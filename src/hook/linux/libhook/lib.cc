@@ -1,6 +1,11 @@
-#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#endif
+
+#include "linker.h"
+#include "session.h"
+#include "resolver.h"
+#include "executor.h"
+
+#include <linux/limits.h>
 #include "unistd.h"
 #include <atomic>
 #include <cerrno>
@@ -27,17 +32,15 @@ void va_copy_n(va_list& args, char* argv[], const size_t argc) {
 }
 
 const char** environment() noexcept {
+#ifdef HAVE_NSGETENVIRON
+    return const_cast<const char**>(*_NSGetEnviron());
+#else
     return const_cast<const char**>(environ);
+#endif
 }
 }  // namespace
 
 // dynamic linker
-namespace {
-template <class T>
-T dynamic_load(const char* name) {
-    return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
-}
-}  // namespace
 
 /// function type we need hook
 using execve_t = int (*)(const char* path, char* const argv[], char* const envp[]);
@@ -76,6 +79,8 @@ char BUFFER[BUFFER_SIZE];
 // This is used for being multi thread safe (loading time only).
 std::atomic<bool> LOADED(false);
 // These are related to the functionality of this library.
+catter::Linker LINKER;
+catter::Session SESSION;
 
 }  // namespace
 
@@ -84,6 +89,9 @@ std::atomic<bool> LOADED(false);
  *
  * The first method to call after the library is loaded into memory.
  */
+
+namespace ct = catter;
+
 extern "C" void on_load() __attribute__((constructor));
 
 extern "C" void on_load() {
@@ -92,6 +100,8 @@ extern "C" void on_load() {
         return;
 
     // TODO: initialization code here
+    ct::session::from(SESSION, environment());
+    catter::session::persist(SESSION, BUFFER, BUFFER + BUFFER_SIZE);
 
     errno = 0;
 }
@@ -115,7 +125,14 @@ extern "C" void on_unload() {
 
 // TODO: implement hooked functions below
 
-extern "C" int execve(const char* path, char* const argv[], char* const envp[]) {}
+extern "C" int execve(const char* path, char* const argv[], char* const envp[]) {
+    ct::Resolver resolver;
+    const auto result = ct::Executor(LINKER, SESSION, resolver).execve(path, argv, envp);
+    if(!result.has_value()) {
+        errno = result.error();
+    }
+    return result.value_or(-1);
+}
 
 extern "C" int execv(const char* path, char* const argv[]) {}
 

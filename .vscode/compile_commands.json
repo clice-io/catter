@@ -1,0 +1,11 @@
+[
+{
+  "directory": "/home/kacent/project/catter",
+  "arguments": ["/usr/local/llvm-21/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-std=c++23", "-Isrc", "-o", "build/.objs/catter/linux/x86_64/release/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
+},
+{
+  "directory": "/home/kacent/project/catter",
+  "arguments": ["/usr/local/llvm-21/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fPIC", "-std=c++23", "-Isrc/hook/linux", "-ffreestanding", "-o", "build/.objs/catter-hook-linux/linux/x86_64/release/src/hook/linux/libhook/lib.cc.o", "src/hook/linux/libhook/lib.cc"],
+  "file": "src/hook/linux/libhook/lib.cc"
+}]

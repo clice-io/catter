@@ -3,6 +3,7 @@ set_allowedplats("windows", "linux")
 
 
 set_languages("c++23")
+set_toolchains("clang")
 
 option("dev", {default = true})
 if has_config("dev") then
@@ -26,9 +27,9 @@ end
 if is_plat("linux") then
     target("catter-hook-linux")
         set_kind("shared")
-        add_includedirs("src")
-        add_files("src/hook/linux/libhook/*.cpp")
-        add_syslinks("pthread")
+        add_includedirs("src/hook/linux")
+        add_files("src/hook/linux/libhook/*.cc")
+        add_cxxflags("-ffreestanding")
 end
 
 
