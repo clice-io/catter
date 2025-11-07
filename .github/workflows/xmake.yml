@@ -18,10 +18,10 @@ on:
       - "xmake.lua"
 
 jobs:
-  windows:
+  build:
     strategy:
       matrix:
-        os: [windows-2025]
+        os: [windows-2025, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -37,7 +37,6 @@ jobs:
           actions-cache-key: ${{ matrix.os }}
           package-cache: true
           package-cache-key: ${{ matrix.os }}
-
 
       - name: Build (Release)
         run: |

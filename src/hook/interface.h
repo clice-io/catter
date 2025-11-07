@@ -1,8 +1,12 @@
 #pragma once
+#include <expected>
+#include <string>
 #include <system_error>
-#include <string_view>
 #include <span>
+#include <vector>
 
 namespace catter::hook {
-int attach_run(std::span<const char* const> command, std::error_code& ec);
-};
+int run(std::span<const char* const> command, std::error_code& ec);
+
+std::expected<std::vector<std::string>, std::string> collect_all();
+};  // namespace catter::hook
