@@ -89,6 +89,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
                                               config::OS_PATH_SEPARATOR,
                                               existing_paths,
                                               config::OS_PATH_SEPARATOR);
+                continue;
             }
         }
         joined_command += std::format("{} ", arg);
