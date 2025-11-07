@@ -12,7 +12,7 @@ class Buffer;
 struct Session {
     const char* log_path = nullptr;
     const char* self_lib_path = nullptr;
-    const char* neccessary_envp_entry[2] = {nullptr, nullptr};
+    const char* necessary_envp_entry[2] = {nullptr, nullptr};
 };
 
 namespace session {

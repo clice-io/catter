@@ -15,9 +15,9 @@ void from(Session& session, const char** environment) noexcept {
         WARN("session is invalid");
         return;
     }
-    session.neccessary_envp_entry[0] =
+    session.necessary_envp_entry[0] =
         catter::env::get_env_entry(environment, config::KEY_CMD_LOG_FILE);
-    session.neccessary_envp_entry[1] =
+    session.necessary_envp_entry[1] =
         catter::env::get_env_entry(environment, config::KEY_CATTER_PRELOAD_PATH);
 
     INFO("session from env: log_path={}, self_lib_path={}",
@@ -32,8 +32,8 @@ void persist(Session& session, char* begin, char* end) noexcept {
     Buffer buffer(begin, end);
     session.log_path = buffer.store(session.log_path);
     session.self_lib_path = buffer.store(session.self_lib_path);
-    session.neccessary_envp_entry[0] = buffer.store(session.neccessary_envp_entry[0]);
-    session.neccessary_envp_entry[1] = buffer.store(session.neccessary_envp_entry[1]);
+    session.necessary_envp_entry[0] = buffer.store(session.necessary_envp_entry[0]);
+    session.necessary_envp_entry[1] = buffer.store(session.necessary_envp_entry[1]);
 }
 
 bool is_valid(const Session& session) noexcept {

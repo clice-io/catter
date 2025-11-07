@@ -32,7 +32,8 @@ namespace {
 #define CHECK_POINTER(PTR_)                                                                        \
     do {                                                                                           \
         if(nullptr == (PTR_)) {                                                                    \
-            return EFAULT;                                                                         \
+            errno = EFAULT;                                                                        \
+            return -1;                                                                             \
         }                                                                                          \
     } while(false)
 #define LOGGING_CMD(PATH_, ARGV_)                                                                  \
@@ -81,9 +82,9 @@ int inject_catter_env(const catter::Session& ss, char* const*& envp_) {
     if(!catter::session::is_valid(test_ses)) {
         INFO("copy envp into new area");
         size_t idx = 0;
-        envp_copy[idx++] = ss.neccessary_envp_entry[0];
-        envp_copy[idx++] = ss.neccessary_envp_entry[1];
-        for(const char* it = envp[0]; it != nullptr; ++it) {
+        envp_copy[idx++] = ss.necessary_envp_entry[0];
+        envp_copy[idx++] = ss.necessary_envp_entry[1];
+        for(const char* it = envp; it != nullptr; ++it) {
             envp_copy[idx++] = it;
             if(idx >= (envp_size - 1)) {
                 // no enough space
@@ -224,6 +225,8 @@ int Executor::execve(const char* path, char* const* argv, char* const* envp) {
     auto run_res = linker_.execve(executable_res.value(), argv, envp);
     if(!run_res.has_value()) {
         recorder_.writeErr(run_res.error());
+        errno = ENOSYS;
+        return -1;
     }
     return run_res.value();
 }
@@ -233,16 +236,15 @@ int Executor::execvpe(const char* file, char* const* argv, char* const* envp) {
     CHECK_SESSION(session_);
     CHECK_POINTER(file);
     auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
-    if(!executable_res.has_value()) {
-        return executable_res.error();
-    }
-
+    CHECK_EXEC_RESULT(executable_res);
     INJECT_PRELOAD(session_, envp);
+    LOGGING_CMD(executable_res.value(), argv);
     auto run_res = linker_.execve(executable_res.value(), argv, envp);
     if(!run_res.has_value()) {
         recorder_.writeErr(run_res.error());
+        errno = ENOSYS;
+        return -1;
     }
-    LOGGING_CMD(executable_res.value(), argv);
     return run_res.value();
 }
 
@@ -255,15 +257,15 @@ int Executor::execvP(const char* file,
     CHECK_POINTER(file);
 
     auto executable_res = resolver_.from_search_path(file, search_path);
-    if(!executable_res.has_value()) {
-        return executable_res.error();
-    }
+    CHECK_EXEC_RESULT(executable_res);
     INJECT_PRELOAD(session_, envp);
+    LOGGING_CMD(executable_res.value(), argv);
     auto run_res = linker_.execve(executable_res.value(), argv, envp);
     if(!run_res.has_value()) {
         recorder_.writeErr(run_res.error());
+        errno = ENOSYS;
+        return -1;
     }
-    LOGGING_CMD(executable_res.value(), argv);
     return run_res.value();
 }
 
@@ -278,16 +280,16 @@ int Executor::posix_spawn(pid_t* pid,
     CHECK_POINTER(path);
 
     auto executable_res = resolver_.from_current_directory(path);
-    if(!executable_res.has_value()) {
-        return executable_res.error();
-    }
+    CHECK_EXEC_RESULT(executable_res);
     INJECT_PRELOAD(session_, envp);
+    LOGGING_CMD(executable_res.value(), argv);
     auto run_res =
         linker_.posix_spawn(pid, executable_res.value(), file_actions, attrp, argv, envp);
     if(!run_res.has_value()) {
         recorder_.writeErr(run_res.error());
+        errno = ENOSYS;
+        return -1;
     }
-    LOGGING_CMD(executable_res.value(), argv);
     return run_res.value();
 }
 
@@ -302,16 +304,16 @@ int Executor::posix_spawnp(pid_t* pid,
     CHECK_POINTER(file);
 
     auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
-    if(!executable_res.has_value()) {
-        return executable_res.error();
-    }
+    CHECK_EXEC_RESULT(executable_res);
     INJECT_PRELOAD(session_, envp);
+    LOGGING_CMD(executable_res.value(), argv);
     auto run_res =
         linker_.posix_spawn(pid, executable_res.value(), file_actions, attrp, argv, envp);
     if(!run_res.has_value()) {
         recorder_.writeErr(run_res.error());
+        errno = ENOSYS;
+        return -1;
     }
-    LOGGING_CMD(executable_res.value(), argv);
     return run_res.value();
 }
 }  // namespace catter
