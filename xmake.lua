@@ -29,6 +29,7 @@ if is_plat("linux") then
         add_includedirs("src/hook/linux/libhook")
         add_files("src/hook/linux/libhook/*.cc")
         add_files("src/hook/linux/libhook/inject/*.cc")
+        add_syslinks("dl")
         if is_mode("debug") then
             add_defines("DEBUG")
         end
