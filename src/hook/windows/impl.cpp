@@ -11,6 +11,8 @@
 #include "hook/interface.h"
 #include "hook/windows/env.h"
 
+namespace fs = std::filesystem;
+
 namespace catter::hook {
 namespace detail {
 std::string quote_win32_arg(std::string_view arg) {
