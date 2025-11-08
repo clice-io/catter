@@ -13,10 +13,10 @@ class unique_file {
 public:
     unique_file() {
         std::error_code ec;
-        std::filesystem::create_directories(catter::capture_root, ec);
+        std::filesystem::create_directories(catter::win::capture_root, ec);
         if(ec) {
             std::println("Failed to create capture root directory: {}: {}",
-                         catter::capture_root,
+                         catter::win::capture_root,
                          ec.message());
             return;
         }
@@ -24,7 +24,7 @@ public:
         auto unique_id = std::hash<std::thread::id>()(std::this_thread::get_id());
         auto time_stamp = std::chrono::system_clock::now().time_since_epoch().count();
 
-        auto path = std::format("{}/{}_{}", catter::capture_root, unique_id, time_stamp);
+        auto path = std::format("{}/{}_{}", catter::win::capture_root, unique_id, time_stamp);
         this->ofs.open(path, std::ios::out | std::ios::app);
 
         if(!this->ofs.is_open()) {

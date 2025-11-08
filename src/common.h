@@ -1,10 +1,6 @@
 #pragma once
 #include <string_view>
 
-namespace catter {
-constexpr static char capture_root[] = "catter-captured";
-}
-
 namespace meta {
 template <typename T>
 consteval std::string_view type_name() {

@@ -1,3 +1,4 @@
+#include <expected>
 #include <print>
 #include <string>
 #include <ranges>
@@ -108,6 +109,59 @@ int run(std::span<const char* const> command, std::error_code& ec) {
     CloseHandle(pi.hProcess);
     ec.clear();
     return static_cast<int>(exit_code);
+}
+
+std::expected<std::vector<std::string>, std::string> collect_all() {
+    std::vector<std::string> result;
+
+    std::error_code ec;
+
+    if(!fs::exists(catter::win::capture_root, ec)) {
+        return result;
+    }
+
+    if(ec) {
+        std::println("Failed to access capture root directory: {}: {}",
+                     catter::win::capture_root,
+                     ec.message());
+        return result;
+    }
+
+    auto dir_iter = fs::recursive_directory_iterator(catter::win::capture_root,
+                                                     fs::directory_options::skip_permission_denied,
+                                                     ec);
+
+    for(; dir_iter != fs::end(dir_iter); dir_iter.increment(ec)) {
+        if(ec) {
+            std::println("Failed to access directory entry: {}: {}",
+                         dir_iter->path().string(),
+                         ec.message());
+            ec.clear();
+            continue;
+        }
+
+        const auto& entry = *dir_iter;
+
+        if(entry.is_regular_file()) {
+            std::ifstream ifs(entry.path(), std::ios::in | std::ios::binary);
+            if(!ifs) {
+                std::println("Failed to open file: {}", entry.path().string());
+                continue;
+            }
+            std::string line;
+            while(std::getline(ifs, line)) {
+                result.push_back(line);
+            }
+        }
+    }
+
+    fs::remove_all(catter::win::capture_root, ec);
+    if(ec) {
+        std::println("Failed to remove capture root directory: {}: {}",
+                     catter::win::capture_root,
+                     ec.message());
+    }
+    return result;
 }
 
 };  // namespace catter::hook
