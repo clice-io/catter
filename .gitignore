@@ -43,4 +43,6 @@
 .cache/
 .xmake
 .venv
+.vscode
 build*/
+vsxmake*/
