@@ -18,10 +18,13 @@ on:
       - "xmake.lua"
 
 jobs:
-  windows:
     strategy:
       matrix:
         os: [windows-2025, ubuntu-24.04]
+
+    concurrency:
+      group: ${{ github.ref }}-${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.os }}
+      cancel-in-progress: true
 
     runs-on: ${{ matrix.os }}
 

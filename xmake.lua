@@ -7,7 +7,8 @@ set_languages("c++23")
 
 option("dev", {default = true})
 if has_config("dev") then
-   add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+    set_policy("build.ccache", true)
+    add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
 if is_plat("windows") then
