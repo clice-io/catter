@@ -18,6 +18,7 @@ on:
       - "xmake.lua"
 
 jobs:
+  build:
     strategy:
       matrix:
         os: [windows-2025, ubuntu-24.04]
