@@ -52,9 +52,4 @@ private:
     std::mutex mutex;
 };
 
-inline unique_file& output_file() {
-    static unique_file instance;
-    return instance;
-}
-
 }  // namespace

@@ -12,7 +12,7 @@
 #include <detours.h>
 
 #include "common.h"
-#include "hook/windows/output.h"
+#include "hook/windows/unique_file.h"
 #include "hook/windows/env.h"
 
 // https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
@@ -30,15 +30,15 @@ HINSTANCE& dll_instance() {
 class path {
 public:
     path() {
-        this->length = GetModuleFileNameA(dll_instance(), storage.data, MAX_PATH);
+        this->length = GetModuleFileNameA(dll_instance(), this->storage.data, MAX_PATH);
         if(this->length >= MAX_PATH) {
             // Need dynamic allocation
-            size_t needed = this->length + 1;
-            storage.dynamic_data = new char[needed];
-            GetModuleFileNameA(dll_instance(), storage.dynamic_data, static_cast<DWORD>(needed));
-            this->data = storage.dynamic_data;
+            size_t needed = this->length;
+            this->storage.dynamic_data = new char[needed];
+            GetModuleFileNameA(dll_instance(), this->storage.dynamic_data, needed);
+            this->data = this->storage.dynamic_data;
         } else {
-            this->data = storage.data;
+            this->data = this->storage.data;
         }
     }
 
@@ -87,8 +87,6 @@ path& hook_dll_path() {
 // Use anonymous namespace to avoid exporting symbols
 namespace {
 
-static HINSTANCE hinst = nullptr;
-
 std::string wstring_to_utf8(const std::wstring& wstr, std::error_code& ec) {
     if(wstr.empty())
         return {};
@@ -127,6 +125,11 @@ std::string wstring_to_utf8(const std::wstring& wstr, std::error_code& ec) {
     }
     ec.clear();
     return to;
+}
+
+unique_file& output_file() {
+    static unique_file instance;
+    return instance;
 }
 
 template <typename... args_t>

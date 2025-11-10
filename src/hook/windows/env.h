@@ -1,6 +1,4 @@
 #pragma once
-#include <cstddef>
-#include <windows.h>
 
 namespace catter::win {
 constexpr static char hook_dll_name[] = "catter-hook64.dll";
