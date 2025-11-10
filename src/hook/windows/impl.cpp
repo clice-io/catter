@@ -90,7 +90,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
                                              nullptr,
                                              &si,
                                              &pi,
-                                             catter::win::hook_dll,
+                                             catter::win::hook_dll_name,
                                              nullptr);
 
     if(!ret) {

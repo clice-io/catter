@@ -103,7 +103,7 @@ struct CreateProcessA {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll,
+                                             catter::win::hook_dll_path.data,
                                              target);
     }
 };
@@ -134,7 +134,7 @@ struct CreateProcessW {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll,
+                                             catter::win::hook_dll_path.data,
                                              target);
     }
 };
@@ -174,11 +174,11 @@ struct CreateProcessAsUserA {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll;
+        LPCSTR szDll = catter::win::hook_dll_path.data;
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperA(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll,
+                                    catter::win::hook_dll_path.data,
                                     CreateProcessA::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -235,11 +235,11 @@ struct CreateProcessAsUserW {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll;
+        LPCSTR szDll = catter::win::hook_dll_path.data;
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperW(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll,
+                                    catter::win::hook_dll_path.data,
                                     CreateProcessW::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -303,6 +303,13 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
     }
 
     if(dwReason == DLL_PROCESS_ATTACH) {
+
+        catter::win::hook_dll_path.length =
+            GetModuleFileNameA(hinst, catter::win::hook_dll_path.data, MAX_PATH);
+
+        // Ensure dll path is visible to other threads
+        std::atomic_thread_fence(std::memory_order_seq_cst);
+
         DetourRestoreAfterWith();
 
         DetourTransactionBegin();
