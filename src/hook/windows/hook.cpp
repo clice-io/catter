@@ -1,4 +1,7 @@
+#include <array>
+#include <cstddef>
 #include <format>
+#include <memory>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -16,8 +19,75 @@
 #pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")
 #pragma comment(lib, "Advapi32.lib")
 
+namespace catter::win {
+namespace {
+
+HINSTANCE& dll_instance() {
+    static HINSTANCE instance = nullptr;
+    return instance;
+}
+
+class path {
+public:
+    path() {
+        this->length = GetModuleFileNameA(dll_instance(), storage.data, MAX_PATH);
+        if(this->length >= MAX_PATH) {
+            // Need dynamic allocation
+            size_t needed = this->length + 1;
+            storage.dynamic_data = new char[needed];
+            GetModuleFileNameA(dll_instance(), storage.dynamic_data, static_cast<DWORD>(needed));
+            this->data = storage.dynamic_data;
+        } else {
+            this->data = storage.data;
+        }
+    }
+
+    size_t size() const {
+        return this->length;
+    }
+
+    const char* data_ptr() const {
+        return this->data;
+    }
+
+    operator const char*() const {
+        return this->data_ptr();
+    }
+
+    path(const path&) = delete;
+    path(path&&) = delete;
+    path& operator= (const path&) = delete;
+    path& operator= (path&&) = delete;
+
+    ~path() {
+        if(this->data != storage.data) {
+            delete[] storage.dynamic_data;
+        }
+    }
+
+private:
+    size_t length{};
+
+    union {
+        char data[MAX_PATH];
+        char* dynamic_data;
+    } storage;
+
+    char* data{};
+};
+
+path& hook_dll_path() {
+    static path dll_path{};
+    return dll_path;
+}
+}  // namespace
+
+}  // namespace catter::win
+
 // Use anonymous namespace to avoid exporting symbols
 namespace {
+
+static HINSTANCE hinst = nullptr;
 
 std::string wstring_to_utf8(const std::wstring& wstr, std::error_code& ec) {
     if(wstr.empty())
@@ -103,7 +173,7 @@ struct CreateProcessA {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll_path.data,
+                                             catter::win::hook_dll_path(),
                                              target);
     }
 };
@@ -134,7 +204,7 @@ struct CreateProcessW {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll_path.data,
+                                             catter::win::hook_dll_path(),
                                              target);
     }
 };
@@ -174,11 +244,11 @@ struct CreateProcessAsUserA {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll_path.data;
+        LPCSTR szDll = catter::win::hook_dll_path();
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperA(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll_path.data,
+                                    catter::win::hook_dll_path(),
                                     CreateProcessA::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -235,11 +305,11 @@ struct CreateProcessAsUserW {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll_path.data;
+        LPCSTR szDll = catter::win::hook_dll_path();
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperW(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll_path.data,
+                                    catter::win::hook_dll_path(),
                                     CreateProcessW::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -268,9 +338,11 @@ struct detour_meta {
 };
 
 template <typename... args_t>
-std::vector<detour_meta> collect_fn() noexcept {
-    return {
-        {meta::type_name<args_t>(), (void**)(&args_t::target), (void*)(&args_t::detour)}
+auto collect_fn() noexcept {
+    return std::array<detour_meta, sizeof...(args_t)>{
+        detour_meta{meta::type_name<args_t>(),
+                    (void**)(&args_t::target),
+                    (void*)(&args_t::detour)}
         ...
     };
 }
@@ -303,12 +375,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
     }
 
     if(dwReason == DLL_PROCESS_ATTACH) {
-
-        catter::win::hook_dll_path.length =
-            GetModuleFileNameA(hinst, catter::win::hook_dll_path.data, MAX_PATH);
-
-        // Ensure dll path is visible to other threads
-        std::atomic_thread_fence(std::memory_order_seq_cst);
+        catter::win::dll_instance() = hinst;
 
         DetourRestoreAfterWith();
 
