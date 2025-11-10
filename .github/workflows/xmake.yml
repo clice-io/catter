@@ -55,9 +55,7 @@ jobs:
       - name: Setup clang
         if: matrix.os == 'macos-15'
         run: |
-          brew install llvm
-          echo "::add-path::$(brew --prefix llvm)/bin"
-          echo "Clang version:"
+          brew install llvm@20
           clang --version
 
       - name: Build (Release)
