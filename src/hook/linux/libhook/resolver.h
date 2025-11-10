@@ -2,7 +2,7 @@
 
 #include <climits>
 #include <expected>
-#include <linux/limits.h>
+#include <limits.h>
 #include <string_view>
 
 namespace catter {

@@ -1,12 +1,13 @@
 #include "hook/interface.h"
 #include "./libhook/config.h"
-#include "hook/linux/config.h"
+#include "config.h"
+#include "common/crossplat.h"
 #include <array>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <linux/limits.h>
+#include <limits.h>
 #include <print>
 #include <system_error>
 #include <unistd.h>
@@ -16,14 +17,11 @@
 namespace catter::hook {
 
 std::filesystem::path get_hook_path(std::error_code& ec) {
-    std::array<char, PATH_MAX> buf;
-    ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
-    if(len <= 0) {
-        ec = std::error_code(errno, std::generic_category());
+    auto exe_path = get_executable_path(ec);
+    if(ec) {
         return {};
     }
-    buf[len] = '\0';
-    return std::filesystem::path(buf.data()).parent_path() / config::RELATIVE_PATH_OF_HOOK_LIB;
+    return std::filesystem::path(exe_path).parent_path() / config::RELATIVE_PATH_OF_HOOK_LIB;
 }
 
 std::filesystem::path get_save_dir(std::error_code& ec) {
@@ -32,7 +30,7 @@ std::filesystem::path get_save_dir(std::error_code& ec) {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
         return {};
     }
-    std::string this_dir = std::format("{}-{}", getpid(), gettid());
+    std::string this_dir = std::format("{}-{}", getpid(), get_thread_id());
     return std::filesystem::path(home) / config::HOME_RELATIVE_PATH_OF_LOG / this_dir;
 }
 
@@ -49,7 +47,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
     std::println("Using hook library at path: {}", lib_path.string());
     std::println("Saving captured logs to directory: {}", save_dir.string());
     // check hook_lib exists
-    if(not std::filesystem::exists(lib_path, ec)) {
+    if(!std::filesystem::exists(lib_path, ec)) {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
         return 0;
     }
@@ -68,14 +66,20 @@ int run(std::span<const char* const> command, std::error_code& ec) {
     if(ec) {
         return 0;
     }
+    std::string joined_command = "";
+#ifdef CATTER_MAC
+#ifdef DEBUG
+    joined_command += "DYLD_PRINT_INTERPOSING=1 ";
+#endif  // DEBUG
+#endif  // CATTER_MAC
 
-    std::string joined_command = std::format("{}={} {}={} {}={} ",
-                                             config::KEY_PRELOAD,
-                                             lib_path.string(),
-                                             config::KEY_CMD_LOG_FILE,
-                                             save_dir.string(),
-                                             config::KEY_CATTER_PRELOAD_PATH,
-                                             lib_path.string());
+    joined_command += std::format("{}={} {}={} {}={} ",
+                                  config::KEY_PRELOAD,
+                                  lib_path.string(),
+                                  config::KEY_CMD_LOG_FILE,
+                                  save_dir.string(),
+                                  config::KEY_CATTER_PRELOAD_PATH,
+                                  lib_path.string());
     for(const auto& arg: command) {
         // consider if the user add LD_PRELOAD in command
         if(auto arg_sv = std::string_view{arg}; arg_sv.starts_with(config::KEY_PRELOAD)) {
@@ -141,6 +145,11 @@ std::expected<std::vector<std::string>, std::string> collect_all() {
                 }
             }
         }
+    }
+    // remove cache
+    std::filesystem::remove_all(save_dir, ec);
+    if(ec) {
+        return std::unexpected(std::format("Failed to remove save directory: {}", ec.message()));
     }
     return result;
 };

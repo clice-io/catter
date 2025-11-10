@@ -2,6 +2,7 @@
 #include "array.h"
 #include "config.h"
 #include "debug.h"
+#include "crossplat.h"
 #include <unistd.h>
 
 #include <fcntl.h>
@@ -57,7 +58,7 @@ const char* Recorder::getFilePath() noexcept {
         return nullptr;
     }
     auto pid = ::getpid();
-    auto tid = ::gettid();
+    auto tid = get_thread_id();
     char* it = file_name_index_;
     if(push_num(pid, it, dir_sz_ + dir_) != 0) {
         return nullptr;

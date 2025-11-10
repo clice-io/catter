@@ -1,0 +1,11 @@
+[
+{
+  "directory": "/Users/kacent/code/catter",
+  "arguments": ["/opt/homebrew/opt/llvm/bin/clang", "-c", "-Qunused-arguments", "-g", "-O0", "-std=c++23", "-Isrc", "-Ibuild/.gens/catter/macosx/arm64/debug/platform/windows/idl", "-DCATTER_MAC", "-o", "build/.objs/catter/macosx/arm64/debug/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
+},
+{
+  "directory": "/Users/kacent/code/catter",
+  "arguments": ["/opt/homebrew/opt/llvm/bin/clang", "-c", "-Qunused-arguments", "-g", "-O0", "-std=c++23", "-Isrc", "-Ibuild/.gens/catter/macosx/arm64/debug/platform/windows/idl", "-DCATTER_MAC", "-o", "build/.objs/catter/macosx/arm64/debug/src/hook/linux/impl.cc.o", "src/hook/linux/impl.cc"],
+  "file": "src/hook/linux/impl.cc"
+}]
