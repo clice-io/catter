@@ -17,6 +17,7 @@
 namespace catter::hook {
 
 namespace fs = std::filesystem;
+
 namespace detail {
 std::string quote_win32_arg(std::string_view arg) {
     // No quoting needed if it's empty or has no special characters.
@@ -79,7 +80,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
 
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
-    
+
     auto [length, path] = catter::win::path();
 
     std::filesystem::path dll_path{path.get()};

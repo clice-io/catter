@@ -9,7 +9,6 @@
 #include "common.h"
 #include "hook/windows/env.h"
 
-
 // Platform independent
 class unique_file {
 public:
