@@ -9,7 +9,6 @@
 #include "common.h"
 #include "hook/windows/env.h"
 
-namespace {
 
 // Platform independent
 class unique_file {
@@ -51,5 +50,3 @@ private:
     std::ofstream ofs;
     std::mutex mutex;
 };
-
-}  // namespace
