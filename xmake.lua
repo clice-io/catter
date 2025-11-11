@@ -24,7 +24,7 @@ target("catter-hook64")
     set_enabled(is_plat("windows"))
     add_includedirs("src")
     add_files("src/hook/windows/hook.cpp")
-    add_syslinks("user32")
+    add_syslinks("user32", "advapi32")
     add_packages("microsoft-detours")
 
 target("catter")

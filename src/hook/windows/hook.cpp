@@ -17,7 +17,6 @@
 
 // https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
 #pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")
-#pragma comment(lib, "Advapi32.lib")
 
 namespace catter::win {
 namespace {
@@ -30,16 +29,7 @@ HINSTANCE& dll_instance() {
 class path {
 public:
     path() {
-        this->length = GetModuleFileNameA(dll_instance(), this->storage.data, MAX_PATH);
-        if(this->length >= MAX_PATH) {
-            // Need dynamic allocation
-            size_t needed = this->length;
-            this->storage.dynamic_data = new char[needed];
-            GetModuleFileNameA(dll_instance(), this->storage.dynamic_data, needed);
-            this->data = this->storage.dynamic_data;
-        } else {
-            this->data = this->storage.data;
-        }
+        std::tie(this->length, this->data) = catter::win::path(catter::win::dll_instance());
     }
 
     size_t size() const {
@@ -47,7 +37,7 @@ public:
     }
 
     const char* data_ptr() const {
-        return this->data;
+        return this->data.get();
     }
 
     operator const char*() const {
@@ -59,21 +49,11 @@ public:
     path& operator= (const path&) = delete;
     path& operator= (path&&) = delete;
 
-    ~path() {
-        if(this->data != storage.data) {
-            delete[] storage.dynamic_data;
-        }
-    }
+    ~path() = default;
 
 private:
     size_t length{};
-
-    union {
-        char data[MAX_PATH];
-        char* dynamic_data;
-    } storage;
-
-    char* data{};
+    std::unique_ptr<char[]> data;
 };
 
 path& hook_dll_path() {

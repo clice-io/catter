@@ -6,17 +6,17 @@
 #include <span>
 #include <fstream>
 #include <filesystem>
-
 #include <vector>
+
 #include <windows.h>
 #include <detours.h>
 
 #include "hook/interface.h"
 #include "hook/windows/env.h"
 
-namespace fs = std::filesystem;
-
 namespace catter::hook {
+
+namespace fs = std::filesystem;
 namespace detail {
 std::string quote_win32_arg(std::string_view arg) {
     // No quoting needed if it's empty or has no special characters.
@@ -79,6 +79,11 @@ int run(std::span<const char* const> command, std::error_code& ec) {
 
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
+    
+    auto [length, path] = catter::win::path();
+
+    std::filesystem::path dll_path{path.get()};
+    dll_path.replace_filename(catter::win::hook_dll_name);
 
     auto ret = DetourCreateProcessWithDllExA(nullptr,
                                              command_line.data(),
@@ -90,7 +95,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
                                              nullptr,
                                              &si,
                                              &pi,
-                                             catter::win::hook_dll_name,
+                                             dll_path.string().c_str(),
                                              nullptr);
 
     if(!ret) {
