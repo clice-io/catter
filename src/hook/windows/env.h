@@ -18,7 +18,7 @@ struct path {
         return data.get();
     }
 
-    operator char const*() const {
+    operator const char*() const {
         return data.get();
     }
 };

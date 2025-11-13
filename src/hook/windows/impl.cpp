@@ -82,7 +82,7 @@ int run(std::span<const char* const> command, std::error_code& ec) {
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
 
     std::filesystem::path dll_path{catter::win::current_path().get()};
-    
+
     dll_path.replace_filename(catter::win::hook_dll_name);
 
     auto ret = DetourCreateProcessWithDllExA(nullptr,
