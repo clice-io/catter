@@ -10,7 +10,20 @@ namespace catter::win {
 constexpr static char hook_dll_name[] = "catter-hook64.dll";
 constexpr static char capture_root[] = "catter-captured";
 
-inline auto path(HMODULE h = nullptr) {
+struct path {
+    size_t length;
+    std::unique_ptr<char[]> data;
+
+    const char* get() const {
+        return data.get();
+    }
+
+    operator char const*() const {
+        return data.get();
+    }
+};
+
+inline path current_path(HMODULE h = nullptr) {
     size_t max_size = MAX_PATH;
     size_t length = 0;
     std::unique_ptr<char[]> data;
@@ -20,7 +33,7 @@ inline auto path(HMODULE h = nullptr) {
         length = GetModuleFileNameA(h, data.get(), max_size);
     } while(length == max_size && GetLastError() == ERROR_INSUFFICIENT_BUFFER);
 
-    return std::make_tuple(length, std::move(data));
+    return {length, std::move(data)};
 }
 
 }  // namespace catter::win

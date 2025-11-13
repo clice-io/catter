@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <detours.h>
 
-#include "common.h"
+#include "hook/windows/type_name.h"
 #include "hook/windows/unique_file.h"
 #include "hook/windows/env.h"
 
@@ -26,38 +26,8 @@ HINSTANCE& dll_instance() {
     return instance;
 }
 
-class path {
-public:
-    path() {
-        std::tie(this->length, this->data) = catter::win::path(catter::win::dll_instance());
-    }
-
-    size_t size() const {
-        return this->length;
-    }
-
-    const char* data_ptr() const {
-        return this->data.get();
-    }
-
-    operator const char*() const {
-        return this->data_ptr();
-    }
-
-    path(const path&) = delete;
-    path(path&&) = delete;
-    path& operator= (const path&) = delete;
-    path& operator= (path&&) = delete;
-
-    ~path() = default;
-
-private:
-    size_t length{};
-    std::unique_ptr<char[]> data;
-};
-
 path& hook_dll_path() {
-    static path dll_path{};
+    static path dll_path = current_path(dll_instance());
     return dll_path;
 }
 }  // namespace

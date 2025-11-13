@@ -13,19 +13,12 @@ end
 
 if is_plat("windows") then
     add_requires("microsoft-detours")
+    includes("src/hook/windows")
 end
 
 if is_plat("linux") then
     includes("src/hook/linux")
 end
-
-target("catter-hook64")
-    set_kind("shared")
-    set_enabled(is_plat("windows"))
-    add_includedirs("src")
-    add_files("src/hook/windows/hook.cpp")
-    add_syslinks("user32", "advapi32")
-    add_packages("microsoft-detours")
 
 target("catter")
     set_kind("binary")
