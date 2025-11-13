@@ -12,11 +12,8 @@ if has_config("dev") then
 end
 
 if is_plat("windows") then
-    add_requires("microsoft-detours")
     includes("src/hook/windows")
-end
-
-if is_plat("linux") then
+elseif is_plat("linux") then
     includes("src/hook/linux")
 end
 
