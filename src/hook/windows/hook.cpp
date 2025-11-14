@@ -1,4 +1,7 @@
+#include <array>
+#include <cstddef>
 #include <format>
+#include <memory>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -8,13 +11,28 @@
 #include <windows.h>
 #include <detours.h>
 
-#include "common.h"
-#include "hook/windows/output.h"
+#include "hook/windows/type_name.h"
+#include "hook/windows/unique_file.h"
 #include "hook/windows/env.h"
 
 // https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
 #pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")
-#pragma comment(lib, "Advapi32.lib")
+
+namespace catter::win {
+namespace {
+
+HINSTANCE& dll_instance() {
+    static HINSTANCE instance = nullptr;
+    return instance;
+}
+
+path& hook_dll_path() {
+    static path dll_path = current_path(dll_instance());
+    return dll_path;
+}
+}  // namespace
+
+}  // namespace catter::win
 
 // Use anonymous namespace to avoid exporting symbols
 namespace {
@@ -57,6 +75,11 @@ std::string wstring_to_utf8(const std::wstring& wstr, std::error_code& ec) {
     }
     ec.clear();
     return to;
+}
+
+unique_file& output_file() {
+    static unique_file instance;
+    return instance;
 }
 
 template <typename... args_t>
@@ -103,7 +126,7 @@ struct CreateProcessA {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll,
+                                             catter::win::hook_dll_path(),
                                              target);
     }
 };
@@ -134,7 +157,7 @@ struct CreateProcessW {
                                              lpCurrentDirectory,
                                              lpStartupInfo,
                                              lpProcessInformation,
-                                             catter::win::hook_dll,
+                                             catter::win::hook_dll_path(),
                                              target);
     }
 };
@@ -174,11 +197,11 @@ struct CreateProcessAsUserA {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll;
+        LPCSTR szDll = catter::win::hook_dll_path();
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperA(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll,
+                                    catter::win::hook_dll_path(),
                                     CreateProcessA::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -235,11 +258,11 @@ struct CreateProcessAsUserW {
             return FALSE;
         }
 
-        LPCSTR szDll = catter::win::hook_dll;
+        LPCSTR szDll = catter::win::hook_dll_path();
 
         if(!DetourUpdateProcessWithDll(lpProcessInformation->hProcess, &szDll, 1) &&
            !DetourProcessViaHelperW(lpProcessInformation->dwProcessId,
-                                    catter::win::hook_dll,
+                                    catter::win::hook_dll_path(),
                                     CreateProcessW::target)) {
 
             TerminateProcess(lpProcessInformation->hProcess, ~0u);
@@ -268,9 +291,11 @@ struct detour_meta {
 };
 
 template <typename... args_t>
-std::vector<detour_meta> collect_fn() noexcept {
-    return {
-        {meta::type_name<args_t>(), (void**)(&args_t::target), (void*)(&args_t::detour)}
+auto collect_fn() noexcept {
+    return std::array<detour_meta, sizeof...(args_t)>{
+        detour_meta{meta::type_name<args_t>(),
+                    (void**)(&args_t::target),
+                    (void*)(&args_t::detour)}
         ...
     };
 }
@@ -303,6 +328,8 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
     }
 
     if(dwReason == DLL_PROCESS_ATTACH) {
+        catter::win::dll_instance() = hinst;
+
         DetourRestoreAfterWith();
 
         DetourTransactionBegin();

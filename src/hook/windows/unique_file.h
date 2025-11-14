@@ -6,10 +6,7 @@
 #include <print>
 #include <thread>
 
-#include "common.h"
 #include "hook/windows/env.h"
-
-namespace {
 
 // Platform independent
 class unique_file {
@@ -51,10 +48,3 @@ private:
     std::ofstream ofs;
     std::mutex mutex;
 };
-
-inline unique_file& output_file() {
-    static unique_file instance;
-    return instance;
-}
-
-}  // namespace
