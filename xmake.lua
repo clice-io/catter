@@ -1,7 +1,7 @@
 set_project("catter")
 
 add_rules("mode.debug", "mode.release")
-set_allowedplats("windows", "linux")
+set_allowedplats("windows", "linux", "macosx")
 
 set_languages("c++23")
 
