@@ -4,33 +4,38 @@
 
 #include "hook/interface.h"
 
+#include "qjs.h"
+
 int main(int argc, char* argv[]) {
-    if(argc < 2) {
-        std::println("Usage: {} <command>", argv[0]);
-        return 1;
-    }
 
-    std::span<const char* const> command{argv + 1, argv + argc};
+    fix_cmd("example command");
 
-    std::error_code ec;
+    // if(argc < 2) {
+    //     std::println("Usage: {} <command>", argv[0]);
+    //     return 1;
+    // }
 
-    auto ret = catter::hook::run(command, ec);
+    // std::span<const char* const> command{argv + 1, argv + argc};
 
-    if(ec) {
-        std::println("Failed to attach hook: {}", ec.message());
-        return 1;
-    }
+    // std::error_code ec;
 
-    if(ret != 0) {
-        std::println("Command failed with exit code: {}", ret);
-    }
+    // auto ret = catter::hook::run(command, ec);
 
-    if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
-        for(const auto& line: captured_output.value()) {
-            std::println("{}", line);
-        }
-    } else {
-        std::println("Failed to collect captured output: {}", captured_output.error());
-    }
+    // if(ec) {
+    //     std::println("Failed to attach hook: {}", ec.message());
+    //     return 1;
+    // }
+
+    // if(ret != 0) {
+    //     std::println("Command failed with exit code: {}", ret);
+    // }
+
+    // if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
+    //     for(const auto& line: captured_output.value()) {
+    //         std::println("{}", line);
+    //     }
+    // } else {
+    //     std::println("Failed to collect captured output: {}", captured_output.error());
+    // }
     return 0;
 }

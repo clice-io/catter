@@ -11,6 +11,8 @@ if has_config("dev") then
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
+add_requires("quickjs-ng")
+
 if is_plat("windows") then
     includes("src/hook/windows")
 elseif is_plat("linux") then
@@ -20,7 +22,7 @@ end
 target("catter")
     set_kind("binary")
     add_includedirs("src")
-    add_files("src/main.cpp")
+    add_files("src/main.cpp", "src/qjs.cpp")
     if is_plat("windows") then
         add_files("src/hook/windows/impl.cpp")
     elseif is_plat("linux") then
@@ -30,3 +32,5 @@ target("catter")
     if is_plat("windows") then
         add_packages("microsoft-detours")
     end
+
+    add_packages("quickjs-ng")
