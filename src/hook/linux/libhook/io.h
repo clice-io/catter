@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <initializer_list>
-#include <linux/limits.h>
+#include <limits.h>
 
 namespace catter {
 class Recorder {

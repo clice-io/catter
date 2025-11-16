@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         std::println("Failed to collect captured output: {}", captured_output.error());
+        return 1;
     }
     return 0;
 }

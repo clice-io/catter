@@ -14,7 +14,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <expected>
-#include <linux/limits.h>
+#include <limits.h>
 #include <unistd.h>
 
 namespace {

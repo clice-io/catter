@@ -1,7 +1,7 @@
 set_project("catter")
 
 add_rules("mode.debug", "mode.release")
-set_allowedplats("windows", "linux")
+set_allowedplats("windows", "linux", "macosx")
 
 set_languages("c++23")
 
@@ -11,11 +11,19 @@ if has_config("dev") then
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
-add_requires("quickjs-ng")
+if is_mode("debug") then
+    add_defines("DEBUG")
+end
+
+if is_plat("linux") then
+    add_defines("CATTER_LINUX")
+elseif is_plat("macosx") then
+    add_defines("CATTER_MAC")
+end
 
 if is_plat("windows") then
     includes("src/hook/windows")
-elseif is_plat("linux") then
+elseif is_plat("linux", "macosx") then
     includes("src/hook/linux")
 end
 
@@ -25,7 +33,7 @@ target("catter")
     add_files("src/main.cpp", "src/qjs.cpp")
     if is_plat("windows") then
         add_files("src/hook/windows/impl.cpp")
-    elseif is_plat("linux") then
+    elseif is_plat("linux", "macosx") then
         add_files("src/hook/linux/*.cc")
     end
 
