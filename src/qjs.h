@@ -259,7 +259,7 @@ public:
     }
 
     R operator() (Args... args) {
-        return this->invoke(Object{}, args...);
+        return this->invoke(Object{this->context(), JS_GetGlobalObject(this->context())}, args...);
     }
 };
 

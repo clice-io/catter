@@ -27,6 +27,8 @@ elseif is_plat("linux", "macosx") then
     includes("src/hook/linux")
 end
 
+add_requires("quickjs-ng")
+
 target("catter")
     set_kind("binary")
     add_includedirs("src")
