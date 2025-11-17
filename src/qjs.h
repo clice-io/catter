@@ -343,8 +343,9 @@ public:
                         return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
                     }
                     return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
-                        auto transformed_args = std::make_tuple(
-                            Value{ctx, JS_DupValue(ctx, argv[Is])}.to<Params::template get_t<Is>>()...);
+                        auto transformed_args =
+                            std::make_tuple(Value{ctx, JS_DupValue(ctx, argv[Is])}
+                                                .to<Params::template get_t<Is>>()...);
 
                         int32_t arg_error = -1;
                         std::string_view type_name = "";

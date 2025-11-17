@@ -8,7 +8,6 @@
 
 #include "qjs.h"
 
-
 int main(int argc, char* argv[]) {
     if(argc < 2) {
         std::println("Usage: {} <command>", argv[0]);
@@ -70,9 +69,9 @@ void qjs_example() {
 
     try {
         ctx->eval(example_script,
-                           nullptr,
-                           JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
-        
+                  nullptr,
+                  JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+
     } catch(const catter::qjs::exception& e) {
         std::println("JavaScript Exception: {}", e.what());
     }
