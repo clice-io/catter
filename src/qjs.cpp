@@ -30,45 +30,6 @@ std::string dump(JSContext* ctx) {
 }
 }  // namespace detail
 
-void CModule::add_functor(std::string_view name, Functor_move&& func) const {
-    static JSClassID id = 0;
-
-    auto rt = JS_GetRuntime(this->ctx);
-    if(id == 0) {
-        JS_NewClassID(rt, &id);
-        auto class_name = std::format("qjs.{}", meta::type_name<Functor_move>());
-
-        JSClassDef def{class_name.c_str(),
-                       [](JSRuntime* rt, JSValue obj) {
-                           auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(obj, id));
-                           delete ptr;
-                       },
-                       nullptr,
-                       [](JSContext* ctx,
-                          JSValueConst func_obj,
-                          JSValueConst this_val,
-                          int argc,
-                          JSValueConst* argv,
-                          int flags) -> JSValue {
-                           auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(func_obj, id));
-                           if(!ptr) {
-                               return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
-                           }
-                           return (*ptr)(ctx, this_val, argc, argv);
-                       },
-                       nullptr};
-        JS_NewClass(rt, id, &def);
-    }
-
-    Value result{this->ctx, JS_NewObjectClass(this->ctx, id)};
-    JS_SetOpaque(result.value(), new Functor_move(std::move(func)));
-
-    const_cast<CModule*>(this)->exports.push_back(kv{std::string(name), std::move(result)});
-
-    JS_AddModuleExport(this->ctx, m, name.data());
-    return;
-}
-
 const CModule* Context::cmodule(const std::string& name) const {
     if(auto it = this->raw->modules.find(name); it != this->raw->modules.end()) {
         return &it->second;

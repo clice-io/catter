@@ -1,11 +1,15 @@
 #pragma once
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
 #include <exception>
 #include <functional>
 #include <optional>
 #include <print>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -19,56 +23,33 @@
 
 namespace catter::qjs {
 namespace detail {
-std::string dump(JSContext* ctx);
 
-template <typename Sign>
-class function_ref {
-    static_assert(false, "Sign must be a function type");
-};
+template <typename... args_t>
+struct type_list {
 
-template <typename R, typename... Args>
-class function_ref<R(Args...)> {
-public:
-    using Sign = R(Args...);
-
-    using Erased = union {
-        void* ctx;
-        Sign* fn;
+    template <size_t I>
+    struct get {
+        using type = typename std::tuple_element<I, std::tuple<args_t...>>::type;
     };
 
-    constexpr function_ref(const function_ref&) = default;
-    constexpr function_ref(function_ref&&) = default;
+    template <size_t I>
+    using get_t = typename get<I>::type;
 
-    constexpr function_ref& operator= (const function_ref&) = default;
-    constexpr function_ref& operator= (function_ref&&) = default;
+    template <typename T>
+    struct contains {
+        constexpr static bool value = (std::is_same_v<T, args_t> || ...);
+    };
 
-    template <typename invocable_t>
-        requires std::is_invocable_r_v<R, invocable_t, Args...> &&
-                     (!std::is_convertible_v<invocable_t, Sign*>) &&
-                     (!std::is_same_v<function_ref<R(Args...)>, invocable_t>)
-    constexpr function_ref(invocable_t& inv) :
-        proxy{[](Erased c, Args... args) -> R {
-            return std::invoke(*static_cast<invocable_t*>(c.ctx), static_cast<Args>(args)...);
-        }},
-        ctx{.ctx = static_cast<void*>(&inv)} {}
+    template <typename T>
+    constexpr static bool contains_v = contains<T>::value;
 
-    template <typename invocable_t>
-        requires std::is_invocable_r_v<R, invocable_t, Args...> &&
-                     std::is_convertible_v<invocable_t, Sign*>
-    constexpr function_ref(const invocable_t& inv) :
-        proxy{[](Erased c, Args... args) -> R {
-            return std::invoke(c.fn, static_cast<Args>(args)...);
-        }},
-        ctx{.fn = inv} {}
-
-    constexpr R operator() (Args... args) const {
-        return proxy(ctx, static_cast<Args>(args)...);
-    }
-
-private:
-    R (*proxy)(Erased, Args...);
-    Erased ctx;
+    constexpr static size_t size = sizeof...(args_t);
 };
+
+template <typename U>
+struct value_trans;
+
+std::string dump(JSContext* ctx);
 
 }  // namespace detail
 
@@ -123,24 +104,16 @@ public:
     Value(JSContext* ctx, JSValue&& val) : ctx(ctx), val(std::move(val)) {}
 
     template <typename T>
-    static Value from(JSContext* ctx, T value) {
-        if constexpr(std::is_same_v<T, int32_t>) {
-            return Value(ctx, JS_NewInt32(ctx, value));
-        } else if constexpr(std::is_same_v<T, double>) {
-            return Value(ctx, JS_NewFloat64(ctx, value));
-        } else if constexpr(std::is_same_v<T, const char*>) {
-            return Value(ctx, JS_NewString(ctx, value));
-        } else if constexpr(std::is_same_v<T, std::string>) {
-            return Value(ctx, JS_NewStringLen(ctx, value.c_str(), value.size()));
-        } else {
-            static_assert(false, "Unsupported type for Value::from()");
-        }
+    static Value from(JSContext* ctx, T&& value) {
+        return detail::value_trans<std::remove_cvref_t<T>>::from(ctx, std::forward<T>(value));
     }
 
     template <typename T>
-    std::optional<T> to();
+    std::optional<T> to() {
+        return detail::value_trans<T>::to(this->ctx, *this);
+    }
 
-    bool is_exception() {
+    bool is_exception() const {
         return JS_IsException(this->val);
     }
 
@@ -224,10 +197,6 @@ class Object : public Value {
 public:
     using Value::Value;
 
-    Object(const Value& val) : Value(val) {}
-
-    Object(Value&& val) : Value(std::move(val)) {}
-
     Object() = default;
     Object(const Object&) = default;
     Object(Object&& other) = default;
@@ -245,31 +214,74 @@ public:
     }
 };
 
-template <typename T>
-std::optional<T> Value::to() {
-    if(!this->is_valid()) {
-        return std::nullopt;
+namespace detail {
+template <>
+struct value_trans<bool> {
+    static Value from(JSContext* ctx, bool value) {
+        return Value(ctx, JS_NewBool(ctx, value));
     }
-    if constexpr(std::is_same_v<T, std::string>) {
-        if(!JS_IsString(this->val)) {
+
+    static std::optional<bool> to(JSContext* ctx, const Value& val) {
+        if(!JS_IsBool(val.value())) {
             return std::nullopt;
         }
-        const char* str = JS_ToCString(this->ctx, this->val);
+        return JS_ToBool(ctx, val.value());
+    }
+};
+
+template <>
+struct value_trans<int64_t> {
+    static Value from(JSContext* ctx, int64_t value) {
+        return Value(ctx, JS_NewInt32(ctx, value));
+    }
+
+    static std::optional<int64_t> to(JSContext* ctx, const Value& val) {
+        if(!JS_IsNumber(val.value())) {
+            return std::nullopt;
+        }
+        int64_t result;
+        if(JS_ToInt64(ctx, &result, val.value()) < 0) {
+            return std::nullopt;
+        }
+        return result;
+    }
+};
+
+template <>
+struct value_trans<std::string> {
+    static Value from(JSContext* ctx, const std::string& value) {
+        return Value(ctx, JS_NewStringLen(ctx, value.data(), value.size()));
+    }
+
+    static std::optional<std::string> to(JSContext* ctx, const Value& val) {
+        if(!JS_IsString(val.value())) {
+            return std::nullopt;
+        }
+        size_t len;
+        const char* str = JS_ToCStringLen(ctx, &len, val.value());
         if(str == nullptr) {
             return std::nullopt;
         }
-        std::string result{str};
-        JS_FreeCString(this->ctx, str);
+        std::string result{str, len};
+        JS_FreeCString(ctx, str);
         return result;
-    } else if constexpr(std::is_same_v<T, Object>) {
-        if(!JS_IsObject(this->val)) {
+    }
+};
+
+template <>
+struct value_trans<Object> {
+    static Value from(JSContext* ctx, const Object& obj) {
+        return Value(ctx, JS_DupValue(ctx, obj.value()));
+    }
+
+    static std::optional<Object> to(JSContext* ctx, const Value& val) {
+        if(!JS_IsObject(val.value())) {
             return std::nullopt;
         }
-        return Object(*this);
-    } else {
-        static_assert(false, "Unsupported type for Value::to()");
+        return Object(ctx, JS_DupValue(ctx, val.value()));
     }
-}
+};
+}  // namespace detail
 
 template <typename Signature>
 class Function {};
@@ -277,11 +289,17 @@ class Function {};
 template <typename R, typename... Args>
 class Function<R(Args...)> : public Object {
 public:
+    using AllowParamTypes = detail::type_list<bool, int64_t, std::string, Object>;
+
+    static_assert((AllowParamTypes::contains_v<Args> && ...),
+                  "Function parameter types must be one of the allowed types");
+    static_assert(AllowParamTypes::contains_v<R> || std::is_void_v<R>,
+                  "Function return type must be one of the allowed types");
+
+    using Sign = R(Args...);
+    using Params = detail::type_list<Args...>;
+
     using Object::Object;
-
-    Function(const Object& obj) : Object(obj) {}
-
-    Function(Object&& obj) : Object(std::move(obj)) {}
 
     Function() = default;
     Function(const Function&) = default;
@@ -289,6 +307,90 @@ public:
     Function& operator= (const Function&) = default;
     Function& operator= (Function&& other) = default;
     ~Function() = default;
+
+    static Function from(const Object& obj) {
+        return Function{obj.context(), JS_DupValue(obj.context(), obj.value())};
+    }
+
+    static Function from(Object&& obj) {
+        return Function{obj.context(), JS_DupValue(obj.context(), obj.value())};
+    }
+
+    static Function from(JSContext* ctx, std::function<Sign> func) {
+        // Maybe we should require @func to receive this_obj as first parameter,
+        // like std::function<R(const Object&, Args...)> ?
+
+        static JSClassID id = 0;
+        auto rt = JS_GetRuntime(ctx);
+        if(id == 0) {
+            JS_NewClassID(rt, &id);
+            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>>());
+
+            JSClassDef def{
+                class_name.c_str(),
+                [](JSRuntime* rt, JSValue obj) {
+                    auto* ptr = static_cast<std::function<Sign>*>(JS_GetOpaque(obj, id));
+                    delete ptr;
+                },
+                nullptr,
+                [](JSContext* ctx,
+                   JSValueConst func_obj,
+                   JSValueConst this_val,
+                   int argc,
+                   JSValueConst* argv,
+                   int flags) -> JSValue {
+                    if(argc != sizeof...(Args)) {
+                        return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
+                    }
+                    return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
+                        auto transformed_args = std::make_tuple(
+                            Value{ctx, JS_DupValue(ctx, argv[Is])}.to<Params::template get_t<Is>>()...);
+
+                        int32_t arg_error = -1;
+                        std::string_view type_name = "";
+                        ((std::get<Is>(transformed_args).has_value()
+                              ? -1
+                              : (type_name = meta::type_name<Params::template get_t<Is>>(),
+                                 arg_error = Is)),
+                         ...);
+
+                        if(arg_error != -1) {
+                            return JS_ThrowTypeError(
+                                ctx,
+                                std::format("Failed to convert argument[{}] to {}",
+                                            arg_error,
+                                            type_name)
+                                    .c_str());
+                        }
+                        if(auto* ptr =
+                               static_cast<std::function<Sign>*>(JS_GetOpaque(func_obj, id))) {
+                            if constexpr(std::is_void_v<R>) {
+                                (*ptr)(std::get<Is>(transformed_args).value()...);
+                                return JS_UNDEFINED;
+                            } else {
+                                return Value::from(
+                                           ctx,
+                                           (*ptr)(std::get<Is>(transformed_args).value()...))
+                                    .value();
+                            }
+                        } else {
+                            return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
+                        }
+                    }(std::make_index_sequence<sizeof...(Args)>{});
+                },
+                nullptr};
+            JS_NewClass(rt, id, &def);
+        }
+        Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
+        JS_SetOpaque(result.value(), new std::function<Sign>(std::move(func)));
+        return result;
+    }
+
+    std::function<Sign> to() {
+        return [self = *this](Args... args) -> R {
+            return self(args...);
+        };
+    }
 
     R invoke(const Object& this_obj, Args... args) {
         auto value = Value(this->context(),
@@ -304,13 +406,17 @@ public:
             throw exception(detail::dump(this->context()));
         }
 
-        auto result = value.to<R>();
-        if(!result.has_value()) {
-            JS_ThrowTypeError(this->context(), "Failed to convert function return value");
-            throw exception(detail::dump(this->context()));
-        }
+        if constexpr(std::is_void_v<R>) {
+            return;
+        } else {
+            auto result = value.to<R>();
+            if(!result.has_value()) {
+                JS_ThrowTypeError(this->context(), "Failed to convert function return value");
+                throw exception(detail::dump(this->context()));
+            }
 
-        return result.value();
+            return result.value();
+        }
     }
 
     R operator() (Args... args) {
@@ -328,17 +434,18 @@ public:
     CModule& operator= (CModule&&) = default;
     ~CModule() = default;
 
-#ifdef __cpp_lib_move_only_function
-    using Functor_move =
-        std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
-#else
-    using Functor_move = std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
-#endif
-
-    void add_functor(std::string_view name, Functor_move&& func) const;
+    template <typename Sign>
+    const CModule& add_functor(const std::string& name, const Function<Sign>& func) const {
+        const_cast<CModule*>(this)->exports.push_back(kv{
+            name,
+            Value{this->ctx, JS_DupValue(this->ctx, func.value())}
+        });
+        JS_AddModuleExport(this->ctx, m, name.c_str());
+        return *this;
+    }
 
 private:
-    CModule(JSContext* ctx, JSModuleDef* m, std::string_view name) : ctx(ctx), m(m), name(name) {}
+    CModule(JSContext* ctx, JSModuleDef* m, const std::string& name) : ctx(ctx), m(m), name(name) {}
 
     struct kv {
         std::string name;
@@ -418,6 +525,7 @@ private:
                 JS_FreeContext(ctx);
             }
         };
+
         std::unique_ptr<JSContext, JSContextDeleter> ctx = nullptr;
         std::unordered_map<std::string, CModule> modules{};
     };
@@ -493,6 +601,7 @@ private:
                 JS_FreeRuntime(rt);
             }
         };
+
         std::unique_ptr<JSRuntime, JSRuntimeDeleter> rt = nullptr;
         std::unordered_map<std::string, Context> ctxs{};
     };

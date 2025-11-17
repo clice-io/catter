@@ -5,92 +5,74 @@
 #include <string_view>
 
 #include "hook/interface.h"
-#include "qjs.h"
-#include "quickjs.h"
 
-void qjs_example();
+#include "qjs.h"
+
 
 int main(int argc, char* argv[]) {
-    qjs_example();
-    // if(argc < 2) {
-    //     std::println("Usage: {} <command>", argv[0]);
-    //     return 1;
-    // }
+    if(argc < 2) {
+        std::println("Usage: {} <command>", argv[0]);
+        return 1;
+    }
 
-    // std::span<const char* const> command{argv + 1, argv + argc};
+    std::span<const char* const> command{argv + 1, argv + argc};
 
-    // std::error_code ec;
+    std::error_code ec;
 
-    // auto ret = catter::hook::run(command, ec);
+    auto ret = catter::hook::run(command, ec);
 
-    // if(ec) {
-    //     std::println("Failed to attach hook: {}", ec.message());
-    //     return 1;
-    // }
+    if(ec) {
+        std::println("Failed to attach hook: {}", ec.message());
+        return 1;
+    }
 
-    // if(ret != 0) {
-    //     std::println("Command failed with exit code: {}", ret);
-    // }
+    if(ret != 0) {
+        std::println("Command failed with exit code: {}", ret);
+    }
 
-    // if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
-    //     for(const auto& line: captured_output.value()) {
-    //         std::println("{}", line);
-    //     }
-    // } else {
-    //     std::println("Failed to collect captured output: {}", captured_output.error());
-    //     return 1;
-    // }
+    if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
+        for(const auto& line: captured_output.value()) {
+            std::println("{}", line);
+        }
+    } else {
+        std::println("Failed to collect captured output: {}", captured_output.error());
+        return 1;
+    }
     return 0;
 }
 
 std::string_view example_script =
     R"(
     import * as catter from "catter";
-
     catter.add_callback((msg) => {
-        return `Callback received message: ${msg}`;
-    });
-    catter._callback((msg) => {
-        return `Second callback received message: ${msg}`;
+        catter.log("Callback invoked from JS: " + msg);
     });
 )";
 
-
-
-
-
 void qjs_example() {
-    auto rt = catter::qjs::Runtime::create();
+    using namespace catter;
+    auto rt = qjs::Runtime::create();
     auto ctx = rt.context();
 
-    // auto f = [&](catter::qjs::Value func) -> catter::qjs::Value{
+    auto mod = ctx->cmodule("catter");
 
-    //     return {};
-    // };
-
-    catter::qjs::Function<std::string(std::string)> stored_func{};
-    ctx->cmodule("catter")->add_functor(
-        "add_callback",
-        [&stored_func](JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
-            -> JSValue {
-            if(argc != 1) {
-                return JS_ThrowTypeError(ctx, "Expected one argument");
-            }
-            stored_func = {ctx, argv[0]};
-            return JS_UNDEFINED;
+    auto log = qjs::Function<bool(std::string)>::from(ctx->js_context(), [](std::string msg) {
+        std::println("[From JS]: {}", msg);
+        return true;
+    });
+    auto add_callback =
+        qjs::Function<void(qjs::Object)>::from(ctx->js_context(), [](qjs::Object cb) {
+            std::println("Invoking callback from C++...");
+            qjs::Function<void(std::string)>::from(cb)("Hello from C++!");
         });
+
+    mod->add_functor("log", log).add_functor("add_callback", add_callback);
 
     try {
         ctx->eval(example_script,
-                  nullptr,
-                  JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
-
-        if(stored_func) {
-            std::println("Invoking stored callback: {}",
-                         stored_func.invoke(ctx->global_this(), "Hello from C++"));
-        } else {
-            std::println("No callback was stored.");
-        }
+                           nullptr,
+                           JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+        
     } catch(const catter::qjs::exception& e) {
         std::println("JavaScript Exception: {}", e.what());
     }
