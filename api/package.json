@@ -27,7 +27,6 @@
   },
   "keywords": [],
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.14.0",
   "devDependencies": {
     "@microsoft/api-extractor": "^7.55.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
