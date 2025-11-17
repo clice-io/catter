@@ -317,77 +317,41 @@ public:
     }
 };
 
-class Context {
+class CModule {
 public:
-    class CModule {
-    public:
-        friend class Context;
-        CModule() = default;
-        CModule(const CModule&) = default;
-        CModule(CModule&&) = default;
-        CModule& operator= (const CModule&) = default;
-        CModule& operator= (CModule&&) = default;
+    friend class Context;
+    CModule() = default;
+    CModule(const CModule&) = default;
+    CModule(CModule&&) = default;
+    CModule& operator= (const CModule&) = default;
+    CModule& operator= (CModule&&) = default;
 
 #ifdef __cpp_lib_move_only_function
-        using Functor_move =
-            std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
+    using Functor_move =
+        std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
 #else
-        using Functor_move = std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
-
+    using Functor_move = std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
 #endif
 
-        void add_functor(std::string_view name, Functor_move&& func) {
-            static JSClassID id = 0;
+    void add_functor(std::string_view name, Functor_move&& func) const;
 
-            auto rt = JS_GetRuntime(this->ctx->get());
-            if(id == 0) {
-                JS_NewClassID(rt, &id);
-                auto class_name = std::format("qjs.{}", meta::type_name<Functor_move>());
+private:
+    CModule(JSContext* ctx, JSModuleDef* m, std::string_view name) : ctx(ctx), m(m), name(name) {}
 
-                JSClassDef def{
-                    class_name.c_str(),
-                    [](JSRuntime* rt, JSValue obj) {
-                        auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(obj, id));
-                        delete ptr;
-                    },
-                    nullptr,
-                    [](JSContext* ctx,
-                       JSValueConst func_obj,
-                       JSValueConst this_val,
-                       int argc,
-                       JSValueConst* argv,
-                       int flags) -> JSValue {
-                        auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(func_obj, id));
-                        if(!ptr) {
-                            return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
-                        }
-                        return (*ptr)(ctx, this_val, argc, argv);
-                    },
-                    nullptr};
-                JS_NewClass(rt, id, &def);
-            }
-
-            Value result{this->ctx->get(), JS_NewObjectClass(this->ctx->get(), id)};
-            JS_SetOpaque(result.value(), new Functor_move(std::move(func)));
-            this->exports.push_back(kv{std::string(name), std::move(result)});
-
-            JS_AddModuleExport(this->ctx->get(), m, name.data());
-            return;
-        }
-
-    private:
-        CModule(Context* ctx, JSModuleDef* m, std::string_view name) : ctx(ctx), m(m), name(name) {}
-
-        struct kv {
-            std::string name;
-            Value value;
-        };
-
-        Context* ctx = nullptr;
-        JSModuleDef* m = nullptr;
-        std::string name{};
-        std::vector<kv> exports{};
+    struct kv {
+        std::string name;
+        Value value;
     };
+
+    JSContext* ctx = nullptr;
+    JSModuleDef* m = nullptr;
+    std::string name{};
+    std::vector<kv> exports{};
+};
+
+class Context {
+public:
+    friend class Runtime;
 
     Context() = default;
     Context(const Context&) = delete;
@@ -396,56 +360,35 @@ public:
     Context& operator= (Context&&) = default;
     ~Context() = default;
 
-    static Context create(JSRuntime* rt) {
-        Context c{JS_NewContext(rt)};
-        return c;
-    }
+    // Get or create a CModule with the given name
+    // @name: The name of the module.
+    // Different from context, it is used for js module system.
+    // In js, you can import it via `import * as mod from 'name';`
+    const CModule* cmodule(const std::string& name) const;
 
-    CModule* new_cmodule(const std::string& name) {
-        auto m = JS_NewCModule(this->get(), name.data(), [](JSContext* js_ctx, JSModuleDef* m) {
-            auto* ctx = Context::get_opaque(js_ctx);
-
-            auto atom = Atom(js_ctx, JS_GetModuleName(js_ctx, m));
-
-            if(!ctx) {
-                return -1;
-            }
-
-            auto& mod = ctx->modules[atom.to_string()];
-            for(const auto& kv: mod.exports) {
-                JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.value());
-            }
-            return 0;
-        });
-        if(auto it = this->raw->modules.find(name); it != this->raw->modules.end()) {
-            return &it->second;
-        }
-        return &this->raw->modules.emplace(name, CModule(this, m, name)).first->second;
-    }
-
-    Value eval(const char* input, size_t input_len, const char* filename, int eval_flags) {
-        auto val = JS_Eval(this->get(), input, input_len, filename, eval_flags);
+    Value eval(const char* input, size_t input_len, const char* filename, int eval_flags) const {
+        auto val = JS_Eval(this->js_context(), input, input_len, filename, eval_flags);
 
         if(this->has_exception()) {
-            throw exception(detail::dump(this->get()));
+            throw exception(detail::dump(this->js_context()));
         }
 
-        return Value(this->get(), std::move(val));
+        return Value(this->js_context(), std::move(val));
     }
 
-    Value eval(std::string_view input, const char* filename, int eval_flags) {
+    Value eval(std::string_view input, const char* filename, int eval_flags) const {
         return this->eval(input.data(), input.size(), filename, eval_flags);
     }
 
-    Object global_this() {
-        return Object(this->get(), JS_GetGlobalObject(this->get()));
+    Object global_this() const {
+        return Object(this->js_context(), JS_GetGlobalObject(this->js_context()));
     }
 
-    bool has_exception() {
-        return JS_HasException(this->get());
+    bool has_exception() const {
+        return JS_HasException(this->js_context());
     }
 
-    JSContext* get() {
+    JSContext* js_context() const {
         return this->raw->ctx.get();
     }
 
@@ -479,14 +422,14 @@ private:
     };
 
     void set_opaque() {
-        JS_SetContextOpaque(this->get(), this->raw.get());
+        JS_SetContextOpaque(this->js_context(), this->raw.get());
     }
 
     static Raw* get_opaque(JSContext* ctx) {
         return static_cast<Raw*>(JS_GetContextOpaque(ctx));
     }
 
-    Context(JSContext* raw_ctx) : raw(std::make_unique<Raw>(raw_ctx)) {
+    Context(JSContext* js_ctx) : raw(std::make_unique<Raw>(js_ctx)) {
         this->set_opaque();
     }
 
@@ -507,28 +450,56 @@ public:
         return r;
     }
 
-    Context new_context() {
-        return Context::create(this->get());
+    // Get or create a context with the given name
+    // @name: The name of the context. Just for identification purposes.
+    const Context* context(const std::string& name = "default") const {
+        if(auto it = this->raw->ctxs.find(name); it != this->raw->ctxs.end()) {
+            return &it->second;
+        } else {
+            auto js_ctx = JS_NewContext(this->js_runtime());
+            if(js_ctx == nullptr) {
+                throw std::runtime_error("Failed to create new JS context");
+            }
+            return &this->raw->ctxs.emplace(name, Context(js_ctx)).first->second;
+        }
     }
 
-    JSRuntime* get() {
-        return this->rt.get();
+    JSRuntime* js_runtime() const {
+        return this->raw->rt.get();
     }
 
-    operator bool() {
-        return this->rt != nullptr;
+    operator bool() const {
+        return this->raw != nullptr;
     }
 
 private:
-    Runtime(JSRuntime* raw_rt) : rt(raw_rt) {}
+    class Raw {
+    public:
+        Raw() = default;
 
-    struct JSRuntimeDeleter {
-        void operator() (JSRuntime* rt) const {
-            JS_FreeRuntime(rt);
-        }
+        Raw(JSRuntime* rt) : rt(rt) {}
+
+        Raw(const Raw&) = delete;
+        Raw(Raw&&) = default;
+        Raw& operator= (const Raw&) = delete;
+        Raw& operator= (Raw&&) = default;
+
+        ~Raw() = default;
+
+    public:
+        struct JSRuntimeDeleter {
+            void operator() (JSRuntime* rt) const {
+                JS_FreeRuntime(rt);
+            }
+        };
+
+        std::unordered_map<std::string, Context> ctxs{};
+        std::unique_ptr<JSRuntime, JSRuntimeDeleter> rt = nullptr;
     };
 
-    std::unique_ptr<JSRuntime, JSRuntimeDeleter> rt = nullptr;
+    Runtime(JSRuntime* js_rt) : raw(std::make_unique<Raw>(js_rt)) {}
+
+    std::unique_ptr<Raw> raw = nullptr;
 };
 
 }  // namespace catter::qjs

@@ -56,11 +56,10 @@ std::string_view example_script =
 
 void qjs_example() {
     auto rt = catter::qjs::Runtime::create();
-    auto ctx = rt.new_context();
+    auto ctx = rt.context();
 
     catter::qjs::Function<std::string(std::string)> stored_func{};
-
-    ctx.new_cmodule("catter")->add_functor(
+    ctx->cmodule("catter")->add_functor(
         "add_callback",
         [&stored_func](JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
             -> JSValue {
@@ -72,13 +71,13 @@ void qjs_example() {
         });
 
     try {
-        ctx.eval(example_script,
-                 nullptr,
-                 JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+        ctx->eval(example_script,
+                  nullptr,
+                  JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
 
         if(stored_func) {
             std::println("Invoking stored callback: {}",
-                         stored_func.invoke(ctx.global_this(), "Hello from C++"));
+                         stored_func.invoke(ctx->global_this(), "Hello from C++"));
         } else {
             std::println("No callback was stored.");
         }
