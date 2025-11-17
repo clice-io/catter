@@ -9,8 +9,10 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <utility>
 
 #include <quickjs.h>
+
 namespace catter::qjs {
 namespace detail {
 std::string dump(JSContext* ctx);
@@ -282,29 +284,29 @@ public:
             auto rt = JS_GetRuntime(this->ctx->get());
             if(id == 0) {
                 JS_NewClassID(rt, &id);
-                JSClassDef def{name.data(),
-                            [](JSRuntime* rt, JSValue obj) {
-                                auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(obj, id));
-                                delete ptr;
-                            },
-                            nullptr,
-                            [](JSContext* ctx,
-                                JSValueConst func_obj,
-                                JSValueConst this_val,
-                                int argc,
-                                JSValueConst* argv,
-                                int flags) -> JSValue {
-                                auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(func_obj, id));
-                                if(!ptr) {
-                                    return JS_ThrowTypeError(ctx,
-                                                                "Internal error: C++ functor is null");
-                                }
-                                return (*ptr)(ctx, this_val, argc, argv);
-                            },
-                            nullptr};
+                JSClassDef def{
+                    name.data(),
+                    [](JSRuntime* rt, JSValue obj) {
+                        auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(obj, id));
+                        delete ptr;
+                    },
+                    nullptr,
+                    [](JSContext* ctx,
+                       JSValueConst func_obj,
+                       JSValueConst this_val,
+                       int argc,
+                       JSValueConst* argv,
+                       int flags) -> JSValue {
+                        auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(func_obj, id));
+                        if(!ptr) {
+                            return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
+                        }
+                        return (*ptr)(ctx, this_val, argc, argv);
+                    },
+                    nullptr};
                 JS_NewClass(rt, id, &def);
             }
-            
+
             Value result{this->ctx->get(), JS_NewObjectClass(this->ctx->get(), id)};
             JS_SetOpaque(result.value(), new Functor_move(std::move(func)));
             this->exports.push_back(kv{std::string(name), std::move(result)});
