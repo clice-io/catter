@@ -11,34 +11,35 @@
 void qjs_example();
 
 int main(int argc, char* argv[]) {
-    if(argc < 2) {
-        std::println("Usage: {} <command>", argv[0]);
-        return 1;
-    }
+    qjs_example();
+    // if(argc < 2) {
+    //     std::println("Usage: {} <command>", argv[0]);
+    //     return 1;
+    // }
 
-    std::span<const char* const> command{argv + 1, argv + argc};
+    // std::span<const char* const> command{argv + 1, argv + argc};
 
-    std::error_code ec;
+    // std::error_code ec;
 
-    auto ret = catter::hook::run(command, ec);
+    // auto ret = catter::hook::run(command, ec);
 
-    if(ec) {
-        std::println("Failed to attach hook: {}", ec.message());
-        return 1;
-    }
+    // if(ec) {
+    //     std::println("Failed to attach hook: {}", ec.message());
+    //     return 1;
+    // }
 
-    if(ret != 0) {
-        std::println("Command failed with exit code: {}", ret);
-    }
+    // if(ret != 0) {
+    //     std::println("Command failed with exit code: {}", ret);
+    // }
 
-    if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
-        for(const auto& line: captured_output.value()) {
-            std::println("{}", line);
-        }
-    } else {
-        std::println("Failed to collect captured output: {}", captured_output.error());
-        return 1;
-    }
+    // if(auto captured_output = catter::hook::collect_all(); captured_output.has_value()) {
+    //     for(const auto& line: captured_output.value()) {
+    //         std::println("{}", line);
+    //     }
+    // } else {
+    //     std::println("Failed to collect captured output: {}", captured_output.error());
+    //     return 1;
+    // }
     return 0;
 }
 
@@ -54,9 +55,18 @@ std::string_view example_script =
     });
 )";
 
+
+
+
+
 void qjs_example() {
     auto rt = catter::qjs::Runtime::create();
     auto ctx = rt.context();
+
+    // auto f = [&](catter::qjs::Value func) -> catter::qjs::Value{
+
+    //     return {};
+    // };
 
     catter::qjs::Function<std::string(std::string)> stored_func{};
     ctx->cmodule("catter")->add_functor(

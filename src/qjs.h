@@ -3,6 +3,7 @@
 #include <exception>
 #include <functional>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -325,6 +326,7 @@ public:
     CModule(CModule&&) = default;
     CModule& operator= (const CModule&) = default;
     CModule& operator= (CModule&&) = default;
+    ~CModule() = default;
 
 #ifdef __cpp_lib_move_only_function
     using Functor_move =
@@ -416,9 +418,8 @@ private:
                 JS_FreeContext(ctx);
             }
         };
-
-        std::unordered_map<std::string, CModule> modules{};
         std::unique_ptr<JSContext, JSContextDeleter> ctx = nullptr;
+        std::unordered_map<std::string, CModule> modules{};
     };
 
     void set_opaque() {
@@ -492,9 +493,8 @@ private:
                 JS_FreeRuntime(rt);
             }
         };
-
-        std::unordered_map<std::string, Context> ctxs{};
         std::unique_ptr<JSRuntime, JSRuntimeDeleter> rt = nullptr;
+        std::unordered_map<std::string, Context> ctxs{};
     };
 
     Runtime(JSRuntime* js_rt) : raw(std::make_unique<Raw>(js_rt)) {}
