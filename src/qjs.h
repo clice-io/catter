@@ -213,7 +213,7 @@ std::optional<T> Value::to() {
         }
         return Object(*this);
     } else {
-        static_assert(false, "Unsupported type for Value::as()");
+        static_assert(false, "Unsupported type for Value::to()");
     }
 }
 
@@ -276,7 +276,7 @@ public:
         CModule& operator= (CModule&&) = default;
 
         using Functor_move =
-            std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
+            std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
 
         void add_functor(std::string_view name, Functor_move&& func) {
             static JSClassID id = 0;
