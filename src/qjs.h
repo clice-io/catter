@@ -20,7 +20,6 @@ namespace catter::qjs {
 namespace detail {
 std::string dump(JSContext* ctx);
 
-
 template <typename Sign>
 class function_ref {
     static_assert(false, "Sign must be a function type");
@@ -30,7 +29,7 @@ template <typename R, typename... Args>
 class function_ref<R(Args...)> {
 public:
     using Sign = R(Args...);
-    
+
     using Erased = union {
         void* ctx;
         Sign* fn;
@@ -39,30 +38,31 @@ public:
     constexpr function_ref(const function_ref&) = default;
     constexpr function_ref(function_ref&&) = default;
 
-    constexpr function_ref& operator=(const function_ref&) = default;
-    constexpr function_ref& operator=(function_ref&&) = default;
+    constexpr function_ref& operator= (const function_ref&) = default;
+    constexpr function_ref& operator= (function_ref&&) = default;
 
-
-    template<typename invocable_t>
-        requires std::is_invocable_r_v<R, invocable_t, Args...> && (!std::is_convertible_v<invocable_t, Sign*>)
-                && (!std::is_same_v<function_ref<R(Args...)>, invocable_t>)
-    constexpr function_ref(invocable_t& inv)
-      : proxy{[](Erased c, Args... args) -> R {
+    template <typename invocable_t>
+        requires std::is_invocable_r_v<R, invocable_t, Args...> &&
+                     (!std::is_convertible_v<invocable_t, Sign*>) &&
+                     (!std::is_same_v<function_ref<R(Args...)>, invocable_t>)
+    constexpr function_ref(invocable_t& inv) :
+        proxy{[](Erased c, Args... args) -> R {
             return std::invoke(*static_cast<invocable_t*>(c.ctx), static_cast<Args>(args)...);
         }},
-        ctx{.ctx = static_cast<void*>(&inv)}
-    {}
+        ctx{.ctx = static_cast<void*>(&inv)} {}
 
-    template<typename invocable_t>
-        requires std::is_invocable_r_v<R, invocable_t, Args...> && std::is_convertible_v<invocable_t, Sign*>
-    constexpr function_ref(const invocable_t& inv)
-      : proxy{[](Erased c, Args... args) -> R {
+    template <typename invocable_t>
+        requires std::is_invocable_r_v<R, invocable_t, Args...> &&
+                     std::is_convertible_v<invocable_t, Sign*>
+    constexpr function_ref(const invocable_t& inv) :
+        proxy{[](Erased c, Args... args) -> R {
             return std::invoke(c.fn, static_cast<Args>(args)...);
         }},
-        ctx{.fn = inv}
-    {}
+        ctx{.fn = inv} {}
 
-    constexpr R operator()(Args... args) const { return proxy(ctx, static_cast<Args>(args)...); }
+    constexpr R operator() (Args... args) const {
+        return proxy(ctx, static_cast<Args>(args)...);
+    }
 
 private:
     R (*proxy)(Erased, Args...);
@@ -328,14 +328,12 @@ public:
         CModule& operator= (const CModule&) = default;
         CModule& operator= (CModule&&) = default;
 
-
 #ifdef __cpp_lib_move_only_function
         using Functor_move =
-            std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;        
+            std::move_only_function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
 #else
-        using Functor_move =
-            std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
-        
+        using Functor_move = std::function<JSValue(JSContext*, JSValueConst, int, JSValueConst*)>;
+
 #endif
 
         void add_functor(std::string_view name, Functor_move&& func) {
@@ -344,7 +342,7 @@ public:
             auto rt = JS_GetRuntime(this->ctx->get());
             if(id == 0) {
                 JS_NewClassID(rt, &id);
-                auto class_name = std::format("{}.{}", this->name, meta::type_name<Functor_move>());
+                auto class_name = std::format("qjs.{}", meta::type_name<Functor_move>());
 
                 JSClassDef def{
                     class_name.c_str(),

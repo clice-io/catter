@@ -1,6 +1,5 @@
 #include "qjs.h"
 
-
 namespace catter::qjs {
 namespace detail {
 std::string dump(JSContext* ctx) {
