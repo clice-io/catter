@@ -10,8 +10,11 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <format>
 
 #include <quickjs.h>
+
+#include "type_name.h"
 
 namespace catter::qjs {
 namespace detail {
@@ -341,8 +344,10 @@ public:
             auto rt = JS_GetRuntime(this->ctx->get());
             if(id == 0) {
                 JS_NewClassID(rt, &id);
+                auto class_name = std::format("{}.{}", this->name, meta::type_name<Functor_move>());
+
                 JSClassDef def{
-                    name.data(),
+                    class_name.c_str(),
                     [](JSRuntime* rt, JSValue obj) {
                         auto* ptr = static_cast<Functor_move*>(JS_GetOpaque(obj, id));
                         delete ptr;

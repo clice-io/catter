@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <detours.h>
 
-#include "hook/windows/type_name.h"
+#include "type_name.h"
 #include "hook/windows/unique_file.h"
 #include "hook/windows/env.h"
 
