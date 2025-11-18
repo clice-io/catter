@@ -6,9 +6,11 @@ using namespace catter;
 std::string_view example_script =
     R"(
     import * as catter from "catter";
+
     catter.add_callback((msg) => {
         catter.log("Callback invoked from JS: " + msg);
     });
+
 )";
 
 struct Handler {

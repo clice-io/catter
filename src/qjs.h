@@ -501,15 +501,15 @@ class CModule {
 public:
     friend class Context;
     CModule() = default;
-    CModule(const CModule&) = default;
+    CModule(const CModule&) = delete;
     CModule(CModule&&) = default;
-    CModule& operator= (const CModule&) = default;
+    CModule& operator= (const CModule&) = delete;
     CModule& operator= (CModule&&) = default;
     ~CModule() = default;
 
     template <typename Sign>
     const CModule& export_functor(const std::string& name, const Function<Sign>& func) const {
-        const_cast<CModule*>(this)->exports.push_back(kv{
+        this->exports_list().push_back(kv{
             name,
             Value{this->ctx, JS_DupValue(this->ctx, func.value())}
         });
@@ -525,10 +525,14 @@ private:
         Value value;
     };
 
+    std::vector<kv>& exports_list() const {
+        return *this->exports;
+    }
+
     JSContext* ctx = nullptr;
     JSModuleDef* m = nullptr;
     std::string name{};
-    std::vector<kv> exports{};
+    std::unique_ptr<std::vector<kv>> exports{std::make_unique<std::vector<kv>>()};
 };
 
 class Context {
@@ -564,7 +568,7 @@ public:
 
                     auto& mod = ctx->modules[atom.to_string()];
 
-                    for(const auto& kv: mod.exports) {
+                    for(const auto& kv: mod.exports_list()) {
                         JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.value());
                     }
                     return 0;
