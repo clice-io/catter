@@ -1,6 +1,6 @@
 
 #include "qjs.h"
-
+#include <print>
 using namespace catter;
 
 std::string_view example_script =

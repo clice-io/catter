@@ -32,7 +32,7 @@ add_requires("quickjs-ng")
 target("catter")
     set_kind("binary")
     add_includedirs("src")
-    add_files("src/main.cpp", "src/qjs.cpp")
+    add_files("src/main.cpp")
     if is_plat("windows") then
         add_files("src/hook/windows/impl.cpp")
     elseif is_plat("linux", "macosx") then
