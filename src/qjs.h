@@ -43,10 +43,8 @@ struct type_list {
     constexpr static size_t size = sizeof...(Args);
 };
 
-template<typename Ts, size_t I>
+template <typename Ts, size_t I>
 using type_get = typename Ts::template get<I>::type;
-
-
 
 template <typename U>
 struct value_trans;
@@ -366,12 +364,11 @@ public:
                          ...);
 
                         if(arg_error != -1) {
-                            return JS_ThrowTypeError(
-                                ctx,
-                                std::format("Failed to convert argument[{}] to {}",
-                                            arg_error,
-                                            type_name)
-                                    .c_str());
+                            auto msg = std::format("Failed to convert argument[{}] to {}",
+                                                   arg_error,
+                                                   type_name);
+
+                            return JS_ThrowTypeError(ctx, msg.c_str());
                         }
                         if(auto* ptr =
                                static_cast<std::function<Sign>*>(JS_GetOpaque(func_obj, id))) {
