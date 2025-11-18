@@ -96,7 +96,7 @@ public:
     Value(const Value& other) : ctx(other.ctx), val(JS_DupValue(other.ctx, other.val)) {}
 
     Value(Value&& other) :
-        ctx(std::exchange(other.ctx, nullptr)), val(std::exchange(other.val, JS_UNDEFINED)) {}
+        ctx(std::exchange(other.ctx, nullptr)), val(std::exchange(other.val, JS_UNINITIALIZED)) {}
 
     Value& operator= (const Value& other) {
         if(this != &other) {
@@ -115,7 +115,7 @@ public:
                 JS_FreeValue(this->ctx, this->val);
             }
             ctx = std::exchange(other.ctx, nullptr);
-            val = std::exchange(other.val, JS_UNDEFINED);
+            val = std::exchange(other.val, JS_UNINITIALIZED);
         }
         return *this;
     }
@@ -158,7 +158,7 @@ public:
 
     JSValue release() {
         JSValue temp = this->val;
-        this->val = JS_UNDEFINED;
+        this->val = JS_UNINITIALIZED;
         this->ctx = nullptr;
         return temp;
     }
@@ -169,7 +169,7 @@ public:
 
 private:
     JSContext* ctx = nullptr;
-    JSValue val = JS_UNDEFINED;
+    JSValue val = JS_UNINITIALIZED;
 };
 
 class Atom {
