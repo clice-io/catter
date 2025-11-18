@@ -129,6 +129,13 @@ public:
         return this->val;
     }
 
+    JSValue release() {
+        JSValue temp = this->val;
+        this->val = JS_UNDEFINED;
+        this->ctx = nullptr;
+        return temp;
+    }
+
     JSContext* context() const {
         return this->ctx;
     }
@@ -345,13 +352,13 @@ public:
                     return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
                         auto transformed_args =
                             std::make_tuple(Value{ctx, JS_DupValue(ctx, argv[Is])}
-                                                .to<Params::template get_t<Is>>()...);
+                                                .to<typename Params::template get_t<Is>>()...);
 
                         int32_t arg_error = -1;
                         std::string_view type_name = "";
                         ((std::get<Is>(transformed_args).has_value()
                               ? -1
-                              : (type_name = meta::type_name<Params::template get_t<Is>>(),
+                              : (type_name = meta::type_name<typename Params::template get_t<Is>>(),
                                  arg_error = Is)),
                          ...);
 
@@ -372,7 +379,7 @@ public:
                                 return Value::from(
                                            ctx,
                                            (*ptr)(std::get<Is>(transformed_args).value()...))
-                                    .value();
+                                    .release();
                             }
                         } else {
                             return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
