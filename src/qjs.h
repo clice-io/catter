@@ -513,7 +513,10 @@ public:
             name,
             Value{this->ctx, JS_DupValue(this->ctx, func.value())}
         });
-        JS_AddModuleExport(this->ctx, m, name.c_str());
+        if(JS_AddModuleExport(this->ctx, m, name.c_str()) < 0) {
+            throw std::runtime_error(
+                std::format("Failed to add export '{}' to module '{}'", name, this->name));
+        }
         return *this;
     }
 
@@ -662,8 +665,11 @@ public:
     ~Runtime() = default;
 
     static Runtime create() {
-        Runtime r{JS_NewRuntime()};
-        return r;
+        auto js_rt = JS_NewRuntime();
+        if(!js_rt) {
+            throw std::runtime_error("Failed to create new JS runtime");
+        }
+        return Runtime(js_rt);
     }
 
     // Get or create a context with the given name
@@ -673,7 +679,7 @@ public:
             return it->second;
         } else {
             auto js_ctx = JS_NewContext(this->js_runtime());
-            if(js_ctx == nullptr) {
+            if(!js_ctx) {
                 throw std::runtime_error("Failed to create new JS context");
             }
             return this->raw->ctxs.emplace(name, Context(js_ctx)).first->second;
