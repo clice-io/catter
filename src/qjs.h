@@ -24,27 +24,29 @@
 namespace catter::qjs {
 namespace detail {
 
-template <typename... args_t>
+template <typename... Args>
 struct type_list {
 
     template <size_t I>
     struct get {
-        using type = typename std::tuple_element<I, std::tuple<args_t...>>::type;
+        using type = typename std::tuple_element<I, std::tuple<Args...>>::type;
     };
-
-    template <size_t I>
-    using get_t = typename get<I>::type;
 
     template <typename T>
     struct contains {
-        constexpr static bool value = (std::is_same_v<T, args_t> || ...);
+        constexpr static bool value = (std::is_same_v<T, Args> || ...);
     };
 
     template <typename T>
     constexpr static bool contains_v = contains<T>::value;
 
-    constexpr static size_t size = sizeof...(args_t);
+    constexpr static size_t size = sizeof...(Args);
 };
+
+template<typename Ts, size_t I>
+using type_get = typename Ts::template get<I>::type;
+
+
 
 template <typename U>
 struct value_trans;
@@ -65,6 +67,7 @@ private:
     std::string details;
 };
 
+// Maybe we can prohibit copy and only allow move?
 class Value {
 public:
     Value() = default;
@@ -352,13 +355,13 @@ public:
                     return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
                         auto transformed_args =
                             std::make_tuple(Value{ctx, JS_DupValue(ctx, argv[Is])}
-                                                .to<typename Params::template get_t<Is>>()...);
+                                                .to<detail::type_get<Params, Is>>()...);
 
                         int32_t arg_error = -1;
                         std::string_view type_name = "";
                         ((std::get<Is>(transformed_args).has_value()
                               ? -1
-                              : (type_name = meta::type_name<typename Params::template get_t<Is>>(),
+                              : (type_name = meta::type_name<detail::type_get<Params, Is>>(),
                                  arg_error = Is)),
                          ...);
 
