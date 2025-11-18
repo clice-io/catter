@@ -508,7 +508,7 @@ public:
     ~CModule() = default;
 
     template <typename Sign>
-    const CModule& add_functor(const std::string& name, const Function<Sign>& func) const {
+    const CModule& export_functor(const std::string& name, const Function<Sign>& func) const {
         const_cast<CModule*>(this)->exports.push_back(kv{
             name,
             Value{this->ctx, JS_DupValue(this->ctx, func.value())}

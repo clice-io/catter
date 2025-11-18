@@ -35,8 +35,8 @@ void qjs_example() {
 
     Handler handler{};
     ctx.cmodule("catter")
-        .add_functor("log", log)
-        .add_functor("add_callback", handler.callback_setter(ctx));
+        .export_functor("log", log)
+        .export_functor("add_callback", handler.callback_setter(ctx));
 
     try {
         ctx.eval(example_script,
