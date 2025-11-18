@@ -6,6 +6,7 @@
 #include <exception>
 #include <functional>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -88,17 +89,17 @@ private:
     std::string details;
 };
 
-// Maybe we can prohibit copy and only allow move?
 class Value {
 public:
+    // Maybe we can prohibit copy and only allow move?
     Value() = default;
 
-    Value(const Value& other) : ctx(other.ctx), val(JS_DupValue(other.ctx, other.val)) {}
+    Value(const Value& other) noexcept : ctx(other.ctx), val(JS_DupValue(other.ctx, other.val)) {}
 
-    Value(Value&& other) :
+    Value(Value&& other) noexcept :
         ctx(std::exchange(other.ctx, nullptr)), val(std::exchange(other.val, JS_UNINITIALIZED)) {}
 
-    Value& operator= (const Value& other) {
+    Value& operator= (const Value& other) noexcept {
         if(this != &other) {
             if(this->ctx) {
                 JS_FreeValue(this->ctx, this->val);
@@ -109,7 +110,7 @@ public:
         return *this;
     }
 
-    Value& operator= (Value&& other) {
+    Value& operator= (Value&& other) noexcept {
         if(this != &other) {
             if(this->ctx) {
                 JS_FreeValue(this->ctx, this->val);
@@ -120,50 +121,50 @@ public:
         return *this;
     }
 
-    ~Value() {
+    ~Value() noexcept {
         if(this->ctx) {
             JS_FreeValue(ctx, val);
         }
     }
 
-    Value(JSContext* ctx, const JSValue& val) : ctx(ctx), val(JS_DupValue(ctx, val)) {}
+    Value(JSContext* ctx, const JSValue& val) noexcept : ctx(ctx), val(JS_DupValue(ctx, val)) {}
 
-    Value(JSContext* ctx, JSValue&& val) : ctx(ctx), val(std::move(val)) {}
+    Value(JSContext* ctx, JSValue&& val) noexcept : ctx(ctx), val(std::move(val)) {}
 
     template <typename T>
-    static Value from(JSContext* ctx, T&& value) {
+    static Value from(JSContext* ctx, T&& value) noexcept {
         return detail::value_trans<std::remove_cvref_t<T>>::from(ctx, std::forward<T>(value));
     }
 
     template <typename T>
-    std::optional<T> to() {
+    std::optional<T> to() noexcept {
         return detail::value_trans<T>::to(this->ctx, *this);
     }
 
-    bool is_exception() const {
+    bool is_exception() const noexcept {
         return JS_IsException(this->val);
     }
 
-    bool is_valid() const {
+    bool is_valid() const noexcept {
         return this->ctx != nullptr;
     }
 
-    operator bool() const {
+    operator bool() const noexcept {
         return this->is_valid();
     }
 
-    JSValue value() const {
+    const JSValue& value() const noexcept {
         return this->val;
     }
 
-    JSValue release() {
+    JSValue release() noexcept {
         JSValue temp = this->val;
         this->val = JS_UNINITIALIZED;
         this->ctx = nullptr;
         return temp;
     }
 
-    JSContext* context() const {
+    JSContext* context() const noexcept {
         return this->ctx;
     }
 
@@ -176,14 +177,16 @@ class Atom {
 public:
     Atom() = default;
 
-    Atom(JSContext* ctx, JSAtom atom) : ctx(ctx), atom(atom) {}
+    Atom(JSContext* ctx, const JSAtom& atom) noexcept : ctx(ctx), atom(JS_DupAtom(ctx, atom)) {}
 
-    Atom(const Atom& other) : ctx(other.ctx), atom(JS_DupAtom(other.ctx, other.atom)) {}
+    Atom(JSContext* ctx, JSAtom&& atom) noexcept : ctx(ctx), atom(std::move(atom)) {}
 
-    Atom(Atom&& other) :
+    Atom(const Atom& other) noexcept : ctx(other.ctx), atom(JS_DupAtom(other.ctx, other.atom)) {}
+
+    Atom(Atom&& other) noexcept :
         ctx(std::exchange(other.ctx, nullptr)), atom(std::exchange(other.atom, JS_ATOM_NULL)) {}
 
-    Atom& operator= (const Atom& other) {
+    Atom& operator= (const Atom& other) noexcept {
         if(this != &other) {
             if(this->ctx) {
                 JS_FreeAtom(this->ctx, this->atom);
@@ -194,7 +197,7 @@ public:
         return *this;
     }
 
-    Atom& operator= (Atom&& other) {
+    Atom& operator= (Atom&& other) noexcept {
         if(this != &other) {
             if(this->ctx) {
                 JS_FreeAtom(this->ctx, this->atom);
@@ -205,17 +208,17 @@ public:
         return *this;
     }
 
-    ~Atom() {
+    ~Atom() noexcept {
         if(this->ctx) {
             JS_FreeAtom(this->ctx, this->atom);
         }
     }
 
-    JSAtom value() const {
+    JSAtom value() const noexcept {
         return this->atom;
     }
 
-    std::string to_string() const {
+    std::string to_string() const noexcept {
         const char* str = JS_AtomToCString(this->ctx, this->atom);
         if(str == nullptr) {
             return {};
@@ -230,9 +233,15 @@ private:
     JSAtom atom = JS_ATOM_NULL;
 };
 
-class Object : public Value {
+class Object : private Value {
 public:
     using Value::Value;
+    using Value::is_exception;
+    using Value::is_valid;
+    using Value::value;
+    using Value::context;
+    using Value::operator bool;
+    using Value::release;
 
     Object() = default;
     Object(const Object&) = default;
@@ -241,9 +250,9 @@ public:
     Object& operator= (Object&& other) = default;
     ~Object() = default;
 
-    Value get_property(const std::string& prop_name) {
-        auto ret = Value(this->context(),
-                         JS_GetPropertyStr(this->context(), this->value(), prop_name.c_str()));
+    Value get_property(const std::string& prop_name) const {
+        auto ret = Value{this->context(),
+                         JS_GetPropertyStr(this->context(), this->value(), prop_name.c_str())};
         if(ret.is_exception()) {
             throw exception(detail::dump(this->context()));
         }
@@ -253,15 +262,15 @@ public:
     template <typename T>
     class Register {
     public:
-        static auto find(JSRuntime* rt) {
+        static auto find(JSRuntime* rt) noexcept {
             return class_ids.find(rt);
         }
 
-        static auto end() {
+        static auto end() noexcept {
             return class_ids.end();
         }
 
-        static JSClassID get(JSRuntime* rt) {
+        static JSClassID get(JSRuntime* rt) noexcept {
             if(auto it = class_ids.find(rt); it != class_ids.end()) {
                 return it->second;
             } else {
@@ -269,7 +278,7 @@ public:
             }
         }
 
-        static JSClassID create(JSRuntime* rt, JSClassDef* def) {
+        static JSClassID create(JSRuntime* rt, JSClassDef* def) noexcept {
             JSClassID id = 0;
             JS_NewClassID(rt, &id);
             JS_NewClass(rt, id, def);
@@ -285,11 +294,11 @@ public:
 namespace detail {
 template <>
 struct value_trans<bool> {
-    static Value from(JSContext* ctx, bool value) {
-        return Value(ctx, JS_NewBool(ctx, value));
+    static Value from(JSContext* ctx, bool value) noexcept {
+        return Value{ctx, JS_NewBool(ctx, value)};
     }
 
-    static std::optional<bool> to(JSContext* ctx, const Value& val) {
+    static std::optional<bool> to(JSContext* ctx, const Value& val) noexcept {
         if(!JS_IsBool(val.value())) {
             return std::nullopt;
         }
@@ -299,11 +308,11 @@ struct value_trans<bool> {
 
 template <>
 struct value_trans<int64_t> {
-    static Value from(JSContext* ctx, int64_t value) {
-        return Value(ctx, JS_NewInt64(ctx, value));
+    static Value from(JSContext* ctx, int64_t value) noexcept {
+        return Value{ctx, JS_NewInt64(ctx, value)};
     }
 
-    static std::optional<int64_t> to(JSContext* ctx, const Value& val) {
+    static std::optional<int64_t> to(JSContext* ctx, const Value& val) noexcept {
         if(!JS_IsNumber(val.value())) {
             return std::nullopt;
         }
@@ -317,11 +326,11 @@ struct value_trans<int64_t> {
 
 template <>
 struct value_trans<std::string> {
-    static Value from(JSContext* ctx, const std::string& value) {
-        return Value(ctx, JS_NewStringLen(ctx, value.data(), value.size()));
+    static Value from(JSContext* ctx, const std::string& value) noexcept {
+        return Value{ctx, JS_NewStringLen(ctx, value.data(), value.size())};
     }
 
-    static std::optional<std::string> to(JSContext* ctx, const Value& val) {
+    static std::optional<std::string> to(JSContext* ctx, const Value& val) noexcept {
         if(!JS_IsString(val.value())) {
             return std::nullopt;
         }
@@ -336,23 +345,12 @@ struct value_trans<std::string> {
     }
 };
 
-template <>
-struct value_trans<Object> {
-    static Value from(JSContext* ctx, const Object& obj) {
-        return Value(ctx, JS_DupValue(ctx, obj.value()));
-    }
-
-    static std::optional<Object> to(JSContext* ctx, const Value& val) {
-        if(!JS_IsObject(val.value())) {
-            return std::nullopt;
-        }
-        return Object(ctx, JS_DupValue(ctx, val.value()));
-    }
-};
 }  // namespace detail
 
 template <typename Signature>
-class Function {};
+class Function {
+    static_assert("Function must be instantiated with a function type");
+};
 
 template <typename R, typename... Args>
 class Function<R(Args...)> : public Object {
@@ -376,15 +374,15 @@ public:
     Function& operator= (Function&& other) = default;
     ~Function() = default;
 
-    static Function from(const Object& obj) {
-        return Function{obj.context(), JS_DupValue(obj.context(), obj.value())};
+    static Function from(const Object& obj) noexcept {
+        return Function{obj.context(), obj.value()};
     }
 
-    static Function from(Object&& obj) {
-        return Function{obj.context(), JS_DupValue(obj.context(), obj.value())};
+    static Function from(Object&& obj) noexcept {
+        return Function{obj.context(), obj.release()};
     }
 
-    static Function from(JSContext* ctx, std::function<Sign> func) {
+    static Function from(JSContext* ctx, std::function<Sign> func) noexcept {
         // Maybe we should require @func to receive this_obj as first parameter,
         // like std::function<R(const Object&, Args...)> ?
 
@@ -415,38 +413,44 @@ public:
                         return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
                     }
                     return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
-                        auto transformed_args =
-                            std::make_tuple(Value{ctx, JS_DupValue(ctx, argv[Is])}
-                                                .to<detail::type_get<Params, Is>>()...);
+                        auto transformer = [&]<size_t N>(std::in_place_index_t<N>) {
+                            using T = detail::type_get<Params, N>;
+                            if constexpr(std::is_same_v<T, Object>) {
+                                if(JS_IsObject(argv[N])) {
+                                    return Object{ctx, argv[N]};
+                                }
+                            } else {
+                                if(auto opt = qjs::Value{ctx, argv[N]}.to<T>(); opt.has_value()) {
+                                    return opt.value();
+                                }
+                            }
+                            throw std::runtime_error(
+                                std::format("Failed to convert argument[{}] to {}",
+                                            N,
+                                            meta::type_name<T>()));
+                        };
 
-                        int32_t arg_error = -1;
-                        std::string_view type_name = "";
-                        ((std::get<Is>(transformed_args).has_value()
-                              ? -1
-                              : (type_name = meta::type_name<detail::type_get<Params, Is>>(),
-                                 arg_error = Is)),
-                         ...);
-
-                        if(arg_error != -1) {
-                            auto msg = std::format("Failed to convert argument[{}] to {}",
-                                                   arg_error,
-                                                   type_name);
-
-                            return JS_ThrowTypeError(ctx, msg.c_str());
-                        }
                         if(auto* ptr = static_cast<std::function<Sign>*>(
                                JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))))) {
-                            if constexpr(std::is_void_v<R>) {
-                                (*ptr)(std::get<Is>(transformed_args).value()...);
-                                return JS_UNDEFINED;
-                            } else {
-                                return Value::from(
-                                           ctx,
-                                           (*ptr)(std::get<Is>(transformed_args).value()...))
-                                    .release();
+                            try {
+                                if constexpr(std::is_void_v<R>) {
+                                    (*ptr)(transformer(std::in_place_index<Is>)...);
+                                    return JS_UNDEFINED;
+                                } else if constexpr(std::is_same_v<R, Object>) {
+                                    auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
+                                    return res.release();
+                                } else {
+                                    auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
+                                    return qjs::Value::from(ctx, res).release();
+                                }
+                            } catch(const std::runtime_error& e) {
+                                return JS_ThrowTypeError(ctx,
+                                                         "Exception in C++ function: %s",
+                                                         e.what());
                             }
                         } else {
-                            return JS_ThrowTypeError(ctx, "Internal error: C++ functor is null");
+                            return JS_ThrowInternalError(ctx,
+                                                         "Internal error: C++ functor is null");
                         }
                     }(std::make_index_sequence<sizeof...(Args)>{});
                 },
@@ -459,21 +463,29 @@ public:
         return result;
     }
 
-    std::function<Sign> to() {
+    std::function<Sign> to() noexcept {
         return [self = *this](Args... args) -> R {
             return self(args...);
         };
     }
 
-    R invoke(const Object& this_obj, Args... args) {
-        auto value = Value(this->context(),
-                           JS_Call(this->context(),
-                                   this->value(),
-                                   this_obj.value(),
-                                   sizeof...(Args),
-                                   std::array<JSValue, sizeof...(Args)>{
-                                       Value::from(this->context(), args).value()...}
-                                       .data()));
+    R invoke(const Object& this_obj, Args... args) const {
+
+#ifdef _MSC_VER
+        // MSVC have some problem, so we need to use a lambda here
+        auto argv = std::array<JSValue, sizeof...(Args)>{[&] {
+            return qjs::Value::from(this->context(), args).release();
+        }()...};
+#else
+        auto argv = std::array<JSValue, sizeof...(Args)>{
+            qjs::Value::from(this->context(), args).release()...};
+#endif
+        auto value = qjs::Value{this->context(),
+                                JS_Call(this->context(),
+                                        this->value(),
+                                        this_obj.value(),
+                                        sizeof...(Args),
+                                        argv.data())};
 
         if(value.is_exception()) {
             throw exception(detail::dump(this->context()));
@@ -492,7 +504,7 @@ public:
         }
     }
 
-    R operator() (Args... args) {
+    R operator() (Args... args) const {
         return this->invoke(Object{this->context(), JS_GetGlobalObject(this->context())}, args...);
     }
 };
@@ -511,7 +523,7 @@ public:
     const CModule& export_functor(const std::string& name, const Function<Sign>& func) const {
         this->exports_list().push_back(kv{
             name,
-            Value{this->ctx, JS_DupValue(this->ctx, func.value())}
+            Value{this->ctx, func.value()}
         });
         if(JS_AddModuleExport(this->ctx, m, name.c_str()) < 0) {
             throw std::runtime_error(
@@ -521,14 +533,15 @@ public:
     }
 
 private:
-    CModule(JSContext* ctx, JSModuleDef* m, const std::string& name) : ctx(ctx), m(m), name(name) {}
+    CModule(JSContext* ctx, JSModuleDef* m, const std::string& name) noexcept :
+        ctx(ctx), m(m), name(name) {}
 
     struct kv {
         std::string name;
         Value value;
     };
 
-    std::vector<kv>& exports_list() const {
+    std::vector<kv>& exports_list() const noexcept {
         return *this->exports;
     }
 
@@ -589,29 +602,30 @@ public:
         auto val = JS_Eval(this->js_context(), input, input_len, filename, eval_flags);
 
         if(this->has_exception()) {
+            JS_FreeValue(this->js_context(), val);
             throw exception(detail::dump(this->js_context()));
         }
 
-        return Value(this->js_context(), std::move(val));
+        return Value{this->js_context(), std::move(val)};
     }
 
     Value eval(std::string_view input, const char* filename, int eval_flags) const {
         return this->eval(input.data(), input.size(), filename, eval_flags);
     }
 
-    Object global_this() const {
-        return Object(this->js_context(), JS_GetGlobalObject(this->js_context()));
+    Object global_this() const noexcept {
+        return Object{this->js_context(), JS_GetGlobalObject(this->js_context())};
     }
 
-    bool has_exception() const {
+    bool has_exception() const noexcept {
         return JS_HasException(this->js_context());
     }
 
-    JSContext* js_context() const {
+    JSContext* js_context() const noexcept {
         return this->raw->ctx.get();
     }
 
-    operator bool() {
+    operator bool() const noexcept {
         return this->raw != nullptr;
     }
 
@@ -631,7 +645,7 @@ private:
 
     public:
         struct JSContextDeleter {
-            void operator() (JSContext* ctx) const {
+            void operator() (JSContext* ctx) const noexcept {
                 JS_FreeContext(ctx);
             }
         };
@@ -640,15 +654,15 @@ private:
         std::unordered_map<std::string, CModule> modules{};
     };
 
-    void set_opaque() {
+    void set_opaque() noexcept {
         JS_SetContextOpaque(this->js_context(), this->raw.get());
     }
 
-    static Raw* get_opaque(JSContext* ctx) {
+    static Raw* get_opaque(JSContext* ctx) noexcept {
         return static_cast<Raw*>(JS_GetContextOpaque(ctx));
     }
 
-    Context(JSContext* js_ctx) : raw(std::make_unique<Raw>(js_ctx)) {
+    Context(JSContext* js_ctx) noexcept : raw(std::make_unique<Raw>(js_ctx)) {
         this->set_opaque();
     }
 
@@ -686,11 +700,11 @@ public:
         }
     }
 
-    JSRuntime* js_runtime() const {
+    JSRuntime* js_runtime() const noexcept {
         return this->raw->rt.get();
     }
 
-    operator bool() const {
+    operator bool() const noexcept {
         return this->raw != nullptr;
     }
 
@@ -699,7 +713,7 @@ private:
     public:
         Raw() = default;
 
-        Raw(JSRuntime* rt) : rt(rt) {}
+        Raw(JSRuntime* rt) noexcept : rt(rt) {}
 
         Raw(const Raw&) = delete;
         Raw(Raw&&) = default;
@@ -710,7 +724,7 @@ private:
 
     public:
         struct JSRuntimeDeleter {
-            void operator() (JSRuntime* rt) const {
+            void operator() (JSRuntime* rt) const noexcept {
                 JS_FreeRuntime(rt);
             }
         };
