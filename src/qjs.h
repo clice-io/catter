@@ -88,6 +88,9 @@ public:
 
     Value& operator= (Value&& other) {
         if(this != &other) {
+            if(this->ctx) {
+                JS_FreeValue(this->ctx, this->val);
+            }
             ctx = std::exchange(other.ctx, nullptr);
             val = std::exchange(other.val, JS_UNDEFINED);
         }
@@ -170,6 +173,9 @@ public:
 
     Atom& operator= (Atom&& other) {
         if(this != &other) {
+            if(this->ctx) {
+                JS_FreeAtom(this->ctx, this->atom);
+            }
             ctx = std::exchange(other.ctx, nullptr);
             atom = std::exchange(other.atom, JS_ATOM_NULL);
         }
@@ -220,6 +226,37 @@ public:
         }
         return ret;
     }
+
+    template <typename T>
+    class Register {
+    public:
+        static auto find(JSRuntime* rt) {
+            return class_ids.find(rt);
+        }
+
+        static auto end() {
+            return class_ids.end();
+        }
+
+        static JSClassID get(JSRuntime* rt) {
+            if(auto it = class_ids.find(rt); it != class_ids.end()) {
+                return it->second;
+            } else {
+                return JS_INVALID_CLASS_ID;
+            }
+        }
+
+        static JSClassID create(JSRuntime* rt, JSClassDef* def) {
+            JSClassID id = 0;
+            JS_NewClassID(rt, &id);
+            JS_NewClass(rt, id, def);
+            class_ids[rt] = id;
+            return id;
+        }
+
+    private:
+        inline static std::unordered_map<JSRuntime*, JSClassID> class_ids{};
+    };
 };
 
 namespace detail {
@@ -240,7 +277,7 @@ struct value_trans<bool> {
 template <>
 struct value_trans<int64_t> {
     static Value from(JSContext* ctx, int64_t value) {
-        return Value(ctx, JS_NewInt32(ctx, value));
+        return Value(ctx, JS_NewInt64(ctx, value));
     }
 
     static std::optional<int64_t> to(JSContext* ctx, const Value& val) {
@@ -328,16 +365,20 @@ public:
         // Maybe we should require @func to receive this_obj as first parameter,
         // like std::function<R(const Object&, Args...)> ?
 
-        static JSClassID id = 0;
         auto rt = JS_GetRuntime(ctx);
-        if(id == 0) {
-            JS_NewClassID(rt, &id);
-            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>>());
 
+        using Register = Object::Register<std::function<Sign>>;
+
+        JSClassID id = 0;
+        if(auto it = Register::find(rt); it != Register::end()) {
+            id = it->second;
+        } else {
+            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>>());
             JSClassDef def{
                 class_name.c_str(),
                 [](JSRuntime* rt, JSValue obj) {
-                    auto* ptr = static_cast<std::function<Sign>*>(JS_GetOpaque(obj, id));
+                    auto* ptr =
+                        static_cast<std::function<Sign>*>(JS_GetOpaque(obj, Register::get(rt)));
                     delete ptr;
                 },
                 nullptr,
@@ -370,8 +411,8 @@ public:
 
                             return JS_ThrowTypeError(ctx, msg.c_str());
                         }
-                        if(auto* ptr =
-                               static_cast<std::function<Sign>*>(JS_GetOpaque(func_obj, id))) {
+                        if(auto* ptr = static_cast<std::function<Sign>*>(
+                               JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))))) {
                             if constexpr(std::is_void_v<R>) {
                                 (*ptr)(std::get<Is>(transformed_args).value()...);
                                 return JS_UNDEFINED;
@@ -387,7 +428,8 @@ public:
                     }(std::make_index_sequence<sizeof...(Args)>{});
                 },
                 nullptr};
-            JS_NewClass(rt, id, &def);
+
+            id = Register::create(rt, &def);
         }
         Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
         JS_SetOpaque(result.value(), new std::function<Sign>(std::move(func)));
