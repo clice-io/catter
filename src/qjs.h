@@ -6,7 +6,6 @@
 #include <exception>
 #include <functional>
 #include <optional>
-#include <print>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -523,7 +522,7 @@ public:
     // @name: The name of the module.
     // Different from context, it is used for js module system.
     // In js, you can import it via `import * as mod from 'name';`
-    const CModule* cmodule(const std::string& name) const;
+    const CModule& cmodule(const std::string& name) const;
 
     Value eval(const char* input, size_t input_len, const char* filename, int eval_flags) const {
         auto val = JS_Eval(this->js_context(), input, input_len, filename, eval_flags);
@@ -611,15 +610,15 @@ public:
 
     // Get or create a context with the given name
     // @name: The name of the context. Just for identification purposes.
-    const Context* context(const std::string& name = "default") const {
+    const Context& context(const std::string& name = "default") const {
         if(auto it = this->raw->ctxs.find(name); it != this->raw->ctxs.end()) {
-            return &it->second;
+            return it->second;
         } else {
             auto js_ctx = JS_NewContext(this->js_runtime());
             if(js_ctx == nullptr) {
                 throw std::runtime_error("Failed to create new JS context");
             }
-            return &this->raw->ctxs.emplace(name, Context(js_ctx)).first->second;
+            return this->raw->ctxs.emplace(name, Context(js_ctx)).first->second;
         }
     }
 

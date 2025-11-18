@@ -30,9 +30,9 @@ std::string dump(JSContext* ctx) {
 }
 }  // namespace detail
 
-const CModule* Context::cmodule(const std::string& name) const {
+const CModule& Context::cmodule(const std::string& name) const {
     if(auto it = this->raw->modules.find(name); it != this->raw->modules.end()) {
-        return &it->second;
+        return it->second;
     } else {
         auto m =
             JS_NewCModule(this->js_context(), name.data(), [](JSContext* js_ctx, JSModuleDef* m) {
@@ -55,8 +55,7 @@ const CModule* Context::cmodule(const std::string& name) const {
             throw std::runtime_error("Failed to create new C module");
         }
 
-        return &this->raw->modules.emplace(name, CModule(this->js_context(), m, name))
-                    .first->second;
+        return this->raw->modules.emplace(name, CModule(this->js_context(), m, name)).first->second;
     }
 }
 }  // namespace catter::qjs
