@@ -27,10 +27,12 @@ elseif is_plat("linux", "macosx") then
     includes("src/hook/linux")
 end
 
+add_requires("quickjs-ng")
+
 target("catter")
     set_kind("binary")
     add_includedirs("src")
-    add_files("src/main.cpp")
+    add_files("src/main.cpp", "src/qjs.cpp")
     if is_plat("windows") then
         add_files("src/hook/windows/impl.cpp")
     elseif is_plat("linux", "macosx") then
@@ -40,3 +42,5 @@ target("catter")
     if is_plat("windows") then
         add_packages("microsoft-detours")
     end
+
+    add_packages("quickjs-ng")
