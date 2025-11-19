@@ -476,6 +476,9 @@ public:
                                         this_obj.value(),
                                         sizeof...(Args),
                                         argv.data())};
+        for(auto& v: argv) {
+            JS_FreeValue(this->context(), v);
+        }
 
         if(value.is_exception()) {
             throw qjs::Exception(detail::dump(this->context()));
@@ -560,7 +563,9 @@ struct value_trans<Object> {
     }
 
     static Value from(Object&& value) noexcept {
-        return Value{value.context(), value.release()};
+        auto ctx = value.context();
+        auto val = value.release();
+        return Value{ctx, val};
     }
 
     static std::optional<Object> to(JSContext* ctx, const Value& val) noexcept {
