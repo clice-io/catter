@@ -584,7 +584,8 @@ struct object_trans<Function<R(Args...)>> {
     }
 
     static Value from(FuncType&& value) noexcept {
-        return Value{value.context(), value.release()};
+        auto ctx = value.context();
+        return Value{ctx, value.release()};
     }
 
     static std::optional<FuncType> to(JSContext* ctx, const Object& val) noexcept {
