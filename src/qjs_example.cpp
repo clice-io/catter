@@ -7,8 +7,17 @@ std::string_view example_script =
     R"(
     import * as catter from "catter";
 
+    try {
+        catter.add_callback(() => {
+            // Invalid callback: missing parameter
+        });
+    } catch (e) {
+        catter.log("Caught exception when adding invalid callback: " + e.message);
+    }
+
     catter.add_callback((msg) => {
         catter.log("Callback invoked from JS: " + msg);
+        throw new Error("Test exception from JS callback");
     });
 
 )";
@@ -18,7 +27,12 @@ struct Handler {
         return qjs::Function<void(qjs::Object)>::from(
             ctx.js_context(),
             [this](qjs::Object callback) {
-                this->callback = qjs::Function<void(std::string)>::from(callback);
+                auto cb = callback.to<qjs::Function<void(std::string)>>();
+                if(cb.has_value()) {
+                    this->callback = cb.value();
+                } else {
+                    throw qjs::Exception("Invalid callback function provided");
+                }
             });
     }
 
@@ -44,9 +58,13 @@ void qjs_example() {
         ctx.eval(example_script,
                  nullptr,
                  JS_EVAL_TYPE_MODULE | JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT);
+        if(handler.callback) {
+            handler.callback.invoke(ctx.global_this(), "Hello from C++!");
+        } else {
+            std::println("No callback was set from JS");
+        }
 
-        handler.callback.invoke(ctx.global_this(), "Hello from C++!");
-    } catch(const catter::qjs::exception& e) {
+    } catch(const catter::qjs::Exception& e) {
         std::println("JavaScript Exception: {}", e.what());
     }
 }
