@@ -564,8 +564,7 @@ struct value_trans<Object> {
 
     static Value from(Object&& value) noexcept {
         auto ctx = value.context();
-        auto val = value.release();
-        return Value{ctx, val};
+        return Value{ctx, value.release()};
     }
 
     static std::optional<Object> to(JSContext* ctx, const Value& val) noexcept {
