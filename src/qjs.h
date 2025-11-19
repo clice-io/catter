@@ -84,6 +84,11 @@ inline std::string dump(JSContext* ctx) {
 }
 }  // namespace detail
 
+/**
+ * @brief An exception class for reporting errors from the qjs wrapper.
+ * It contains details about the JavaScript exception, including name, message, and stack trace.
+ * Also You can use it in qjs::Function to throw exceptions back to JavaScript.
+ */
 class Exception : public std::exception {
 public:
     Exception(std::string&& details) : details(std::move(details)) {}
@@ -96,6 +101,11 @@ private:
     std::string details;
 };
 
+/**
+ * @brief A wrapper around a QuickJS JSValue.
+ * This class manages the lifecycle of a JSValue, providing methods for type conversion,
+ * checking for exceptions, and interacting with the QuickJS engine.
+ */
 class Value {
 public:
     // Maybe we can prohibit copy and only allow move?
@@ -185,6 +195,11 @@ private:
     JSValue val = JS_UNINITIALIZED;
 };
 
+/**
+ * @brief A wrapper around a QuickJS JSAtom.
+ * This class manages the lifecycle of a JSAtom, which is used for efficient string handling in
+ * QuickJS.
+ */
 class Atom {
 public:
     Atom() = default;
@@ -245,6 +260,10 @@ private:
     JSAtom atom = JS_ATOM_NULL;
 };
 
+/**
+ * @brief A specialized Value that represents a JavaScript object.
+ * It inherits from Value and provides object-specific operations like property access.
+ */
 class Object : private Value {
 public:
     using Value::Value;
@@ -312,6 +331,11 @@ public:
     };
 };
 
+/**
+ * @brief A typed wrapper for JavaScript functions.
+ * This class allows calling JavaScript functions from C++ and creating C++ callbacks that can be
+ * called from JavaScript.
+ */
 template <typename Signature>
 class Function {
     static_assert("Function must be instantiated with a function type");
@@ -404,10 +428,15 @@ public:
                                     auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
                                     return qjs::Value::from(ctx, res).release();
                                 }
-                            } catch(const std::exception& e) {
+                            } catch(const qjs::Exception& e) {
                                 return JS_ThrowInternalError(ctx,
                                                              "Exception in C++ function: %s",
                                                              e.what());
+                            } catch(const std::exception& e) {
+                                return JS_ThrowInternalError(
+                                    ctx,
+                                    "This is an Unexpected exception. If you encounter this, please report a bug to the author: %s",
+                                    e.what());
                             }
                         } else {
                             return JS_ThrowInternalError(ctx,
@@ -568,6 +597,12 @@ struct object_trans<Function<R(Args...)>> {
 };
 }  // namespace detail
 
+/**
+ * @brief Represents a C module that can be imported into JavaScript.
+ * This class allows exporting qjs::Function to be used as a module in QuickJS.
+ * We're not providing creation functions here. Please use Context::cmodule to get a CModule
+ * instance, it will ensure the lifecycle is properly managed.
+ */
 class CModule {
 public:
     friend class Context;
@@ -610,6 +645,13 @@ private:
     std::unique_ptr<std::vector<kv>> exports{std::make_unique<std::vector<kv>>()};
 };
 
+/**
+ * @brief A wrapper around a QuickJS JSContext.
+ * It manages the lifecycle of a JSContext and provides an interface for evaluating scripts,
+ * managing modules, and accessing the global object.
+ * We're not providing creation functions here. Please use Runtime::context to get a Context
+ * instance, it will ensure the lifecycle is properly managed.
+ */
 class Context {
 public:
     friend class Runtime;
@@ -728,6 +770,11 @@ private:
     std::unique_ptr<Raw> raw = nullptr;
 };
 
+/**
+ * @brief A wrapper around a QuickJS JSRuntime.
+ * This class manages the lifecycle of a JSRuntime and is the top-level object for using QuickJS.
+ * It can contain multiple contexts.
+ */
 class Runtime {
 public:
     Runtime() = default;
