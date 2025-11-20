@@ -19,7 +19,35 @@
 
 #include <quickjs.h>
 
-#include "type_name.h"
+namespace meta {
+template <typename T>
+consteval std::string_view type_name() {
+    std::string_view name =
+#if defined(__clang__) || defined(__GNUC__)
+        __PRETTY_FUNCTION__;  // Clang / GCC
+#elif defined(_MSC_VER)
+        __FUNCSIG__;  // MSVC
+#else
+        static_assert(false, "Unsupported compiler");
+#endif
+
+#if defined(__clang__)
+    constexpr std::string_view prefix = "std::string_view meta::type_name() [T = ";
+    constexpr std::string_view suffix = "]";
+#elif defined(__GNUC__)
+    constexpr std::string_view prefix = "consteval std::string_view meta::type_name() [with T = ";
+    constexpr std::string_view suffix = "; std::string_view = std::basic_string_view<char>]";
+#elif defined(_MSC_VER)
+    constexpr std::string_view prefix =
+        "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl meta::type_name<";
+    constexpr std::string_view suffix = ">(void)";
+#endif
+    name.remove_prefix(prefix.size());
+    name.remove_suffix(suffix.size());
+    return name;
+}
+
+}  // namespace meta
 
 namespace catter::qjs {
 namespace detail {
@@ -368,88 +396,54 @@ public:
     Function& operator= (Function&& other) = default;
     ~Function() = default;
 
-    static Function from(JSContext* ctx, std::function<Sign> func) noexcept {
+    using Register = Object::Register<std::function<Sign>>;
+
+    static Function from(JSContext* ctx, std::function<Sign>&& func) noexcept {
         // Maybe we should require @func to receive this_obj as first parameter,
         // like std::function<R(const Object&, Args...)> ?
 
         auto rt = JS_GetRuntime(ctx);
 
-        using Register = Object::Register<std::function<Sign>>;
-
         JSClassID id = 0;
         if(auto it = Register::find(rt); it != Register::end()) {
             id = it->second;
         } else {
-            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>>());
-            JSClassDef def{
-                class_name.c_str(),
-                [](JSRuntime* rt, JSValue obj) {
-                    auto* ptr =
-                        static_cast<std::function<Sign>*>(JS_GetOpaque(obj, Register::get(rt)));
-                    delete ptr;
-                },
-                nullptr,
-                [](JSContext* ctx,
-                   JSValueConst func_obj,
-                   JSValueConst this_val,
-                   int argc,
-                   JSValueConst* argv,
-                   int flags) -> JSValue {
-                    if(argc != sizeof...(Args)) {
-                        return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
-                    }
-                    return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
-                        auto transformer = [&]<size_t N>(std::in_place_index_t<N>) {
-                            using T = detail::type_get<Params, N>;
-                            if constexpr(std::is_same_v<T, Object>) {
-                                if(JS_IsObject(argv[N])) {
-                                    return Object{ctx, argv[N]};
-                                }
-                            } else {
-                                if(auto opt = qjs::Value{ctx, argv[N]}.to<T>(); opt.has_value()) {
-                                    return opt.value();
-                                }
-                            }
-                            throw qjs::Exception(std::format("Failed to convert argument[{}] to {}",
-                                                             N,
-                                                             meta::type_name<T>()));
-                        };
-
-                        if(auto* ptr = static_cast<std::function<Sign>*>(
-                               JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))))) {
-                            try {
-                                if constexpr(std::is_void_v<R>) {
-                                    (*ptr)(transformer(std::in_place_index<Is>)...);
-                                    return JS_UNDEFINED;
-                                } else if constexpr(std::is_same_v<R, Object>) {
-                                    auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
-                                    return res.release();
-                                } else {
-                                    auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
-                                    return qjs::Value::from(ctx, res).release();
-                                }
-                            } catch(const qjs::Exception& e) {
-                                return JS_ThrowInternalError(ctx,
-                                                             "Exception in C++ function: %s",
-                                                             e.what());
-                            } catch(const std::exception& e) {
-                                return JS_ThrowInternalError(
-                                    ctx,
-                                    "This is an Unexpected exception. If you encounter this, please report a bug to the author: %s",
-                                    e.what());
-                            }
-                        } else {
-                            return JS_ThrowInternalError(ctx,
-                                                         "Internal error: C++ functor is null");
-                        }
-                    }(std::make_index_sequence<sizeof...(Args)>{});
-                },
-                nullptr};
+            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>&&>());
+            JSClassDef def{class_name.c_str(),
+                           [](JSRuntime* rt, JSValue obj) {
+                               auto* ptr = static_cast<std::function<Sign>*>(
+                                   JS_GetOpaque(obj, Register::get(rt)));
+                               delete ptr;
+                           },
+                           nullptr,
+                           proxy,
+                           nullptr};
 
             id = Register::create(rt, &def);
         }
         Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
         JS_SetOpaque(result.value(), new std::function<Sign>(std::move(func)));
+        return result;
+    }
+
+    // Careful: @func reference must outlive the created Function
+    static Function from(JSContext* ctx, std::function<Sign>& func) noexcept {
+        // Maybe we should require @func to receive this_obj as first parameter,
+        // like std::function<R(const Object&, Args...)> ?
+
+        auto rt = JS_GetRuntime(ctx);
+
+        JSClassID id = 0;
+        if(auto it = Register::find(rt); it != Register::end()) {
+            id = it->second;
+        } else {
+            auto class_name = std::format("qjs.{}", meta::type_name<std::function<Sign>&>());
+            JSClassDef def{class_name.c_str(), nullptr, nullptr, proxy, nullptr};
+
+            id = Register::create(rt, &def);
+        }
+        Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
+        JS_SetOpaque(result.value(), &func);
         return result;
     }
 
@@ -499,6 +493,59 @@ public:
 
     R operator() (Args... args) const {
         return this->invoke(Object{this->context(), JS_GetGlobalObject(this->context())}, args...);
+    }
+
+private:
+    static JSValue proxy(JSContext* ctx,
+                         JSValueConst func_obj,
+                         JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv,
+                         int flags) {
+        if(argc != sizeof...(Args)) {
+            return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
+        }
+        return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
+            auto transformer = [&]<size_t N>(std::in_place_index_t<N>) {
+                using T = detail::type_get<Params, N>;
+                if constexpr(std::is_same_v<T, Object>) {
+                    if(JS_IsObject(argv[N])) {
+                        return Object{ctx, argv[N]};
+                    }
+                } else {
+                    if(auto opt = qjs::Value{ctx, argv[N]}.to<T>(); opt.has_value()) {
+                        return opt.value();
+                    }
+                }
+                throw qjs::Exception(
+                    std::format("Failed to convert argument[{}] to {}", N, meta::type_name<T>()));
+            };
+
+            if(auto* ptr = static_cast<std::function<Sign>*>(
+                   JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))))) {
+                try {
+                    if constexpr(std::is_void_v<R>) {
+                        (*ptr)(transformer(std::in_place_index<Is>)...);
+                        return JS_UNDEFINED;
+                    } else if constexpr(std::is_same_v<R, Object>) {
+                        auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
+                        return res.release();
+                    } else {
+                        auto res = (*ptr)(transformer(std::in_place_index<Is>)...);
+                        return qjs::Value::from(ctx, res).release();
+                    }
+                } catch(const qjs::Exception& e) {
+                    return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
+                } catch(const std::exception& e) {
+                    return JS_ThrowInternalError(
+                        ctx,
+                        "This is an Unexpected exception. If you encounter this, please report a bug to the author: %s",
+                        e.what());
+                }
+            } else {
+                return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
+            }
+        }(std::make_index_sequence<sizeof...(Args)>{});
     }
 };
 

@@ -1,0 +1,6 @@
+target("catter-proxy")
+    set_kind("binary")
+    add_includedirs("src")
+    add_files("src/*.cc")
+    add_deps("libhook")
+    add_deps("libcommand")

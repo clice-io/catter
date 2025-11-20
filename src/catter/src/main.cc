@@ -1,5 +1,5 @@
-
 #include "qjs.h"
+
 #include <print>
 using namespace catter;
 
@@ -67,4 +67,9 @@ void qjs_example() {
     } catch(const catter::qjs::Exception& e) {
         std::println("JavaScript Exception: {}", e.what());
     }
+}
+
+int main(int argc, char* argv[], char* envp[]) {
+    qjs_example();
+    return 0;
 }
