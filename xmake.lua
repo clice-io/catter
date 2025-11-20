@@ -14,5 +14,6 @@ end
 
 includes("src/libhook")
 includes("src/libcommand")
+includes("src/libqjs")
 includes("src/catter")
 includes("src/catter-proxy")
