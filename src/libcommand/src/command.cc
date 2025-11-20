@@ -2,7 +2,7 @@
 
 namespace catter {
 namespace detail {
-inline std::string quote_win32_arg(std::string_view arg) {
+std::string quote_win32_arg(std::string_view arg) {
     // No quoting needed if it's empty or has no special characters.
     if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
         return std::string(arg);
@@ -56,7 +56,7 @@ std::string Command::cmdline() const {
 #endif
 }
 
-Command Command::create(std::span<char_view> args, char_view envp[]) {
+Command Command::create(std::span<cstr_view> args, cstr_view envp[]) {
 
     if(args.size() == 0) {
         throw std::invalid_argument("No arguments provided");
@@ -67,7 +67,7 @@ Command Command::create(std::span<char_view> args, char_view envp[]) {
 
     std::vector<std::string> arguments = {args.begin() + 1, args.end()};
     std::map<std::string, std::string> environment;
-    for(char_view* it = envp; *it != nullptr; ++it) {
+    for(cstr_view* it = envp; *it != nullptr; ++it) {
         std::string_view env_entry(*it);
         size_t pos = env_entry.find('=');
         if(pos != std::string_view::npos) {

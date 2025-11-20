@@ -14,9 +14,9 @@ struct Command {
 
     std::string cmdline() const;
 
-    using char_view = const char* const;
+    using cstr_view = const char* const;
 
-    static Command create(std::span<char_view> args, char_view envp[]);
+    static Command create(std::span<cstr_view> args, cstr_view envp[]);
 };
 
 int spawn(Command cmd);
