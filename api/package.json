@@ -1,0 +1,41 @@
+{
+  "name": "catter-api",
+  "version": "1.0.0",
+  "author": "clice-io",
+  "description": "Catter runtime API package, for code completion and type checking, running on quickjs.",
+  "type": "module",
+  "files": [
+    "output/types/index.d.ts",
+    "output/types/capi/*"
+  ],
+  "typesVersions": {
+    "*": {
+      "*": [
+        "output/types/index.d.ts",
+        "output/types/capi/*"
+      ]
+    }
+  },
+  "scripts": {
+    "cleanup": "rimraf ./build && rimraf ./output",
+    "add-capi": "cpx './src/capi/**/*' './output/types/capi/'",
+    "prebuild": "pnpm run cleanup",
+    "bundle-js": "rollup -c ./rollup.config.js",
+    "bundle-dts": "tsc && api-extractor run && pnpm run add-capi",
+    "build-dev": "pnpm run prebuild && run-p bundle-dts bundle-js",
+    "build-release": "pnpm run build-dev && rimraf ./build"
+  },
+  "keywords": [],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.55.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "cpx": "^1.5.0",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^6.1.0",
+    "rollup": "^4.53.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  }
+}

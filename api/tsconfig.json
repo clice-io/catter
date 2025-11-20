@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./build/.tsbuildinfo",
+    "module": "esnext",
+    "rootDir": "./src",
+    "outDir": "./output/lib",
+    "declaration": true,
+    "declarationDir": "./build/types",
+    "emitDeclarationOnly": true,
+    "lib": [
+      "ES2020",
+      "ES2020.Promise",
+      "ES2020.Intl"
+    ],
+    "types": []
+  },
+  "include": [
+    "src/**/*.ts",
+  ],
+  "exclude": [
+    "node_modules"
+  ],
+}

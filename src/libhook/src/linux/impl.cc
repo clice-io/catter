@@ -102,9 +102,6 @@ int run(std::span<const char* const> command, std::error_code& ec) {
     // sh -c the command with hook injected
     // run
     const int ret = system(joined_command.c_str());
-    if(ret != 0) {
-        ec = std::make_error_code(std::errc::operation_canceled);
-    }
     return 0;
 };
 

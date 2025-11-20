@@ -23,3 +23,19 @@ repos:
     hooks:
       - id: clang-format
         types_or: [c++, c]
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: pnpm run eslint
+        language: node
+        files: '\.(ts)$'
+        types: [file]
+
+      - id: prettier
+        name: Prettier
+        entry: pnpm run prettier
+        language: node
+        files: '\.(ts)$'
+        types: [file]

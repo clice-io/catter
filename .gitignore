@@ -1,3 +1,8 @@
+#nodejs
+node_modules
+.rollup*
+api/output
+
 # Prerequisites
 *.d
 

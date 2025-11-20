@@ -1,0 +1,17 @@
+*.js
+*.jsx
+
+*.tsx
+
+*.css
+*.scss
+*.less
+
+*.html
+*.md
+
+*.json
+*.yaml
+*.yml
+
+!*.ts
