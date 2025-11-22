@@ -1,4 +1,4 @@
-#include "qjs.h"
+#include "libqjs/qjs.h"
 
 #include <print>
 using namespace catter;

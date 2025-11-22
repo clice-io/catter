@@ -12,7 +12,7 @@
 #include <detours.h>
 
 #include "env.h"
-#include "../hook.h"
+#include "interface/hook.h"
 
 namespace catter::hook {
 

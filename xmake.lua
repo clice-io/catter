@@ -11,9 +11,25 @@ if has_config("dev") then
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
+if is_mode("debug") then
+    add_defines("DEBUG")
+end
+
+if is_plat("linux") then
+    add_defines("CATTER_LINUX")
+elseif is_plat("macosx") then
+    add_defines("CATTER_MAC")
+elseif is_plat("windows") then
+    add_defines("CATTER_WINDOWS")
+end
+
+add_includedirs("src/common")
 
 includes("src/libhook")
-includes("src/libcommand")
-includes("src/libqjs")
+includes("src/common/librpc")
+includes("src/common/libqjs")
+includes("src/common/libutil")
+
+
 includes("src/catter")
 includes("src/catter-proxy")

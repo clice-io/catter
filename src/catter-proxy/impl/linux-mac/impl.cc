@@ -1,7 +1,6 @@
-#include "hook/interface.h"
-#include "./libhook/config.h"
-#include "config.h"
-#include "common/crossplat.h"
+#include "interface/hook.h"
+#include "linux/common/config.h"
+#include "linux/common/crossplat.h"
 #include <array>
 #include <expected>
 #include <filesystem>

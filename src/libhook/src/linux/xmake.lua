@@ -1,4 +1,4 @@
-target("catter-hook")
+target("catter-hook-unix")
     set_kind("shared")
     add_includedirs("libhook")
     add_includedirs("common")
