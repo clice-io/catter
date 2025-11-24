@@ -28,9 +28,10 @@ target("libhook")
     set_kind("static")
     add_includedirs("include", {public = true})
     if is_plat("windows") then
-        add_files("src/win/impl.cc")
+        add_files("src/win-impl.cc")
         add_packages("microsoft-detours")
     elseif is_plat("linux", "macosx") then
-        add_files("src/linux-mac/*.cc")
+        add_files("src/linux-mac-impl.cc")
     end
+
     add_deps("librpc")

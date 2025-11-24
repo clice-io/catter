@@ -1,7 +1,8 @@
 #include "librpc/helper.h"
 #include <string>
 
-namespace {
+namespace catter::rpc::helper {
+namespace detail {
 std::string quote_win32_arg(std::string_view arg) noexcept {
     // No quoting needed if it's empty or has no special characters.
     if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
@@ -37,13 +38,11 @@ std::string quote_win32_arg(std::string_view arg) noexcept {
     quoted_arg.push_back('"');
     return quoted_arg;
 }
-}  // namespace
-
-namespace catter::rpc::helper {
+}  // namespace detail
 
 std::string cmdline_of(const catter::rpc::data::command& cmd) noexcept {
 #ifdef _WIN32
-    std::string full_cmd = quote_win32_arg(cmd.executable);
+    std::string full_cmd = detail::quote_win32_arg(cmd.executable);
     for(const auto& arg: cmd.args) {
         full_cmd += " " + detail::quote_win32_arg(arg);
     }

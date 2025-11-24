@@ -12,17 +12,18 @@
 #include <detours.h>
 
 #include "libhook/win/env.h"
-
+#include "librpc/data.h"
+#include "librpc/helper.h"
 
 namespace catter::hook {
 
-int run(Command cmd) {
+int run(rpc::data::command cmd, rpc::data::command_id_t) {
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
 
     std::filesystem::path dll_path = catter::win::current_path() / catter::win::dll_name;
 
-    std::string cmdline = cmd.cmdline();
+    std::string cmdline = rpc::helper::cmdline_of(cmd);
 
     auto ret = DetourCreateProcessWithDllExA(nullptr,
                                              cmdline.data(),

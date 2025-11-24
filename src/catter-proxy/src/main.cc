@@ -9,21 +9,24 @@
 #include "librpc/helper.h"
 #include "libutil/crossplat.h"
 #include "libhook/interface.h"
+
 namespace catter::proxy {
 int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
-        case action::WRAP:{
+        case action::WRAP: {
             return std::system(rpc::helper::cmdline_of(act.cmd).c_str());
         }
-            
-        case action::INJECT:{
-            return catter::proxy::hook::run(act.cmd, id);
-        } 
-        case action::DROP:{
+
+        case action::INJECT: {
+            return catter::hook::run(act.cmd, id);
+        }
+        case action::DROP: {
             return 0;
         }
-        default:{ return -1;}
+        default: {
+            return -1;
+        }
     }
 }
 }  // namespace catter::proxy
@@ -31,27 +34,28 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
 int main(int argc, char* argv[], char* envp[]) {
     if(argc < 5) {
         // -p is the parent of this
-        std::println("Usage: catter-proxy -p [id] <target-exe> [args...]");
+        std::println("Usage: catter-proxy -p [id] -- <target-exe> [args...]");
         return 0;
     }
 
     char** arg_end = argv + argc;
 
-    if(std::string(argv[1]) != "-p") {
-        std::println("Expected '-p' as the first argument");
-    }
-
-    catter::rpc::data::command_id_t from_id = std::stoi(argv[2]);
-    if(std::string(argv[3]) != "--") {
-        std::println("Expected '--' as the first argument");
-        return 0;
-    }
-
     try {
+
+        if(std::string(argv[1]) != "-p") {
+            std::println("Expected '-p' as the first argument");
+        }
+
+        catter::rpc::data::command_id_t from_id = std::stoi(argv[2]);
+
+        if(std::string(argv[3]) != "--") {
+            std::println("Expected '--' as the first argument");
+            return 0;
+        }
 
         // 1. read command from args
         auto cmd = catter::proxy::build_raw_cmd(argv + 4, arg_end);
-        
+
         // 2. locate executable, which means resolve PATH if needed
         catter::util::locate_exe(cmd);
         // 3. remote procedure call, wait server make decision
@@ -67,7 +71,6 @@ int main(int argc, char* argv[], char* envp[]) {
 
         // 5. report finish
         catter::rpc::server::finish(ret);
-
 
         // 5. return exit code
         return ret;
