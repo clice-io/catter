@@ -8,6 +8,7 @@ if is_plat("windows") then
         add_files("payload/win/main.cc")
         add_syslinks("user32", "advapi32")
         add_packages("microsoft-detours")
+        add_cxxflags("-fno-exceptions -fno-rtti")
 
 elseif is_plat("linux", "macosx") then
     target("catter-hook-unix")

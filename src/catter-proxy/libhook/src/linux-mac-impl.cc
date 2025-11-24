@@ -13,7 +13,7 @@
 #include <dirent.h>
 #include <vector>
 
-namespace catter::hook {
+namespace catter::proxy::hook {
 
 std::filesystem::path get_hook_path(std::error_code& ec) {
     auto exe_path = get_executable_path(ec);
@@ -150,4 +150,4 @@ std::expected<std::vector<std::string>, std::string> collect_all() {
     return result;
 };
 
-};  // namespace catter::hook
+};  // namespace catter::proxy::hook

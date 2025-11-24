@@ -15,7 +15,7 @@
 #include "librpc/data.h"
 #include "librpc/helper.h"
 
-namespace catter::hook {
+namespace catter::proxy::hook {
 
 int run(rpc::data::command cmd, rpc::data::command_id_t) {
     PROCESS_INFORMATION pi{};
@@ -63,4 +63,4 @@ int run(rpc::data::command cmd, rpc::data::command_id_t) {
     return static_cast<int>(exit_code);
 };
 
-};  // namespace catter::hook
+};  // namespace catter::proxy::hook

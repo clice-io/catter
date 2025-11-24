@@ -17,9 +17,8 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
         case action::WRAP: {
             return std::system(rpc::helper::cmdline_of(act.cmd).c_str());
         }
-
         case action::INJECT: {
-            return catter::hook::run(act.cmd, id);
+            return catter::proxy::hook::run(act.cmd, id);
         }
         case action::DROP: {
             return 0;
