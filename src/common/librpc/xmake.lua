@@ -1,4 +1,4 @@
 target("librpc")
     set_kind("static")
-    add_includedirs("..", {public = true})
-    add_files("*.cc")
+    add_includedirs("include", {public = true})
+    add_files("src/*.cc")

@@ -23,13 +23,9 @@ elseif is_plat("windows") then
     add_defines("CATTER_WINDOWS")
 end
 
-add_includedirs("src/common")
 
-includes("src/libhook")
 includes("src/common/librpc")
-includes("src/common/libqjs")
 includes("src/common/libutil")
-
 
 includes("src/catter")
 includes("src/catter-proxy")
