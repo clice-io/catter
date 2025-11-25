@@ -409,7 +409,11 @@ public:
             auto class_name = std::format("qjs.{}", meta::type_name<Invocable&&>());
             if constexpr(std::is_convertible_v<Invocable, Sign*> ||
                          std::is_lvalue_reference_v<Invocable&&>) {
-                JSClassDef def{class_name.c_str(), nullptr, nullptr, proxy<Opaque>, nullptr};
+                JSClassDef def{class_name.c_str(),
+                               nullptr,
+                               nullptr,
+                               proxy<Opaque, Register>,
+                               nullptr};
                 id = Register::create(rt, &def);
             } else {
                 JSClassDef def{class_name.c_str(),
@@ -419,7 +423,7 @@ public:
                                    delete ptr;
                                },
                                nullptr,
-                               proxy<Opaque>,
+                               proxy<Opaque, Register>,
                                nullptr};
 
                 id = Register::create(rt, &def);
@@ -485,7 +489,7 @@ public:
     }
 
 private:
-    template <typename Opaque>
+    template <typename Opaque, typename Register>
     static JSValue proxy(JSContext* ctx,
                          JSValueConst func_obj,
                          JSValueConst this_val,
