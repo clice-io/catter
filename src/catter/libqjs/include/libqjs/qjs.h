@@ -396,11 +396,10 @@ public:
     Function& operator= (Function&& other) = default;
     ~Function() = default;
 
-    using Register = Object::Register<std::function<Sign>>;
-
     template <typename Invocable>
         requires std::is_invocable_r_v<R, Invocable, Args...>
     static Function from(JSContext* ctx, Invocable&& invocable) noexcept {
+        using Register = Object::Register<Invocable&&>;
         using Opaque = std::remove_cvref_t<Invocable>;
         auto rt = JS_GetRuntime(ctx);
         JSClassID id = 0;
@@ -410,7 +409,11 @@ public:
             auto class_name = std::format("qjs.{}", meta::type_name<Invocable&&>());
             if constexpr(std::is_convertible_v<Invocable, Sign*> ||
                          std::is_lvalue_reference_v<Invocable&&>) {
-                JSClassDef def{class_name.c_str(), nullptr, nullptr, proxy<Opaque>, nullptr};
+                JSClassDef def{class_name.c_str(),
+                               nullptr,
+                               nullptr,
+                               proxy<Opaque, Register>,
+                               nullptr};
                 id = Register::create(rt, &def);
             } else {
                 JSClassDef def{class_name.c_str(),
@@ -420,7 +423,7 @@ public:
                                    delete ptr;
                                },
                                nullptr,
-                               proxy<Opaque>,
+                               proxy<Opaque, Register>,
                                nullptr};
 
                 id = Register::create(rt, &def);
@@ -486,7 +489,7 @@ public:
     }
 
 private:
-    template <typename Opaque>
+    template <typename Opaque, typename Register>
     static JSValue proxy(JSContext* ctx,
                          JSValueConst func_obj,
                          JSValueConst this_val,
