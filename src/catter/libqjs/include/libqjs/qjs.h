@@ -396,11 +396,10 @@ public:
     Function& operator= (Function&& other) = default;
     ~Function() = default;
 
-    using Register = Object::Register<std::function<Sign>>;
-
     template <typename Invocable>
         requires std::is_invocable_r_v<R, Invocable, Args...>
     static Function from(JSContext* ctx, Invocable&& invocable) noexcept {
+        using Register = Object::Register<Invocable&&>;
         using Opaque = std::remove_cvref_t<Invocable>;
         auto rt = JS_GetRuntime(ctx);
         JSClassID id = 0;
