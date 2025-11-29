@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <print>
+#include <variant>
 #include <vector>
 
 #include <windows.h>
@@ -94,8 +95,8 @@ bool is_key_match(std::basic_string_view<char_t> entry, std::basic_string_view<c
 }
 
 template <CharT char_t>
-std::vector<char_t> fix_env_block(char_t* env_block,
-                                  const std::basic_string<char_t>& rpc_id_entry) {
+std::vector<char_t> fix_env_block_helper(char_t* env_block,
+                                         const std::basic_string<char_t>& rpc_id_entry) {
     constexpr char_t char_zero = []() {
         if constexpr(std::is_same_v<char_t, char>) {
             return '\0';
@@ -127,6 +128,36 @@ std::vector<char_t> fix_env_block(char_t* env_block,
     return result;
 }
 
+auto fix_env_block(DWORD dwCreationFlags, void* lpEnvironment) {
+    struct result {
+        std::vector<char> raiiA{};
+        std::vector<wchar_t> raiiW{};
+        void* env_block{};
+    };
+
+    if(lpEnvironment == nullptr) {
+        return result{.env_block = nullptr};
+    }
+
+    if(dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) {
+        auto rpc_id_entry = std::format(L"{}={}",
+                                        catter::win::ENV_VAR_RPC_ID<wchar_t>,
+                                        catter::win::get_rpc_id<wchar_t>());
+        auto ret =
+            result{.raiiW = catter::win::fix_env_block_helper<wchar_t>((wchar_t*)lpEnvironment,
+                                                                       rpc_id_entry)};
+        ret.env_block = ret.raiiW.data();
+        return ret;
+    } else {
+        auto rpc_id_entry = std::format("{}={}",
+                                        catter::win::ENV_VAR_RPC_ID<char>,
+                                        catter::win::get_rpc_id<char>());
+        auto ret = result{
+            .raiiA = catter::win::fix_env_block_helper<char>((char*)lpEnvironment, rpc_id_entry)};
+        ret.env_block = ret.raiiA.data();
+        return ret;
+    }
+}
 }  // namespace
 
 }  // namespace catter::win
@@ -149,28 +180,8 @@ struct CreateProcessA {
                               LPCSTR lpCurrentDirectory,
                               LPSTARTUPINFOA lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
-        std::vector<char> fixed_env_blockA;
-        std::vector<wchar_t> fixed_env_blockW;
 
-        void* final_env = lpEnvironment;
-        if(final_env) {
-            if(dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) {
-                auto rpc_id_entry = std::format(L"{}={}",
-                                                catter::win::ENV_VAR_RPC_ID<wchar_t>,
-                                                catter::win::get_rpc_id<wchar_t>());
-                fixed_env_blockW =
-                    catter::win::fix_env_block<wchar_t>((wchar_t*)lpEnvironment, rpc_id_entry);
-                final_env = fixed_env_blockW.data();
-
-            } else {
-                auto rpc_id_entry = std::format("{}={}",
-                                                catter::win::ENV_VAR_RPC_ID<char>,
-                                                catter::win::get_rpc_id<char>());
-                fixed_env_blockA =
-                    catter::win::fix_env_block<char>((char*)lpEnvironment, rpc_id_entry);
-                final_env = fixed_env_blockA.data();
-            }
-        }
+        auto fixed_env = catter::win::fix_env_block(dwCreationFlags, lpEnvironment);
 
         auto converted_cmdline =
             std::format("{} -p {} -- {}",
@@ -184,7 +195,7 @@ struct CreateProcessA {
                       lpThreadAttributes,
                       bInheritHandles,
                       dwCreationFlags,
-                      final_env,
+                      fixed_env.env_block,
                       lpCurrentDirectory,
                       lpStartupInfo,
                       lpProcessInformation);
@@ -206,28 +217,7 @@ struct CreateProcessW {
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        std::vector<char> fixed_env_blockA;
-        std::vector<wchar_t> fixed_env_blockW;
-
-        void* final_env = lpEnvironment;
-        if(final_env) {
-            if(dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) {
-                auto rpc_id_entry = std::format(L"{}={}",
-                                                catter::win::ENV_VAR_RPC_ID<wchar_t>,
-                                                catter::win::get_rpc_id<wchar_t>());
-                fixed_env_blockW =
-                    catter::win::fix_env_block<wchar_t>((wchar_t*)lpEnvironment, rpc_id_entry);
-                final_env = fixed_env_blockW.data();
-
-            } else {
-                auto rpc_id_entry = std::format("{}={}",
-                                                catter::win::ENV_VAR_RPC_ID<char>,
-                                                catter::win::get_rpc_id<char>());
-                fixed_env_blockA =
-                    catter::win::fix_env_block<char>((char*)lpEnvironment, rpc_id_entry);
-                final_env = fixed_env_blockA.data();
-            }
-        }
+        auto fixed_env = catter::win::fix_env_block(dwCreationFlags, lpEnvironment);
 
         auto converted_cmdline =
             std::format(L"{} -p {} -- {}",
@@ -241,7 +231,7 @@ struct CreateProcessW {
                       lpThreadAttributes,
                       bInheritHandles,
                       dwCreationFlags,
-                      final_env,
+                      fixed_env.env_block,
                       lpCurrentDirectory,
                       lpStartupInfo,
                       lpProcessInformation);
