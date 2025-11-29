@@ -31,7 +31,7 @@ end
 
 
 target("libhook")
-    set_kind("static")
+    set_kind("object")
     add_deps("librpc")
     add_deps("libutil")
     add_deps("libconfig")

@@ -9,24 +9,22 @@ namespace catter::win {
 // Anonymous namespace for internal linkage
 // to avoid symbol conflicts.
 namespace {
-constexpr static char exe_name[] = "catter-proxy.exe";
-constexpr static char dll_name[] = "catter-hook64.dll";
+constexpr static char EXE_NAME[] = "catter-proxy.exe";
+constexpr static char DLL_NAME[] = "catter-hook64.dll";
 
-inline std::filesystem::path current_path(HMODULE h = nullptr) {
+template <typename char_t>
+concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
 
-    std::vector<char> data;
-    data.resize(MAX_PATH);
+template <CharT char_t>
+constexpr static char_t ENV_VAR_RPC_ID[] = {};
 
-    while(true) {
-        if(GetModuleFileNameA(h, data.data(), data.size()) == data.size() &&
-           GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-            data.resize(data.size() * 2);
-        } else {
-            break;
-        }
-    }
+template <>
+constexpr char ENV_VAR_RPC_ID<char>[] = "CATTER_RPC_ID";
 
-    return std::filesystem::path(data.data()).parent_path();
-}
+template <>
+constexpr wchar_t ENV_VAR_RPC_ID<wchar_t>[] = L"CATTER_RPC_ID";
+
+using rpc_id_t = int64_t;
+
 }  // namespace
 }  // namespace catter::win

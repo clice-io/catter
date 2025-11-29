@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include "spdlog/spdlog.h"
 
 /**
@@ -22,5 +23,7 @@
 #define LOG_CRITICAL(...) SPDLOG_CRITICAL(__VA_ARGS__)
 
 namespace catter::log {
-void init_logger(const char* logger_name, const char* file_path, bool cmdline = false) noexcept;
+void init_logger(const std::string& logger_name,
+                 const std::filesystem::path& file_path,
+                 bool cmdline = false) noexcept;
 };

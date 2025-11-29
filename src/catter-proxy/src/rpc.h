@@ -15,13 +15,13 @@ public:
     }
 
     rpc::data::command_id_t new_id() const {
-        return new_id_;
+        return id;
     }
 
     rpc::data::action make_decision(rpc::data::command_id_t parent_id,
                                     const rpc::data::command& cmd) {
         auto res = rpc::server::make_decision(parent_id, cmd);
-        new_id_ = res.nxt_cmd_id;
+        id = res.nxt_cmd_id;
         return res.act;
     }
 
@@ -30,13 +30,13 @@ public:
     };
 
     void finish(int ret_code) {
-        return rpc::server::finish(new_id_, ret_code);
+        return rpc::server::finish(id, ret_code);
     }
 
 private:
     rpc_handler() noexcept = default;
 
 private:
-    rpc::data::command_id_t new_id_;
+    rpc::data::command_id_t id;
 };
 }  // namespace catter::proxy
