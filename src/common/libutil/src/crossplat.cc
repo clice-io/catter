@@ -3,68 +3,113 @@
 #include <array>
 #include <climits>
 #include <system_error>
-#include <unistd.h>
 #include <vector>
 #include <string>
 
-#ifdef CATTER_LINUX
+#if defined(CATTER_LINUX)
+#include <unistd.h>
 extern char** environ;
-#endif
-#if CATTER_MAC
-#include <crt_externs.h>
-#endif
 
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept {
     std::vector<std::string> env_vars;
-#if defined(CATTER_MAC)
-    auto envp = const_cast<const char**>(*_NSGetEnviron());
-    for(int i = 0; envp[i] != nullptr; ++i) {
-        env_vars.emplace_back(envp[i]);
-    }
-#elif defined(CATTER_LINUX)
     for(int i = 0; environ[i] != nullptr; ++i) {
         env_vars.emplace_back(environ[i]);
     }
-#elif defined(CATTER_WINDOWS)
-// TODO: windows environment variable
-#else
-#error "Unsupported platform"
-#endif
     return env_vars;
 }
 
-std::string get_executable_path(std::error_code& ec) {
-    std::array<char, PATH_MAX> buf;
-#if defined(CATTER_LINUX)
+std::filesystem::path get_log_path() {
+    const char* home = getenv("HOME");
+    if(home == nullptr) {
+        throw std::runtime_error("HOME environment variable not set");
+    }
+    std::filesystem::path path = home;
+    return path / ".catter";
+}
+
+std::filesystem::path get_executable_path(std::error_code& ec) {
+    std::array<char, 1024> buf;
     ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
     if(len <= 0) {
         ec = std::error_code(errno, std::generic_category());
         return {};
     }
     buf[len] = '\0';
+    return std::filesystem::path(buf.data());
+}
+
+}  // namespace catter::util
+
 #elif defined(CATTER_MAC)
+
+#include <unistd.h>
+#include <crt_externs.h>
+
+namespace catter::util {
+std::vector<std::string> get_environment() noexcept {
+    std::vector<std::string> env_vars;
+    auto envp = const_cast<const char**>(*_NSGetEnviron());
+    for(int i = 0; envp[i] != nullptr; ++i) {
+        env_vars.emplace_back(envp[i]);
+    }
+    return env_vars;
+}
+
+std::filesystem::path get_log_path() {
+    const char* home = getenv("HOME");
+    if(home == nullptr) {
+        throw std::runtime_error("HOME environment variable not set");
+    }
+    std::filesystem::path path = home;
+    return path / ".catter";
+}
+
+std::filesystem::path get_executable_path(std::error_code& ec) {
+    std::array<char, 1024> buf;
     uint32_t size = buf.size();
     if(_NSGetExecutablePath(buf.data(), &size) != 0) {
         ec = std::error_code(ERANGE, std::generic_category());
         return {};
     }
-#endif
-    return std::string(buf.data());
+    return std::filesystem::path(buf.data());
 }
 
-std::string home_path() {
-    const char* home = getenv("HOME");
-    if(home == nullptr) {
-        throw std::runtime_error("HOME environment variable not set");
+}  // namespace catter::util
+
+#elif defined(CATTER_WINDOWS)
+
+#include <windows.h>
+
+namespace catter::util {
+std::vector<std::string> get_environment() noexcept {
+    return {};
+}
+
+std::filesystem::path get_executable_path() {
+    std::vector<char> data;
+    data.resize(MAX_PATH);
+    while(true) {
+        if(GetModuleFileNameA(nullptr, data.data(), data.size()) == data.size() &&
+           GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+            data.resize(data.size() * 2);
+        } else {
+            break;
+        }
     }
-    return std::string(home);
+
+    return std::filesystem::path(data.data());
 }
 
-std::string catter_path() {
-    const auto home_p = home_path();
-    std::filesystem::path path = home_p;
-    path /= ".catter";
-    return path.string();
+std::filesystem::path get_log_path() {
+    return get_catter_root_path() / "logs";
 }
+
+}  // namespace catter::util
+#endif
+
+namespace catter::util {
+std::filesystem::path get_catter_root_path() {
+    return get_executable_path().parent_path();
+};
 }  // namespace catter::util

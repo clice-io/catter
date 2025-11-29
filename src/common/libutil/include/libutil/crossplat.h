@@ -2,23 +2,22 @@
 #include <system_error>
 #include <vector>
 #include <string>
+#include <filesystem>
 #include "librpc/data.h"
 
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept;
 
-std::string get_executable_path(std::error_code& ec);
+std::filesystem::path get_catter_root_path();
 
 /**
- * @return the home path of current user
- * @throw std::runtime_error if HOME environment variable is not set
+ * @return the executable path of current process
  */
-std::string home_path();
+std::filesystem::path get_executable_path();
 
 /**
- * @return the catter path under home directory
- * @throw std::runtime_error if HOME environment variable is not set
- * @example /home/user/.catter
+ * @return the log path used by catter
  */
-std::string catter_path();
+std::filesystem::path get_log_path();
+
 }  // namespace catter::util

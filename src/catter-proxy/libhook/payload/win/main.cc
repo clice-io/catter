@@ -12,13 +12,29 @@
 // https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
 #pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")
 
-
 namespace catter::win {
 namespace {
 
 HINSTANCE& dll_instance() {
     static HINSTANCE instance = nullptr;
     return instance;
+}
+
+std::filesystem::path current_path(HMODULE h = nullptr) {
+
+    std::vector<char> data;
+    data.resize(MAX_PATH);
+
+    while(true) {
+        if(GetModuleFileNameA(h, data.data(), data.size()) == data.size() &&
+           GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+            data.resize(data.size() * 2);
+        } else {
+            break;
+        }
+    }
+
+    return std::filesystem::path(data.data()).parent_path();
 }
 
 }  // namespace
@@ -153,9 +169,7 @@ struct detour_meta {
 template <typename... args_t>
 auto collect_fn() noexcept {
     return std::array<detour_meta, sizeof...(args_t)>{
-        detour_meta{args_t::name,
-                    (void**)(&args_t::target),
-                    (void*)(&args_t::detour)}
+        detour_meta{args_t::name, (void**)(&args_t::target), (void*)(&args_t::detour)}
         ...
     };
 }

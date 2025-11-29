@@ -11,17 +11,18 @@
 #include <windows.h>
 #include <detours.h>
 
+#include "libutil/crossplat.h"
 #include "libhook/win/env.h"
 #include "librpc/data.h"
 #include "librpc/helper.h"
 
 namespace catter::proxy::hook {
 
-int run(rpc::data::command cmd, rpc::data::command_id_t) {
+int run(rpc::data::command cmd, rpc::data::command_id_t id) {
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
 
-    std::filesystem::path dll_path = catter::win::current_path() / catter::win::dll_name;
+    std::filesystem::path dll_path = catter::util::get_catter_root_path() / catter::win::dll_name;
 
     std::string cmdline = rpc::helper::cmdline_of(cmd);
 
@@ -62,5 +63,9 @@ int run(rpc::data::command cmd, rpc::data::command_id_t) {
     CloseHandle(pi.hProcess);
     return static_cast<int>(exit_code);
 };
+
+void locate_exe(rpc::data::command& command) {
+    return;
+}
 
 };  // namespace catter::proxy::hook
