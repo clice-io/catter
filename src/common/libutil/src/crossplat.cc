@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <array>
 #include <climits>
+#include <print>
+#include <string_view>
 #include <system_error>
 #include <vector>
 #include <string>
@@ -34,7 +36,8 @@ std::filesystem::path get_executable_path() {
     ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
     if(len <= 0) {
         auto err = std::error_code(errno, std::generic_category());
-        throw std::runtime_error(std::format("readlink failed with code {}: {})", err.value(), err.message()));
+        throw std::runtime_error(
+            std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     buf[len] = '\0';
     return std::filesystem::path(buf.data());
@@ -71,7 +74,8 @@ std::filesystem::path get_executable_path() {
     uint32_t size = buf.size();
     if(_NSGetExecutablePath(buf.data(), &size) != 0) {
         auto err = std::error_code(ERANGE, std::generic_category());
-        throw std::runtime_error(std::format("readlink failed with code {}: {})", err.value(), err.message()));
+        throw std::runtime_error(
+            std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     return std::filesystem::path(buf.data());
 }
@@ -84,7 +88,22 @@ std::filesystem::path get_executable_path() {
 
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept {
-    return {};
+    auto env_block = GetEnvironmentStrings();
+
+    if(env_block == nullptr) {
+        return {};
+    }
+
+    std::vector<std::string> env_vars;
+
+    for(auto current = env_block; *current != '\0';) {
+        std::string_view sv(current);
+        env_vars.emplace_back(sv);
+        std::advance(current, sv.size() + 1);
+    }
+
+    FreeEnvironmentStringsA(env_block);
+    return env_vars;
 }
 
 std::filesystem::path get_executable_path() {

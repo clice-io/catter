@@ -1,4 +1,5 @@
 #include <expected>
+#include <format>
 #include <print>
 #include <string>
 #include <ranges>
@@ -19,12 +20,23 @@
 namespace catter::proxy::hook {
 
 int run(rpc::data::command cmd, rpc::data::command_id_t id) {
+    std::string cmdline = rpc::helper::cmdline_of(cmd);
+
+    SetEnvironmentVariableA(catter::win::ENV_VAR_RPC_ID<char>, std::to_string(id).c_str());
+
+    std::vector<char> env_block;
+
+    for(auto c: catter::util::get_environment()) {
+        std::span<const char> span(c.c_str(), c.size() + 1);
+        env_block.append_range(span);
+    }
+
+    env_block.push_back('\0');  // Double null termination
+
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
 
-    std::filesystem::path dll_path = catter::util::get_catter_root_path() / catter::win::dll_name;
-
-    std::string cmdline = rpc::helper::cmdline_of(cmd);
+    std::filesystem::path dll_path = catter::util::get_catter_root_path() / catter::win::DLL_NAME;
 
     auto ret = DetourCreateProcessWithDllExA(nullptr,
                                              cmdline.data(),
@@ -32,7 +44,7 @@ int run(rpc::data::command cmd, rpc::data::command_id_t id) {
                                              nullptr,
                                              FALSE,
                                              0,
-                                             nullptr,
+                                             env_block.data(),
                                              nullptr,
                                              &si,
                                              &pi,
