@@ -60,7 +60,7 @@ static int run_command(const catter::rpc::data::command& command) {
 
 namespace catter::proxy::hook {
 
-void locate_exe(rpc::data::command& command, std::error_code& ec) {
+void locate_exe(rpc::data::command& command) {
     std::string result;
     std::array<char, 128> buffer;
 
@@ -68,8 +68,7 @@ void locate_exe(rpc::data::command& command, std::error_code& ec) {
     std::string find_cmd = "command -v " + command.executable;
     auto fp = popen(find_cmd.c_str(), "r");
     if(!fp) {
-        ec = std::make_error_code(std::errc::io_error);
-        return;
+        throw std::runtime_error("popen failed when locating executable");
     }
     if(fgets(buffer.data(), buffer.size(), fp) != nullptr) {
         result = buffer.data();
@@ -80,35 +79,27 @@ void locate_exe(rpc::data::command& command, std::error_code& ec) {
     }
     auto ret = pclose(fp);
     if(ret == -1 || WEXITSTATUS(ret) != 0) {
-        ec = std::make_error_code(std::errc::no_such_file_or_directory);
-        return;
+        throw std::runtime_error("command -v failed to locate executable");
     }
     if(result.empty()) {
-        ec = std::make_error_code(std::errc::no_such_file_or_directory);
-        return;
+        throw std::runtime_error("executable not found");
     }
     command.executable = result;
 }
 
-std::filesystem::path get_hook_path(std::error_code& ec) {
-    auto exe_path = util::get_executable_path(ec);
-    if(ec) {
-        return {};
-    }
+std::filesystem::path get_hook_path() {
+    auto exe_path = util::get_executable_path();
     return std::filesystem::path(exe_path).parent_path() /
            catter::config::hook::RELATIVE_PATH_OF_HOOK_LIB;
 }
 
-int run(rpc::data::command command, rpc::data::command_id_t id, std::error_code& ec) {
-    const auto lib_path = get_hook_path(ec);
-    if(ec) {
-        return -1;
-    }
+int run(rpc::data::command command, rpc::data::command_id_t id) {
+    const auto lib_path = get_hook_path();
     LOG_INFO("new command id is: {}", id);
     // check hook_lib exists
-    if(!std::filesystem::exists(lib_path, ec)) {
-        ec = std::make_error_code(std::errc::no_such_file_or_directory);
-        return -1;
+    if(!std::filesystem::exists(lib_path)) {
+        throw std::runtime_error(
+            std::format("Catter-Proxy Hook library not found at path: {}", lib_path.string()));
     }
     std::string joined_command = "";
 #ifdef CATTER_MAC
@@ -123,7 +114,7 @@ int run(rpc::data::command command, rpc::data::command_id_t id, std::error_code&
                                       lib_path.string()));
     command.env.push_back(std::format("{}={}", catter::config::hook::KEY_CATTER_COMMAND_ID, id));
     command.env.push_back(
-        std::format("{}={}", catter::config::hook::KEY_CATTER_PROXY_PATH, get_proxy_path()));
+        std::format("{}={}", catter::config::hook::KEY_CATTER_PROXY_PATH, util::get_catter_root_path().c_str()));
     // remove CATTER_PROXY_ENV_KEY from env to enable hooking in the child process
     auto rm_it =
         std::remove_if(command.env.begin(), command.env.end(), [](const std::string& env_entry) {

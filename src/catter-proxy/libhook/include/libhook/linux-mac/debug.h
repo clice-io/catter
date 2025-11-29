@@ -9,8 +9,8 @@
 
 const inline auto __just_for_init = []() {
     auto path =
-        std::filesystem::path(catter::util::catter_path()) / catter::config::hook::LOG_PATH_REL;
-    catter::log::init_logger("catter-hook", path.c_str(), false);
+        catter::util::get_log_path() / catter::config::hook::LOG_PATH_REL;
+    catter::log::init_logger("catter-hook", path, false);
     return 0;
 }();
 

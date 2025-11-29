@@ -1,4 +1,5 @@
 #include "libutil/crossplat.h"
+#include <cerrno>
 #include <filesystem>
 #include <array>
 #include <climits>
@@ -28,12 +29,12 @@ std::filesystem::path get_log_path() {
     return path / ".catter";
 }
 
-std::filesystem::path get_executable_path(std::error_code& ec) {
+std::filesystem::path get_executable_path() {
     std::array<char, 1024> buf;
     ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
     if(len <= 0) {
-        ec = std::error_code(errno, std::generic_category());
-        return {};
+        auto err = std::error_code(errno, std::generic_category());
+        throw std::runtime_error(std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     buf[len] = '\0';
     return std::filesystem::path(buf.data());
@@ -65,12 +66,12 @@ std::filesystem::path get_log_path() {
     return path / ".catter";
 }
 
-std::filesystem::path get_executable_path(std::error_code& ec) {
+std::filesystem::path get_executable_path() {
     std::array<char, 1024> buf;
     uint32_t size = buf.size();
     if(_NSGetExecutablePath(buf.data(), &size) != 0) {
-        ec = std::error_code(ERANGE, std::generic_category());
-        return {};
+        auto err = std::error_code(ERANGE, std::generic_category());
+        throw std::runtime_error(std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     return std::filesystem::path(buf.data());
 }
