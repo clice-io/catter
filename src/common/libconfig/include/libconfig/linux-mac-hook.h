@@ -19,7 +19,7 @@ constexpr const inline static char LD_PRELOAD_INIT_ENTRY[] = "DYLD_INSERT_LIBRAR
 #if CATTER_LINUX
 constexpr static const char* RELATIVE_PATH_OF_HOOK_LIB = "libcatter-hook-unix.so";
 #elif CATTER_MAC
-constexpr static std::string_view RELATIVE_PATH_OF_HOOK_LIB = "libcatter-hook.dylib";
+constexpr static const char* RELATIVE_PATH_OF_HOOK_LIB = "libcatter-hook-unix.dylib";
 #else
 #error "Unsupported platform"
 #endif

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dlfcn.h>
 #include <unistd.h>
 #include <array>
 #include <limits.h>
@@ -92,3 +93,8 @@ inline std::string get_executable_path() {
 #endif
 
 #define INJECT_FUNCTION(fn) DYLD_INTERPOSE(HOOK_NAME(fn), fn)
+
+template <typename T>
+T dynamic_linker(const char* const name) {
+    return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
+}

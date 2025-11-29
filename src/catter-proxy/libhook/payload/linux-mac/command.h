@@ -1,7 +1,6 @@
 #pragma once
 #include "buffer.h"
 #include <climits>
-#include <linux/limits.h>
 
 namespace catter {
 class CmdBuilder {

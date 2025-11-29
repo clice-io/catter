@@ -22,7 +22,7 @@ std::vector<std::string> get_environment() noexcept {
     return env_vars;
 }
 
-std::filesystem::path get_log_path() {
+std::filesystem::path get_catter_data_path() {
     const char* home = getenv("HOME");
     if(home == nullptr) {
         throw std::runtime_error("HOME environment variable not set");
@@ -49,6 +49,7 @@ std::filesystem::path get_executable_path() {
 
 #include <unistd.h>
 #include <crt_externs.h>
+#include <mach-o/dyld.h>
 
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept {
@@ -60,7 +61,7 @@ std::vector<std::string> get_environment() noexcept {
     return env_vars;
 }
 
-std::filesystem::path get_log_path() {
+std::filesystem::path get_catter_data_path() {
     const char* home = getenv("HOME");
     if(home == nullptr) {
         throw std::runtime_error("HOME environment variable not set");
@@ -121,7 +122,7 @@ std::filesystem::path get_executable_path() {
     return std::filesystem::path(data.data());
 }
 
-std::filesystem::path get_log_path() {
+std::filesystem::path get_catter_data_path() {
     return get_catter_root_path() / "logs";
 }
 

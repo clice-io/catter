@@ -8,8 +8,7 @@
 #include "libconfig/linux-mac-hook.h"
 
 const inline auto __just_for_init = []() {
-    auto path =
-        catter::util::get_log_path() / catter::config::hook::LOG_PATH_REL;
+    auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;
     catter::log::init_logger("catter-hook", path, false);
     return 0;
 }();

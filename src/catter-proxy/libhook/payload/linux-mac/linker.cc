@@ -15,13 +15,6 @@ using posix_spawn_t = int (*)(pid_t* pid,
                               char* const argv[],
                               char* const envp[]);
 
-namespace {
-template <typename T>
-T dynamic_linker(const char* const name) {
-    return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
-}
-}  // namespace
-
 namespace catter {
 
 std::expected<int, const char*> Linker::execve(const char* path,
@@ -36,6 +29,7 @@ std::expected<int, const char*> Linker::execve(const char* path,
     if(fp == nullptr) {
         return std::unexpected("hook function \"execve\" not found");
     }
+    INFO("execve called with path: {}, argv[0]: {}", path, argv[0]);
     if(argv[1][1] != 'p') {
         WARN("execve called with unexpected argv[1]: {}", argv[1]);
     }
@@ -59,6 +53,7 @@ std::expected<int, const char*> Linker::posix_spawn(pid_t* pid,
     if(fp == nullptr) {
         return std::unexpected("hook function \"posix_spawn\" not found");
     }
+    INFO("execve called with path: {}, argv[0]: {}", path, argv[0]);
     if(argv[1][1] != 'p') {
         WARN("posix_spawn called with unexpected argv[1]: {}", argv[1]);
     }

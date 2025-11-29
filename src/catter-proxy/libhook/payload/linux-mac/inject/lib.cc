@@ -46,14 +46,6 @@ void va_copy_n(va_list& args, char* argv[], const size_t argc) {
 
 }  // namespace
 
-// dynamic linker
-namespace {
-template <typename T>
-T dynamic_linker(const char* const name) {
-    return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
-}
-}  // namespace
-
 /// function type we need hook
 using execve_t = int (*)(const char* path, char* const argv[], char* const envp[]);
 using execv_t = int (*)(const char* path, char* const argv[]);
@@ -142,6 +134,9 @@ extern "C" EXPORT_SYMBOL void on_unload() {
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execve)(const char* path,
                                                char* const argv[],
                                                char* const envp[]) {
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execve(path, argv, envp););
+#endif
     IF_IN_PROXY(return dynamic_linker<execve_t>("execve")(path, argv, envp););
     ct::Resolver resolver;
     INFO("hooked execve called: path={}, argv[0]={}", path, argv[0]);
@@ -151,6 +146,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execve)(const char* path,
 INJECT_FUNCTION(execve);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execv)(const char* path, char* const argv[]) {
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execv(path, argv););
+#endif
     IF_IN_PROXY(return dynamic_linker<execv_t>("execv")(path, argv););
     ct::Resolver resolver;
     auto envp = const_cast<char* const*>(environment());
@@ -160,6 +158,7 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execv)(const char* path, char* const argv
 
 INJECT_FUNCTION(execv);
 
+/// Mac do not have execvpe, we only hook it in linux
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvpe)(const char* file,
                                                 char* const argv[],
                                                 char* const envp[]) {
@@ -175,6 +174,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execvp)(const char* file, char* const arg
     ct::Resolver resolver;
     auto envp = const_cast<char* const*>(environment());
     INFO("hooked execvp called: file={}, argv[0]={}", file, argv[0]);
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execvp(file, argv););
+#endif
     IF_IN_PROXY(return dynamic_linker<execvp_t>("execvp")(file, argv););
     return ct::Executor(LINKER, SESSION, resolver).execvpe(file, argv, envp);
 }
@@ -184,6 +186,9 @@ INJECT_FUNCTION(execvp);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvP)(const char* file,
                                                const char* search_path,
                                                char* const argv[]) {
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execvP(file, search_path, argv););
+#endif
     IF_IN_PROXY(return dynamic_linker<execvP_t>("execvP")(file, search_path, argv););
     ct::Resolver resolver;
     auto envp = const_cast<char* const*>(environment());
@@ -221,6 +226,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execl)(const char* path, const char* arg,
     va_copy_n(ap, &argv[1], argc + 1);
     va_end(ap);
 
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execv(path, argv););
+#endif
     auto envp = const_cast<char* const*>(environment());
     IF_IN_PROXY(return dynamic_linker<execve_t>("execve")(path, argv, envp););
     ct::Resolver resolver;
@@ -244,6 +252,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execlp)(const char* file, const char* arg
     va_copy_n(ap, &argv[1], argc + 1);
     va_end(ap);
 
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execvp(file, argv););
+#endif
     auto envp = const_cast<char* const*>(environment());
     IF_IN_PROXY(return dynamic_linker<execvpe_t>("execvpe")(file, argv, envp););
     ct::Resolver resolver;
@@ -268,7 +279,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execle)(const char* path, const char* arg
     va_copy_n(ap, &argv[1], argc + 1);
     char** envp = va_arg(ap, char**);
     va_end(ap);
-
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::execve(path, argv, envp););
+#endif
     IF_IN_PROXY(return dynamic_linker<execve_t>("execve")(path, argv, envp););
     ct::Resolver resolver;
     INFO("hooked execle called: path={}, argv[0]={}", path, argv[0]);
@@ -285,6 +298,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(posix_spawn)(pid_t* pid,
                                                     const posix_spawnattr_t* attrp,
                                                     char* const argv[],
                                                     char* const envp[]) {
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::posix_spawn(pid, path, file_actions, attrp, argv, envp););
+#endif
     IF_IN_PROXY(return dynamic_linker<posix_spawn_t>(
                            "posix_spawn")(pid, path, file_actions, attrp, argv, envp););
     ct::Resolver resolver;
@@ -301,6 +317,9 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(posix_spawnp)(pid_t* pid,
                                                      const posix_spawnattr_t* attrp,
                                                      char* const argv[],
                                                      char* const envp[]) {
+#ifdef CATTER_MAC
+    IF_IN_PROXY(return ::posix_spawnp(pid, file, file_actions, attrp, argv, envp););
+#endif
     IF_IN_PROXY(return dynamic_linker<posix_spawnp_t>(
                            "posix_spawnp")(pid, file, file_actions, attrp, argv, envp););
     ct::Resolver resolver;

@@ -9,7 +9,6 @@
 #include <limits.h>
 #include "libconfig/linux-mac-hook.h"
 #include <spawn.h>
-#include <system_error>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
@@ -113,8 +112,9 @@ int run(rpc::data::command command, rpc::data::command_id_t id) {
                                       catter::config::hook::KEY_PRELOAD,
                                       lib_path.string()));
     command.env.push_back(std::format("{}={}", catter::config::hook::KEY_CATTER_COMMAND_ID, id));
-    command.env.push_back(
-        std::format("{}={}", catter::config::hook::KEY_CATTER_PROXY_PATH, util::get_catter_root_path().c_str()));
+    command.env.push_back(std::format("{}={}",
+                                      catter::config::hook::KEY_CATTER_PROXY_PATH,
+                                      util::get_executable_path().string()));
     // remove CATTER_PROXY_ENV_KEY from env to enable hooking in the child process
     auto rm_it =
         std::remove_if(command.env.begin(), command.env.end(), [](const std::string& env_entry) {

@@ -16,8 +16,8 @@ std::filesystem::path get_catter_root_path();
 std::filesystem::path get_executable_path();
 
 /**
- * @return the log path used by catter
+ * @return the data path used by catter
  */
-std::filesystem::path get_log_path();
+std::filesystem::path get_catter_data_path();
 
 }  // namespace catter::util
