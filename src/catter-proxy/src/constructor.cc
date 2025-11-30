@@ -3,8 +3,6 @@
 #include "librpc/data.h"
 #include "libutil/crossplat.h"
 
-
-
 namespace catter::proxy {
 rpc::data::command build_raw_cmd(char* arg_start[], char* arg_end[]) {
     if(arg_start >= arg_end) {
