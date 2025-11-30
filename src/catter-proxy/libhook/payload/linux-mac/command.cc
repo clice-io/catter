@@ -60,7 +60,7 @@ CmdBuilder::command CmdBuilder::proxy_str(const char* path, char* const* argv_in
 rollback:
     append_argv_ptr = argv_backup;
     append_ptr = ptr_backup;
-    return {path, argv_in};
+    return error_str("Overflow when building command", path);
 }
 
 CmdBuilder::command CmdBuilder::error_str(const char* msg,
@@ -72,17 +72,18 @@ CmdBuilder::command CmdBuilder::error_str(const char* msg,
 
     Buffer buf(append_ptr, cmd_buf_area + BUF_SIZE);
 
-    buf.push(catter::config::hook::ERROR_PREFFIX);
+    buf.push(catter::config::hook::ERROR_PREFIX);
     buf.push(" ");
     buf.push(msg);
     buf.push(" in executing:\n    --->");
     buf.push(path);
 
-    for(unsigned i = 1; argv_in[i]; ++i) {
-        buf.push(" ");
-        buf.push(argv_in[i]);
+    if(argv_in != nullptr) {
+        for(unsigned i = 1; argv_in[i]; ++i) {
+            buf.push(" ");
+            buf.push(argv_in[i]);
+        }
     }
-
     auto res = buf.store("");
 
     if(!res) {

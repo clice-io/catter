@@ -39,7 +39,7 @@ public:
      * @example linux or mac error found in hook: msg in executing:
      *              --> path arg1 arg2 ...
      */
-    command error_str(const char* msg, const char* path, char* const* argv) noexcept;
+    command error_str(const char* msg, const char* path, char* const* argv = nullptr) noexcept;
 
 private:
     // Helper function to store a string as an argument
