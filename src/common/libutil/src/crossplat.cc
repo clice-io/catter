@@ -6,6 +6,7 @@
 #include <system_error>
 #include <vector>
 #include <string>
+#include <format>
 
 #if defined(CATTER_LINUX)
 #include <unistd.h>
