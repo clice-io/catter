@@ -4,8 +4,10 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "eslint": "eslint ./api/src/**/*.ts ./scripts/**/*.ts --fix",
-    "prettier": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts"
+    "eslint-all": "eslint -c eslint.config.js ./api/src/**/*.ts ./scripts/**/*.ts",
+    "eslint": "eslint -c eslint.config.js",
+    "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",
+    "prettier": "prettier --write "
   },
   "keywords": [],
   "author": "",
