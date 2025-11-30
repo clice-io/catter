@@ -45,12 +45,13 @@ CmdBuilder::command CmdBuilder::proxy_str(const char* path, char* const* argv_in
         goto rollback;
     }
 
-    for(unsigned i = 1; argv_in[i]; ++i)  // argv_in[0] is the path
+    for(unsigned i = 1; argv_in[i]; ++i) {
         if(!store_arg(buf, argv_in[i])) {
             WARN("Overflow when building proxy command args");
             goto rollback;
         }
-
+    }
+    *append_argv_ptr++ = nullptr;
     append_argv_ptr = argv_backup;
     append_ptr = ptr_backup;
     INFO("Built proxy command:");
@@ -96,6 +97,7 @@ CmdBuilder::command CmdBuilder::error_str(const char* msg,
     }
 
     *append_argv_ptr++ = append_ptr;
+    *append_argv_ptr++ = nullptr;
 
     append_argv_ptr = argv_backup;
     append_ptr = ptr_backup;
