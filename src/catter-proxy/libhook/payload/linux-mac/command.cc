@@ -24,6 +24,8 @@ CmdBuilder::CmdBuilder(const char* proxy_path, const char* self_id) noexcept {
 
     Buffer buf(cmd_buf_area, cmd_buf_area + BUF_SIZE);
 
+    // at lease we provide a space enough for proxy_path, -p, self_id, "", and null
+    // therefore we do not check the return value here
     executable_path_ptr = store_arg(buf, proxy_path);
     store_arg(buf, "-p");
     store_arg(buf, self_id);
