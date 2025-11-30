@@ -36,10 +36,15 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
 
 // we do not output in proxy, it must be invoked by main program.
 int main(int argc, char* argv[], char* envp[]) {
-    catter::log::init_logger("catter-proxy.log",
-                             catter::util::get_catter_data_path() /
-                                 catter::config::proxy::LOG_PATH_REL,
-                             false);
+    try {
+        catter::log::init_logger("catter-proxy.log",
+                                 catter::util::get_catter_data_path() /
+                                     catter::config::proxy::LOG_PATH_REL,
+                                 false);
+    } catch(const std::exception& e) {
+        // cannot init logger
+        catter::log::mute_logger();
+    }
 #ifndef CATTER_WINDOWS
     // To let hook in this process stop working
     setenv(catter::config::proxy::CATTER_PROXY_ENV_KEY, "v1", 0);

@@ -38,4 +38,8 @@ void init_logger(const std::string& logger_name,
     spdlog::set_default_logger(logger_instance);
 }
 
+void mute_logger() noexcept {
+    ::spdlog::set_level(::spdlog::level::off);
+}
+
 }  // namespace catter::log

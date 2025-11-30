@@ -26,4 +26,6 @@ namespace catter::log {
 void init_logger(const std::string& logger_name,
                  const std::filesystem::path& file_path,
                  bool cmdline = false) noexcept;
-};
+
+void mute_logger() noexcept;
+}  // namespace catter::log

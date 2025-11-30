@@ -37,6 +37,6 @@ private:
     rpc_handler() noexcept = default;
 
 private:
-    rpc::data::command_id_t id;
+    rpc::data::command_id_t id{-1};
 };
 }  // namespace catter::proxy
