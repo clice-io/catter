@@ -1,3 +1,4 @@
+#pragma once
 #define NON_DEFAULT_CONSTRUCTABLE(T) T() noexcept = delete;
 
 #define NON_COPYABLE_NOR_MOVABLE(T)                                                                \

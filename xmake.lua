@@ -13,7 +13,8 @@ if has_config("dev") then
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
-if is_mode("debug") then
+if is_mode("debug") and is_plat("linux", "macosx") then
+    -- hook.so will use a static lib to log in debug mode
     add_defines("DEBUG")
     add_cxxflags("-fPIC")
 end

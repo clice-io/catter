@@ -13,7 +13,7 @@
 static pid_t get_thread_id(void) {
     return (pid_t)syscall(SYS_gettid);
 }
-#elif CATTER_MAC
+#elif defined(CATTER_MAC)
 #include <pthread.h>
 
 static uint64_t get_thread_id(void) {
@@ -46,7 +46,7 @@ static const char** environment() noexcept {
 
 #ifdef CATTER_LINUX
 #include <unistd.h>
-#elif CATTER_MAC
+#elif defined(CATTER_MAC)
 #include <mach-o/dyld.h>
 #else
 #error "Unsupported platform"

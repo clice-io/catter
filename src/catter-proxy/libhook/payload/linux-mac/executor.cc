@@ -60,8 +60,8 @@ Executor::Executor(const Linker& linker, const Session& session, Resolver& resol
 int Executor::execve(const char* path, char* const* argv, char* const* envp) {
 
     INIT_EXEC();
-    CHECK_SESSION(session_, path, argv);
     CHECK_POINTER(path);
+    CHECK_SESSION(session_, path, argv);
 
     auto executable_res = resolver_.from_current_directory(path);
     CHECK_EXEC_RESULT(executable_res, path, argv);
@@ -81,8 +81,8 @@ int Executor::execve(const char* path, char* const* argv, char* const* envp) {
 
 int Executor::execvpe(const char* file, char* const* argv, char* const* envp) {
     INIT_EXEC();
-    CHECK_SESSION(session_, file, argv);
     CHECK_POINTER(file);
+    CHECK_SESSION(session_, file, argv);
     auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
     CHECK_EXEC_RESULT(executable_res, file, argv);
     if(!final_cmd_or_error.valid()) {
@@ -103,8 +103,8 @@ int Executor::execvP(const char* file,
                      char* const* argv,
                      char* const* envp) {
     INIT_EXEC();
-    CHECK_SESSION(session_, file, argv);
     CHECK_POINTER(file);
+    CHECK_SESSION(session_, file, argv);
 
     auto executable_res = resolver_.from_search_path(file, search_path);
     CHECK_EXEC_RESULT(executable_res, file, argv);
@@ -127,8 +127,8 @@ int Executor::posix_spawn(pid_t* pid,
                           char* const* argv,
                           char* const* envp) {
     INIT_EXEC();
-    CHECK_SESSION(session_, path, argv);
     CHECK_POINTER(path);
+    CHECK_SESSION(session_, path, argv);
 
     auto executable_res = resolver_.from_current_directory(path);
     CHECK_EXEC_RESULT(executable_res, path, argv);
@@ -151,8 +151,8 @@ int Executor::posix_spawnp(pid_t* pid,
                            char* const* argv,
                            char* const* envp) {
     INIT_EXEC();
-    CHECK_SESSION(session_, file, argv);
     CHECK_POINTER(file);
+    CHECK_SESSION(session_, file, argv);
 
     auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
     CHECK_EXEC_RESULT(executable_res, file, argv);

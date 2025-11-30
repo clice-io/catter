@@ -83,7 +83,6 @@ CmdBuilder::command CmdBuilder::error_str(const char* msg,
         buf.push(argv_in[i]);
     }
 
-    *append_argv_ptr++ = append_ptr;
     auto res = buf.store("");
 
     if(!res) {
@@ -93,10 +92,12 @@ CmdBuilder::command CmdBuilder::error_str(const char* msg,
         return {path, argv_in};
     }
 
+    *append_argv_ptr++ = append_ptr;
+
     append_argv_ptr = argv_backup;
     append_ptr = ptr_backup;
     ERROR("{}", append_ptr);
-    return {cmd_buf_area, this->argv};
+    return {executable_path_ptr, this->argv};
 }
 
 }  // namespace catter

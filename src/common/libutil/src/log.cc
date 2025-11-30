@@ -30,8 +30,8 @@ void init_logger(const std::string& logger_name,
     daily_file_sink->set_pattern(catter::config::log::LOG_PATTERN_FILE);
     std::vector<spdlog::sink_ptr> sinks{daily_file_sink};
     if(cmdline) {
-        daily_file_sink->set_pattern(catter::config::log::LOG_PATTERN_CONSOLE);
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        console_sink->set_pattern(catter::config::log::LOG_PATTERN_CONSOLE);
         sinks.push_back(console_sink);
     }
     logger_instance = std::make_shared<spdlog::logger>(logger_name, begin(sinks), end(sinks));
