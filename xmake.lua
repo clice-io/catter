@@ -5,42 +5,33 @@ set_allowedplats("windows", "linux", "macosx")
 
 set_languages("c++23")
 
+add_requires("spdlog", {system = false, version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
+
 option("dev", {default = true})
 if has_config("dev") then
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
 
-if is_mode("debug") then
+if is_mode("debug") and is_plat("linux", "macosx") then
+    -- hook.so will use a static lib to log in debug mode
     add_defines("DEBUG")
+    add_cxxflags("-fPIC")
 end
 
 if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
+elseif is_plat("windows") then
+    add_defines("CATTER_WINDOWS")
 end
 
-if is_plat("windows") then
-    includes("src/hook/windows")
-elseif is_plat("linux", "macosx") then
-    includes("src/hook/linux")
-end
 
-add_requires("quickjs-ng")
+includes("src/common/librpc")
+includes("src/common/libutil")
+includes("src/common/libconfig")
 
-target("catter")
-    set_kind("binary")
-    add_includedirs("src")
-    add_files("src/main.cpp")
-    if is_plat("windows") then
-        add_files("src/hook/windows/impl.cpp")
-    elseif is_plat("linux", "macosx") then
-        add_files("src/hook/linux/*.cc")
-    end
 
-    if is_plat("windows") then
-        add_packages("microsoft-detours")
-    end
-
-    add_packages("quickjs-ng")
+includes("src/catter")
+includes("src/catter-proxy")
