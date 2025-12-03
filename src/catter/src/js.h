@@ -1,0 +1,56 @@
+#pragma once
+
+#include "libqjs/qjs.h"
+
+namespace catter::core::js {
+
+/**
+ * Initialize QuickJS runtime and context, register C++ APIs, and load JS libraries.
+ * @throws std::runtime_error or std::exception if initialization fails.
+ */
+void init_qjs();
+
+/**
+ * Run a JavaScript file content in a new QuickJS runtime and context.
+ *
+ * @param content The JavaScript code to execute.
+ * @param filename The name of the file (used for error reporting).
+ * @throws qjs::Exception if there is an error during execution.
+ */
+qjs::Value run_js_file(std::string_view content, const std::string_view filename);
+
+qjs::Object& js_mod_object();
+
+/**
+ * Get a property from the catter JS module as a specific type.
+ *
+ * @tparam T The expected type of the property (e.g., qjs::Function<void(std::string)>).
+ * @param prop_name The name of the property to retrieve.
+ * @return An optional containing the property if it exists(no exception happens, and isnot
+ * undefined) and can be converted to type T; std::nullopt otherwise.It maybe js `null` even return
+ * a T.
+ */
+template <typename T>
+std::optional<T> prop_of_js_mod(const std::string& prop_name) {
+    auto val = js_mod_object().get_optional_property(prop_name);
+    if(!val.has_value()) {
+        return std::nullopt;
+    }
+    if constexpr(std::is_same_v<T, qjs::Value>) {
+        return val;
+    } else if constexpr(catter::meta::is_specialization_of_v<T, qjs::Function>) {
+        if(!val->is_function()) {
+            return std::nullopt;
+        }
+        auto to_obj_res = val->to<qjs::Object>();
+        if(!to_obj_res.has_value()) {
+            return std::nullopt;
+        }
+        auto to_func_res = to_obj_res->to<T>();
+        return to_func_res;
+    } else {
+        return val->to<T>();
+    }
+}
+
+};  // namespace catter::core::js

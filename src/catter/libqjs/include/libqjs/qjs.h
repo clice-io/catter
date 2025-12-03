@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <exception>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -17,35 +18,9 @@
 
 #include <quickjs.h>
 
-namespace meta {
-template <typename T>
-consteval std::string_view type_name() {
-    std::string_view name =
-#if defined(__clang__) || defined(__GNUC__)
-        __PRETTY_FUNCTION__;  // Clang / GCC
-#elif defined(_MSC_VER)
-        __FUNCSIG__;  // MSVC
-#else
-#error "Unsupported compiler for meta::type_name"
-#endif
+#include "libutil/meta.h"
 
-#if defined(__clang__)
-    constexpr std::string_view prefix = "std::string_view meta::type_name() [T = ";
-    constexpr std::string_view suffix = "]";
-#elif defined(__GNUC__)
-    constexpr std::string_view prefix = "consteval std::string_view meta::type_name() [with T = ";
-    constexpr std::string_view suffix = "; std::string_view = std::basic_string_view<char>]";
-#elif defined(_MSC_VER)
-        constexpr std::string_view prefix =
-            "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl meta::type_name<";
-    constexpr std::string_view suffix = ">(void)";
-#endif
-    name.remove_prefix(prefix.size());
-    name.remove_suffix(suffix.size());
-    return name;
-}
-
-}  // namespace meta
+// namespace meta
 
 namespace catter::qjs {
 namespace detail {
@@ -189,6 +164,14 @@ public:
         return detail::value_trans<T>::to(this->ctx, *this);
     }
 
+    bool is_object() const noexcept {
+        return JS_IsObject(this->val);
+    }
+
+    bool is_function() const noexcept {
+        return JS_IsFunction(this->ctx, this->val);
+    }
+
     bool is_exception() const noexcept {
         return JS_IsException(this->val);
     }
@@ -330,7 +313,9 @@ public:
     /**
      * @brief Get the property object, noticed that property maybe undefined.
      */
-    Value operator[] (const std::string& prop_name) const {
+    template <typename T>
+        requires std::is_convertible_v<T, std::string>
+    Value operator[] (const T& prop_name) const {
         return get_property(prop_name);
     }
 
@@ -402,6 +387,14 @@ class Function {
     static_assert("Function must be instantiated with a function type");
 };
 
+/**
+ * @brief A typed wrapper for JavaScript functions.
+ * This class allows calling JavaScript functions from C++ and creating C++ callbacks that can be
+ * called from JavaScript.
+ * Notice that it applies for closure, quickjs will manage the closure's memory.
+ * If you want to pass a c ++ function pointer or functor that you manage the memory,
+ * Please.
+ */
 template <typename R, typename... Args>
 class Function<R(Args...)> : private Object {
 public:
@@ -470,6 +463,18 @@ public:
         } else {
             JS_SetOpaque(result.value(), new Opaque(std::forward<Invocable>(invocable)));
         }
+        return result;
+    }
+
+    template <auto FnPtr>
+        requires std::is_pointer_v<decltype(FnPtr)> &&
+                 std::is_function_v<std::remove_pointer_t<decltype(FnPtr)>>
+    static Function from_raw(JSContext* ctx, const char* name) noexcept {
+        using FuncType = std::remove_cvref_t<decltype(*FnPtr)>;
+        using Param = catter::meta::FuncDecomposer<FuncType>::ParamTy;
+        Function<FuncType> result{
+            ctx,
+            JS_NewCFunction(ctx, FnProxy<FnPtr>, name, std::tuple_size_v<Param>)};
         return result;
     }
 
@@ -573,6 +578,61 @@ private:
                 return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
             }
         }(std::make_index_sequence<sizeof...(Args)>{});
+    }
+
+    /**
+     * @brief A generic function proxy for C function pointers.
+     * This function template allows wrapping C function pointers to be used as JavaScript
+     * functions in QuickJS.
+     * You should ensure that FnPtr is a valid function pointer type.
+     */
+    template <auto FnPtr>
+        requires std::is_pointer_v<decltype(FnPtr)> &&
+                 std::is_function_v<std::remove_pointer_t<decltype(FnPtr)>>
+    static auto FnProxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv)
+        -> JSValue {
+        using FuncType = std::remove_cvref_t<decltype(*FnPtr)>;
+        using ParamTupleTy = catter::meta::FuncDecomposer<FuncType>::ParamTy;
+        using RetTy = catter::meta::FuncDecomposer<FuncType>::RetTy;
+        constexpr size_t ParamCount = std::tuple_size_v<ParamTupleTy>;
+        if(argc != ParamCount) {
+            return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
+        }
+        return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
+            auto transformer = [&]<size_t N>(std::in_place_index_t<N>) {
+                using T = std::tuple_element_t<N, ParamTupleTy>;
+                if constexpr(std::is_same_v<T, Object>) {
+                    if(JS_IsObject(argv[N])) {
+                        return Object{ctx, argv[N]};
+                    }
+                } else {
+                    if(auto opt = qjs::Value{ctx, argv[N]}.to<T>(); opt.has_value()) {
+                        return opt.value();
+                    }
+                }
+                throw qjs::Exception(
+                    std::format("Failed to convert argument[{}] to {}", N, meta::type_name<T>()));
+            };
+            try {
+                if constexpr(std::is_void_v<RetTy>) {
+                    (*FnPtr)(transformer(std::in_place_index<Is>)...);
+                    return JS_UNDEFINED;
+                } else if constexpr(std::is_same_v<RetTy, Object>) {
+                    auto res = (*FnPtr)(transformer(std::in_place_index<Is>)...);
+                    return res.release();
+                } else {
+                    auto res = (*FnPtr)(transformer(std::in_place_index<Is>)...);
+                    return qjs::Value::from(ctx, res).release();
+                }
+            } catch(const qjs::Exception& e) {
+                return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
+            } catch(const std::exception& e) {
+                return JS_ThrowInternalError(
+                    ctx,
+                    "This is an Unexpected exception. If you encounter this, please report a bug to the author: %s",
+                    e.what());
+            }
+        }(std::make_index_sequence<ParamCount>{});
     }
 };
 

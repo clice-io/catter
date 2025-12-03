@@ -1,3 +1,2 @@
 CompileFlags:
   CompilationDatabase: ./build
-  Add: ["/msvc: -std:latest", "/clang:-std=c++23"]

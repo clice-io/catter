@@ -27,4 +27,5 @@ export default {
       },
     }),
   ],
+  external: ['catter-c']
 };

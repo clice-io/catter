@@ -51,3 +51,4 @@ api/output
 .vscode
 build*/
 vsxmake*/
+.turbo/

@@ -1,0 +1,6 @@
+target("ut-catter")
+    set_kind("binary")
+    add_deps("catter-core", "libconfig", "librpc", "libutil")
+    add_files("main.cc")
+    add_files("tests/**/*.cc")
+    add_packages("boost_ut")

@@ -6,7 +6,8 @@ using api_register = void (*)(const catter::qjs::CModule&, const catter::qjs::Co
 inline std::vector<api_register> api_registers{};
 }  // namespace catter::apitool
 
-#define TO_JS_FN(func) catter::qjs::Function<decltype(func)>::from(ctx.js_context(), func)
+#define TO_JS_FN(func)                                                                             \
+    catter::qjs::Function<decltype(func)>::from_raw<func>(ctx.js_context(), #func)
 
 #define MERGE(x, y) x##y
 // CAPI(function sign)

@@ -7,7 +7,8 @@
     "eslint-all": "eslint -c eslint.config.js ./api/src/**/*.ts ./scripts/**/*.ts",
     "eslint": "eslint -c eslint.config.js",
     "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",
-    "prettier": "prettier --write "
+    "prettier": "prettier --write ",
+    "build-js-lib": "cd ./api && pnpm run build"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
   "devDependencies": {
     "eslint": "^9.39.1",
     "prettier": "3.6.2",
+    "turbo": "^2.6.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4"
   },

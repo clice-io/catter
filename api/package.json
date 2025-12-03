@@ -22,8 +22,7 @@
     "prebuild": "pnpm run cleanup",
     "bundle-js": "rollup -c ./rollup.config.js",
     "bundle-dts": "tsc && api-extractor run && pnpm run add-capi",
-    "build-dev": "pnpm run prebuild && run-p bundle-dts bundle-js",
-    "build-release": "pnpm run build-dev && rimraf ./build"
+    "build": "pnpm run prebuild && run-p bundle-dts bundle-js"
   },
   "keywords": [],
   "license": "Apache-2.0",
