@@ -1,25 +1,31 @@
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <string>
 #include <system_error>
 
 #include "constructor.h"
 #include "librpc/data.h"
-#include "librpc/helper.h"
+#include "librpc/uv.h"
+
 #include "libutil/crossplat.h"
 #include "libutil/log.h"
 #include "libhook/interface.h"
 #include "libconfig/proxy.h"
 
 #include "libutil/output.h"
-#include "rpc.h"
+#include "rpppppc.h"
+#include "uv.h"
 
 namespace catter::proxy {
 int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
         case action::WRAP: {
-            return std::system(rpc::helper::cmdline_of(act.cmd).c_str());
+            return catter::rpc::uv::sync::spawn_process(catter::rpc::uv::default_loop(),
+                                                        act.cmd.executable,
+                                                        act.cmd.args);
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);
@@ -39,7 +45,8 @@ int main(int argc, char* argv[], char* envp[]) {
     try {
         catter::log::init_logger("catter-proxy.log",
                                  catter::util::get_catter_data_path() /
-                                     catter::config::proxy::LOG_PATH_REL,
+                                     catter::config::proxy::LOG_PATH_REL /
+                                     std::format("{:016x}.log", catter::util::unique_id()),
                                  false);
     } catch(const std::exception& e) {
         // cannot init logger

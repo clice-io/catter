@@ -1,6 +1,6 @@
 
 if is_plat("windows") then
-    add_requires("microsoft-detours")
+    add_requires("microsoft-detours", {system = false, version = "2023.6.8"})
 
     target("catter-hook64")
         set_kind("shared")

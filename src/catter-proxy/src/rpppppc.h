@@ -1,13 +1,15 @@
 #pragma once
 #include "librpc/data.h"
-#include "libutil/macro.h"
 #include "librpc/function.h"
 
 // TODO
 namespace catter::proxy {
 class rpc_handler {
 public:
-    NON_COPYABLE_NOR_MOVABLE(rpc_handler);
+    rpc_handler(const rpc_handler&) = delete;
+    rpc_handler& operator= (const rpc_handler&) = delete;
+    rpc_handler(rpc_handler&&) = delete;
+    rpc_handler& operator= (rpc_handler&&) = delete;
 
     static rpc_handler& instance() noexcept {
         static rpc_handler instance;
@@ -25,12 +27,12 @@ public:
         return res.act;
     }
 
-    void report_error(rpc::data::command_id_t parent_id, const std::string& msg) {
+    void report_error(rpc::data::command_id_t parent_id, const std::string& msg) noexcept {
         return rpc::server::report_error(parent_id, msg);
     };
 
     void finish(int ret_code) {
-        return rpc::server::finish(id, ret_code);
+        return rpc::server::finish(ret_code);
     }
 
 private:
