@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <exception>
 #include <optional>
-#include <print>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -846,7 +845,6 @@ public:
             JS_FreeValue(this->js_context(), val);
             throw qjs::Exception(detail::dump(this->js_context()));
         }
-
         return Value{this->js_context(), std::move(val)};
     }
 

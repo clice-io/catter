@@ -1,22 +1,56 @@
 R"(
 import * as capi from 'catter-c';
+import { stdout_print } from 'catter-c';
 
-function stdout_print(content) {
-    capi.stdout_print(`wrappered by js: ${content}`);
-}
-let test_cb = null;
-function add_test_callback(cb) {
-    test_cb = cb;
-}
-function call_test_callback(msg) {
-    if (test_cb) {
-        test_cb(`called from js: ${msg}`);
-    }
-    else {
-        stdout_print("no callback registered");
+/// api for debug and test
+/**
+ * @param cond - condition to assert
+ * @param otherwise - function to call when assertion fails
+ */
+function assert_do(cond, otherwise) {
+    if (!cond) {
+        otherwise();
     }
 }
+/**
+ * assert condition, print message on failure
+ * @param cond - condition to assert
+ */
+function assert_print(cond) {
+    assert_do(cond, () => {
+        stdout_print("assertion failed!");
+    });
+}
+/**
+ * assert condition, throw error on failure
+ * @param cond - condition to assert
+ */
+function assert_throw(cond) {
+    assert_do(cond, () => {
+        throw new Error("assertion failed!");
+    });
+}
 
-export { add_test_callback, call_test_callback, stdout_print };
+var debug = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    assert_do: assert_do,
+    assert_print: assert_print,
+    assert_throw: assert_throw
+});
+
+/**
+ * Provides standard output printing
+ * @param content - content to print
+ */
+function print(content) {
+    capi.stdout_print(content);
+}
+
+var io = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    print: print
+});
+
+export { debug, io };
 
 )"

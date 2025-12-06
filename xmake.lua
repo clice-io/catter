@@ -40,6 +40,17 @@ rule("js-lib")
         end, {files = sourcefile})
     end)
 
+rule("js-test")
+    set_extensions(".ts", ".d.ts", ".js")
+    on_build_file(function (target, sourcefile, opt)
+        import("core.project.depend")
+        import("utils.progress")
+        depend.on_changed(function ()
+            progress.show(opt.progress, "${color.build.target}build js-lib %s", sourcefile)
+            os.run("pnpm run build-js-test")
+        end, {files = sourcefile})
+    end)
+
 
 
 includes("src/common/librpc")

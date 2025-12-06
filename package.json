@@ -8,7 +8,8 @@
     "eslint": "eslint -c eslint.config.js",
     "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",
     "prettier": "prettier --write ",
-    "build-js-lib": "cd ./api && pnpm run build"
+    "build-js-lib": "cd ./api && pnpm run build",
+    "build-js-test": "cd ./api && pnpm run test-file"
   },
   "keywords": [],
   "author": "",
