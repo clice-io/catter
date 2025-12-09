@@ -7,7 +7,6 @@
 
 #include "constructor.h"
 #include "librpc/data.h"
-#include "librpc/uv.h"
 
 #include "libutil/crossplat.h"
 #include "libutil/log.h"
@@ -16,16 +15,13 @@
 
 #include "libutil/output.h"
 #include "rpppppc.h"
-#include "uv.h"
 
 namespace catter::proxy {
 int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
         case action::WRAP: {
-            return catter::rpc::uv::sync::spawn_process(catter::rpc::uv::default_loop(),
-                                                        act.cmd.executable,
-                                                        act.cmd.args);
+            // TODO
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);

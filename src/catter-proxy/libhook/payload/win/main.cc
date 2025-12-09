@@ -64,16 +64,11 @@ std::basic_string<char_t> get_rpc_id() {
     char_t buffer[buffer_size];
 
     if constexpr(std::is_same_v<char_t, char>) {
-        if(GetEnvironmentVariableA(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
-            return std::basic_string<char_t>(buffer);
-        } else {
+        if(!GetEnvironmentVariableA(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
             // TODO: log
         }
-
     } else {
-        if(GetEnvironmentVariableW(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
-            return std::basic_string<char_t>(buffer);
-        } else {
+        if(!GetEnvironmentVariableW(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
             // TODO: log
         }
     }
