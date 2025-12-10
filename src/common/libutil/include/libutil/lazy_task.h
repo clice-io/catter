@@ -35,7 +35,7 @@ public:
         return std::move(this->result);
     }
 
-private:
+protected:
     Ret result{};
 };
 
@@ -47,61 +47,78 @@ public:
     void result_rvalue() noexcept {}
 };
 
+class PromiseAwait {
+public:
+    awaiter::final final_suspend() noexcept {
+        return {.continues = this->previous};
+    }
+
+    void set_previous(std::coroutine_handle<> h) noexcept {
+        this->previous = h;
+    }
+
+protected:
+    std::coroutine_handle<> previous{std::noop_coroutine()};
+};
+
+class PromiseException {
+public:
+    void unhandled_exception() noexcept {
+        this->exception = std::current_exception();
+    }
+
+    void rethrow_if_exception() {
+        if(this->exception) {
+            std::rethrow_exception(this->exception);
+        }
+    }
+
+protected:
+    std::exception_ptr exception{nullptr};
+};
+
 template <typename Ret>
-class LazyTask {
+class Lazy {
 public:
     class Promise;
 
     using promise_type = Promise;
     using handle_type = std::coroutine_handle<promise_type>;
 
-    LazyTask() = default;
+    Lazy() = default;
 
-    LazyTask(handle_type h) : handle{h} {}
+    Lazy(handle_type h) : handle{h} {}
 
-    LazyTask(const LazyTask&) = delete;
+    Lazy(const Lazy&) = delete;
 
-    LazyTask(LazyTask&& other) noexcept : handle{std::exchange(other.handle, nullptr)} {}
+    Lazy(Lazy&& other) noexcept : handle{std::exchange(other.handle, nullptr)} {}
 
-    LazyTask& operator= (const LazyTask&) = delete;
+    Lazy& operator= (const Lazy&) = delete;
 
-    LazyTask& operator= (LazyTask&& other) noexcept {
+    Lazy& operator= (Lazy&& other) noexcept {
         if(this != &other) {
-            this->~LazyTask();
-            new (this) LazyTask(std::move(other));
+            this->~Lazy();
+            new (this) Lazy(std::move(other));
         }
         return *this;
     }
 
-    ~LazyTask() {
+    ~Lazy() {
         if(this->handle) {
             this->wait();
             this->handle.destroy();
         }
     }
 
-    class Promise : public PromiseRet<Ret> {
+    class Promise : public PromiseRet<Ret>, public PromiseException, public PromiseAwait {
     public:
-        LazyTask get_return_object() noexcept {
+        Lazy get_return_object() noexcept {
             return {handle_type::from_promise(*this)};
         }
 
         std::suspend_never initial_suspend() noexcept {
             return {};
         }
-
-        awaiter::final final_suspend() noexcept {
-            return {.continues = this->previous};
-        }
-
-        void unhandled_exception() noexcept {}
-
-        void set_previous(std::coroutine_handle<> h) noexcept {
-            this->previous = h;
-        }
-
-    protected:
-        std::coroutine_handle<> previous{std::noop_coroutine()};
     };
 
     struct awaiter {
@@ -109,13 +126,18 @@ public:
             return false;
         }
 
-        Ret await_resume() noexcept {
+        Ret await_resume() {
+            this->coro.promise().rethrow_if_exception();
             return this->coro.promise().result_rvalue();
         }
 
-        auto await_suspend(std::coroutine_handle<> h) noexcept {
-            this->coro.promise().set_previous(h);
-            return this->coro;
+        std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) noexcept {
+            if(this->coro.done()) {
+                return h;
+            } else {
+                this->coro.promise().set_previous(h);
+                return this->coro;
+            }
         }
 
         std::coroutine_handle<promise_type> coro;
@@ -145,8 +167,9 @@ public:
         }
     }
 
-    Ret get() noexcept {
+    Ret get() {
         this->wait();
+        this->handle.promise().rethrow_if_exception();
         return this->handle.promise().result_rvalue();
     }
 

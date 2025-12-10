@@ -56,16 +56,6 @@ public:
     Read(uv_stream_t* stream, char* dst, size_t len) : stream{stream}, buf{dst}, remaining{len} {}
 
     bool await_ready() noexcept {
-        return false;
-    }
-
-    ssize_t await_resume() noexcept {
-        this->stream->data = this->tmp_data;
-        return this->nread;
-    }
-
-    bool await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
         this->tmp_data = this->stream->data;
         this->stream->data = this;
 
@@ -84,6 +74,15 @@ public:
         } else {
             return true;
         }
+    }
+
+    ssize_t await_resume() noexcept {
+        this->stream->data = this->tmp_data;
+        return this->nread;
+    }
+
+    void await_suspend(std::coroutine_handle<> h) noexcept {
+        this->handle = h;
     }
 
 private:
@@ -124,15 +123,6 @@ public:
         stream{stream}, bufs{bufs}, nbufs{nbufs} {}
 
     bool await_ready() noexcept {
-        return false;
-    }
-
-    int await_resume() noexcept {
-        return this->status;
-    }
-
-    bool await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
         this->req.data = this;
         auto ret = uv_write(&this->req,
                             this->stream,
@@ -147,6 +137,14 @@ public:
         } else {
             return true;
         }
+    }
+
+    int await_resume() noexcept {
+        return this->status;
+    }
+
+    void await_suspend(std::coroutine_handle<> h) noexcept {
+        this->handle = h;
     }
 
 private:
@@ -227,14 +225,13 @@ private:
 }  // namespace awaiter
 
 template <typename Ret>
-class LazyTask : catter::coro::LazyTask<Ret> {
-public:
-    using Base = catter::coro::LazyTask<Ret>;
+struct Lazy : catter::coro::Lazy<Ret> {
+    using Base = catter::coro::Lazy<Ret>;
     using Base::Base;
 
     class promise_type : public Base::promise_type {
     public:
-        LazyTask get_return_object() noexcept {
+        Lazy get_return_object() noexcept {
             return {Base::handle_type::from_promise(*this)};
         }
 
@@ -246,18 +243,16 @@ public:
 
         template <typename T>
             requires is_base_of_v<uv_handle_t, T>
-        T* create() noexcept {
-            auto ptr = new T;
-            std::shared_ptr<uv_handle_t> handle = {
-                uv::ptr_cast<uv_handle_t>(ptr),
-                [](uv_handle_t* h) { delete reinterpret_cast<T*>(h); }};
-            this->handles.push_back(handle);
-            return ptr;
+        void register_handle_for_close(T* handle) noexcept {
+
+            this->handles.push_back(
+                std::shared_ptr<uv_handle_t>(uv::ptr_cast<uv_handle_t>(handle), [](uv_handle_t* h) {
+                    delete reinterpret_cast<T*>(h);
+                }));
         }
 
     private:
-        static coro::LazyTask<void>
-            close_handles(std::vector<std::shared_ptr<uv_handle_t>>& handles) {
+        static coro::Lazy<void> close_handles(std::vector<std::shared_ptr<uv_handle_t>>& handles) {
             co_await std::suspend_always{};
             for(auto& handle: handles) {
                 co_await awaiter::Close(handle.get());
@@ -266,34 +261,45 @@ public:
         }
 
         std::vector<std::shared_ptr<uv_handle_t>> handles{};
-        coro::LazyTask<void> cleaner{};
+        coro::Lazy<void> cleaner{};
     };
 };
 
 template <typename T>
     requires is_base_of_v<uv_handle_t, T>
-class Create {
+class CreateBase {
 public:
-    Create() = default;
+    CreateBase() = default;
 
     bool await_ready() noexcept {
         return false;
     }
 
     T* await_resume() noexcept {
-        return std::move(this->ptr);
+        return this->ptr;
     }
 
     template <typename Promise>
-    // requires std::is_base_of_v<async::LazyTask<Ret>, Promise>
+    // requires std::is_base_of_v<async::Lazy<Ret>, Promise>
     // TODO
     bool await_suspend(std::coroutine_handle<Promise> h) noexcept {
-        this->ptr = h.promise().template create<T>();
+        h.promise().template register_handle_for_close<T>(this->ptr);
         return false;
     }
 
-private:
-    T* ptr = nullptr;
+protected:
+    T* ptr = new T{};
+};
+
+template <typename T>
+    requires is_base_of_v<uv_handle_t, T>
+struct Create;
+
+template <>
+struct Create<uv_pipe_t> : CreateBase<uv_pipe_t> {
+    Create(uv_loop_t* loop, int ipc = 0) : CreateBase<uv_pipe_t>() {
+        uv_pipe_init(loop, this->ptr, ipc);
+    }
 };
 }  // namespace catter::uv::async
 
