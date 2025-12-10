@@ -110,8 +110,7 @@ public:
         }
     }
 
-    class Promise : public PromiseRet<Ret>, public PromiseException, public PromiseAwait {
-    public:
+    struct Promise : PromiseRet<Ret>, PromiseException, PromiseAwait {
         Lazy get_return_object() noexcept {
             return {handle_type::from_promise(*this)};
         }
@@ -131,12 +130,12 @@ public:
             return this->coro.promise().result_rvalue();
         }
 
-        std::coroutine_handle<> await_suspend(std::coroutine_handle<> h) noexcept {
+        bool await_suspend(std::coroutine_handle<> h) noexcept {
             if(this->coro.done()) {
-                return h;
+                return false;
             } else {
                 this->coro.promise().set_previous(h);
-                return this->coro;
+                return true;
             }
         }
 

@@ -16,24 +16,26 @@ using namespace catter;
 
 class Listener {
 public:
-    Listener(uv_pipe_t* server) : stream{server} {
+    Listener(uv_stream_t* server) : stream{server} {}
+
+    int start_listen(int backlog = 128) {
         this->stream->data = this;
+        return uv_listen(this->stream, backlog, [](uv_stream_t* server, int status) {
+            static_cast<Listener*>(server->data)->connection_cb(server, status);
+        });
+    }
 
-        uv_listen(uv::ptr_cast<uv_stream_t>(this->stream),
-                  128,
-                  [](uv_stream_t* server, int status) {
-                      auto self = static_cast<Listener*>(server->data);
-                      if(status < 0) {
-                          std::println("Listen error: {}", uv_strerror(status));
-                          return;
-                      }
-                      std::println("New client is connecting...");
-                      self->semaphore_count++;
+    void connection_cb(uv_stream_t* req, int status) {
+        if(status < 0) {
+            std::println("Listen error: {}", uv_strerror(status));
+            return;
+        }
+        std::println("New client is connecting...");
+        this->semaphore_count++;
 
-                      if(self->semaphore_count > 0) {
-                          self->handle.resume();
-                      }
-                  });
+        if(this->semaphore_count > 0) {
+            this->handle.resume();
+        }
     }
 
     struct awaiter {
@@ -55,7 +57,6 @@ public:
             base.await_suspend(h);
             if(listener->semaphore_count == 0) {
                 listener->handle = h;
-                std::println("Listener is waiting for client...");
                 return true;
             } else {
                 return false;
@@ -71,7 +72,7 @@ public:
     }
 
 private:
-    uv_pipe_t* stream{nullptr};
+    uv_stream_t* stream{nullptr};
 
     std::coroutine_handle<> handle{};
     size_t semaphore_count{0};
@@ -85,9 +86,16 @@ uv::async::Lazy<void> accept(Listener& listener) {
 
 [[nodiscard]]
 uv::async::Lazy<void> loop() {
-    auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop(), 1);
+    auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
+
     uv_pipe_bind(server, PIPE_NAME);
-    Listener listener{server};
+
+    Listener listener{uv::ptr_cast<uv_stream_t>(server)};
+    int ret = listener.start_listen();
+    if(ret < 0) {
+        std::println("Failed to start listening: {}", uv_strerror(ret));
+        co_return;
+    }
     co_await accept(listener);
 }
 
@@ -118,6 +126,7 @@ uv::async::Lazy<void> foo() {
 
 int main(int argc, char* argv[], char* envp[]) {
     auto loop_task = loop();
+    auto foo_task = foo();
     uv::run();
     return 0;
 }

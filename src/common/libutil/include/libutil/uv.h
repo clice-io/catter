@@ -70,9 +70,9 @@ public:
 
         if(ret < 0) {
             this->nread = ret;
-            return false;
-        } else {
             return true;
+        } else {
+            return false;
         }
     }
 
@@ -133,9 +133,9 @@ public:
                             });
         if(ret < 0) {
             this->status = ret;
-            return false;
-        } else {
             return true;
+        } else {
+            return false;
         }
     }
 
