@@ -1,13 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
+#include <ranges>
 #include <string>
-#include <tuple>
 #include <vector>
 #include <type_traits>
-#include <memory>
-#include <variant>
-#include <stdexcept>
 
 namespace catter::rpc::data {
 
@@ -44,7 +41,35 @@ enum class Request : uint8_t {
 };
 
 template <typename T>
-concept Reader = std::is_invocable_r_v<void, T, char*, size_t>;
+concept Reader = std::is_invocable_v<T, char*, size_t>;
+
+template <typename T>
+concept CoReader = std::is_invocable_v<T, char*, size_t> &&
+    requires (T t) {
+        { operator co_await(t) };
+    };
+
+
+template<typename Range>
+    requires std::ranges::range<std::decay_t<Range>> && std::is_same_v<char, std::ranges::range_value_t<Range>>
+void append_range_to_vector(std::vector<char>& buffer, Range&& range) {
+#ifdef __cpp_lib_containers_ranges 
+    buffer.append_range(std::forward<Range>(range));
+#else
+    buffer.insert(buffer.end(), std::ranges::begin(range), std::ranges::end(range));
+#endif
+}
+
+template<typename ... Args>
+    requires ((std::ranges::range<std::decay_t<Args>> && std::is_same_v<char, std::ranges::range_value_t<Args>>) && ...)
+std::vector<char> merge_range_to_vector(Args&& ... args) {
+    std::vector<char> buffer;
+    buffer.reserve((std::ranges::size(args) + ...));
+    (append_range_to_vector(buffer, std::forward<Args>(args)), ...);
+    return buffer;
+}
+
+
 
 template <typename T>
 struct Serde {
@@ -60,22 +85,26 @@ struct Serde<T> {
         return buffer;
     }
 
-    template <typename Invocable>
-        requires std::invocable<Invocable, char*, size_t>
+    template <Reader Invocable>
     static T deserialize(Invocable&& reader) {
         T value;
         reader(reinterpret_cast<char*>(&value), sizeof(T));
         return value;
     }
+
+    // template< CoReader Invocable>
+    // static coro::Lazy<T> co_deserialize(Invocable&& reader) {
+    //     T value;
+    //     co_await reader(reinterpret_cast<char*>(&value), sizeof(T));
+    //     co_return value;
+    // }
+
 };
 
 template <>
 struct Serde<std::string> {
     static std::vector<char> serialize(const std::string& str) {
-        std::vector<char> buffer{};
-        buffer.append_range(Serde<size_t>::serialize(str.size()));
-        buffer.append_range(str);
-        return buffer;
+        return merge_range_to_vector(Serde<size_t>::serialize(str.size()), str);
     }
 
     template <Reader Invocable>
@@ -91,9 +120,9 @@ template <typename T>
 struct Serde<std::vector<T>> {
     static std::vector<char> serialize(const std::vector<T>& vec) {
         std::vector<char> buffer;
-        buffer.append_range(Serde<size_t>::serialize(vec.size()));
+        append_range_to_vector(buffer, Serde<size_t>::serialize(vec.size()));
         for(const auto& item: vec) {
-            buffer.append_range(Serde<T>::serialize(item));
+            append_range_to_vector(buffer, Serde<T>::serialize(item));
         }
         return buffer;
     }
@@ -127,11 +156,11 @@ struct Serde<Request> {
 template <>
 struct Serde<command> {
     static std::vector<char> serialize(const command& cmd) {
-        std::vector<char> buffer;
-        buffer.append_range(Serde<std::string>::serialize(cmd.executable));
-        buffer.append_range(Serde<std::vector<std::string>>::serialize(cmd.args));
-        buffer.append_range(Serde<std::vector<std::string>>::serialize(cmd.env));
-        return buffer;
+        return merge_range_to_vector(
+                Serde<std::string>::serialize(cmd.executable),
+                Serde<std::vector<std::string>>::serialize(cmd.args),
+                Serde<std::vector<std::string>>::serialize(cmd.env)
+            );
     }
 
     template <Reader Invocable>
@@ -147,10 +176,10 @@ struct Serde<command> {
 template <>
 struct Serde<action> {
     static std::vector<char> serialize(const action& act) {
-        std::vector<char> buffer;
-        buffer.append_range(Serde<uint8_t>::serialize(static_cast<uint8_t>(act.type)));
-        buffer.append_range(Serde<command>::serialize(act.cmd));
-        return buffer;
+        return merge_range_to_vector(
+            Serde<uint8_t>::serialize(static_cast<uint8_t>(act.type)),
+            Serde<command>::serialize(act.cmd)
+        );
     }
 
     template <Reader Invocable>
@@ -165,10 +194,10 @@ struct Serde<action> {
 template <>
 struct Serde<decision_info> {
     static std::vector<char> serialize(const decision_info& info) {
-        std::vector<char> buffer;
-        buffer.append_range(Serde<action>::serialize(info.act));
-        buffer.append_range(Serde<command_id_t>::serialize(info.nxt_cmd_id));
-        return buffer;
+        return merge_range_to_vector(
+            Serde<action>::serialize(info.act),
+            Serde<command_id_t>::serialize(info.nxt_cmd_id)
+        );
     }
 
     template <Reader Invocable>
@@ -177,37 +206,4 @@ struct Serde<decision_info> {
                 Serde<command_id_t>::deserialize(std::forward<Invocable>(reader))};
     }
 };
-
-template <typename... Args>
-struct Serde<std::variant<Args...>> {
-    static std::vector<char> serialize(const std::variant<Args...>& var) {
-        std::vector<char> buffer;
-        buffer.append_range(Serde<size_t>::serialize(var.index()));
-        buffer.append_range(std::visit(
-            [](const auto& value) {
-                return Serde<std::decay_t<decltype(value)>>::serialize(value);
-            },
-            var));
-        return buffer;
-    }
-
-    template <Reader Invocable>
-    static std::variant<Args...> deserialize(Invocable&& reader) {
-        size_t index = Serde<size_t>::deserialize(std::forward<Invocable>(reader));
-
-        return [&]<size_t... Is>(std::index_sequence<Is...>) {
-            using variant_type = std::variant<Args...>;
-            using deserialize_fn = variant_type (*)(Invocable&&);
-            constexpr deserialize_fn fns[] = {[](Invocable&& reader) -> variant_type {
-                using T = std::tuple_element_t<Is, std::tuple<Args...>>;
-                return Serde<T>::deserialize(std::forward<Invocable>(reader));
-            }...};
-            if(index >= sizeof...(Args)) {
-                throw std::runtime_error("Invalid variant index during deserialization");
-            }
-            return fns[index](std::forward<Invocable>(reader));
-        }(std::make_index_sequence<sizeof...(Args)>{});
-    }
-};
-
 }  // namespace catter::rpc::data

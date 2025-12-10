@@ -1,9 +1,11 @@
 #pragma once
+#include <utility>
 #include <uv.h>
 #include <memory>
+#include <variant>
 #include <vector>
 #include <print>
-#include "libutil/lazy_task.h"
+#include "libutil/lazy.h"
 
 namespace catter::uv {
 uv_loop_t* default_loop() noexcept;
@@ -25,6 +27,15 @@ struct is_base_of<uv_handle_t, Derived> {
     };
 };
 
+template<typename Derived>
+struct is_base_of<uv_req_t, Derived> {
+    constexpr static bool value = requires {
+        { &Derived::data } ->  std::convertible_to<void* Derived::*>;
+        { &Derived::type } -> std::convertible_to<uv_req_type Derived::*>;
+        // other uv_req_t members...
+    };
+};
+
 template <typename Derived>
 struct is_base_of<uv_stream_t, Derived> {
     constexpr static bool value = is_base_of<uv_handle_t, Derived>::value && requires {
@@ -40,7 +51,7 @@ constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
 
 template <typename Base, typename Derived>
     requires is_base_of_v<Base, Derived>
-Base* ptr_cast(Derived* ptr) noexcept {
+Base* cast(Derived* ptr) noexcept {
     static_assert("Invalid uv_safe_cast");
     return reinterpret_cast<Base*>(ptr);
 }
@@ -51,15 +62,110 @@ namespace catter::uv::async {
 
 namespace awaiter {
 
-class Read {
+template <typename Derived, typename Ret>
+class HandleBase {
 public:
-    Read(uv_stream_t* stream, char* dst, size_t len) : stream{stream}, buf{dst}, remaining{len} {}
+    bool await_ready() {
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_handle()->data);
+        auto ret = static_cast<Derived*>(this)->init();
+        if(ret < 0) {
+            throw std::runtime_error(uv_strerror(ret));
+        } 
+        return false;
+    }
+    Ret await_resume() noexcept {
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_handle()->data);
+        return this->result;
+    }
+    
+    void await_suspend(std::coroutine_handle<> h) noexcept{
+        this->handle = h;
+    }
 
-    bool await_ready() noexcept {
-        this->tmp_data = this->stream->data;
-        this->stream->data = this;
+public:
+    int init() { std::terminate(); } // to be specialized
+    uv_handle_t* uv_handle() { std::terminate(); } // to be specialized
 
-        auto ret = uv_read_start(
+    void resume() noexcept {
+        this->handle.resume();
+    }
+
+    Ret& get_result() noexcept {
+        return this->result;
+    }
+    
+private:
+    Ret result{};
+    void* tmp_data{this};
+    std::coroutine_handle<> handle{nullptr};
+};
+
+template <typename Derived, typename Ret>
+class RequestBase {
+public:
+    bool await_ready() {
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_req()->data);
+        auto ret = static_cast<Derived*>(this)->init();
+        if(ret < 0) {
+            throw std::runtime_error(uv_strerror(ret));
+            return true;
+        } else {
+            return false;
+        }
+    }
+    Ret await_resume() noexcept {
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_req()->data);
+        return this->result;
+    }
+    void await_suspend(std::coroutine_handle<> h) noexcept{
+        this->handle = h;
+    }
+
+public:
+    int init() { std::terminate(); } // to be specialized
+    uv_req_t* uv_req() { std::terminate(); } // to be specialized
+
+    void resume() noexcept {
+        this->handle.resume();
+    }
+
+    Ret& get_result() noexcept {
+        return this->result;
+    }
+    
+private:
+    Ret result{};
+    void* tmp_data{this};
+    std::coroutine_handle<> handle{nullptr};
+};
+
+class Close : public HandleBase<Close, std::monostate> {
+public:
+    Close(uv_handle_t* handle) : handle{handle} {}
+
+    int init() {
+        uv_close(this->handle,
+                 [](uv_handle_t* handle) { static_cast<Close*>(handle->data)->close_cb(handle); });
+        return 0;
+    }
+
+    uv_handle_t* uv_handle() {
+        return this->handle;
+    }
+
+private:
+    void close_cb(uv_handle_t* /*handle*/) {
+        this->resume();
+    }
+    uv_handle_t* handle{nullptr};
+};
+
+class Read : public HandleBase<Read, ssize_t> {
+public:
+    Read(uv_stream_t* stream, char* dst, size_t len) : stream{stream}, dst{dst}, remaining{len} {}
+
+    int init() {        
+        return uv_read_start(
             this->stream,
             [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
                 static_cast<Read*>(handle->data)->alloc_cb(handle, suggested_size, buf);
@@ -67,165 +173,128 @@ public:
             [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
                 static_cast<Read*>(stream->data)->read_cb(stream, nread, buf);
             });
-
-        if(ret < 0) {
-            this->nread = ret;
-            return true;
-        } else {
-            return false;
-        }
     }
-
-    ssize_t await_resume() noexcept {
-        this->stream->data = this->tmp_data;
-        return this->nread;
-    }
-
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
+    
+    uv_handle_t* uv_handle() {
+        return catter::uv::cast<uv_handle_t>(this->stream);
     }
 
 private:
-    void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-        buf->base = this->buf;
+    void alloc_cb(uv_handle_t* /*handle*/, size_t /*suggested_size*/, uv_buf_t* buf) {
+        buf->base = this->dst;
         buf->len = this->remaining;
     }
 
-    void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
+    void read_cb(uv_stream_t* /*stream*/, ssize_t nread, const uv_buf_t* /*buf*/) {
         if(nread > 0) {
-            this->buf += nread;
+            this->dst += nread;
             this->remaining -= nread;
-            this->nread += nread;
+            this->get_result() += nread;
             if(this->remaining == 0) {
                 uv_read_stop(this->stream);
-                this->handle.resume();
+                this->resume();
             }
         } else {
-            this->nread = nread;
+            this->get_result() = nread;
             uv_read_stop(this->stream);
-            this->handle.resume();
+            this->resume();
         }
     }
-
     uv_stream_t* stream{nullptr};
-    std::coroutine_handle<> handle{};
-
-    char* buf{nullptr};
+    char* dst{nullptr};
     size_t remaining{0};
-
-    void* tmp_data{nullptr};
-    ssize_t nread{0};
 };
 
-class Write {
+class Write : public RequestBase<Write, int> {
 public:
     Write(uv_stream_t* stream, uv_buf_t* bufs, unsigned int nbufs) :
-        stream{stream}, bufs{bufs}, nbufs{nbufs} {}
+        stream{stream}, bufs{bufs}, nbufs{nbufs}{}
 
-    bool await_ready() noexcept {
-        this->req.data = this;
-        auto ret = uv_write(&this->req,
-                            this->stream,
-                            this->bufs,
-                            this->nbufs,
-                            [](uv_write_t* req, int status) {
+    int init() {
+        return uv_write(&this->req,
+                        this->stream,
+                        this->bufs,
+                        this->nbufs,
+                        [](uv_write_t* req, int status) {
                                 static_cast<Write*>(req->data)->write_cb(req, status);
                             });
-        if(ret < 0) {
-            this->status = ret;
-            return true;
-        } else {
-            return false;
-        }
     }
 
-    int await_resume() noexcept {
-        return this->status;
+    uv_req_t* uv_req() {
+        return catter::uv::cast<uv_req_t>(&this->req);
     }
-
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
-    }
-
+    
 private:
-    void write_cb(uv_write_t* req, int status) {
-        this->status = status;
-        this->handle.resume();
+    void write_cb(uv_write_t* /*req*/, int status) {
+        this->get_result() = status;
+        this->resume();
     }
+    uv_write_t req{};
 
     uv_stream_t* stream{nullptr};
     uv_buf_t* bufs{nullptr};
     unsigned int nbufs{0};
-
-    int status{0};
-    uv_write_t req{};
-    std::coroutine_handle<> handle{};
 };
 
-class Close {
-public:
-    Close(uv_handle_t* handle) : uv_handle{handle} {}
 
-    bool await_ready() noexcept {
-        return false;
-    }
 
-    void await_resume() noexcept {}
-
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        this->uv_handle->data = this;
-        this->handle = h;
-        uv_close(this->uv_handle,
-                 [](uv_handle_t* handle) { static_cast<Close*>(handle->data)->close_cb(handle); });
-    }
-
-private:
-    void close_cb(uv_handle_t* handle) {
-        this->handle.resume();
-    }
-
-    uv_handle_t* uv_handle{nullptr};
-    std::coroutine_handle<> handle{};
-};
-
-class PipeConnect {
+class PipeConnect : public RequestBase<PipeConnect, int> {
 public:
     PipeConnect(uv_pipe_t* pipe, const char* name) : pipe{pipe}, name{name} {}
 
-    bool await_ready() noexcept {
-        return false;
-    }
-
-    int await_resume() noexcept {
-        return this->status;
-    }
-
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
-        this->req.data = this;
+    int init() {
         uv_pipe_connect(&this->req, this->pipe, this->name, [](uv_connect_t* req, int status) {
             static_cast<PipeConnect*>(req->data)->connect_cb(req, status);
         });
+        return 0;
+    }
+
+    uv_req_t* uv_req() {
+        return catter::uv::cast<uv_req_t>(&this->req);
     }
 
 private:
-    void connect_cb(uv_connect_t* req, int status) {
-        this->status = status;
-        this->handle.resume();
+    void connect_cb(uv_connect_t* /*req*/, int status) {
+        this->get_result() = status;
+        this->resume();
     }
-
+    uv_connect_t req{};
     uv_pipe_t* pipe{nullptr};
     const char* name{nullptr};
+};
 
-    int status{0};
-    uv_connect_t req{};
-    std::coroutine_handle<> handle{};
+
+class Spwan : public HandleBase<Spwan, int64_t> {
+public:
+    Spwan(uv_loop_t* loop, uv_process_options_t* options) :
+        loop{loop}, options{options} {}
+
+    int init() {
+        this->process.exit_cb = [](uv_process_t* process, int64_t exit_status, int /*term_signal*/) {
+            static_cast<Spwan*>(process->data)->exit_cb(exit_status);
+        };
+        return uv_spawn(this->loop, &this->process, this->options);
+    }
+
+    uv_handle_t* uv_handle() {
+        return catter::uv::cast<uv_handle_t>(&this->process);
+    }
+    
+private:
+    void exit_cb(int64_t exit_status) {
+        this->get_result() = exit_status;
+        this->resume();
+    }
+    uv_process_t process{};
+
+    uv_loop_t* loop{nullptr};
+    uv_process_options_t* options{nullptr};
 };
 
 }  // namespace awaiter
 
 template <typename Ret>
-struct Lazy : catter::coro::Lazy<Ret> {
+struct [[nodiscard]] Lazy : catter::coro::Lazy<Ret> {
     using Base = catter::coro::Lazy<Ret>;
     using Base::Base;
 
@@ -246,7 +315,7 @@ struct Lazy : catter::coro::Lazy<Ret> {
         void register_handle_for_close(T* handle) noexcept {
 
             this->handles.push_back(
-                std::shared_ptr<uv_handle_t>(uv::ptr_cast<uv_handle_t>(handle), [](uv_handle_t* h) {
+                std::shared_ptr<uv_handle_t>(uv::cast<uv_handle_t>(handle), [](uv_handle_t* h) {
                     delete reinterpret_cast<T*>(h);
                 }));
         }

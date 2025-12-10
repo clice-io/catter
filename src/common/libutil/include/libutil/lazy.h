@@ -78,9 +78,9 @@ protected:
 };
 
 template <typename Ret>
-class Lazy {
+class [[nodiscard]] Lazy {
 public:
-    class Promise;
+    struct Promise;
 
     using promise_type = Promise;
     using handle_type = std::coroutine_handle<promise_type>;
@@ -164,6 +164,10 @@ public:
         while(!this->handle.done()) {
             std::this_thread::yield();
         }
+    }
+
+    void resume() noexcept {
+        this->handle.resume();
     }
 
     Ret get() {
