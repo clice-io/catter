@@ -22,9 +22,7 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
         case action::WRAP: {
-            return uv::wait([&]() -> coro::Lazy<int64_t> {
-                co_return co_await uv::async::spawn(act.cmd.executable, act.cmd.args);
-            }());
+            return uv::wait(uv::async::spawn(act.cmd.executable, act.cmd.args));
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);

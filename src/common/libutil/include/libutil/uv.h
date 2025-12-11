@@ -62,8 +62,9 @@ Base* cast(Derived* ptr) noexcept {
 
 template <typename Task>
 inline auto wait(Task&& task) {
+    uv::run();
     while(!task.done()) {
-        uv::run(UV_RUN_ONCE);
+        uv::run();
     }
     return task.get();
 }
@@ -292,18 +293,19 @@ private:
 
 class Spawn : public HandleBase<Spawn, int64_t> {
 public:
-    Spawn(uv_loop_t* loop, uv_process_options_t* options) : loop{loop}, options{options} {}
+    Spawn(uv_loop_t* loop, uv_process_t* process, uv_process_options_t* options) :
+        loop{loop}, process{process}, options{options} {}
 
     int init() {
-        this->process.exit_cb =
+        this->options->exit_cb =
             [](uv_process_t* process, int64_t exit_status, int /*term_signal*/) {
                 static_cast<Spawn*>(process->data)->exit_cb(exit_status);
             };
-        return uv_spawn(this->loop, &this->process, this->options);
+        return uv_spawn(this->loop, this->process, this->options);
     }
 
     uv_handle_t* uv_handle() {
-        return catter::uv::cast<uv_handle_t>(&this->process);
+        return catter::uv::cast<uv_handle_t>(this->process);
     }
 
 private:
@@ -312,9 +314,8 @@ private:
         this->resume();
     }
 
-    uv_process_t process{};
-
     uv_loop_t* loop{nullptr};
+    uv_process_t* process{nullptr};
     uv_process_options_t* options{nullptr};
 };
 
@@ -389,7 +390,7 @@ protected:
 
 template <typename T>
     requires is_base_of_v<uv_handle_t, T>
-struct Create;
+struct Create : CreateBase<T> {};
 
 template <>
 struct Create<uv_pipe_t> : CreateBase<uv_pipe_t> {
@@ -409,7 +410,7 @@ inline coro::Lazy<ssize_t> read(uv_stream_t* stream, char* dst, size_t len) {
     co_return co_await awaiter::Read(stream, dst, len);
 }
 
-inline coro::Lazy<int64_t> spawn(const std::string& path, const std::vector<std::string>& args) {
+inline async::Lazy<int64_t> spawn(const std::string& path, const std::vector<std::string>& args) {
     std::vector<const char*> line;
     line.emplace_back(path.c_str());
     for(auto& arg: args) {
@@ -430,7 +431,9 @@ inline coro::Lazy<int64_t> spawn(const std::string& path, const std::vector<std:
     options.stdio_count = 3;
     options.stdio = child_stdio;
 
-    co_return co_await uv::async::awaiter::Spawn(uv::default_loop(), &options);
+    auto process = co_await Create<uv_process_t>();
+
+    co_return co_await uv::async::awaiter::Spawn(uv::default_loop(), process, &options);
 }
 
 }  // namespace catter::uv::async

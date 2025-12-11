@@ -7,7 +7,6 @@ set_languages("c++23")
 
 add_requires("spdlog", {system = false, version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 
-add_cxxflags("-Wall", "-Wextra")
 
 option("dev", {default = true})
 if has_config("dev") then
