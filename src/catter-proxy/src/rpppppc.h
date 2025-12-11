@@ -24,29 +24,45 @@ public:
     }
 
     rpc::data::action make_decision(rpc::data::command_id_t parent_id, rpc::data::command cmd) {
+        std::println("Requesting decision for command ID {}", parent_id);
+        std::println("Command to execute: {}", cmd.executable);
+        std::println("Arguments size: {}", cmd.args.size());
+        for(auto& arg: cmd.args) {
+            std::println("  Arg: {}", arg);
+        }
+        std::println("Environment size: {}", cmd.env.size());
+        for(auto& env_var: cmd.env) {
+            std::println("  Env: {}", env_var);
+        }
+
         this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::MAKE_DECISION),
-              Serde<rpc::data::command_id_t>::serialize(parent_id),
-              Serde<rpc::data::command>::serialize(cmd));
+                    Serde<rpc::data::command_id_t>::serialize(parent_id),
+                    Serde<rpc::data::command>::serialize(cmd));
 
         auto [act, nxt_cmd_id] = Serde<rpc::data::decision_info>::deserialize(
             [this](char* dst, size_t len) { read(dst, len); });
 
         this->id = nxt_cmd_id;
+        std::println("Received decision: {}", static_cast<int>(act.type));
+        std::println("Next command ID will be {}", nxt_cmd_id);
         return act;
     }
 
     void finish(int ret_code) {
+        std::println("Reporting finish with code {}", ret_code);
         this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::FINISH),
-                                  Serde<int>::serialize(ret_code));
+                    Serde<int>::serialize(ret_code));
         return;
     }
 
-    void report_error(rpc::data::command_id_t parent_id, std::string error_msg) noexcept {
+    void report_error(std::string error_msg) noexcept {
         try {
+            std::println("Reporting error for command ID {}: {}", this->id, error_msg);
             this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::REPORT_ERROR),
-                Serde<rpc::data::command_id_t>::serialize(parent_id),
-                Serde<std::string>::serialize(error_msg));
+                        Serde<rpc::data::command_id_t>::serialize(this->id),
+                        Serde<std::string>::serialize(error_msg));
         } catch(...) {
+            std::println("Exception while reporting error: {}", error_msg);
             // cannot do anything here
         }
         return;
@@ -65,6 +81,7 @@ private:
     void read(char* dst, size_t len) {
         uv::wait([&]() -> coro::Lazy<void> {
             co_await uv::async::read(uv::cast<uv_stream_t>(&this->client_pipe), dst, len);
+            // std::println("Read {} bytes.", len);
             co_return;
         }());
     }
@@ -76,11 +93,12 @@ private:
                         &this->client_pipe,
                         catter::config::rpc::PIPE_NAME,
                         [](uv_connect_t* /*req*/, int status) {
-                            if (status < 0) {
-                                std::println("Failed to connect to parent process: {}", uv_strerror(status));
+                            if(status < 0) {
+                                std::println("Failed to connect to parent process: {}",
+                                             uv_strerror(status));
                             }
                         });
-        
+
         uv::run();
     };
 

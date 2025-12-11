@@ -60,9 +60,9 @@ Base* cast(Derived* ptr) noexcept {
     return reinterpret_cast<Base*>(ptr);
 }
 
-template<typename Task>
+template <typename Task>
 inline auto wait(Task&& task) {
-    while (!task.done()) {
+    while(!task.done()) {
         uv::run(UV_RUN_ONCE);
     }
     return task.get();
@@ -417,7 +417,7 @@ inline coro::Lazy<int64_t> spawn(const std::string& path, const std::vector<std:
     }
     line.push_back(nullptr);
 
-    uv_process_options_t options;
+    uv_process_options_t options{};
     uv_stdio_container_t child_stdio[3] = {
         {.flags = UV_IGNORE,     .data = {}       },
         {.flags = UV_INHERIT_FD, .data = {.fd = 1}},
@@ -432,6 +432,5 @@ inline coro::Lazy<int64_t> spawn(const std::string& path, const std::vector<std:
 
     co_return co_await uv::async::awaiter::Spawn(uv::default_loop(), &options);
 }
-
 
 }  // namespace catter::uv::async

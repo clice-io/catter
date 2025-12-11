@@ -61,7 +61,7 @@ int main(int argc, char* argv[], char* envp[]) {
     if(argc < 4) {
         // -p is the parent of this
         LOG_CRITICAL("Expected at least 4 arguments, got {}", argc);
-        rpc_ins.report_error(-1, "Insufficient arguments in catter-proxy");
+        rpc_ins.report_error("Insufficient arguments in catter-proxy");
         return -1;
     }
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[], char* envp[]) {
 
         if(std::string(argv[1]) != "-p") {
             LOG_CRITICAL("Expected '-p' as the first argument");
-            rpc_ins.report_error(-1, "Invalid arguments in catter-proxy");
+            rpc_ins.report_error("Invalid arguments in catter-proxy");
             return -1;
         }
 
@@ -80,25 +80,21 @@ int main(int argc, char* argv[], char* envp[]) {
         if(std::string(argv[3]) != "--") {
             if(argv[3] != nullptr) {
                 // a msg from hook
-                rpc_ins.report_error(from_id, argv[3]);
+                rpc_ins.report_error(argv[3]);
                 return -1;
             }
             LOG_CRITICAL("Expected '--' as the third argument");
-            rpc_ins.report_error(-1, "Invalid arguments in catter-proxy");
+            rpc_ins.report_error("Invalid arguments in catter-proxy");
             return -1;
         }
 
         // 1. read command from args
         auto cmd = catter::proxy::build_raw_cmd(argv + 4, arg_end);
-        std::error_code ec;
 
         // 2. locate executable, which means resolve PATH if needed
         catter::proxy::hook::locate_exe(cmd);
-        // 3. remote procedure call, wait server make decision
-        // TODO, depend yalantinglib, coro_rpc
-        // use interface in librpc/function.h
-        // now we just invoke the function, it is wrong in use
 
+        // 3. remote procedure call, wait server make decision
         auto received_act = rpc_ins.make_decision(from_id, cmd);
         // received cmd maybe not a path, either, so we need locate again
         catter::proxy::hook::locate_exe(received_act.cmd);
@@ -113,11 +109,11 @@ int main(int argc, char* argv[], char* envp[]) {
         return ret;
     } catch(const std::exception& e) {
         LOG_CRITICAL("Exception in catter-proxy: {}", e.what());
-        rpc_ins.report_error(-1, e.what());
+        rpc_ins.report_error(e.what());
         return -1;
     } catch(...) {
         LOG_CRITICAL("Unknown exception in catter-proxy.");
-        rpc_ins.report_error(-1, "Unknown exception in catter-proxy.");
+        rpc_ins.report_error("Unknown exception in catter-proxy.");
         return -1;
     }
 }
