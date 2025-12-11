@@ -6,8 +6,6 @@
 #include <thread>
 #include <chrono>
 
-#include "librpc/data.h"
-
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept;
 

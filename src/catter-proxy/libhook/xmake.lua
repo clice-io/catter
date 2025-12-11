@@ -32,7 +32,6 @@ end
 
 target("libhook")
     set_kind("object")
-    add_deps("librpc")
     add_deps("libutil")
     add_deps("libconfig")
     add_includedirs("include", {public = true})

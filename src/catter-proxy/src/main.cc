@@ -6,14 +6,15 @@
 #include <system_error>
 
 #include "constructor.h"
-#include "librpc/data.h"
 
 #include "libutil/crossplat.h"
+#include "libutil/lazy.h"
 #include "libutil/log.h"
 #include "libhook/interface.h"
 #include "libconfig/proxy.h"
 
 #include "libutil/output.h"
+#include "libutil/uv.h"
 #include "rpppppc.h"
 
 namespace catter::proxy {
@@ -21,7 +22,9 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
         case action::WRAP: {
-            // TODO
+            return uv::wait([&]() -> coro::Lazy<int64_t> {
+                co_return co_await uv::async::spawn(act.cmd.executable, act.cmd.args);
+            }());
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);

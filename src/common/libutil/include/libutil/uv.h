@@ -1,4 +1,8 @@
 #pragma once
+#include <cstdint>
+#include <cstdio>
+#include <string>
+#include <type_traits>
 #include <utility>
 #include <uv.h>
 #include <memory>
@@ -27,10 +31,10 @@ struct is_base_of<uv_handle_t, Derived> {
     };
 };
 
-template<typename Derived>
+template <typename Derived>
 struct is_base_of<uv_req_t, Derived> {
     constexpr static bool value = requires {
-        { &Derived::data } ->  std::convertible_to<void* Derived::*>;
+        { &Derived::data } -> std::convertible_to<void* Derived::*>;
         { &Derived::type } -> std::convertible_to<uv_req_type Derived::*>;
         // other uv_req_t members...
     };
@@ -56,6 +60,14 @@ Base* cast(Derived* ptr) noexcept {
     return reinterpret_cast<Base*>(ptr);
 }
 
+template<typename Task>
+inline auto wait(Task&& task) {
+    while (!task.done()) {
+        uv::run(UV_RUN_ONCE);
+    }
+    return task.get();
+}
+
 }  // namespace catter::uv
 
 namespace catter::uv::async {
@@ -70,21 +82,27 @@ public:
         auto ret = static_cast<Derived*>(this)->init();
         if(ret < 0) {
             throw std::runtime_error(uv_strerror(ret));
-        } 
+        }
         return false;
     }
+
     Ret await_resume() noexcept {
         std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_handle()->data);
         return this->result;
     }
-    
-    void await_suspend(std::coroutine_handle<> h) noexcept{
+
+    void await_suspend(std::coroutine_handle<> h) noexcept {
         this->handle = h;
     }
 
 public:
-    int init() { std::terminate(); } // to be specialized
-    uv_handle_t* uv_handle() { std::terminate(); } // to be specialized
+    int init() {
+        std::terminate();
+    }  // to be specialized
+
+    uv_handle_t* uv_handle() {
+        std::terminate();
+    }  // to be specialized
 
     void resume() noexcept {
         this->handle.resume();
@@ -93,7 +111,7 @@ public:
     Ret& get_result() noexcept {
         return this->result;
     }
-    
+
 private:
     Ret result{};
     void* tmp_data{this};
@@ -113,17 +131,24 @@ public:
             return false;
         }
     }
+
     Ret await_resume() noexcept {
         std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_req()->data);
         return this->result;
     }
-    void await_suspend(std::coroutine_handle<> h) noexcept{
+
+    void await_suspend(std::coroutine_handle<> h) noexcept {
         this->handle = h;
     }
 
 public:
-    int init() { std::terminate(); } // to be specialized
-    uv_req_t* uv_req() { std::terminate(); } // to be specialized
+    int init() {
+        std::terminate();
+    }  // to be specialized
+
+    uv_req_t* uv_req() {
+        std::terminate();
+    }  // to be specialized
 
     void resume() noexcept {
         this->handle.resume();
@@ -132,7 +157,7 @@ public:
     Ret& get_result() noexcept {
         return this->result;
     }
-    
+
 private:
     Ret result{};
     void* tmp_data{this};
@@ -157,6 +182,7 @@ private:
     void close_cb(uv_handle_t* /*handle*/) {
         this->resume();
     }
+
     uv_handle_t* handle{nullptr};
 };
 
@@ -164,7 +190,7 @@ class Read : public HandleBase<Read, ssize_t> {
 public:
     Read(uv_stream_t* stream, char* dst, size_t len) : stream{stream}, dst{dst}, remaining{len} {}
 
-    int init() {        
+    int init() {
         return uv_read_start(
             this->stream,
             [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -174,7 +200,7 @@ public:
                 static_cast<Read*>(stream->data)->read_cb(stream, nread, buf);
             });
     }
-    
+
     uv_handle_t* uv_handle() {
         return catter::uv::cast<uv_handle_t>(this->stream);
     }
@@ -200,6 +226,7 @@ private:
             this->resume();
         }
     }
+
     uv_stream_t* stream{nullptr};
     char* dst{nullptr};
     size_t remaining{0};
@@ -208,7 +235,7 @@ private:
 class Write : public RequestBase<Write, int> {
 public:
     Write(uv_stream_t* stream, uv_buf_t* bufs, unsigned int nbufs) :
-        stream{stream}, bufs{bufs}, nbufs{nbufs}{}
+        stream{stream}, bufs{bufs}, nbufs{nbufs} {}
 
     int init() {
         return uv_write(&this->req,
@@ -216,27 +243,26 @@ public:
                         this->bufs,
                         this->nbufs,
                         [](uv_write_t* req, int status) {
-                                static_cast<Write*>(req->data)->write_cb(req, status);
-                            });
+                            static_cast<Write*>(req->data)->write_cb(req, status);
+                        });
     }
 
     uv_req_t* uv_req() {
         return catter::uv::cast<uv_req_t>(&this->req);
     }
-    
+
 private:
     void write_cb(uv_write_t* /*req*/, int status) {
         this->get_result() = status;
         this->resume();
     }
+
     uv_write_t req{};
 
     uv_stream_t* stream{nullptr};
     uv_buf_t* bufs{nullptr};
     unsigned int nbufs{0};
 };
-
-
 
 class PipeConnect : public RequestBase<PipeConnect, int> {
 public:
@@ -258,33 +284,34 @@ private:
         this->get_result() = status;
         this->resume();
     }
+
     uv_connect_t req{};
     uv_pipe_t* pipe{nullptr};
     const char* name{nullptr};
 };
 
-
-class Spwan : public HandleBase<Spwan, int64_t> {
+class Spawn : public HandleBase<Spawn, int64_t> {
 public:
-    Spwan(uv_loop_t* loop, uv_process_options_t* options) :
-        loop{loop}, options{options} {}
+    Spawn(uv_loop_t* loop, uv_process_options_t* options) : loop{loop}, options{options} {}
 
     int init() {
-        this->process.exit_cb = [](uv_process_t* process, int64_t exit_status, int /*term_signal*/) {
-            static_cast<Spwan*>(process->data)->exit_cb(exit_status);
-        };
+        this->process.exit_cb =
+            [](uv_process_t* process, int64_t exit_status, int /*term_signal*/) {
+                static_cast<Spawn*>(process->data)->exit_cb(exit_status);
+            };
         return uv_spawn(this->loop, &this->process, this->options);
     }
 
     uv_handle_t* uv_handle() {
         return catter::uv::cast<uv_handle_t>(&this->process);
     }
-    
+
 private:
     void exit_cb(int64_t exit_status) {
         this->get_result() = exit_status;
         this->resume();
     }
+
     uv_process_t process{};
 
     uv_loop_t* loop{nullptr};
@@ -370,12 +397,41 @@ struct Create<uv_pipe_t> : CreateBase<uv_pipe_t> {
         uv_pipe_init(loop, this->ptr, ipc);
     }
 };
+
+template <typename... Vector>
+    requires (std::is_same_v<std::remove_cvref_t<Vector>, std::vector<char>> && ...)
+coro::Lazy<int> write(uv_stream_t* stream, Vector&&... vecs) {
+    std::vector<uv_buf_t> bufs{uv_buf_init(vecs.data(), vecs.size())...};
+    co_return co_await awaiter::Write(stream, bufs.data(), bufs.size());
+}
+
+inline coro::Lazy<ssize_t> read(uv_stream_t* stream, char* dst, size_t len) {
+    co_return co_await awaiter::Read(stream, dst, len);
+}
+
+inline coro::Lazy<int64_t> spawn(const std::string& path, const std::vector<std::string>& args) {
+    std::vector<const char*> line;
+    line.emplace_back(path.c_str());
+    for(auto& arg: args) {
+        line.push_back(arg.c_str());
+    }
+    line.push_back(nullptr);
+
+    uv_process_options_t options;
+    uv_stdio_container_t child_stdio[3] = {
+        {.flags = UV_IGNORE,     .data = {}       },
+        {.flags = UV_INHERIT_FD, .data = {.fd = 1}},
+        {.flags = UV_INHERIT_FD, .data = {.fd = 2}},
+    };
+
+    options.file = path.c_str();
+    options.args = const_cast<char**>(line.data());
+    options.flags = UV_PROCESS_WINDOWS_VERBATIM_ARGUMENTS | UV_PROCESS_WINDOWS_HIDE;
+    options.stdio_count = 3;
+    options.stdio = child_stdio;
+
+    co_return co_await uv::async::awaiter::Spawn(uv::default_loop(), &options);
+}
+
+
 }  // namespace catter::uv::async
-
-namespace catter::uv::sync {
-void write(uv_stream_t* stream, std::vector<char>& payload);
-
-void read(uv_stream_t* stream, char* dst, size_t len);
-
-int spawn_process(uv_loop_t* loop, std::string& executable, std::vector<std::string>& args);
-}  // namespace catter::uv::sync

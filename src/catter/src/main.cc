@@ -7,110 +7,133 @@
 #include <string>
 #include <print>
 
-#include "librpc/data.h"
+#include "libconfig/rpc.h"
 #include "libutil/uv.h"
-
-#ifdef _WIN32
-constexpr char PIPE_NAME[] = R"(\\.\pipe\catter)";
-#else
-constexpr char PIPE_NAME[] = "pipe-catter.sock";
-#endif
+#include "libutil/rpc_data.h"
 
 using namespace catter;
 
-template <typename Ivokable>
-    requires std::invocable<Ivokable, int64_t, int>
-uv::async::Lazy<int64_t> spawn_process(rpc::data::command& cmd) {
-    std::vector<char*> args;
-    args.push_back(cmd.executable.data());
-    for(auto& arg: cmd.args) {
-        args.push_back(arg.data());
-    }
-    args.push_back(nullptr);
 
-    uv_process_options_t options;
-    uv_stdio_container_t child_stdio[3] = {
-                                {.flags = UV_IGNORE, .data = {}},
-                                {.flags = UV_INHERIT_FD, .data = {.fd = 1}},
-                                {.flags = UV_INHERIT_FD, .data = {.fd = 2}},
-                                };
-
-    options.file = cmd.executable.c_str();
-    options.args = args.data();
-    options.flags = UV_PROCESS_WINDOWS_VERBATIM_ARGUMENTS | UV_PROCESS_WINDOWS_HIDE;
-    options.stdio_count = 3;
-    options.stdio = child_stdio;
-    
-    co_return co_await uv::async::awaiter::Spwan(uv::default_loop(), &options);
-}
 uv::async::Lazy<void> accept(uv_stream_t* server) {
     auto client = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
     uv_accept(server, uv::cast<uv_stream_t>(client));
-    std::println("Client connected.");
+
+    auto reader = [&](char* dst, size_t len) -> coro::Lazy<void> {
+        auto ret = co_await uv::async::read(uv::cast<uv_stream_t>(client), dst, len);
+        std::print("Read {} bytes: ", ret);
+        for(size_t i = 0; i < static_cast<size_t>(ret); ++i) {
+            std::print("{:02x} ", static_cast<uint8_t>(dst[i]));
+        }
+        std::println();
+        if(ret < 0) {
+            throw std::runtime_error(uv_strerror(ret));
+            co_return;
+        }
+    };
+
+    try {
+        while(true) {
+            rpc::data::Request req = co_await Serde<rpc::data::Request>::co_deserialize(reader);
+            switch(req) {
+                case rpc::data::Request::MAKE_DECISION: {
+                    std::println("Received MAKE_DECISION request.");
+                    rpc::data::command_id_t parent_id =
+                        co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+                    std::println("Parent ID: {}", parent_id);
+
+                    rpc::data::command cmd =
+                        co_await Serde<rpc::data::command>::co_deserialize(reader);
+
+                    std::println("Spawning process: {}", cmd.executable);
+                    for(auto& arg: cmd.args) {
+                        std::println("  Arg: {}", arg);
+                    }
+
+                    rpc::data::decision_info decision{
+                        .act = {
+                            .type = rpc::data::action::WRAP,
+                            .cmd = cmd,
+                        },
+                        .nxt_cmd_id = parent_id + 1,
+                    };
+
+                    auto ret = co_await uv::async::write(
+                        uv::cast<uv_stream_t>(client),
+                        Serde<rpc::data::decision_info>::serialize(decision));
+                    std::println("Sent decision info ({} bytes).", ret);
+                    break;
+                }
+                case rpc::data::Request::FINISH: {
+                    std::println("Received FINISH request.");
+                    int ret_code = co_await Serde<int>::co_deserialize(reader);
+                    std::println("Finish code: {}", ret_code);
+                    break;
+                }
+                case rpc::data::Request::REPORT_ERROR: {
+                    std::println("Received REPORT_ERROR request.");
+                    rpc::data::command_id_t parent_id =
+                        co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+                    std::println("Parent ID: {}", parent_id);
+                    std::string error_msg =
+                        co_await Serde<std::string>::co_deserialize(reader);
+                    std::println("Error message: {}", error_msg);
+                    break;
+                }
+                default: std::println("Unknown request received.");
+            }
+        }
+    } catch(std::exception& e) {
+        std::println("Exception while handling request: {}", e.what());
+    }
     co_return;
 }
-
 
 uv::async::Lazy<void> loop() {
     auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
-    uv_pipe_bind(server, PIPE_NAME);
-
-    std::vector<uv::async::Lazy<void>> acceptors;
-    server->data = &acceptors;
-    uv_listen(uv::cast<uv_stream_t>(server), 128, [](uv_stream_t* server, int status) { 
-        auto &acceptors = *static_cast<std::vector<uv::async::Lazy<void>>*>(server->data);
-        acceptors.push_back(accept(server));
-    });
-
-    co_await std::suspend_always{}; // process events
-
-    for (auto& acceptor: acceptors) {
-        if (!acceptor.done()) {
-            std::println("Error: pending acceptor on shutdown.");
-        }
-    }
-    co_return;
-}
-
-uv::async::Lazy<void> foo(uv::async::Lazy<void>& loop_task) {
-    auto pipe = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
-
-    auto status = co_await uv::async::awaiter::PipeConnect(pipe, PIPE_NAME);
-    if(status != 0) {
-        std::println("Connect failed: {}", uv_strerror(status));
+    if(auto ret = uv_pipe_bind(server, catter::config::rpc::PIPE_NAME); ret < 0) {
+        std::println("Bind error: {}", uv_strerror(ret));
         co_return;
     }
 
-    std::println("Connected to pipe.");
-    char buffer;
-    while(true) {
-        ssize_t nread =
-            co_await uv::async::awaiter::Read(uv::cast<uv_stream_t>(pipe), &buffer, 1);
-        if(nread < 0) {
-            std::println("Read error: {}", uv_strerror(nread));
-            break;
-        } else {
-            std::print("{}", buffer);
+    std::vector<uv::async::Lazy<void>> acceptors;
+    server->data = &acceptors;
+    auto ret = uv_listen(uv::cast<uv_stream_t>(server), 128, [](uv_stream_t* server, int status) {
+        if(status < 0) {
+            std::println("Listen error: {}", uv_strerror(status));
+            return;
         }
+        auto& acceptors = *static_cast<std::vector<uv::async::Lazy<void>>*>(server->data);
+        acceptors.push_back(accept(server));
+    });
+    if(ret < 0) {
+        std::println("Listen error: {}", uv_strerror(ret));
+        co_return;
     }
 
-    loop_task.resume();
+    std::string exe_path = "catter-proxy";
+
+    std::vector<std::string> args = {"-p", "42", "--", "ls"};
+
+    auto proxy_ret = co_await uv::async::spawn(exe_path, args);
+
+    std::println("catter-proxy exited with code {}", proxy_ret);
+
+    for(auto& acceptor: acceptors) {
+        if (!acceptor.done()) {
+            std::println("Error: acceptor coroutine not done yet.");
+        }
+    }
     co_return;
 }
-
-
 
 
 int main(int argc, char* argv[], char* envp[]) {
     auto loop_task = loop();
 
-    auto foo_task = foo(loop_task);
-
     uv::run();
     try {
         loop_task.get();
-        foo_task.get();
-    } catch (std::exception& e) {
+    } catch(std::exception& e) {
         std::println("Exception: {}", e.what());
     }
     return 0;

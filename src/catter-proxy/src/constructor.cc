@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include "librpc/data.h"
+#include "libutil/rpc_data.h"
 #include "libutil/crossplat.h"
 
 namespace catter::proxy {

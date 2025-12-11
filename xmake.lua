@@ -30,7 +30,7 @@ elseif is_plat("windows") then
 end
 
 
-includes("src/common/librpc")
+
 includes("src/common/libutil")
 includes("src/common/libconfig")
 

@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
-#include "librpc/data.h"
+#include "libutil/rpc_data.h"
 #include "libutil/crossplat.h"
 #include "libutil/log.h"
 

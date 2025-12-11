@@ -14,7 +14,7 @@
 
 #include "libutil/crossplat.h"
 #include "libhook/win/env.h"
-#include "librpc/data.h"
+#include "libutil/rpc_data.h"
 #include <string>
 
 namespace {
