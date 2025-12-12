@@ -19,13 +19,17 @@ public:
         return instance;
     }
 
-    rpc::data::command_id_t new_id() const {
+    rpc::data::command_id_t get_id() const {
         return id;
     }
 
-    rpc::data::action make_decision(rpc::data::command_id_t parent_id, rpc::data::command cmd) {
+    void set_parent_id(rpc::data::command_id_t pid) {
+        this->parent_id = pid;
+    }
+
+    rpc::data::action make_decision(rpc::data::command cmd) {
         this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::MAKE_DECISION),
-                    Serde<rpc::data::command_id_t>::serialize(parent_id),
+                    Serde<rpc::data::command_id_t>::serialize(this->parent_id),
                     Serde<rpc::data::command>::serialize(cmd));
 
         auto [act, nxt_cmd_id] = Serde<rpc::data::decision_info>::deserialize(
@@ -43,8 +47,12 @@ public:
 
     void report_error(std::string error_msg) noexcept {
         try {
+            auto to_send = this->id;
+            if (to_send == -1) {
+                to_send = this->parent_id;
+            }
             this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::REPORT_ERROR),
-                        Serde<rpc::data::command_id_t>::serialize(this->id),
+                        Serde<rpc::data::command_id_t>::serialize(to_send),
                         Serde<std::string>::serialize(error_msg));
         } catch(...) {
             // cannot do anything here
@@ -68,13 +76,8 @@ private:
         uv_connect_t connect_req{};
         uv_pipe_connect(&connect_req,
                         &this->client_pipe,
-                        catter::config::rpc::PIPE_NAME,
-                        [](uv_connect_t* /*req*/, int status) {
-                            if(status < 0) {
-                                std::println("Failed to connect to parent process: {}",
-                                             uv_strerror(status));
-                            }
-                        });
+                        config::rpc::PIPE_NAME,
+                        nullptr);
 
         uv::run();
     };
@@ -85,6 +88,7 @@ private:
     };
 
 private:
+    rpc::data::command_id_t parent_id{-1};
     rpc::data::command_id_t id{-1};
     uv_pipe_t client_pipe{};
 };

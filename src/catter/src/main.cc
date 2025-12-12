@@ -28,7 +28,6 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
         auto ret = co_await uv::async::read(uv::cast<uv_stream_t>(client), dst, len);
         if(ret < 0) {
             throw ret;
-            co_return;
         }
     };
 
@@ -115,7 +114,7 @@ uv::async::Lazy<void> loop() {
 
     std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
 
-    std::vector<std::string> args = {"-p", std::to_string(*generator++), "--", "xmake", "--yes"};
+    std::vector<std::string> args = {"-p", std::to_string(*generator++), "--", "make", "-j"};
 
     auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
 

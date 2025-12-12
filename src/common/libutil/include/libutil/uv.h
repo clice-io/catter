@@ -75,10 +75,10 @@ namespace catter::uv::async {
 namespace awaiter {
 
 template <typename Derived, typename Ret>
-class HandleBase {
+class Base {
 public:
     bool await_ready() {
-        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_handle()->data);
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->data());
         auto ret = static_cast<Derived*>(this)->init();
         if(ret < 0) {
             throw std::runtime_error(uv_strerror(ret));
@@ -87,7 +87,7 @@ public:
     }
 
     Ret await_resume() noexcept {
-        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_handle()->data);
+        std::swap(this->tmp_data, static_cast<Derived*>(this)->data());
         return this->result;
     }
 
@@ -100,7 +100,7 @@ public:
         std::terminate();
     }  // to be specialized
 
-    uv_handle_t* uv_handle() {
+    void*& data() {
         std::terminate();
     }  // to be specialized
 
@@ -117,54 +117,7 @@ private:
     void* tmp_data{this};
     std::coroutine_handle<> handle{nullptr};
 };
-
-template <typename Derived, typename Ret>
-class RequestBase {
-public:
-    bool await_ready() {
-        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_req()->data);
-        auto ret = static_cast<Derived*>(this)->init();
-        if(ret < 0) {
-            throw std::runtime_error(uv_strerror(ret));
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    Ret await_resume() noexcept {
-        std::swap(this->tmp_data, static_cast<Derived*>(this)->uv_req()->data);
-        return this->result;
-    }
-
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        this->handle = h;
-    }
-
-public:
-    int init() {
-        std::terminate();
-    }  // to be specialized
-
-    uv_req_t* uv_req() {
-        std::terminate();
-    }  // to be specialized
-
-    void resume() noexcept {
-        this->handle.resume();
-    }
-
-    Ret& get_result() noexcept {
-        return this->result;
-    }
-
-private:
-    Ret result{};
-    void* tmp_data{this};
-    std::coroutine_handle<> handle{nullptr};
-};
-
-class Close : public HandleBase<Close, std::monostate> {
+class Close : public Base<Close, std::monostate> {
 public:
     Close(uv_handle_t* handle) : handle{handle} {}
 
@@ -174,8 +127,8 @@ public:
         return 0;
     }
 
-    uv_handle_t* uv_handle() {
-        return this->handle;
+    void*& data() {
+        return this->handle->data;
     }
 
 private:
@@ -186,7 +139,7 @@ private:
     uv_handle_t* handle{nullptr};
 };
 
-class Read : public HandleBase<Read, ssize_t> {
+class Read : public Base<Read, ssize_t> {
 public:
     Read(uv_stream_t* stream, char* dst, size_t len) : stream{stream}, dst{dst}, remaining{len} {}
 
@@ -201,8 +154,8 @@ public:
             });
     }
 
-    uv_handle_t* uv_handle() {
-        return catter::uv::cast<uv_handle_t>(this->stream);
+    void*& data() {
+        return this->stream->data;
     }
 
 private:
@@ -232,7 +185,7 @@ private:
     size_t remaining{0};
 };
 
-class Write : public RequestBase<Write, int> {
+class Write : public Base<Write, int> {
 public:
     Write(uv_stream_t* stream, uv_buf_t* bufs, unsigned int nbufs) :
         stream{stream}, bufs{bufs}, nbufs{nbufs} {}
@@ -247,8 +200,8 @@ public:
                         });
     }
 
-    uv_req_t* uv_req() {
-        return catter::uv::cast<uv_req_t>(&this->req);
+    void*& data() {
+        return this->req.data;
     }
 
 private:
@@ -264,7 +217,7 @@ private:
     unsigned int nbufs{0};
 };
 
-class PipeConnect : public RequestBase<PipeConnect, int> {
+class PipeConnect : public Base<PipeConnect, int> {
 public:
     PipeConnect(uv_pipe_t* pipe, const char* name) : pipe{pipe}, name{name} {}
 
@@ -275,8 +228,8 @@ public:
         return 0;
     }
 
-    uv_req_t* uv_req() {
-        return catter::uv::cast<uv_req_t>(&this->req);
+    void*& data() {
+        return this->req.data;
     }
 
 private:
@@ -290,7 +243,7 @@ private:
     const char* name{nullptr};
 };
 
-class Spawn : public HandleBase<Spawn, int64_t> {
+class Spawn : public Base<Spawn, int64_t> {
 public:
     Spawn(uv_loop_t* loop, uv_process_t* process, uv_process_options_t* options) :
         loop{loop}, process{process}, options{options} {}
@@ -303,8 +256,8 @@ public:
         return uv_spawn(this->loop, this->process, this->options);
     }
 
-    uv_handle_t* uv_handle() {
-        return catter::uv::cast<uv_handle_t>(this->process);
+    void*& data() {
+        return this->process->data;
     }
 
 private:
