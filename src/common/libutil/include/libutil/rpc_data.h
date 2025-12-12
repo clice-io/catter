@@ -36,7 +36,7 @@ enum class Request : uint8_t {
     REPORT_ERROR,
     FINISH,
 };
-}
+}  // namespace catter::rpc::data
 
 namespace catter {
 template <>
@@ -51,7 +51,7 @@ struct Serde<rpc::data::Request> {
         return static_cast<rpc::data::Request>(value);
     }
 
-    template<CoReader Invocable>
+    template <CoReader Invocable>
     static coro::Lazy<rpc::data::Request> co_deserialize(Invocable&& reader) {
         uint8_t value = co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader));
         co_return static_cast<rpc::data::Request>(value);
@@ -61,11 +61,9 @@ struct Serde<rpc::data::Request> {
 template <>
 struct Serde<rpc::data::command> {
     static std::vector<char> serialize(const rpc::data::command& cmd) {
-        return merge_range_to_vector(
-                Serde<std::string>::serialize(cmd.executable),
-                Serde<std::vector<std::string>>::serialize(cmd.args),
-                Serde<std::vector<std::string>>::serialize(cmd.env)
-            );
+        return merge_range_to_vector(Serde<std::string>::serialize(cmd.executable),
+                                     Serde<std::vector<std::string>>::serialize(cmd.args),
+                                     Serde<std::vector<std::string>>::serialize(cmd.env));
     }
 
     template <Reader Invocable>
@@ -77,13 +75,15 @@ struct Serde<rpc::data::command> {
         return cmd;
     }
 
-
-    template<CoReader Invocable>
+    template <CoReader Invocable>
     static coro::Lazy<rpc::data::command> co_deserialize(Invocable&& reader) {
         rpc::data::command cmd;
-        cmd.executable = co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
-        cmd.args = co_await Serde<std::vector<std::string>>::co_deserialize(std::forward<Invocable>(reader));
-        cmd.env = co_await Serde<std::vector<std::string>>::co_deserialize(std::forward<Invocable>(reader));
+        cmd.executable =
+            co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
+        cmd.args = co_await Serde<std::vector<std::string>>::co_deserialize(
+            std::forward<Invocable>(reader));
+        cmd.env = co_await Serde<std::vector<std::string>>::co_deserialize(
+            std::forward<Invocable>(reader));
         co_return cmd;
     }
 };
@@ -91,10 +91,8 @@ struct Serde<rpc::data::command> {
 template <>
 struct Serde<rpc::data::action> {
     static std::vector<char> serialize(const rpc::data::action& act) {
-        return merge_range_to_vector(
-            Serde<uint8_t>::serialize(static_cast<uint8_t>(act.type)),
-            Serde<rpc::data::command>::serialize(act.cmd)
-        );
+        return merge_range_to_vector(Serde<uint8_t>::serialize(static_cast<uint8_t>(act.type)),
+                                     Serde<rpc::data::command>::serialize(act.cmd));
     }
 
     template <Reader Invocable>
@@ -105,12 +103,14 @@ struct Serde<rpc::data::action> {
             Serde<rpc::data::command>::deserialize(std::forward<Invocable>(reader))};
     }
 
-    template<CoReader Invocable>
+    template <CoReader Invocable>
     static coro::Lazy<rpc::data::action> co_deserialize(Invocable&& reader) {
         using enum_type = decltype(rpc::data::action::type);
         rpc::data::action act;
-        act.type = static_cast<enum_type>(co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader)));
-        act.cmd = co_await Serde<rpc::data::command>::co_deserialize(std::forward<Invocable>(reader));
+        act.type = static_cast<enum_type>(
+            co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader)));
+        act.cmd =
+            co_await Serde<rpc::data::command>::co_deserialize(std::forward<Invocable>(reader));
         co_return act;
     }
 };
@@ -118,10 +118,8 @@ struct Serde<rpc::data::action> {
 template <>
 struct Serde<rpc::data::decision_info> {
     static std::vector<char> serialize(const rpc::data::decision_info& info) {
-        return merge_range_to_vector(
-            Serde<rpc::data::action>::serialize(info.act),
-            Serde<rpc::data::command_id_t>::serialize(info.nxt_cmd_id)
-        );
+        return merge_range_to_vector(Serde<rpc::data::action>::serialize(info.act),
+                                     Serde<rpc::data::command_id_t>::serialize(info.nxt_cmd_id));
     }
 
     template <Reader Invocable>
@@ -130,13 +128,14 @@ struct Serde<rpc::data::decision_info> {
                 Serde<rpc::data::command_id_t>::deserialize(std::forward<Invocable>(reader))};
     }
 
-    template<CoReader Invocable>
+    template <CoReader Invocable>
     static coro::Lazy<rpc::data::decision_info> co_deserialize(Invocable&& reader) {
         rpc::data::decision_info info;
-        info.act = co_await Serde<rpc::data::action>::co_deserialize(std::forward<Invocable>(reader));
-        info.nxt_cmd_id = co_await Serde<rpc::data::command_id_t>::co_deserialize(std::forward<Invocable>(reader));
+        info.act =
+            co_await Serde<rpc::data::action>::co_deserialize(std::forward<Invocable>(reader));
+        info.nxt_cmd_id = co_await Serde<rpc::data::command_id_t>::co_deserialize(
+            std::forward<Invocable>(reader));
         co_return info;
     }
-
 };
-}  // namespace catter::rpc::data
+}  // namespace catter

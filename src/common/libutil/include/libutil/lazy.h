@@ -77,48 +77,74 @@ protected:
     std::exception_ptr exception{nullptr};
 };
 
-template <typename Ret>
-class [[nodiscard]] Lazy {
+template <typename Promise>
+class [[nodiscard]] TaskBase {
 public:
-    struct Promise;
-
     using promise_type = Promise;
     using handle_type = std::coroutine_handle<promise_type>;
+    TaskBase() = default;
 
-    Lazy() = default;
+    TaskBase(handle_type h) : handle{h} {}
 
-    Lazy(handle_type h) : handle{h} {}
+    TaskBase(const TaskBase&) = delete;
 
-    Lazy(const Lazy&) = delete;
+    TaskBase(TaskBase&& other) noexcept : handle{std::exchange(other.handle, nullptr)} {}
 
-    Lazy(Lazy&& other) noexcept : handle{std::exchange(other.handle, nullptr)} {}
+    TaskBase& operator= (const TaskBase&) = delete;
 
-    Lazy& operator= (const Lazy&) = delete;
-
-    Lazy& operator= (Lazy&& other) noexcept {
+    TaskBase& operator= (TaskBase&& other) noexcept {
         if(this != &other) {
-            this->~Lazy();
-            new (this) Lazy(std::move(other));
+            this->~TaskBase();
+            new (this) TaskBase(std::move(other));
         }
         return *this;
     }
 
-    ~Lazy() {
+    ~TaskBase() {
         if(this->handle) {
             this->wait();
             this->handle.destroy();
         }
     }
 
-    struct Promise : PromiseRet<Ret>, PromiseException, PromiseAwait {
-        Lazy get_return_object() noexcept {
-            return {handle_type::from_promise(*this)};
-        }
+    bool done() const noexcept {
+        return this->handle.done();
+    }
 
-        std::suspend_never initial_suspend() noexcept {
-            return {};
+    handle_type get_handle() noexcept {
+        return this->handle;
+    }
+
+    handle_type release() noexcept {
+        auto temp = this->handle;
+        this->handle = nullptr;
+        return temp;
+    }
+
+    void wait() noexcept {
+        while(!this->handle.done()) {
+            std::this_thread::yield();
         }
-    };
+    }
+
+    void resume() noexcept {
+        this->handle.resume();
+    }
+
+protected:
+    handle_type handle{nullptr};
+};
+
+template <typename Ret>
+struct LazyPromise;
+
+template <typename Ret>
+class [[nodiscard]] Lazy : public TaskBase<LazyPromise<Ret>> {
+public:
+    using Base = TaskBase<LazyPromise<Ret>>;
+    using promise_type = Base::promise_type;
+    using handle_type = Base::handle_type;
+    using Base::Base;
 
     struct awaiter {
         bool await_ready() noexcept {
@@ -146,38 +172,22 @@ public:
         return {this->handle};
     }
 
-    bool done() const noexcept {
-        return this->handle.done();
-    }
-
-    handle_type get_handle() noexcept {
-        return this->handle;
-    }
-
-    handle_type release() noexcept {
-        auto temp = this->handle;
-        this->handle = nullptr;
-        return temp;
-    }
-
-    void wait() noexcept {
-        while(!this->handle.done()) {
-            std::this_thread::yield();
-        }
-    }
-
-    void resume() noexcept {
-        this->handle.resume();
-    }
-
     Ret get() {
         this->wait();
         this->handle.promise().rethrow_if_exception();
         return this->handle.promise().result_rvalue();
     }
+};
 
-protected:
-    handle_type handle{nullptr};
+template <typename Ret>
+struct LazyPromise : PromiseRet<Ret>, PromiseException, PromiseAwait {
+    Lazy<Ret> get_return_object() noexcept {
+        return {Lazy<Ret>::handle_type::from_promise(*this)};
+    }
+
+    std::suspend_never initial_suspend() noexcept {
+        return {};
+    }
 };
 
 }  // namespace catter::coro

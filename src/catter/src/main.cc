@@ -1,6 +1,7 @@
 #include <coroutine>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <exception>
 #include <stdexcept>
 #include <uv.h>
@@ -49,12 +50,10 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                     std::println("ID [{}] created from [{}]: {}", id, parent_id, line);
 
                     rpc::data::decision_info decision{
-                        .act =
-                            {
-                                  .type = rpc::data::action::INJECT,
-                                  .cmd = cmd,
-                                  },
-                        .nxt_cmd_id = id,
+                        {
+                         rpc::data::action::INJECT,
+                         cmd, },
+                        id
                     };
                     auto ret = co_await uv::async::write(
                         uv::cast<uv_stream_t>(client),
@@ -81,9 +80,9 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
         }
     } catch(ssize_t err) {
         if(err == UV_EOF) {
-            std::println("Client disconnected.");
+            std::println("ID [{}] disconnected.", id);
         } else {
-            std::println("Client disconnected with error: {}", uv_strerror(err));
+            std::println("ID [{}] disconnected with error: {}", id, uv_strerror(err));
         }
     } catch(const std::exception& ex) {
         std::println("Exception while handling request: {}", ex.what());
@@ -114,11 +113,11 @@ uv::async::Lazy<void> loop() {
         co_return;
     }
 
-    std::string exe_path = "catter-proxy.exe";
+    std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
 
-    std::vector<std::string> args = {"-p", std::to_string(*generator++), "--", "ls"};
+    std::vector<std::string> args = {"-p", std::to_string(*generator++), "--", "xmake", "--yes"};
 
-    auto proxy_ret = co_await uv::async::spawn(exe_path, args);
+    auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
 
     std::println("catter-proxy exited with code {}", proxy_ret);
 
@@ -131,6 +130,11 @@ uv::async::Lazy<void> loop() {
 }
 
 int main() {
-    uv::wait(loop());
+    try {
+        uv::wait(loop());
+    } catch(const std::exception& ex) {
+        std::println("Fatal error: {}", ex.what());
+        return 1;
+    }
     return 0;
 }

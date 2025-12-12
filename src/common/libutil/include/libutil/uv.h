@@ -62,7 +62,6 @@ Base* cast(Derived* ptr) noexcept {
 
 template <typename Task>
 inline auto wait(Task&& task) {
-    uv::run();
     while(!task.done()) {
         uv::run();
     }
@@ -320,46 +319,91 @@ private:
 };
 
 }  // namespace awaiter
+template <typename Ret>
+struct LazyPromise;
 
 template <typename Ret>
-struct [[nodiscard]] Lazy : catter::coro::Lazy<Ret> {
-    using Base = catter::coro::Lazy<Ret>;
+class [[nodiscard]] Lazy : public coro::TaskBase<LazyPromise<Ret>> {
+public:
+    using Base = coro::TaskBase<LazyPromise<Ret>>;
+    using promise_type = Base::promise_type;
+    using handle_type = Base::handle_type;
     using Base::Base;
 
-    class promise_type : public Base::promise_type {
-    public:
-        Lazy get_return_object() noexcept {
-            return {Base::handle_type::from_promise(*this)};
+    bool done() const noexcept {
+        return Base::done() && this->handle.promise().cleaner.done();
+    }
+
+    struct awaiter {
+        bool await_ready() noexcept {
+            return false;
         }
 
-        coro::awaiter::final final_suspend() noexcept {
-            this->cleaner = close_handles(this->handles);
-            this->cleaner.get_handle().promise().set_previous(this->previous);
-            return {.continues = this->cleaner.get_handle()};
+        Ret await_resume() {
+            this->coro.promise().rethrow_if_exception();
+            return this->coro.promise().result_rvalue();
         }
 
-        template <typename T>
-            requires is_base_of_v<uv_handle_t, T>
-        void register_handle_for_close(T* handle) noexcept {
-
-            this->handles.push_back(
-                std::shared_ptr<uv_handle_t>(uv::cast<uv_handle_t>(handle), [](uv_handle_t* h) {
-                    delete reinterpret_cast<T*>(h);
-                }));
-        }
-
-    private:
-        static coro::Lazy<void> close_handles(std::vector<std::shared_ptr<uv_handle_t>>& handles) {
-            co_await std::suspend_always{};
-            for(auto& handle: handles) {
-                co_await awaiter::Close(handle.get());
+        bool await_suspend(std::coroutine_handle<> h) noexcept {
+            if(this->coro.done() && this->coro.promise().cleaner.done()) {
+                return false;
+            } else {
+                this->coro.promise().cleaner.get_handle().promise().set_previous(h);
+                return true;
             }
-            co_return;
         }
 
-        std::vector<std::shared_ptr<uv_handle_t>> handles{};
-        coro::Lazy<void> cleaner{};
+        std::coroutine_handle<promise_type> coro;
     };
+
+    awaiter operator co_await() noexcept {
+        return {this->handle};
+    }
+
+    Ret get() {
+        this->wait();
+        this->handle.promise().rethrow_if_exception();
+        return this->handle.promise().result_rvalue();
+    }
+};
+
+template <typename Ret>
+struct LazyPromise : coro::PromiseRet<Ret>, coro::PromiseException {
+public:
+    friend class Lazy<Ret>;
+
+    Lazy<Ret> get_return_object() noexcept {
+        return {Lazy<Ret>::handle_type::from_promise(*this)};
+    }
+
+    std::suspend_never initial_suspend() noexcept {
+        return {};
+    }
+
+    coro::awaiter::final final_suspend() noexcept {
+        return {.continues = this->cleaner.get_handle()};
+    }
+
+    template <typename T>
+        requires is_base_of_v<uv_handle_t, T>
+    void register_handle_for_close(T* handle) noexcept {
+
+        this->handles.push_back(
+            std::shared_ptr<uv_handle_t>(uv::cast<uv_handle_t>(handle),
+                                         [](uv_handle_t* h) { delete reinterpret_cast<T*>(h); }));
+    }
+
+private:
+    static coro::Lazy<void> close_handles(std::vector<std::shared_ptr<uv_handle_t>>& handles) {
+        co_await std::suspend_always{};
+        for(auto& handle: handles) {
+            co_await async::awaiter::Close(handle.get());
+        }
+        co_return;
+    }
+
+    std::vector<std::shared_ptr<uv_handle_t>> handles{};
+    coro::Lazy<void> cleaner{close_handles(this->handles)};
 };
 
 template <typename T>
@@ -410,9 +454,11 @@ inline coro::Lazy<ssize_t> read(uv_stream_t* stream, char* dst, size_t len) {
     co_return co_await awaiter::Read(stream, dst, len);
 }
 
-inline async::Lazy<int64_t> spawn(const std::string& path, const std::vector<std::string>& args) {
+inline async::Lazy<int64_t> spawn(const std::string& exe_path,
+                                  const std::vector<std::string>& args,
+                                  bool close_stdio = false) {
     std::vector<const char*> line;
-    line.emplace_back(path.c_str());
+    line.emplace_back(exe_path.c_str());
     for(auto& arg: args) {
         line.push_back(arg.c_str());
     }
@@ -424,8 +470,12 @@ inline async::Lazy<int64_t> spawn(const std::string& path, const std::vector<std
         {.flags = UV_INHERIT_FD, .data = {.fd = 1}},
         {.flags = UV_INHERIT_FD, .data = {.fd = 2}},
     };
+    if(close_stdio) {
+        child_stdio[1].flags = UV_IGNORE;
+        child_stdio[2].flags = UV_IGNORE;
+    }
 
-    options.file = path.c_str();
+    options.file = exe_path.c_str();
     options.args = const_cast<char**>(line.data());
     options.flags = UV_PROCESS_WINDOWS_VERBATIM_ARGUMENTS | UV_PROCESS_WINDOWS_HIDE;
     options.stdio_count = 3;
