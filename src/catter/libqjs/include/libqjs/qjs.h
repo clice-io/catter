@@ -449,8 +449,9 @@ template <typename R, typename... Args>
 class Function<R(Args...)> : private Object {
 public:
     using AllowParamTypes =
-        detail::type_list<bool, int64_t, std::string, Object, int32_t, uint32_t>;
-    using AllowRetTypes = detail::type_list<bool, int64_t, std::string, Object, int32_t, uint32_t>;
+        detail::type_list<bool, int64_t, std::string, Object, int32_t, uint32_t, long, int>;
+    using AllowRetTypes =
+        detail::type_list<bool, int64_t, std::string, Object, int32_t, uint32_t, long, int>;
 
     static_assert((AllowParamTypes::contains_v<Args> && ...),
                   "Function parameter types must be one of the allowed types");

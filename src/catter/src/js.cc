@@ -2,6 +2,7 @@
 #include "libqjs/qjs.h"
 #include <cstdio>
 #include <cstring>
+#include <format>
 #include <print>
 #include <quickjs.h>
 #include "libconfig/js-lib.h"
@@ -109,12 +110,11 @@ static JSValue
     }
 
     if(filename) {
-        std::println(error_strace,
-                     "Promise rejected with reason: {}\n at {}:{}:{}",
-                     error_message ? error_message : "unknown",
-                     filename,
-                     line,
-                     column);
+        error_strace = std::format("Promise rejected with reason: {}\n at {}:{}:{}",
+                                   error_message ? error_message : "unknown",
+                                   filename,
+                                   line,
+                                   column);
     } else {
         error_strace = std::format("Promise rejected with reason: {}",
                                    error_message ? error_message : "unknown");

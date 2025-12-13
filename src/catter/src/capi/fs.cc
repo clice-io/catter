@@ -1,6 +1,7 @@
 #include <fstream>
 #include <quickjs.h>
 #include <string>
+#include <sys/_types/_u_int32_t.h>
 #include <system_error>
 #include "../apitool.h"
 #include "js.h"
@@ -61,9 +62,9 @@ CAPI(fs_path_join_all, (catter::qjs::Object path_parts)->std::string) {
 }
 
 /// return root if no ancestor when doing this part
-CAPI(fs_path_ancestor_n, (std::string path, long n)->std::string) {
+CAPI(fs_path_ancestor_n, (std::string path, u_int32_t n)->std::string) {
     fs::path p = path;
-    for(long i = 0; i < n; ++i) {
+    for(u_int32_t i = 0; i < n; ++i) {
         p = p.parent_path();
     }
     return p.string();
