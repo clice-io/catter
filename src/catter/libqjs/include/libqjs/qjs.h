@@ -530,8 +530,8 @@ public:
      * @return A Function object representing the wrapped C function.
      */
     template <auto FnPtr>
-    // requires std::is_pointer_v<decltype(FnPtr)> &&
-    //          std::is_function_v<std::remove_pointer_t<decltype(FnPtr)>>
+        requires std::is_pointer_v<decltype(FnPtr)> &&
+                 std::is_function_v<std::remove_pointer_t<decltype(FnPtr)>>
     static Function from_raw(JSContext* ctx, const char* name) noexcept {
         Function<Sign> result{ctx, JS_NewCFunction(ctx, FnProxy<FnPtr>, name, sizeof...(Args))};
         return result;
