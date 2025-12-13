@@ -23,7 +23,7 @@ export function fs_path_absolute(path: string): string;
 export function fs_path_relative_to(base: string, path: string): string;
 
 export function fs_create_dir_recursively(path: string): boolean;
-export function fs_create_file_recursively(path: string): boolean;
+export function fs_create_empty_file_recursively(path: string): boolean;
 
 export function fs_remove_recursively(path: string): void;
 export function fs_rename_if_exists(

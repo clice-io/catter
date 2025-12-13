@@ -1,5 +1,6 @@
 import {
   fs_create_dir_recursively,
+  fs_create_empty_file_recursively,
   fs_exists,
   fs_is_dir,
   fs_is_file,
@@ -46,12 +47,12 @@ export function exists(pathStr: string): boolean {
  *
  * @example
  * ```typescript
- * if (is_file('./config.json')) {
+ * if (isFile('./config.json')) {
  *   console.log('Config is a file');
  * }
  * ```
  */
-export function is_file(pathStr: string): boolean {
+export function isFile(pathStr: string): boolean {
   return fs_is_file(pathStr);
 }
 
@@ -65,12 +66,12 @@ export function is_file(pathStr: string): boolean {
  *
  * @example
  * ```typescript
- * if (is_dir('./src')) {
+ * if (isDir('./src')) {
  *   console.log('src is a directory');
  * }
  * ```
  */
-export function is_dir(pathStr: string): boolean {
+export function isDir(pathStr: string): boolean {
   return fs_is_dir(pathStr);
 }
 
@@ -136,7 +137,7 @@ export function mkdir(pathStr: string, recursively = true): boolean {
     fs_create_dir_recursively(pathStr);
     return true;
   }
-  if (is_dir(path.to_ancestor(pathStr))) {
+  if (isDir(path.toAncestor(pathStr))) {
     fs_create_dir_recursively(pathStr);
     return true;
   }
@@ -168,11 +169,11 @@ export function mkdir(pathStr: string, recursively = true): boolean {
  */
 export function createFile(pathStr: string, recursively = true): boolean {
   if (recursively) {
-    fs_create_dir_recursively(path.to_ancestor(pathStr));
+    fs_create_empty_file_recursively(pathStr);
     return true;
   }
-  if (is_dir(path.to_ancestor(pathStr))) {
-    fs_create_dir_recursively(path.to_ancestor(pathStr));
+  if (isDir(path.toAncestor(pathStr))) {
+    fs_create_empty_file_recursively(pathStr);
     return true;
   }
   return false;
@@ -283,14 +284,14 @@ export const path = {
    *
    * @example
    * ```typescript
-   * const parent = path.to_ancestor('/home/user/docs/file.txt');
+   * const parent = path.toAncestor('/home/user/docs/file.txt');
    * // Returns: '/home/user/docs'
    *
-   * const grandparent = path.to_ancestor('/home/user/docs/file.txt', 2);
+   * const grandparent = path.toAncestor('/home/user/docs/file.txt', 2);
    * // Returns: '/home/user'
    * ```
    */
-  to_ancestor(path: string, n: number = 1) {
+  toAncestor(path: string, n: number = 1) {
     return fs_path_ancestor_n(path, n);
   },
 
@@ -328,11 +329,11 @@ export const path = {
    *
    * @example
    * ```typescript
-   * const rel = path.relative_to('/home/user', '/home/user/docs/file.txt');
+   * const rel = path.relativeTo('/home/user', '/home/user/docs/file.txt');
    * // Returns: 'docs/file.txt'
    * ```
    */
-  relative_to(base: string, path: string): string {
+  relativeTo(base: string, path: string): string {
     return fs_path_relative_to(base, path);
   },
 

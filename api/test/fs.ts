@@ -8,7 +8,7 @@ const shouldBeSubDirs = ["a", "b", "c"].map((dir) =>
   fs.path.absolute(fs.path.joinAll(testEnvPath, dir)),
 );
 
-debug.assert_throw(
+debug.assertThrow(
   shouldBeSubDirs.every((dir) => subDirs.includes(dir)) && subDirs.length === 3,
 );
 
@@ -18,7 +18,7 @@ const aTmpStream = new io.TextFileStream(
 );
 
 const entireBinary = aTmpStream.readLines();
-debug.assert_throw(
+debug.assertThrow(
   entireBinary.length === 4 &&
     entireBinary[0] === "Alpha!" &&
     entireBinary[1] === "Beta!" &&
@@ -33,22 +33,36 @@ io.TextFileStream.with(
   "ascii",
   (stream) => {
     stream.append("Appended line.\n");
-    debug.assert_throw(
-      stream.readEntireFile() === "Ok computer!Appended line.\n",
+    io.println(stream.readEntireFile());
+    debug.assertThrow(
+      stream.readEntireFile() === "Ok computer!\nAppended line.\n",
     );
   },
 );
 
 const c_path = fs.path.joinAll(testEnvPath, "c");
-debug.assert_throw(fs.exists(c_path));
-debug.assert_throw(
+debug.assertThrow(fs.exists(c_path));
+debug.assertThrow(
   fs.readDirs(c_path).every((fname) => fs.path.extension(fname) === ".txt"),
 );
 
 // path raw
-debug.assert_throw(fs.path.extension("a/n") === "");
-debug.assert_throw(fs.path.filename("a/b/c.ext") === "c.ext");
-debug.assert_throw(fs.path.filename("a/b/c") === "c");
-debug.assert_throw(
-  fs.path.to_ancestor("a/b/c/d/e.txt", 2) === fs.path.joinAll("a", "b", "c"),
+debug.assertThrow(fs.path.extension("a/n") === "");
+debug.assertThrow(fs.path.filename("a/b/c.ext") === "c.ext");
+debug.assertThrow(fs.path.filename("a/b/c") === "c");
+debug.assertThrow(
+  fs.path.toAncestor("a/b/c/d/e.txt", 2) === fs.path.joinAll("a", "b", "c"),
 );
+
+// create and remove dir/file recursively
+const newFilePath = fs.path.joinAll(
+  testEnvPath,
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i.txt",
+);
+debug.assertThrow(fs.createFile(newFilePath));
+debug.assertThrow(fs.exists(newFilePath) && fs.isFile(newFilePath));

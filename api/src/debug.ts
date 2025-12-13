@@ -6,7 +6,7 @@ import { stdout_print } from "catter-c";
  * @param cond - condition to assert
  * @param otherwise - function to call when assertion fails
  */
-export function assert_do(cond: boolean, otherwise: () => void) {
+export function assertDo(cond: boolean, otherwise: () => void) {
   if (!cond) {
     otherwise();
   }
@@ -16,8 +16,8 @@ export function assert_do(cond: boolean, otherwise: () => void) {
  * assert condition, print message on failure
  * @param cond - condition to assert
  */
-export function assert_print(cond: boolean) {
-  assert_do(cond, () => {
+export function assertPrint(cond: boolean) {
+  assertDo(cond, () => {
     stdout_print("assertion failed!");
   });
 }
@@ -26,8 +26,8 @@ export function assert_print(cond: boolean) {
  * assert condition, throw error on failure
  * @param cond - condition to assert
  */
-export function assert_throw(cond: boolean) {
-  assert_do(cond, () => {
+export function assertThrow(cond: boolean) {
+  assertDo(cond, () => {
     throw new Error("assertion failed!");
   });
 }
