@@ -18,9 +18,11 @@
 
 using namespace catter;
 
-static auto generator = std::views::iota(0).begin();
+static int id_generator = 0;
 
 uv::async::Lazy<void> accept(uv_stream_t* server) {
+    auto id = ++id_generator;
+
     auto client = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
     uv_accept(server, uv::cast<uv_stream_t>(client));
 
@@ -31,7 +33,6 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
         }
     };
 
-    auto id = *generator++;
     try {
         while(true) {
             rpc::data::Request req = co_await Serde<rpc::data::Request>::co_deserialize(reader);
@@ -91,6 +92,7 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
 
 uv::async::Lazy<void> loop() {
     auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
+
     if(auto ret = uv_pipe_bind(server, catter::config::rpc::PIPE_NAME); ret < 0) {
         std::println("Bind error: {}", uv_strerror(ret));
         co_return;
@@ -114,7 +116,7 @@ uv::async::Lazy<void> loop() {
 
     std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
 
-    std::vector<std::string> args = {"-p", std::to_string(*generator++), "--", "make", "-j"};
+    std::vector<std::string> args = {"-p", std::to_string(++id_generator), "--", "make", "-j"};
 
     auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
 
@@ -123,6 +125,12 @@ uv::async::Lazy<void> loop() {
     for(auto& acceptor: acceptors) {
         if(!acceptor.done()) {
             std::println("Error: acceptor coroutine not done yet.");
+        } else {
+            try {
+                acceptor.get();
+            } catch(const std::exception& ex) {
+                std::println("Exception in acceptor coroutine: {}", ex.what());
+            }
         }
     }
     co_return;
@@ -133,6 +141,9 @@ int main() {
         uv::wait(loop());
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());
+        return 1;
+    } catch(...) {
+        std::println("Unknown fatal error.");
         return 1;
     }
     return 0;

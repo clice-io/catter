@@ -281,6 +281,12 @@ public:
     using Base = coro::TaskBase<LazyPromise<Ret>>;
     using Base::Base;
 
+    Lazy() = default;
+    Lazy(const Lazy&) = default;
+    Lazy(Lazy&&) noexcept = default;
+    Lazy& operator= (const Lazy&) = default;
+    Lazy& operator= (Lazy&&) noexcept = default;
+
     ~Lazy() {
         this->wait();
     }
