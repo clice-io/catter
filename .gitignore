@@ -37,6 +37,9 @@ api/output
 *.a
 *.lib
 
+# auto genarated when compile
+*.inc
+
 # Executables
 *.exe
 *.out

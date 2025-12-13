@@ -31,7 +31,6 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@types/fastestsmallesttextencoderdecoder": "^1.0.2",
     "cpx": "^1.5.0",
     "npm-run-all": "^4.1.5",
     "rimraf": "^6.1.0",
@@ -40,6 +39,5 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "fastestsmallesttextencoderdecoder": "^1.0.22"
   }
 }

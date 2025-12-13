@@ -24,6 +24,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2025, ubuntu-24.04, macos-15]
+        node-version: ['22']
 
     concurrency:
       group: ${{ github.ref }}-${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.os }}

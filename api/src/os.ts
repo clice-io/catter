@@ -2,7 +2,7 @@ import { os_arch, os_name } from "catter-c";
 
 export {};
 
-export function platfrom(): "linux" | "windows" | "macos" {
+export function platform(): "linux" | "windows" | "macos" {
   return os_name();
 }
 

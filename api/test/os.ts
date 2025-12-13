@@ -1,9 +1,9 @@
 import { debug, io, os } from "catter";
 
 debug.assertThrow(
-  os.platfrom() == "linux" ||
-    os.platfrom() == "windows" ||
-    os.platfrom() == "macos",
+  os.platform() == "linux" ||
+    os.platform() == "windows" ||
+    os.platform() == "macos",
 );
 
 debug.assertThrow(
@@ -13,5 +13,5 @@ debug.assertThrow(
     os.arch() == "arm64",
 );
 
-io.println(`Operating System: ${os.platfrom()}`);
+io.println(`Operating System: ${os.platform()}`);
 io.println(`Architecture: ${os.arch()}`);
