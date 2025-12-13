@@ -3,12 +3,10 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
-#include <print>
 #include <quickjs.h>
 #include "libconfig/js-lib.h"
 #include "apitool.h"
 #include <optional>
-#include <filesystem>
 
 namespace catter::core::js {
 

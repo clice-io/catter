@@ -686,12 +686,16 @@ export class TextFileStream {
    */
   public readLines(): string[] {
     const lines: string[] = [];
+    let currentPos = this.fileStream.tellRead();
     while (true) {
       const line = this.readLine();
-      if (line === "") {
+      const newPos = this.fileStream.tellRead();
+      if (line === "" && newPos === currentPos) {
+        // EOF reached with empty line
         break;
       }
       lines.push(line);
+      currentPos = newPos;
     }
     return lines;
   }

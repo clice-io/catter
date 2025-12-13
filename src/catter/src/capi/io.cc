@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <fstream>
 #include <print>
 #include <quickjs.h>
@@ -110,6 +109,10 @@ CAPI(file_tell_write, (long file_id)->long) {
 /// Receive file_id, size and a ArrayBuffer to write data into
 /// return size that actually read
 CAPI(file_read_n, (long file_id, long buf_size, catter::qjs::Object array_buffer)->long) {
+    if(buf_size < 0) {
+        throw catter::qjs::Exception("Buffer size must be non-negative!");
+        return 0;
+    }
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
         throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
@@ -120,7 +123,7 @@ CAPI(file_read_n, (long file_id, long buf_size, catter::qjs::Object array_buffer
 
     unsigned long reserved_sz = buf_size;
     auto buf = JS_GetArrayBuffer(array_buffer.context(), &reserved_sz, array_buffer.value());
-    if(buf == nullptr && reserved_sz < buf_size) {
+    if(buf == nullptr || reserved_sz < buf_size) {
         throw catter::qjs::Exception("Failed to get ArrayBuffer data or buffer is too small!");
     }
     it->second.read(reinterpret_cast<char*>(buf), buf_size);
@@ -130,6 +133,10 @@ CAPI(file_read_n, (long file_id, long buf_size, catter::qjs::Object array_buffer
 // Receive file_id, size and a ArrayBuffer to write data from
 // return void
 CAPI(file_write_n, (long file_id, long buf_size, catter::qjs::Object array_buffer)->void) {
+    if(buf_size < 0) {
+        throw catter::qjs::Exception("Buffer size must be non-negative!");
+        return;
+    }
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
         throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
@@ -140,7 +147,7 @@ CAPI(file_write_n, (long file_id, long buf_size, catter::qjs::Object array_buffe
 
     unsigned long reserved_sz = buf_size;
     auto buf = JS_GetArrayBuffer(array_buffer.context(), &reserved_sz, array_buffer.value());
-    if(buf == nullptr && reserved_sz < buf_size) {
+    if(buf == nullptr || reserved_sz < buf_size) {
         throw catter::qjs::Exception("Failed to get ArrayBuffer data or buffer is small!");
     }
     it->second.write(reinterpret_cast<char*>(buf), buf_size);
