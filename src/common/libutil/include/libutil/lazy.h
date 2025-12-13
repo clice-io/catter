@@ -107,7 +107,7 @@ public:
         }
     }
 
-    bool done() const noexcept {
+    bool done() noexcept {
         return this->handle.done();
     }
 
@@ -122,7 +122,7 @@ public:
     }
 
     void wait() noexcept {
-        while(!this->handle.done()) {
+        while(!this->done()) {
             std::this_thread::yield();
         }
     }
@@ -132,6 +132,10 @@ public:
     }
 
 protected:
+    promise_type& promise() noexcept {
+        return this->handle.promise();
+    }
+
     handle_type handle{nullptr};
 };
 
@@ -152,30 +156,30 @@ public:
         }
 
         Ret await_resume() {
-            this->coro.promise().rethrow_if_exception();
-            return this->coro.promise().result_rvalue();
+            this->task->promise().rethrow_if_exception();
+            return this->task->promise().result_rvalue();
         }
 
         bool await_suspend(std::coroutine_handle<> h) noexcept {
-            if(this->coro.done()) {
+            if(this->task->done()) {
                 return false;
             } else {
-                this->coro.promise().set_previous(h);
+                this->task->promise().set_previous(h);
                 return true;
             }
         }
 
-        std::coroutine_handle<promise_type> coro;
+        Lazy* task;
     };
 
     awaiter operator co_await() noexcept {
-        return {this->handle};
+        return {this};
     }
 
     Ret get() {
         this->wait();
-        this->handle.promise().rethrow_if_exception();
-        return this->handle.promise().result_rvalue();
+        this->promise().rethrow_if_exception();
+        return this->promise().result_rvalue();
     }
 };
 

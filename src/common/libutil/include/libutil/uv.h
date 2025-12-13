@@ -117,13 +117,14 @@ private:
     void* tmp_data{this};
     std::coroutine_handle<> handle{nullptr};
 };
+
 class Close : public Base<Close, std::monostate> {
 public:
     Close(uv_handle_t* handle) : handle{handle} {}
 
     int init() {
         uv_close(this->handle,
-                 [](uv_handle_t* handle) { static_cast<Close*>(handle->data)->close_cb(handle); });
+                 [](uv_handle_t* handle) { static_cast<Close*>(handle->data)->close_cb(); });
         return 0;
     }
 
@@ -132,7 +133,7 @@ public:
     }
 
 private:
-    void close_cb(uv_handle_t* /*handle*/) {
+    void close_cb() {
         this->resume();
     }
 
@@ -146,11 +147,11 @@ public:
     int init() {
         return uv_read_start(
             this->stream,
-            [](uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-                static_cast<Read*>(handle->data)->alloc_cb(handle, suggested_size, buf);
+            [](uv_handle_t* handle, size_t /*suggested_size*/, uv_buf_t* buf) {
+                static_cast<Read*>(handle->data)->alloc_cb(buf);
             },
-            [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
-                static_cast<Read*>(stream->data)->read_cb(stream, nread, buf);
+            [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* /*buf*/) {
+                static_cast<Read*>(stream->data)->read_cb(nread);
             });
     }
 
@@ -159,12 +160,12 @@ public:
     }
 
 private:
-    void alloc_cb(uv_handle_t* /*handle*/, size_t /*suggested_size*/, uv_buf_t* buf) {
+    void alloc_cb(uv_buf_t* buf) {
         buf->base = this->dst;
         buf->len = this->remaining;
     }
 
-    void read_cb(uv_stream_t* /*stream*/, ssize_t nread, const uv_buf_t* /*buf*/) {
+    void read_cb(ssize_t nread) {
         if(nread > 0) {
             this->dst += nread;
             this->remaining -= nread;
@@ -191,13 +192,12 @@ public:
         stream{stream}, bufs{bufs}, nbufs{nbufs} {}
 
     int init() {
-        return uv_write(&this->req,
-                        this->stream,
-                        this->bufs,
-                        this->nbufs,
-                        [](uv_write_t* req, int status) {
-                            static_cast<Write*>(req->data)->write_cb(req, status);
-                        });
+        return uv_write(
+            &this->req,
+            this->stream,
+            this->bufs,
+            this->nbufs,
+            [](uv_write_t* req, int status) { static_cast<Write*>(req->data)->write_cb(status); });
     }
 
     void*& data() {
@@ -205,7 +205,7 @@ public:
     }
 
 private:
-    void write_cb(uv_write_t* /*req*/, int status) {
+    void write_cb(int status) {
         this->get_result() = status;
         this->resume();
     }
@@ -223,7 +223,7 @@ public:
 
     int init() {
         uv_pipe_connect(&this->req, this->pipe, this->name, [](uv_connect_t* req, int status) {
-            static_cast<PipeConnect*>(req->data)->connect_cb(req, status);
+            static_cast<PipeConnect*>(req->data)->connect_cb(status);
         });
         return 0;
     }
@@ -233,7 +233,7 @@ public:
     }
 
 private:
-    void connect_cb(uv_connect_t* /*req*/, int status) {
+    void connect_cb(int status) {
         this->get_result() = status;
         this->resume();
     }
@@ -279,11 +279,19 @@ template <typename Ret>
 class [[nodiscard]] Lazy : public coro::TaskBase<LazyPromise<Ret>> {
 public:
     using Base = coro::TaskBase<LazyPromise<Ret>>;
-    using promise_type = Base::promise_type;
-    using handle_type = Base::handle_type;
     using Base::Base;
 
-    bool done() const noexcept {
+    ~Lazy() {
+        this->wait();
+    }
+
+    void wait() noexcept {
+        while(!this->done()) {
+            std::this_thread::yield();
+        }
+    }
+
+    bool done() noexcept {
         return Base::done() && this->handle.promise().cleaner.done();
     }
 
@@ -293,30 +301,30 @@ public:
         }
 
         Ret await_resume() {
-            this->coro.promise().rethrow_if_exception();
-            return this->coro.promise().result_rvalue();
+            this->task->promise().rethrow_if_exception();
+            return this->task->promise().result_rvalue();
         }
 
         bool await_suspend(std::coroutine_handle<> h) noexcept {
-            if(this->coro.done() && this->coro.promise().cleaner.done()) {
+            if(this->task->done()) {
                 return false;
             } else {
-                this->coro.promise().cleaner.get_handle().promise().set_previous(h);
+                this->task->promise().set_previous(h);
                 return true;
             }
         }
 
-        std::coroutine_handle<promise_type> coro;
+        Lazy* task;
     };
 
     awaiter operator co_await() noexcept {
-        return {this->handle};
+        return {this};
     }
 
     Ret get() {
         this->wait();
-        this->handle.promise().rethrow_if_exception();
-        return this->handle.promise().result_rvalue();
+        this->promise().rethrow_if_exception();
+        return this->promise().result_rvalue();
     }
 };
 
@@ -335,6 +343,10 @@ public:
 
     coro::awaiter::final final_suspend() noexcept {
         return {.continues = this->cleaner.get_handle()};
+    }
+
+    void set_previous(std::coroutine_handle<> h) noexcept {
+        this->cleaner.get_handle().promise().set_previous(h);
     }
 
     template <typename T>
@@ -377,7 +389,7 @@ public:
     // requires std::is_base_of_v<async::Lazy<Ret>, Promise>
     // TODO
     bool await_suspend(std::coroutine_handle<Promise> h) noexcept {
-        h.promise().template register_handle_for_close<T>(this->ptr);
+        h.promise().register_handle_for_close(this->ptr);
         return false;
     }
 
