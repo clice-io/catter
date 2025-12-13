@@ -47,7 +47,7 @@ rule("build.js")
     set_extensions(".ts", ".d.ts", ".js", ".txt")
 
     on_build_files(function (target, sourcebatch, opt)
-        -- xmake/rules/utils/bin2obj/utils.lua
+        -- ref xmake/rules/utils/bin2obj/utils.lua
         import("utils.binary.bin2obj")
         import("lib.detect.find_tool")
         import("core.project.depend")
