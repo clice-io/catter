@@ -7,6 +7,7 @@ on:
       - ".github/workflows/xmake.yml"
       - "src/**"
       - "tests/**"
+      - "api/**"
       - "xmake.lua"
 
   pull_request:
@@ -15,6 +16,7 @@ on:
       - ".github/workflows/xmake.yml"
       - "src/**"
       - "tests/**"
+      - "api/**"
       - "xmake.lua"
 
 jobs:
@@ -32,6 +34,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+           node-version: ${{ matrix.node-version }}
+           cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
