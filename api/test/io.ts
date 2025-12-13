@@ -1,2 +1,11 @@
 import * as catter from "catter";
-catter.io.print("Test output");
+catter.io.println("\n----Running I/O tests...----");
+catter.io.print("Hello, World!");
+catter.io.println("This is a new line.");
+catter.io.coloredPrint("This is red text.", "red");
+catter.io.coloredPrintln("This is green text with a newline.", "green");
+catter.io.coloredPrint("This is yellow text.", "yellow");
+catter.io.coloredPrintln("This is blue text with a newline.", "blue");
+catter.io.coloredPrint("This is blue text.", "blue");
+catter.io.coloredPrintln("This is yellow text with a newline.", "yellow");
+catter.io.println("----I/O tests completed.----\n");

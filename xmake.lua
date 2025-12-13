@@ -30,25 +30,24 @@ end
 
 rule("js-lib")
     set_extensions(".ts", ".d.ts", ".js")
-    on_build_file(function (target, sourcefile, opt)
+    on_build_files(function (target, sourcebatch, opt)
         import("core.project.depend")
         import("utils.progress")
-
         depend.on_changed(function ()
-            progress.show(opt.progress, "${color.build.target}build js-lib %s", sourcefile)
+            progress.show(opt.progress, "Building js lib")
             os.run("pnpm run build-js-lib")
-        end, {files = sourcefile})
+        end, {files = target:sourcebatches()})
     end)
 
 rule("js-test")
-    set_extensions(".ts", ".d.ts", ".js")
-    on_build_file(function (target, sourcefile, opt)
+    set_extensions(".ts", ".d.ts", ".js", ".txt")
+    on_build_files( function (target, sourcebatch, opt)
         import("core.project.depend")
         import("utils.progress")
         depend.on_changed(function ()
-            progress.show(opt.progress, "${color.build.target}build js-lib %s", sourcefile)
+            progress.show(opt.progress, "Building js test files")
             os.run("pnpm run build-js-test")
-        end, {files = sourcefile})
+        end, {files = target:sourcebatches()})
     end)
 
 

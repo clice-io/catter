@@ -1,3 +1,1 @@
-R"(
-/home/kacent/project/catter/api/output/test
-)"
+R"(/home/kacent/project/catter/api/output/test)"

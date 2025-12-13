@@ -5,7 +5,7 @@
 #include <string_view>
 
 int main(int argc, char* argv[], char* envp[]) {
-    catter::core::js::init_qjs();
+    catter::core::js::init_qjs({.pwd = std::filesystem::current_path()});
     try {
         catter::core::js::run_js_file(
             R"(

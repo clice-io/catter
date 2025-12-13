@@ -4,4 +4,6 @@
  */
 import * as debug from "./debug.js";
 import * as io from "./io.js";
-export { debug, io };
+import * as os from "./os.js";
+import * as fs from "./fs.js";
+export { debug, io, os, fs };

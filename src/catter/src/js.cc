@@ -1,27 +1,37 @@
 #include "js.h"
 #include "libqjs/qjs.h"
+#include <cstdio>
 #include <cstring>
+#include <print>
 #include <quickjs.h>
 #include "libconfig/js-lib.h"
 #include "apitool.h"
 #include <optional>
+#include <filesystem>
 
 namespace catter::core::js {
 
 namespace {
 qjs::Runtime rt;
+RuntimeConfig global_config;
 qjs::Object js_mod_obj;
+
 char error_strace[512]{};
 enum class PromiseState { Pending, Fulfilled, Rejected };
 PromiseState promise_state = PromiseState::Pending;
 }  // namespace
 
-void init_qjs() {
+const RuntimeConfig& get_global_runtime_config() {
+    return global_config;
+}
+
+void init_qjs(const RuntimeConfig& config) {
     rt = qjs::Runtime::create();
+    global_config = config;
 
     const qjs::Context& ctx = rt.context();
     auto& mod = ctx.cmodule("catter-c");
-    for(auto& reg: catter::apitool::api_registers) {
+    for(auto& reg: catter::apitool::api_registers()) {
         reg(mod, ctx);
     }
     // init js lib
@@ -32,7 +42,8 @@ void init_qjs() {
     try {
         js_mod_obj = ctx.global_this()["__catter_mod"].to<qjs::Object>().value();
     } catch(...) {
-        throw std::runtime_error("Failed to get catter module object");
+        throw qjs::Exception("Failed to get catter module object: " +
+                             qjs::detail::dump(ctx.js_context()));
     }
 };
 
@@ -43,7 +54,6 @@ static JSValue
     return JS_UNDEFINED;
 }
 
-// 这是当 Promise 被 reject 时会被调用的 C 函数
 static JSValue
     on_promise_reject(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     promise_state = PromiseState::Rejected;
@@ -120,17 +130,10 @@ static JSValue
     return JS_UNDEFINED;
 }
 
-/**
- * Run a JavaScript file content in a new QuickJS runtime and context.
- *
- * @param content The JavaScript code to execute.
- * @param filename The name of the file (used for error reporting).
- * @throws qjs::Exception if there is an error during execution.
- */
-void run_js_file(std::string_view content, const std::string filename, bool check_error) {
+void run_js_file(std::string_view content, const std::string filepath, bool check_error) {
     const qjs::Context& ctx = rt.context();
 
-    auto ret = ctx.eval(content, filename.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+    auto ret = ctx.eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
     auto promise_ret = ret.to<qjs::Object>();
     if(!promise_ret.has_value()) {
         throw qjs::Exception("Inner exception!, this exception should not happen.");
@@ -161,8 +164,9 @@ void run_js_file(std::string_view content, const std::string filename, bool chec
                 break;
             }
         }
-        // just a tiny wait
-        while(promise_state == PromiseState::Pending) {}
+        if(promise_state == PromiseState::Pending) {
+            throw qjs::Exception("Inner error after executing js async jobs!");
+        }
         if(promise_state == PromiseState::Rejected) {
             throw qjs::Exception(std::format("Module loading with error:\n {}", error_strace));
         }
