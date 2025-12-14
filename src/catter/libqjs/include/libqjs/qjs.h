@@ -519,10 +519,8 @@ public:
         return result;
     }
 
-
-
-
     using SignCtx = R(JSContext*, Args...);
+
     /**
      * @brief Create a Function from a C function pointer.
      * This method wraps a C function pointer so that it can be called from JavaScript.
@@ -590,7 +588,7 @@ public:
 private:
     template <typename Invocable>
     static JSValue invoke_helper(JSContext* ctx, int argc, JSValueConst* argv, Invocable&& fn) {
-        if (argc != sizeof...(Args)) {
+        if(argc != sizeof...(Args)) {
             return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
         }
 
@@ -610,7 +608,7 @@ private:
             };
             try {
                 if constexpr(std::is_void_v<R>) {
-                    fn(transformer(std::in_place_index<Is>)...); 
+                    fn(transformer(std::in_place_index<Is>)...);
                     return JS_UNDEFINED;
                 } else {
                     auto res = fn(transformer(std::in_place_index<Is>)...);
@@ -630,12 +628,16 @@ private:
     }
 
     template <typename Opaque, typename Register>
-    static JSValue proxy(JSContext* ctx, JSValueConst func_obj, JSValueConst this_val,
-                         int argc, JSValueConst* argv, [[maybe_unused]] int flags) noexcept {
-        
+    static JSValue proxy(JSContext* ctx,
+                         JSValueConst func_obj,
+                         JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv,
+                         [[maybe_unused]] int flags) noexcept {
+
         auto* ptr = static_cast<Opaque*>(JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))));
-        
-        if (!ptr) {
+
+        if(!ptr) {
             return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
         }
 
@@ -645,8 +647,8 @@ private:
     }
 
     template <Sign* FnPtr>
-    static JSValue proxy(JSContext* ctx, JSValueConst this_val,
-                         int argc, JSValueConst* argv) noexcept {
+    static JSValue
+        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
 
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(std::forward<Ts>(args)...);
@@ -654,8 +656,8 @@ private:
     }
 
     template <SignCtx* FnPtr>
-    static JSValue proxy(JSContext* ctx, JSValueConst this_val,
-                         int argc, JSValueConst* argv) noexcept {
+    static JSValue
+        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(ctx, std::forward<Ts>(args)...);
         });

@@ -25,7 +25,7 @@ ut::suite<"js"> js = [] {
         if(js_file.path().extension() != ".js") {
             continue;
         }
-        ut::test(std::format("js test: file {}", js_file.path().c_str())) = [&] {
+        ut::test(std::format("js test: file {}", js_file.path().string())) = [&] {
             std::string content;
             {
                 std::ifstream ifs(js_file.path());
