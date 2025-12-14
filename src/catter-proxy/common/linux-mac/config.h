@@ -17,16 +17,12 @@ constexpr static char LD_PRELOAD_INIT_ENTRY[] = "LD_PRELOAD=";
 #elif defined(CATTER_MAC)
 constexpr static char KEY_PRELOAD[] = "DYLD_INSERT_LIBRARIES";
 constexpr static char LD_PRELOAD_INIT_ENTRY[] = "DYLD_INSERT_LIBRARIES=";
-#else
-#error "Unsupported platform"
 #endif
 
 #ifdef CATTER_LINUX
 constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.so";
 #elif defined(CATTER_MAC)
 constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.dylib";
-#else
-#error "Unsupported platform"
 #endif
 
 constexpr static char LOG_PATH_REL[] = "log/catter-hook.log";
