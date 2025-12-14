@@ -42,8 +42,7 @@ int main(int argc, char* argv[], char* envp[]) {
     try {
         catter::log::init_logger("catter-proxy.log",
                                  catter::util::get_catter_data_path() /
-                                     catter::config::proxy::LOG_PATH_REL /
-                                     std::format("{:016x}.log", catter::util::unique_id()),
+                                     catter::config::proxy::LOG_PATH_REL,
                                  false);
     } catch(const std::exception& e) {
         // cannot init logger

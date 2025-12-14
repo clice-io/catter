@@ -7,5 +7,5 @@ constexpr const inline static char CATTER_PROXY_ENV_KEY[] = "exec_is_catter_prox
 }  // namespace catter::config::proxy
 
 namespace catter::config::proxy {
-constexpr const inline static char LOG_PATH_REL[] = "log/catter-proxy";
+constexpr const inline static char LOG_PATH_REL[] = "log/catter-proxy.log";
 };  // namespace catter::config::proxy
