@@ -15,7 +15,7 @@
 
 #include "libutil/output.h"
 #include "libutil/uv.h"
-#include "rpppppc.h"
+#include "rpc_handler.h"
 
 namespace catter::proxy {
 int run(rpc::data::action act, rpc::data::command_id_t id) {
