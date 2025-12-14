@@ -12,6 +12,7 @@
 #include <ranges>
 #include <algorithm>
 #include <cassert>
+#include <format>
 #include <print>
 
 #include <uv.h>
@@ -31,7 +32,10 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
     auto id = ++id_generator;
 
     auto client = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
-    uv_accept(server, uv::cast<uv_stream_t>(client));
+    if(auto ret = uv_accept(server, uv::cast<uv_stream_t>(client)); ret < 0) {
+        std::println("Accept error: {}", uv_strerror(ret));
+        co_return;
+    }
 
     auto reader = [&](char* dst, size_t len) -> coro::Lazy<void> {
         auto ret = co_await uv::async::read(uv::cast<uv_stream_t>(client), dst, len);
@@ -140,8 +144,9 @@ uv::async::Lazy<void> loop() {
         co_return;
     }
 
-    co_await std::suspend_always{};
+    co_await std::suspend_always{};  // placeholder to keep the server running
 
+    // need to locate the real catter-proxy executable here
     std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
 
     std::vector<std::string> args = {"-p", std::to_string(++id_generator), "--", "make", "-j"};

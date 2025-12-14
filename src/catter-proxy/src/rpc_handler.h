@@ -1,5 +1,6 @@
 #pragma once
 #include <print>
+#include <stdexcept>
 
 #include <uv.h>
 
@@ -64,12 +65,18 @@ public:
 private:
     template <typename... Args>
     void write(Args&&... payload) {
-        uv::wait(uv::async::write(uv::cast<uv_stream_t>(&this->client_pipe),
-                                  std::forward<Args>(payload)...));
+        auto ret = uv::wait(uv::async::write(uv::cast<uv_stream_t>(&this->client_pipe),
+                                             std::forward<Args>(payload)...));
+        if(ret < 0) {
+            throw std::runtime_error("rpc_handler write failed: " + std::string(uv_strerror(ret)));
+        }
     }
 
     void read(char* dst, size_t len) {
-        uv::wait(uv::async::read(uv::cast<uv_stream_t>(&this->client_pipe), dst, len));
+        auto ret = uv::wait(uv::async::read(uv::cast<uv_stream_t>(&this->client_pipe), dst, len));
+        if(ret < 0) {
+            throw std::runtime_error("rpc_handler read failed: " + std::string(uv_strerror(ret)));
+        }
     }
 
     rpc_handler() noexcept {

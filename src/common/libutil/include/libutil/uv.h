@@ -56,7 +56,6 @@ constexpr bool is_base_of_v = is_base_of<Base, Derived>::value;
 template <typename Base, typename Derived>
     requires is_base_of_v<Base, Derived>
 Base* cast(Derived* ptr) noexcept {
-    static_assert("Invalid uv_safe_cast");
     return reinterpret_cast<Base*>(ptr);
 }
 
@@ -282,9 +281,9 @@ public:
     using handle_type = Base::handle_type;
 
     using Base::Base;
-    Lazy(const Lazy&) = default;
+    Lazy(const Lazy&) = delete;
     Lazy(Lazy&&) noexcept = default;
-    Lazy& operator= (const Lazy&) = default;
+    Lazy& operator= (const Lazy&) = delete;
     Lazy& operator= (Lazy&&) noexcept = default;
 
     ~Lazy() {
