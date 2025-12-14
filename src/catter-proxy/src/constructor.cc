@@ -1,7 +1,7 @@
 #include <stdexcept>
 
-#include "libutil/rpc_data.h"
-#include "libutil/crossplat.h"
+#include "uv/rpc_data.h"
+#include "util/crossplat.h"
 
 namespace catter::proxy {
 rpc::data::command build_raw_cmd(char* arg_start[], char* arg_end[]) {

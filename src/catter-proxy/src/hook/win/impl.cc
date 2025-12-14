@@ -12,9 +12,10 @@
 #include <windows.h>
 #include <detours.h>
 
-#include "libutil/crossplat.h"
+#include "uv/rpc_data.h"
+#include "util/crossplat.h"
+
 #include "hook/win/env.h"
-#include "libutil/rpc_data.h"
 #include <string>
 
 namespace {

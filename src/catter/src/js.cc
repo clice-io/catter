@@ -4,7 +4,7 @@
 #include <cstring>
 #include <format>
 #include <quickjs.h>
-#include "libconfig/js-lib.h"
+#include "config/js-lib.h"
 #include "apitool.h"
 #include <optional>
 

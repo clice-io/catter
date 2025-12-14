@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <coroutine>
 #include <thread>
 #include <utility>
@@ -123,9 +124,7 @@ public:
     }
 
     void wait() noexcept {
-        while(!this->done()) {
-            std::this_thread::yield();
-        }
+        assert(!this->done());
     }
 
     void resume() noexcept {

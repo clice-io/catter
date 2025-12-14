@@ -7,8 +7,8 @@
 #include <filesystem>
 #include <print>
 #include <filesystem>
-#include "libconfig/js-test.h"
-#include "libutil/output.h"
+#include "config/js-test.h"
+#include "util/output.h"
 namespace ut = boost::ut;
 
 namespace fs = std::filesystem;

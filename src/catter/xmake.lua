@@ -6,7 +6,7 @@ target("catter-core")
     add_includedirs("src", {public = true})
     add_packages("quickjs-ng", {public = true})
 
-    add_deps("libutil")
+    add_deps("common")
 
     add_files("src/**.cc")
 

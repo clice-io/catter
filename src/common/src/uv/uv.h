@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 #include <print>
-#include "libutil/lazy.h"
+#include "util/lazy.h"
 
 namespace catter::uv {
 uv_loop_t* default_loop() noexcept;
@@ -293,9 +293,7 @@ public:
     }
 
     void wait() noexcept {
-        while(!this->done()) {
-            std::this_thread::yield();
-        }
+        assert(!this->done());
     }
 
     bool done() noexcept {

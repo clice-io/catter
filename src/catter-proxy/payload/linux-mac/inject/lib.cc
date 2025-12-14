@@ -7,7 +7,7 @@
 #include "executor.h"
 #include "hook/linux-mac/debug.h"
 #include "hook/linux-mac/crossplat.h"
-#include "libconfig/proxy.h"
+#include "config/proxy.h"
 
 #include <limits.h>
 #include "unistd.h"

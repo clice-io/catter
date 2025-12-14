@@ -19,10 +19,10 @@
 
 #include "js.h"
 
-#include "libconfig/rpc.h"
-#include "libutil/lazy.h"
-#include "libutil/uv.h"
-#include "libutil/rpc_data.h"
+#include "config/rpc.h"
+#include "util/lazy.h"
+#include "uv/uv.h"
+#include "uv/rpc_data.h"
 
 using namespace catter;
 

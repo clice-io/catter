@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-#include "libutil/serde.h"
+#include "util/serde.h"
 
 namespace catter::rpc::data {
 

@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include "../apitool.h"
 #include "qjs.h"
-#include "libutil/output.h"
+#include "util/output.h"
 
 namespace {
 CAPI(stdout_print, (const std::string content)->void) {

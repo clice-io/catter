@@ -18,7 +18,7 @@
 
 #include <quickjs.h>
 
-#include "libutil/meta.h"
+#include "util/meta.h"
 
 // namespace meta
 

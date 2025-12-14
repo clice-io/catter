@@ -2,7 +2,7 @@
 
 #include <iterator>
 #include "array.h"
-#include "libconfig/linux-mac-hook.h"
+#include "config/linux-mac-hook.h"
 #include <string_view>
 
 namespace catter {

@@ -8,13 +8,13 @@
 #include "hook.h"
 #include "constructor.h"
 
-#include "libutil/crossplat.h"
-#include "libutil/lazy.h"
-#include "libutil/log.h"
-#include "libconfig/proxy.h"
+#include "util/crossplat.h"
+#include "util/lazy.h"
+#include "util/log.h"
+#include "config/proxy.h"
 
-#include "libutil/output.h"
-#include "libutil/uv.h"
+#include "util/output.h"
+#include "uv/uv.h"
 #include "rpc_handler.h"
 
 namespace catter::proxy {

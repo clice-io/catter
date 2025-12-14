@@ -1,20 +1,20 @@
 #include "hook.h"
-#include "libconfig/linux-mac-hook.h"
-#include "libconfig/proxy.h"
+#include "config/linux-mac-hook.h"
+#include "config/proxy.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <limits.h>
-#include "libconfig/linux-mac-hook.h"
+#include "config/linux-mac-hook.h"
 #include <spawn.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
-#include "libutil/rpc_data.h"
-#include "libutil/crossplat.h"
-#include "libutil/log.h"
+#include "uv/rpc_data.h"
+#include "util/crossplat.h"
+#include "util/log.h"
 
 /**
  * @brief Run a command using posix_spawn

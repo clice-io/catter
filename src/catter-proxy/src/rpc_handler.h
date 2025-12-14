@@ -4,9 +4,9 @@
 
 #include <uv.h>
 
-#include "libutil/rpc_data.h"
-#include "libutil/uv.h"
-#include "libconfig/rpc.h"
+#include "uv/rpc_data.h"
+#include "uv/uv.h"
+#include "config/rpc.h"
 
 // TODO
 namespace catter::proxy {

@@ -1,11 +1,11 @@
 #pragma once
 
 #ifdef DEBUG
-#include "libutil/crossplat.h"
+#include "util/crossplat.h"
 #include <filesystem>
-#include "libutil/log.h"
-#include "libutil/crossplat.h"
-#include "libconfig/linux-mac-hook.h"
+#include "util/log.h"
+#include "util/crossplat.h"
+#include "config/linux-mac-hook.h"
 
 const inline auto __just_for_init = []() {
     auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;

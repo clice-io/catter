@@ -9,9 +9,9 @@
 #include <format>
 #include <print>
 #include <filesystem>
-#include "libconfig/js-test.h"
+#include "config/js-test.h"
 #include "qjs.h"
-#include "libutil/output.h"
+#include "util/output.h"
 namespace ut = boost::ut;
 
 namespace fs = std::filesystem;

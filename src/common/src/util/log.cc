@@ -1,5 +1,5 @@
-#include "libutil/log.h"
-#include "libconfig/log.h"
+#include "util/log.h"
+#include "config/log.h"
 #include <memory>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/daily_file_sink.h>

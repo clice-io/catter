@@ -14,9 +14,9 @@ elseif is_plat("linux", "macosx") then
     target("catter-hook-unix")
         set_kind("shared")
         if is_mode("debug") then
-            add_deps("libutil")
+            add_deps("common")
         end
-        add_deps("libconfig")
+
         add_includedirs("src")
         add_includedirs("payload/linux-mac")
         add_files("payload/linux-mac/*.cc")
@@ -30,8 +30,7 @@ end
 
 target("catter-proxy")
     set_kind("binary")
-    add_deps("libutil")
-    add_deps("libconfig")
+    add_deps("common")
     add_includedirs("src")
     add_files("src/main.cc", "src/constructor.cc")
     if is_plat("windows") then

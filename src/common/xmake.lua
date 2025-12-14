@@ -1,10 +1,11 @@
 
+
+
 add_requires("libuv", {system = false, version = "v1.51.0"})
 
-target("libutil")
+target("common")
     set_kind("static")
-    add_includedirs("include", {public = true})
-    add_files("src/*.cc")
-    add_deps("libconfig")
+    add_includedirs("src", {public = true})
+    add_files("src/**.cc")
     add_packages("libuv", {public = true})
     add_packages("spdlog", {public = true})

@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 
-#include "libutil/lazy.h"
+#include "util/lazy.h"
 
 namespace catter {
 
