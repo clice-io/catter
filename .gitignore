@@ -3,6 +3,8 @@ node_modules
 .rollup*
 api/output
 
+*.inc
+
 # Prerequisites
 *.d
 
@@ -37,6 +39,9 @@ api/output
 *.a
 *.lib
 
+# auto genarated when compile
+*.inc
+
 # Executables
 *.exe
 *.out
@@ -51,3 +56,4 @@ api/output
 .vscode
 build*/
 vsxmake*/
+.turbo/

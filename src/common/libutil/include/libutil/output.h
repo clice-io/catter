@@ -4,8 +4,6 @@
 #include <format>
 #include <string_view>
 
-#include <iostream>
-
 namespace catter::output {
 
 constexpr const inline char RESET[] = "\033[0m";
@@ -20,8 +18,6 @@ constexpr const inline char BLUE[] = "\033[34m";
 constexpr const inline char MAGENTA[] = "\033[35m";
 constexpr const inline char CYAN[] = "\033[36m";
 constexpr const inline char WHITE[] = "\033[37m";
-
-inline auto& output_stream = std::cout;
 
 struct StyledText {
     std::string_view content;
@@ -38,14 +34,14 @@ template <typename... Args>
 constexpr void colorPrintln(const std::string_view color,
                             std::format_string<Args...> fmt,
                             Args&&... args) {
-    std::println(output_stream, "{}", style(std::format(fmt, std::forward<Args>(args)...), color));
+    std::println("{}", style(std::format(fmt, std::forward<Args>(args)...), color));
 }
 
 template <typename... Args>
 constexpr void colorPrint(const std::string_view color,
                           std::format_string<Args...> fmt,
                           Args&&... args) {
-    std::print(output_stream, "{}", style(std::format(fmt, std::forward<Args>(args)...), color));
+    std::print("{}", style(std::format(fmt, std::forward<Args>(args)...), color));
 }
 
 #define SPECIFIY_COLOR_PRINT(FnName, ColorName)                                                    \

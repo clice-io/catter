@@ -1,0 +1,25 @@
+{
+    "extends": "../tsconfig.base.json",
+    "compilerOptions": {
+        "tsBuildInfoFile": "./build/.tsbuildinfo",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "rootDir": "./test",
+        "outDir": "./output/test/",
+        "declaration": false,
+        "lib": [
+            "ES2020",
+        ],
+        "paths": {
+            "catter": [
+                "./output/types/index.d.ts"
+            ],
+        }
+    },
+    "include": [
+        "test/**/*.ts",
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+}

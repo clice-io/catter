@@ -7,6 +7,7 @@ on:
       - ".github/workflows/xmake.yml"
       - "src/**"
       - "tests/**"
+      - "api/**"
       - "xmake.lua"
 
   pull_request:
@@ -15,6 +16,7 @@ on:
       - ".github/workflows/xmake.yml"
       - "src/**"
       - "tests/**"
+      - "api/**"
       - "xmake.lua"
 
 jobs:
@@ -22,6 +24,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-2025, ubuntu-24.04, macos-15]
+        node-version: ['22']
 
     concurrency:
       group: ${{ github.ref }}-${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.os }}
@@ -33,10 +36,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+           node-version: ${{ matrix.node-version }}
+           cache: 'pnpm'
+
+      - name: Install npm dependencies
+        run: pnpm install
+
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: 3.0.4
+          xmake-version: sha@b7e9857eff9a4425237e8eeb5c666fb4570eec76
           actions-cache-folder: ".xmake-cache"
           actions-cache-key: ${{ matrix.os }}
           package-cache: true
@@ -53,18 +68,21 @@ jobs:
           sudo update-alternatives --set g++ /usr/bin/g++-14
 
       - name: Setup llvm
-        if: matrix.os == 'macos-15'
+        if: runner.os == 'macOS'
         run: |
           brew install llvm@20
 
-      - name: Xmake configure for macos
-        if: matrix.os == 'macos-15'
+      - name: Build
+        shell: bash
         run: |
-          xmake config --clean --yes --mode=release --toolchain=clang --sdk=/opt/homebrew/opt/llvm@20
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            xmake config --clean --yes --mode=release --plat=windows
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            xmake config --clean --yes --mode=release --toolchain=clang --sdk=/opt/homebrew/opt/llvm@20
+          else
+            xmake config --clean --yes --mode=release
+          fi
           xmake --verbose --diagnosis
 
-      - name: Xmake configure for linux, windows
-        if: matrix.os != 'macos-15'
-        run: |
-          xmake config --clean --yes --mode=release
-          xmake --verbose --diagnosis
+      - name: Test
+        run: xmake test --verbose --diagnosis

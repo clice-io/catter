@@ -1,5 +1,6 @@
 import typescript from "@rollup/plugin-typescript";
 import resolve from "@rollup/plugin-node-resolve";
+import terser from "@rollup/plugin-terser"; // 导入 terser 插件
 
 export default {
   input: "src/index.ts",
@@ -16,10 +17,18 @@ export default {
     }),
     typescript({
       tsconfig: "./tsconfig.rollup.json",
-      outputToFilesystem: false,
-      declaration: false,
-      declarationMap: false,
-      compilerOptions: {},
+      compilerOptions: {
+        declarationDir: undefined,
+
+        declaration: false,
+        declarationMap: false,
+
+        module: "esnext",
+        moduleResolution: "bundler",
+      },
+    }),
+    terser({
     }),
   ],
+  external: ["catter-c"],
 };
