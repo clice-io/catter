@@ -10,7 +10,7 @@
 #include <print>
 #include <ranges>
 #include <algorithm>
-
+#include "libqjs.h"
 #include "libconfig/rpc.h"
 #include "libutil/lazy.h"
 #include "libutil/uv.h"
@@ -37,27 +37,41 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
         while(true) {
             rpc::data::Request req = co_await Serde<rpc::data::Request>::co_deserialize(reader);
             switch(req) {
-                case rpc::data::Request::MAKE_DECISION: {
+                case rpc::data::Request::CREATE: {
                     rpc::data::command_id_t parent_id =
                         co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+
+                    std::println("ID [{}] created from [{}]", id, parent_id);
+
+                    auto ret =
+                        co_await uv::async::write(uv::cast<uv_stream_t>(client),
+                                                  Serde<rpc::data::command_id_t>::serialize(id));
+                    if(ret < 0) {
+                        throw std::runtime_error(uv_strerror(ret));
+                    }
+                    break;
+                }
+
+                case rpc::data::Request::MAKE_DECISION: {
                     rpc::data::command cmd =
                         co_await Serde<rpc::data::command>::co_deserialize(reader);
 
                     std::string line = cmd.executable;
+
                     for(auto& arg: cmd.args) {
                         line.append(std::format(" {}", arg));
                     }
-                    std::println("ID [{}] created from [{}]: {}", id, parent_id, line);
 
-                    rpc::data::decision_info decision{
-                        {
-                         rpc::data::action::INJECT,
-                         cmd, },
-                        id
+                    auto act = rpc::data::action{
+                        .type = rpc::data::action::WRAP,
+                        .cmd = cmd,
                     };
-                    auto ret = co_await uv::async::write(
-                        uv::cast<uv_stream_t>(client),
-                        Serde<rpc::data::decision_info>::serialize(decision));
+
+                    std::println("ID [{}] decision: {}", id, line);
+
+                    auto ret = co_await uv::async::write(uv::cast<uv_stream_t>(client),
+                                                         Serde<rpc::data::action>::serialize(act));
+
                     if(ret < 0) {
                         throw std::runtime_error(uv_strerror(ret));
                     }
@@ -69,10 +83,15 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                     break;
                 }
                 case rpc::data::Request::REPORT_ERROR: {
-                    rpc::data::command_id_t parent_id =
+                    auto parent_id =
                         co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+                    auto cmd_id = co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
                     std::string error_msg = co_await Serde<std::string>::co_deserialize(reader);
-                    std::println("ID [{}] reported error: {}", parent_id, error_msg);
+                    std::println("ID [{}] from [{}] reported error: {}",
+                                 cmd_id,
+                                 parent_id,
+                                 error_msg);
+
                     break;
                 }
                 default: std::println("Unknown request received.");
@@ -113,6 +132,8 @@ uv::async::Lazy<void> loop() {
         std::println("Listen error: {}", uv_strerror(ret));
         co_return;
     }
+
+    co_await std::suspend_always{};
 
     std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
 

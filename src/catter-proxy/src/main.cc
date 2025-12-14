@@ -74,7 +74,8 @@ int main(int argc, char* argv[], char* envp[]) {
         }
 
         catter::rpc::data::command_id_t parent_id = std::stoi(argv[2]);
-        rpc_ins.set_parent_id(parent_id);
+
+        auto id = rpc_ins.create(parent_id);
 
         if(std::string(argv[3]) != "--") {
             if(argv[3] != nullptr) {
@@ -99,7 +100,7 @@ int main(int argc, char* argv[], char* envp[]) {
         catter::proxy::hook::locate_exe(received_act.cmd);
 
         // 4. run command
-        int ret = catter::proxy::run(received_act, rpc_ins.get_id());
+        int ret = catter::proxy::run(received_act, id);
 
         // 5. report finish
         rpc_ins.finish(ret);

@@ -292,7 +292,7 @@ private:
  * @brief A specialized Value that represents a JavaScript object.
  * It inherits from Value and provides object-specific operations like property access.
  */
-class Object : private Value {
+class Object : protected Value {
 public:
     using Value::Value;
     using Value::is_valid;
@@ -370,7 +370,7 @@ class Function {
 };
 
 template <typename R, typename... Args>
-class Function<R(Args...)> : private Object {
+class Function<R(Args...)> : protected Object {
 public:
     using AllowParamTypes = detail::type_list<bool, int64_t, std::string, Object>;
 
@@ -448,15 +448,9 @@ public:
 
     R invoke(const Object& this_obj, Args... args) const {
 
-#ifdef _MSC_VER
-        // MSVC have some problem, so we need to use a lambda here
-        auto argv = std::array<JSValue, sizeof...(Args)>{[&] {
-            return qjs::Value::from(this->context(), args).release();
-        }()...};
-#else
         auto argv = std::array<JSValue, sizeof...(Args)>{
             qjs::Value::from(this->context(), args).release()...};
-#endif
+
         auto value = qjs::Value{this->context(),
                                 JS_Call(this->context(),
                                         this->value(),

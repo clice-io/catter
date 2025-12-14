@@ -19,24 +19,26 @@ public:
         return instance;
     }
 
-    rpc::data::command_id_t get_id() const {
-        return id;
+    auto reader() {
+        return [this](char* dst, size_t len) {
+            read(dst, len);
+        };
     }
 
-    void set_parent_id(rpc::data::command_id_t pid) {
-        this->parent_id = pid;
+    rpc::data::command_id_t create(rpc::data::command_id_t parent_id) {
+        this->parent_id = parent_id;
+        this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::CREATE),
+                    Serde<rpc::data::command_id_t>::serialize(parent_id));
+        auto nxt_id = Serde<rpc::data::command_id_t>::deserialize(this->reader());
+        this->id = nxt_id;
+        return nxt_id;
     }
 
     rpc::data::action make_decision(rpc::data::command cmd) {
         this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::MAKE_DECISION),
-                    Serde<rpc::data::command_id_t>::serialize(this->parent_id),
                     Serde<rpc::data::command>::serialize(cmd));
 
-        auto [act, nxt_cmd_id] = Serde<rpc::data::decision_info>::deserialize(
-            [this](char* dst, size_t len) { read(dst, len); });
-
-        this->id = nxt_cmd_id;
-        return act;
+        return Serde<rpc::data::action>::deserialize(this->reader());
     }
 
     void finish(int ret_code) {
@@ -47,12 +49,9 @@ public:
 
     void report_error(std::string error_msg) noexcept {
         try {
-            auto to_send = this->id;
-            if (to_send == -1) {
-                to_send = this->parent_id;
-            }
             this->write(Serde<rpc::data::Request>::serialize(rpc::data::Request::REPORT_ERROR),
-                        Serde<rpc::data::command_id_t>::serialize(to_send),
+                        Serde<rpc::data::command_id_t>::serialize(this->parent_id),
+                        Serde<rpc::data::command_id_t>::serialize(this->id),
                         Serde<std::string>::serialize(error_msg));
         } catch(...) {
             // cannot do anything here
@@ -74,10 +73,7 @@ private:
     rpc_handler() noexcept {
         uv_pipe_init(uv::default_loop(), &this->client_pipe, 0);
         uv_connect_t connect_req{};
-        uv_pipe_connect(&connect_req,
-                        &this->client_pipe,
-                        config::rpc::PIPE_NAME,
-                        nullptr);
+        uv_pipe_connect(&connect_req, &this->client_pipe, config::rpc::PIPE_NAME, nullptr);
 
         uv::run();
     };

@@ -26,12 +26,8 @@ struct action {
     command cmd;
 };
 
-struct decision_info {
-    action act;
-    command_id_t nxt_cmd_id;
-};
-
 enum class Request : uint8_t {
+    CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
@@ -112,30 +108,6 @@ struct Serde<rpc::data::action> {
         act.cmd =
             co_await Serde<rpc::data::command>::co_deserialize(std::forward<Invocable>(reader));
         co_return act;
-    }
-};
-
-template <>
-struct Serde<rpc::data::decision_info> {
-    static std::vector<char> serialize(const rpc::data::decision_info& info) {
-        return merge_range_to_vector(Serde<rpc::data::action>::serialize(info.act),
-                                     Serde<rpc::data::command_id_t>::serialize(info.nxt_cmd_id));
-    }
-
-    template <Reader Invocable>
-    static rpc::data::decision_info deserialize(Invocable&& reader) {
-        return {Serde<rpc::data::action>::deserialize(std::forward<Invocable>(reader)),
-                Serde<rpc::data::command_id_t>::deserialize(std::forward<Invocable>(reader))};
-    }
-
-    template <CoReader Invocable>
-    static coro::Lazy<rpc::data::decision_info> co_deserialize(Invocable&& reader) {
-        rpc::data::decision_info info;
-        info.act =
-            co_await Serde<rpc::data::action>::co_deserialize(std::forward<Invocable>(reader));
-        info.nxt_cmd_id = co_await Serde<rpc::data::command_id_t>::co_deserialize(
-            std::forward<Invocable>(reader));
-        co_return info;
     }
 };
 }  // namespace catter

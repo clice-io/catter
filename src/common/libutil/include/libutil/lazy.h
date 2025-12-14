@@ -156,24 +156,24 @@ public:
         }
 
         Ret await_resume() {
-            this->task->promise().rethrow_if_exception();
-            return this->task->promise().result_rvalue();
+            this->coro.promise().rethrow_if_exception();
+            return this->coro.promise().result_rvalue();
         }
 
         bool await_suspend(std::coroutine_handle<> h) noexcept {
-            if(this->task->done()) {
+            if(this->coro.done()) {
                 return false;
             } else {
-                this->task->promise().set_previous(h);
+                this->coro.promise().set_previous(h);
                 return true;
             }
         }
 
-        Lazy* task;
+        handle_type coro;
     };
 
     awaiter operator co_await() noexcept {
-        return {this};
+        return {this->handle};
     }
 
     Ret get() {
