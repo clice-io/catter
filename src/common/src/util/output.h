@@ -6,18 +6,18 @@
 
 namespace catter::output {
 
-constexpr const inline char RESET[] = "\033[0m";
-constexpr const inline char BOLD[] = "\033[1m";
-constexpr const inline char UNDERLINE[] = "\033[4m";
-constexpr const inline char REVERSED[] = "\033[7m";
-constexpr const inline char BLACK[] = "\033[30m";
-constexpr const inline char RED[] = "\033[31m";
-constexpr const inline char GREEN[] = "\033[32m";
-constexpr const inline char YELLOW[] = "\033[33m";
-constexpr const inline char BLUE[] = "\033[34m";
-constexpr const inline char MAGENTA[] = "\033[35m";
-constexpr const inline char CYAN[] = "\033[36m";
-constexpr const inline char WHITE[] = "\033[37m";
+constexpr char RESET[] = "\033[0m";
+constexpr char BOLD[] = "\033[1m";
+constexpr char UNDERLINE[] = "\033[4m";
+constexpr char REVERSED[] = "\033[7m";
+constexpr char BLACK[] = "\033[30m";
+constexpr char RED[] = "\033[31m";
+constexpr char GREEN[] = "\033[32m";
+constexpr char YELLOW[] = "\033[33m";
+constexpr char BLUE[] = "\033[34m";
+constexpr char MAGENTA[] = "\033[35m";
+constexpr char CYAN[] = "\033[36m";
+constexpr char WHITE[] = "\033[37m";
 
 struct StyledText {
     std::string_view content;

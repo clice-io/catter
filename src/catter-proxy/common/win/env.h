@@ -16,7 +16,7 @@ template <typename char_t>
 concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
 
 template <CharT char_t>
-constexpr static char_t ENV_VAR_RPC_ID[] = {};
+constexpr char_t ENV_VAR_RPC_ID[] = {};
 
 template <>
 constexpr char ENV_VAR_RPC_ID<char>[] = "CATTER_RPC_ID";

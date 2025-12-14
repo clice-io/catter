@@ -20,6 +20,9 @@
 #include "js.h"
 
 #include "config/rpc.h"
+#include "config/catter-proxy.h"
+
+#include "util/crossplat.h"
 #include "util/lazy.h"
 #include "uv/uv.h"
 #include "uv/rpc_data.h"
@@ -146,8 +149,8 @@ uv::async::Lazy<void> loop() {
 
     co_await std::suspend_always{};  // placeholder to keep the server running
 
-    // need to locate the real catter-proxy executable here
-    std::string exe_path = "/home/seele/catter/build/linux/x86_64/debug/catter-proxy";
+
+    auto exe_path = util::get_catter_root_path() / catter::config::proxy::EXE_NAME;
 
     std::vector<std::string> args = {"-p", std::to_string(++id_generator), "--", "make", "-j"};
 
