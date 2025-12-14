@@ -149,12 +149,11 @@ uv::async::Lazy<void> loop() {
 
     co_await std::suspend_always{};  // placeholder to keep the server running
 
-
     auto exe_path = util::get_catter_root_path() / catter::config::proxy::EXE_NAME;
 
     std::vector<std::string> args = {"-p", std::to_string(++id_generator), "--", "make", "-j"};
 
-    auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
+    auto proxy_ret = co_await uv::async::spawn(exe_path.string(), args, true);
 
     std::println("catter-proxy exited with code {}", proxy_ret);
 
