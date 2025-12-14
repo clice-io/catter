@@ -5,8 +5,8 @@
 #include "session.h"
 #include "resolver.h"
 #include "executor.h"
-#include "hook/linux-mac/debug.h"
-#include "hook/linux-mac/crossplat.h"
+#include "linux-mac/debug.h"
+#include "linux-mac/crossplat.h"
 #include "config/proxy.h"
 
 #include <limits.h>

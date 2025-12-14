@@ -1,7 +1,7 @@
 #include "executor.h"
 
 #include "command.h"
-#include "hook/linux-mac/debug.h"
+#include "linux-mac/debug.h"
 #include "resolver.h"
 #include "linker.h"
 #include "session.h"

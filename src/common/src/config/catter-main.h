@@ -1,5 +1,4 @@
 #pragma once
-#include "common.h"
 
 namespace catter::config::main {
 #ifdef CATTER_LINUX

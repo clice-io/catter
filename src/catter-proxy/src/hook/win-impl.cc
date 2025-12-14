@@ -15,7 +15,7 @@
 #include "uv/rpc_data.h"
 #include "util/crossplat.h"
 
-#include "hook/win/env.h"
+#include "win/env.h"
 #include <string>
 
 namespace {

@@ -1,6 +1,6 @@
 #include "environment.h"
 #include "array.h"
-#include "hook/linux-mac/debug.h"
+#include "linux-mac/debug.h"
 
 namespace catter::env {
 

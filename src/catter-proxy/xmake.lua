@@ -4,7 +4,7 @@ if is_plat("windows") then
 
     target("catter-hook64")
         set_kind("shared")
-        add_includedirs("src")
+        add_includedirs("common")
         add_files("payload/win/main.cc")
         add_syslinks("user32", "advapi32")
         add_packages("microsoft-detours")
@@ -17,7 +17,7 @@ elseif is_plat("linux", "macosx") then
             add_deps("common")
         end
 
-        add_includedirs("src")
+        add_includedirs("common")
         add_includedirs("payload/linux-mac")
         add_files("payload/linux-mac/*.cc")
         add_files("payload/linux-mac/inject/*.cc")
@@ -31,11 +31,11 @@ end
 target("catter-proxy")
     set_kind("binary")
     add_deps("common")
-    add_includedirs("src")
+    add_includedirs("common", "src")
     add_files("src/main.cc", "src/constructor.cc")
     if is_plat("windows") then
-        add_files("src/hook/win/impl.cc")
+        add_files("src/hook/win-impl.cc")
         add_packages("microsoft-detours")
     elseif is_plat("linux", "macosx") then
-        add_files("src/hook/linux-mac/impl.cc")
+        add_files("src/hook/linux-mac-impl.cc")
     end

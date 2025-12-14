@@ -1,5 +1,3 @@
-#include "common.h"
-
 namespace catter::config::log {
 /// like [2024-06-15 14:23:01.123] [INFO] [pid:12345][tid:123] message
 #ifdef DEBUG

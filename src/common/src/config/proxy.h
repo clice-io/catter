@@ -1,7 +1,5 @@
 #pragma once
 
-#include "common.h"
-
 namespace catter::config::proxy {
 constexpr const inline static char CATTER_PROXY_ENV_KEY[] = "exec_is_catter_proxy_v1";
 }  // namespace catter::config::proxy
