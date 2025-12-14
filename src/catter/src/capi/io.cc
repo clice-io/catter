@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unordered_map>
 #include "../apitool.h"
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include "libutil/output.h"
 
 namespace {

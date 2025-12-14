@@ -10,7 +10,7 @@
 #include <print>
 #include <filesystem>
 #include "libconfig/js-test.h"
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include "libutil/output.h"
 namespace ut = boost::ut;
 

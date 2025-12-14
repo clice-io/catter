@@ -1,9 +1,11 @@
 #pragma once
+#include <print>
+
+#include <uv.h>
+
 #include "libutil/rpc_data.h"
 #include "libutil/uv.h"
 #include "libconfig/rpc.h"
-#include <print>
-#include <uv.h>
 
 // TODO
 namespace catter::proxy {

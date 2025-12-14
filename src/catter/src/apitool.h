@@ -1,5 +1,5 @@
 #pragma once
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include "js.h"
 #include <filesystem>
 

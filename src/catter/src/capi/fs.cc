@@ -5,7 +5,7 @@
 #include <system_error>
 #include "../apitool.h"
 #include "js.h"
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include <filesystem>
 
 namespace fs = std::filesystem;

@@ -1,5 +1,5 @@
 #include "js.h"
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include <cstdio>
 #include <cstring>
 #include <format>

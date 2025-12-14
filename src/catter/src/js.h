@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libqjs/qjs.h"
+#include "qjs.h"
 #include <filesystem>
 
 namespace catter::core::js {
