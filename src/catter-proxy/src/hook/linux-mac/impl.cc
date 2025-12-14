@@ -1,4 +1,4 @@
-#include "libhook/interface.h"
+#include "hook.h"
 #include "libconfig/linux-mac-hook.h"
 #include "libconfig/proxy.h"
 #include <algorithm>

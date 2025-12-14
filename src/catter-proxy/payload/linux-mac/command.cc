@@ -1,6 +1,6 @@
 #include "command.h"
 #include "buffer.h"
-#include "libhook/linux-mac/debug.h"
+#include "hook/linux-mac/debug.h"
 #include "libconfig/linux-mac-hook.h"
 
 namespace catter {

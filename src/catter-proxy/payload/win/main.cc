@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <detours.h>
 
-#include "libhook/win/env.h"
+#include "hook/win/env.h"
 
 // https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
 #pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")

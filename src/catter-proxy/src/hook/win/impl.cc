@@ -13,7 +13,7 @@
 #include <detours.h>
 
 #include "libutil/crossplat.h"
-#include "libhook/win/env.h"
+#include "hook/win/env.h"
 #include "libutil/rpc_data.h"
 #include <string>
 

@@ -1,7 +1,7 @@
 #include "session.h"
 
 #include "buffer.h"
-#include "libhook/linux-mac/debug.h"
+#include "hook/linux-mac/debug.h"
 #include "environment.h"
 #include "libconfig/linux-mac-hook.h"
 

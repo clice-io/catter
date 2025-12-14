@@ -5,8 +5,8 @@
 #include <expected>
 #include <spawn.h>
 #include <unistd.h>
-#include "libhook/linux-mac/debug.h"
-#include "libhook/linux-mac/crossplat.h"
+#include "hook/linux-mac/debug.h"
+#include "hook/linux-mac/crossplat.h"
 
 using execve_t = int (*)(const char* path, char* const argv[], char* const envp[]);
 using posix_spawn_t = int (*)(pid_t* pid,

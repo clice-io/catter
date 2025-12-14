@@ -5,12 +5,12 @@
 #include <string>
 #include <system_error>
 
+#include "hook.h"
 #include "constructor.h"
 
 #include "libutil/crossplat.h"
 #include "libutil/lazy.h"
 #include "libutil/log.h"
-#include "libhook/interface.h"
 #include "libconfig/proxy.h"
 
 #include "libutil/output.h"
