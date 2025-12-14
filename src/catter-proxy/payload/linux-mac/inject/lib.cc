@@ -1,5 +1,4 @@
 #include <cstdlib>
-#define _GNU_SOURCE
 
 #include "linker.h"
 #include "session.h"
@@ -7,7 +6,7 @@
 #include "executor.h"
 #include "linux-mac/debug.h"
 #include "linux-mac/crossplat.h"
-#include "config/proxy.h"
+#include "linux-mac/config.h"
 
 #include <limits.h>
 #include "unistd.h"

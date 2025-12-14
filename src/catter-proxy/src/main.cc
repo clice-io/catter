@@ -7,15 +7,14 @@
 
 #include "hook.h"
 #include "constructor.h"
+#include "rpc_handler.h"
+#include "linux-mac/config.h"
 
 #include "util/crossplat.h"
 #include "util/lazy.h"
 #include "util/log.h"
-#include "config/proxy.h"
-
 #include "util/output.h"
-#include "uv/uv.h"
-#include "rpc_handler.h"
+#include "config/catter-proxy.h"
 
 namespace catter::proxy {
 int run(rpc::data::action act, rpc::data::command_id_t id) {

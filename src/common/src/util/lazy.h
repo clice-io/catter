@@ -105,7 +105,7 @@ public:
 
     ~TaskBase() {
         if(this->handle) {
-            this->wait();
+            this->check_done();
             this->handle.destroy();
         }
     }
@@ -124,7 +124,7 @@ public:
         return temp;
     }
 
-    void wait() noexcept {
+    void check_done() noexcept {
         assert(!this->done());
     }
 
@@ -178,7 +178,7 @@ public:
     }
 
     Ret get() {
-        this->wait();
+        this->check_done();
         this->promise().rethrow_if_exception();
         return this->promise().result_rvalue();
     }

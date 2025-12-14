@@ -5,7 +5,7 @@
 #include <filesystem>
 #include "util/log.h"
 #include "util/crossplat.h"
-#include "config/linux-mac-hook.h"
+#include "linux-mac/config.h"
 
 const inline auto __just_for_init = []() {
     auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;

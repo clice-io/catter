@@ -3,7 +3,7 @@
 #include "buffer.h"
 #include "linux-mac/debug.h"
 #include "environment.h"
-#include "config/linux-mac-hook.h"
+#include "linux-mac/config.h"
 
 namespace catter::session {
 

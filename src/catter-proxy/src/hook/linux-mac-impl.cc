@@ -1,13 +1,13 @@
 #include "hook.h"
-#include "config/linux-mac-hook.h"
-#include "config/proxy.h"
+#include "linux-mac/config.h"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <limits.h>
-#include "config/linux-mac-hook.h"
+#include "linux-mac/config.h"
 #include <spawn.h>
 #include <unistd.h>
 #include <dirent.h>
