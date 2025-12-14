@@ -2,6 +2,7 @@
 #include <cassert>
 #include <coroutine>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <exception>
 
@@ -25,11 +26,11 @@ struct final {
 template <typename Ret>
 class PromiseRet {
 public:
-    void return_value(const Ret& v) noexcept(std::is_nothrow_copy_constructible_v<Ret>) {
+    void return_value(const Ret& v) noexcept(std::is_nothrow_copy_assignable_v<Ret>) {
         this->result = v;
     }
 
-    void return_value(Ret&& v) noexcept(std::is_nothrow_move_constructible_v<Ret>) {
+    void return_value(Ret&& v) noexcept(std::is_nothrow_move_assignable_v<Ret>) {
         this->result = std::move(v);
     }
 

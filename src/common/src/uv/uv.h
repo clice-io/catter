@@ -281,10 +281,16 @@ public:
     using handle_type = Base::handle_type;
 
     using Base::Base;
-    Lazy(const Lazy&) = delete;
-    Lazy(Lazy&&) noexcept = default;
-    Lazy& operator= (const Lazy&) = delete;
-    Lazy& operator= (Lazy&&) noexcept = default;
+
+    Lazy(Lazy&& other) noexcept = default;
+
+    Lazy& operator= (Lazy&& other) noexcept {
+        if(this != &other) {
+            this->~Lazy();
+            new (this) Lazy(std::move(other));
+        }
+        return *this;
+    }
 
     ~Lazy() {
         if(this->handle) {
