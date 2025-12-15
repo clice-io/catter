@@ -1,0 +1,53 @@
+[workspace]
+name = "catter"
+version = "0.0.1"
+description = "A new tool to capture C++ compilation command"
+authors = ["star9029 <hengxing9029@outlook.com>"]
+
+license = "Apache-2.0"
+license-file = "LICENSE"
+
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
+
+[dependencies]
+pnpm = "*"
+python = ">=3.14.2,<3.15"
+
+[target.linux-64.dependencies]
+sysroot_linux-64 = "==2.17"
+gcc = "==14.2.0"
+gxx = "==14.2.0"
+
+[target.osx-arm64.dependencies]
+clang = "==20.1.8"
+clangxx = "==20.1.8"
+lld = "==20.1.8"
+llvm-tools = "==20.1.8"
+compiler-rt = "==20.1.8"
+
+[pypi-dependencies]
+pre-commit = "*"
+
+[tasks]
+npm_install = "pnpm install"
+
+check = "pre-commit run --all-files"
+
+configure = "xmake config --clean --yes"
+build = "xmake --verbose --diagnosis"
+test = "xmake test --verbose --diagnosis"
+
+[tasks.ci-build]
+depends-on = [
+    { task = "npm_install" },
+    { task = "configure" },
+    { task = "build" },
+    { task = "test" },
+]
+
+[tasks.ci-check]
+depends-on = [
+    { task = "npm_install" },
+    { task = "check" },
+]
