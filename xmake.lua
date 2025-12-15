@@ -9,6 +9,16 @@ option("test", {default = true})
 if has_config("dev") then
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+
+    if is_plat("macosx") then
+        local opt = {configs = {
+            ldflags = "-fuse-ld=lld",
+            shflags = "-fuse-ld=lld",
+        }}
+        add_requireconfs("quickjs-ng", opt)
+        add_requireconfs("libuv", opt)
+        add_requireconfs("spdlog", opt)
+    end
 end
 
 add_requires("spdlog", {system = false, version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
