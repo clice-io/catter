@@ -9,16 +9,20 @@ option("test", {default = true})
 if has_config("dev") then
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+end
 
-    if is_plat("macosx") then
-        local opt = {configs = {
-            ldflags = "-fuse-ld=lld",
-            shflags = "-fuse-ld=lld",
-        }}
-        add_requireconfs("quickjs-ng", opt)
-        add_requireconfs("libuv", opt)
-        add_requireconfs("spdlog", opt)
-    end
+if is_plat("macosx") then
+    -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
+    add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
+
+    local opt = {configs = {
+        ldflags = "-fuse-ld=lld",
+        shflags = "-fuse-ld=lld",
+        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1"
+    }}
+    add_requireconfs("quickjs-ng", opt)
+    add_requireconfs("libuv", opt)
+    add_requireconfs("spdlog", opt)
 end
 
 add_requires("spdlog", {system = false, version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
