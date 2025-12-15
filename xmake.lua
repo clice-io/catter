@@ -54,7 +54,7 @@ rule("build.js")
         local js_target = target:extraconf("rules", "build.js", "js_target")
         local js_file = target:extraconf("rules", "build.js", "js_file")
 
-        local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd"), "pnpm not found!")
+        local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
 
         local format
         if target:is_plat("windows", "mingw", "msys", "cygwin") then
