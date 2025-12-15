@@ -14,6 +14,8 @@ end
 if is_plat("macosx") then
     -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
     add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
+    add_ldflags("-fuse-ld=lld")
+    add_shflags("-fuse-ld=lld")
 
     local opt = {configs = {
         ldflags = "-fuse-ld=lld",
