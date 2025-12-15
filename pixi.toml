@@ -39,7 +39,7 @@ build = "xmake --verbose --diagnosis"
 test = "xmake test --verbose --diagnosis"
 
 [target.osx-arm64.tasks.configure]
-cmd = "xmake config --clean --yes --sdk=.pixi/envs/default"
+cmd = "xmake config --clean --yes --toolchain=clang"
 
 [tasks.ci-build]
 depends-on = [
