@@ -37,6 +37,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: sha@b7e9857eff9a4425237e8eeb5c666fb4570eec76
+          actions-cache-folder: ".xmake-cache"
+          actions-cache-key: ${{ matrix.os }}
+          package-cache: true
+          package-cache-key: ${{ matrix.os }}
+
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.9.3
         with:
