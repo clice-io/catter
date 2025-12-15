@@ -40,7 +40,7 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: sha@b7e9857eff9a4425237e8eeb5c666fb4570eec76
+          xmake-version: branch@master
           actions-cache-folder: ".xmake-cache"
           actions-cache-key: ${{ matrix.os }}
           package-cache: true
