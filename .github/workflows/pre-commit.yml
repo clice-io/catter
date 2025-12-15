@@ -21,7 +21,6 @@ jobs:
         with:
           pixi-version: v0.59.0
           environments: develop
-          activate-environment: true
           cache: true
           locked: true
 
