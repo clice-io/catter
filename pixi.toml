@@ -12,7 +12,6 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [dependencies]
 pnpm = "*"
-python = ">=3.14.2,<3.15"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
@@ -26,24 +25,31 @@ lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
 
-[pypi-dependencies]
+[feature.dev.dependencies]
+python = ">=3.14.2,<3.15"
+
+[feature.dev.pypi-dependencies]
 pre-commit = "*"
 
-[tasks]
-npm_install = "pnpm install"
+[environments]
+default = []
+dev = ["dev", "default"]
 
+[feature.dev.tasks]
 check = "pre-commit run --all-files"
+test = "xmake test --verbose --diagnosis"
 
+[tasks]
+npm-install = "pnpm install"
 configure = "xmake config --clean --yes"
 build = "xmake --verbose --diagnosis"
-test = "xmake test --verbose --diagnosis"
 
 [target.osx-arm64.tasks.configure]
 cmd = "xmake config --clean --yes --toolchain=clang"
 
 [tasks.ci-build]
 depends-on = [
-    { task = "npm_install" },
+    { task = "npm-install" },
     { task = "configure" },
     { task = "build" },
     { task = "test" },
@@ -51,6 +57,6 @@ depends-on = [
 
 [tasks.ci-check]
 depends-on = [
-    { task = "npm_install" },
+    { task = "npm-install" },
     { task = "check" },
 ]
