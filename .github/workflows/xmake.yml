@@ -44,7 +44,7 @@ jobs:
           actions-cache-folder: ".xmake-cache"
           actions-cache-key: ${{ matrix.os }}
           package-cache: true
-          package-cache-key: ${{ matrix.os }}
+          package-cache-key: ${{ matrix.os }}-pixi
 
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.9.3
