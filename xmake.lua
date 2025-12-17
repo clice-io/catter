@@ -7,6 +7,8 @@ option("dev", {default = true})
 option("test", {default = true})
 
 if has_config("dev") then
+    -- Don't fetch system package
+    set_policy("package.install_only", true)
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 end
@@ -17,19 +19,16 @@ if is_plat("macosx") then
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
 
-    local opt = {configs = {
+    add_requireconfs("**|cmake", {configs = {
         ldflags = "-fuse-ld=lld",
         shflags = "-fuse-ld=lld",
-        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1"
-    }}
-    add_requireconfs("quickjs-ng", opt)
-    add_requireconfs("libuv", opt)
-    add_requireconfs("spdlog", opt)
+        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
+    }})
 end
 
-add_requires("spdlog", {system = false, version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
+add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 if has_config("test") then
-    add_requires("boost_ut", {system = false, version = "v2.3.1"})
+    add_requires("boost_ut", {version = "v2.3.1"})
 end
 
 set_languages("c++23")
@@ -70,8 +69,6 @@ rule("build.js")
         local js_target = target:extraconf("rules", "build.js", "js_target")
         local js_file = target:extraconf("rules", "build.js", "js_file")
 
-        local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
-
         local format
         if target:is_plat("windows", "mingw", "msys", "cygwin") then
             format = "coff"
@@ -90,7 +87,7 @@ rule("build.js")
 
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Building js target %s", js_target)
-            os.vrunv(pnpm.program, {"run", js_target})
+            os.vrunv("pnpm", {"run", js_target})
 
             if js_file then
                 progress.show(opt.progress or 0, "${color.build.object}generating.bin2obj %s", js_file)
