@@ -2,10 +2,16 @@
 name = "catter"
 version = "0.0.1"
 description = "A new tool to capture C++ compilation command"
-authors = ["star9029 <hengxing9029@outlook.com>"]
+authors = [
+    "star9029 <hengxing9029@outlook.com>",
+    "clice contributors <clice@clice.io>",
+]
 
 license = "Apache-2.0"
 license-file = "LICENSE"
+readme = "README.md"
+documentation = "https://clice.io"
+repository = "https://github.com/clice-io/catter"
 
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
@@ -40,12 +46,9 @@ check = "pre-commit run --all-files"
 test = "xmake test --verbose --diagnosis"
 
 [tasks]
-npm-install = "pnpm install"
-configure = "xmake config --clean --yes"
+npm-install = { cmd = "pnpm install", inputs = ["pnpm-lock.yaml", "package.json"] }
+configure = "xmake config --clean --yes{% if pixi.is_osx %} --toolchain=clang{% endif %}"
 build = "xmake --verbose --diagnosis"
-
-[target.osx-arm64.tasks.configure]
-cmd = "xmake config --clean --yes --toolchain=clang"
 
 [tasks.ci-build]
 depends-on = [
