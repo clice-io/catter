@@ -69,6 +69,8 @@ rule("build.js")
         local js_target = target:extraconf("rules", "build.js", "js_target")
         local js_file = target:extraconf("rules", "build.js", "js_file")
 
+        local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
+
         local format
         if target:is_plat("windows", "mingw", "msys", "cygwin") then
             format = "coff"
@@ -87,7 +89,7 @@ rule("build.js")
 
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Building js target %s", js_target)
-            os.vrunv("pnpm", {"run", js_target})
+            os.vrunv(pnpm.program, {"run", js_target})
 
             if js_file then
                 progress.show(opt.progress or 0, "${color.build.object}generating.bin2obj %s", js_file)
