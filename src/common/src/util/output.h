@@ -26,8 +26,8 @@ struct StyledText {
 
 template <typename T>
     requires std::convertible_to<T, std::string_view>
-constexpr StyledText style(T content, const std::string_view color) {
-    return StyledText{.content = std::string_view(content), .color = color};
+constexpr StyledText style(T&& content, const std::string_view color) {
+    return StyledText{.content = std::string_view(std::forward<T>(content)), .color = color};
 }
 
 template <typename... Args>

@@ -9,6 +9,8 @@
 #include <format>
 #include <print>
 #include <filesystem>
+#include <string>
+#include <string_view>
 #include "config/js-test.h"
 #include "qjs.h"
 #include "util/output.h"
@@ -25,7 +27,9 @@ ut::suite<"js"> js = [] {
         if(js_file.path().extension() != ".js") {
             continue;
         }
-        ut::test(std::format("js test: file {}", js_file.path().string())) = [&] {
+        auto name = std::format("js test: file {}", js_file.path().string());
+
+        ut::test(std::string_view{name}) = [&] {
             std::string content;
             {
                 std::ifstream ifs(js_file.path());
