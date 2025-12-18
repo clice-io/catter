@@ -508,7 +508,7 @@ public:
                 id = Register::create(rt, &def);
             }
         }
-        Function<Sign> result{ctx, JS_DupValue(ctx, JS_NewObjectClass(ctx, id))};
+        Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
 
         if constexpr(std::is_convertible_v<Invocable, Sign*> ||
                      std::is_lvalue_reference_v<Invocable&&>) {
@@ -533,17 +533,13 @@ public:
      */
     template <SignCtx* FnPtr>
     static Function from_raw(JSContext* ctx, const char* name) noexcept {
-        Function<Sign> result{
-            ctx,
-            JS_DupValue(ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, sizeof...(Args)))};
+        Function<Sign> result{ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, sizeof...(Args))};
         return result;
     }
 
     template <Sign* FnPtr>
     static Function from_raw(JSContext* ctx, const char* name) noexcept {
-        Function<Sign> result{
-            ctx,
-            JS_DupValue(ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, sizeof...(Args)))};
+        Function<Sign> result{ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, sizeof...(Args))};
         return result;
     }
 
@@ -718,7 +714,7 @@ public:
     }
 
     static qjs::Array<T> empty_one(JSContext* ctx) noexcept {
-        return Array{ctx, JS_DupValue(ctx, JS_NewArray(ctx))};
+        return Array{ctx, JS_NewArray(ctx)};
     }
 };
 
@@ -894,8 +890,7 @@ public:
     const CModule& export_bare_functor(const std::string& name, JSCFunction func, int argc) const {
         this->exports_list().push_back(kv{
             name,
-            Value{this->ctx,
-                  JS_DupValue(this->ctx, JS_NewCFunction(this->ctx, func, name.c_str(), argc))}
+            Value{this->ctx, JS_NewCFunction(this->ctx, func, name.c_str(), argc)}
         });
         if(JS_AddModuleExport(this->ctx, m, name.c_str()) < 0) {
             throw std::runtime_error(
@@ -964,8 +959,8 @@ public:
 
                     auto& mod = ctx->modules[atom.to_string()];
 
-                    for(const auto& kv: mod.exports_list()) {
-                        JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.value());
+                    for(auto& kv: mod.exports_list()) {
+                        JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.release());
                     }
                     return 0;
                 });

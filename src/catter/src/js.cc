@@ -139,15 +139,11 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
         promise_state = PromiseState::Pending;
         qjs::Value c_resolve_func{
             ctx.js_context(),
-            JS_DupValue(
-                ctx.js_context(),
-                JS_NewCFunction(ctx.js_context(), on_promise_resolve, "__catter_onResolve", 1))};
+            JS_NewCFunction(ctx.js_context(), on_promise_resolve, "__catter_onResolve", 1)};
 
         qjs::Value c_reject_func{
             ctx.js_context(),
-            JS_DupValue(
-                ctx.js_context(),
-                JS_NewCFunction(ctx.js_context(), on_promise_reject, "__catter_onReject", 1))};
+            JS_NewCFunction(ctx.js_context(), on_promise_reject, "__catter_onReject", 1)};
 
         // promise.then(c_resolve_func, c_reject_func)
         JSValue args[2] = {c_resolve_func.value(), c_reject_func.value()};
