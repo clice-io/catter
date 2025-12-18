@@ -11,6 +11,12 @@ if has_config("dev") then
     set_policy("package.install_only", true)
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+    if is_plat("windows") then
+        set_runtimes("MD")
+    end
+    if is_mode("debug") then
+        set_policy("build.sanitizer.address", true)
+    end
 end
 
 if is_plat("macosx") then

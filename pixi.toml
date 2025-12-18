@@ -43,17 +43,21 @@ dev = ["dev", "default"]
 
 [feature.dev.tasks]
 check = "pre-commit run --all-files"
-test = "xmake test --verbose --diagnosis"
+test = "xmake test --verbose"
+
+[tasks.configure]
+args = ["build_type"]
+cmd = "xmake config --clean --yes --mode={{ build_type }}{% if pixi.is_osx %} --toolchain=clang{% endif %}"
 
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = ["pnpm-lock.yaml", "package.json"] }
-configure = "xmake config --clean --yes{% if pixi.is_osx %} --toolchain=clang{% endif %}"
 build = "xmake --verbose --diagnosis"
 
 [tasks.ci-build]
+args = ["build_type"]
 depends-on = [
     { task = "npm-install" },
-    { task = "configure" },
+    { task = "configure", args = ["{{ build_type }}"] },
     { task = "build" },
     { task = "test" },
 ]

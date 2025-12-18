@@ -54,6 +54,10 @@ jobs:
           cache: true
           locked: true
 
-      - name: Build
+      - name: Build (debug)
         run: |
-          pixi run ci-build
+          pixi run ci-build debug
+
+      - name: Build (release)
+        run: |
+          pixi run ci-build release
