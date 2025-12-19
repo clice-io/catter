@@ -1,7 +1,7 @@
 target("ut-catter")
     set_default(false)
     set_kind("binary")
-    add_files("main.cc", "tests/*.cc")
+    add_files("**.cc")
     add_packages("boost_ut")
     add_deps("catter-core", "common")
 

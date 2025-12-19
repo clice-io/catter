@@ -125,7 +125,7 @@ public:
     }
 
     void check_done() noexcept {
-        assert(!this->done());
+        assert(this->done());
     }
 
     void resume() noexcept {

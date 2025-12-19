@@ -10,6 +10,7 @@
 #include <vector>
 #include <print>
 #include "util/lazy.h"
+#include "util/meta.h"
 
 namespace catter::uv {
 uv_loop_t* default_loop() noexcept;
@@ -299,7 +300,7 @@ public:
     }
 
     void check_done() noexcept {
-        assert(!this->done());
+        assert(this->done());
     }
 
     bool done() noexcept {
@@ -397,8 +398,7 @@ public:
     }
 
     template <typename Promise>
-    // requires std::is_base_of_v<async::Lazy<Ret>, Promise>
-    // TODO
+        requires meta::is_specialization_of_v<Promise, LazyPromise>
     bool await_suspend(std::coroutine_handle<Promise> h) noexcept {
         h.promise().register_handle_for_close(this->ptr);
         return false;
