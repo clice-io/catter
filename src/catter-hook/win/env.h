@@ -10,7 +10,7 @@ namespace catter::win {
 // to avoid symbol conflicts.
 namespace {
 constexpr static char EXE_NAME[] = "catter-proxy.exe";
-constexpr static char DLL_NAME[] = "catter-hook64.dll";
+constexpr static char DLL_NAME[] = "catter-hook-win64.dll";
 
 template <typename char_t>
 concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;

@@ -32,11 +32,6 @@ if is_plat("macosx") then
     }})
 end
 
-add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
-if has_config("test") then
-    add_requires("boost_ut", {version = "v2.3.1"})
-end
-
 set_languages("c++23")
 
 if is_mode("debug") and is_plat("linux", "macosx") then
@@ -51,16 +46,98 @@ elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
 elseif is_plat("windows") then
     add_defines("CATTER_WINDOWS")
+    add_requires("microsoft-detours", {version = "2023.6.8"})
 end
 
-includes(
-    "src/common",
+add_requires("libuv", {version = "v1.51.0"})
+add_requires("quickjs-ng", {version = "v0.11.0"})
+add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
+if has_config("test") then
+    add_requires("boost_ut", {version = "v2.3.1"})
+end
 
-    "src/catter",
-    "src/catter-proxy",
+target("common")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/**.cc")
+    add_packages("libuv", {public = true})
+    add_packages("spdlog", {public = true})
 
-    "src/unitest/catter"
-)
+target("catter-core")
+    -- use object, avoid register invalid
+    set_kind("object")
+    add_includedirs("src/catter/src", {public = true})
+    add_packages("quickjs-ng", {public = true})
+
+    add_deps("common")
+
+    add_files("src/catter/src/**.cc")
+
+    add_files("api/src/*.ts", {always_added = true})
+    add_rules("build.js", {js_target = "build-js-lib", js_file = "api/output/lib/lib.js"})
+
+target("catter")
+    set_kind("binary")
+    add_deps("catter-core")
+    add_files("src/catter/main.cc")
+
+
+target("ut-catter")
+    set_default(false)
+    set_kind("binary")
+    add_files("tests/unit/catter/**.cc")
+    add_packages("boost_ut")
+    add_deps("catter-core", "common")
+
+    add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
+    add_rules("build.js", {js_target = "build-js-test"})
+    add_files("api/src/*.ts", "api/test/*.ts", "api/test/res/**/*.txt")
+
+    add_tests("default")
+
+
+if is_plat("windows") then
+    target("catter-hook-win64")
+        set_kind("shared")
+        add_includedirs("src/catter-hook/")
+        add_files("src/catter-hook/win/payload/main.cc")
+        add_syslinks("user32", "advapi32")
+        add_packages("microsoft-detours")
+        add_cxxflags("-fno-exceptions -fno-rtti")
+
+elseif is_plat("linux", "macosx") then
+    target("catter-hook-unix")
+        set_kind("shared")
+        if is_mode("debug") then
+            add_deps("common")
+        end
+
+        add_includedirs("src/catter-hook/")
+        add_includedirs("src/catter-hook/linux-mac")
+        add_files("src/catter-hook/linux-mac/**.cc")
+        add_syslinks("dl")
+        if is_mode("release") then
+            add_cxxflags("-fvisibility=hidden")
+            add_cxxflags("-nostdlib++")
+        end
+end
+
+target("catter-hook")
+    set_kind("object")
+    add_includedirs("src/catter-hook/", {public = true})
+    add_deps("common")
+    if is_plat("windows") then
+        add_files("src/catter-hook/win/impl.cc")
+        add_packages("microsoft-detours")
+    elseif is_plat("linux", "macosx") then
+        add_files("src/catter-hook/linux-mac/impl.cc")
+    end
+
+target("catter-proxy")
+    set_kind("binary")
+    add_deps("common", "catter-hook")
+    add_includedirs("src/catter-proxy/")
+    add_files("src/catter-proxy/main.cc", "src/catter-proxy/constructor.cc")
 
 rule("build.js")
     set_extensions(".ts", ".d.ts", ".js", ".txt")
