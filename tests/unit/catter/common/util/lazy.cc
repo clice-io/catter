@@ -44,11 +44,8 @@ ut::suite<"util::lazy"> util_lazy = [] {
 
             co_return;
         }();
-#if __has_include(<unistd.h>) and __has_include(<sys/wait.h>)
-        ut::expect(ut::aborts([&] { lazy_value.check_done(); }));
-#else
+
         ut::expect(lazy_value.done() == false);
-#endif
         lazy_value.resume();
         ut::expect(lazy_value.done() == true);
     };

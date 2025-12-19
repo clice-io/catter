@@ -114,7 +114,7 @@ elseif is_plat("linux", "macosx") then
 
         add_includedirs("src/catter-hook/")
         add_includedirs("src/catter-hook/linux-mac/payload/")
-        add_files("src/catter-hook/linux-mac/**.cc")
+        add_files("src/catter-hook/linux-mac/payload/**.cc")
         add_syslinks("dl")
         if is_mode("release") then
             add_cxxflags("-fvisibility=hidden")
