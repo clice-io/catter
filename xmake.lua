@@ -66,12 +66,12 @@ target("common")
 target("catter-core")
     -- use object, avoid register invalid
     set_kind("object")
-    add_includedirs("src/catter/src", {public = true})
+    add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
 
     add_deps("common")
 
-    add_files("src/catter/src/**.cc")
+    add_files("src/catter/core/**.cc")
 
     add_files("api/src/*.ts", {always_added = true})
     add_rules("build.js", {js_target = "build-js-lib", js_file = "api/output/lib/lib.js"})
