@@ -113,7 +113,7 @@ elseif is_plat("linux", "macosx") then
         end
 
         add_includedirs("src/catter-hook/")
-        add_includedirs("src/catter-hook/linux-mac")
+        add_includedirs("src/catter-hook/linux-mac/payload/")
         add_files("src/catter-hook/linux-mac/**.cc")
         add_syslinks("dl")
         if is_mode("release") then
