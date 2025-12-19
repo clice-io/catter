@@ -57,3 +57,7 @@ api/output
 build*/
 vsxmake*/
 .turbo/
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml

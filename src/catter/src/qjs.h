@@ -959,8 +959,8 @@ public:
 
                     auto& mod = ctx->modules[atom.to_string()];
 
-                    for(const auto& kv: mod.exports_list()) {
-                        JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.value());
+                    for(auto& kv: mod.exports_list()) {
+                        JS_SetModuleExport(js_ctx, m, kv.name.c_str(), kv.value.release());
                     }
                     return 0;
                 });

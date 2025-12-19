@@ -1,4 +1,4 @@
-add_requires("quickjs-ng", {system = false, version = "v0.11.0", debug = true})
+add_requires("quickjs-ng", {version = "v0.11.0"})
 
 target("catter-core")
     -- use object, avoid register invalid

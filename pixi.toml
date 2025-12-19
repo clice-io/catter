@@ -1,0 +1,69 @@
+[workspace]
+name = "catter"
+version = "0.0.1"
+description = "A new tool to capture C++ compilation command"
+authors = [
+    "star9029 <hengxing9029@outlook.com>",
+    "clice contributors <clice@clice.io>",
+]
+
+license = "Apache-2.0"
+license-file = "LICENSE"
+readme = "README.md"
+documentation = "https://clice.io"
+repository = "https://github.com/clice-io/catter"
+
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
+
+[dependencies]
+pnpm = "*"
+
+[target.linux-64.dependencies]
+sysroot_linux-64 = "==2.17"
+gcc = "==14.2.0"
+gxx = "==14.2.0"
+
+[target.osx-arm64.dependencies]
+clang = "==20.1.8"
+clangxx = "==20.1.8"
+lld = "==20.1.8"
+llvm-tools = "==20.1.8"
+compiler-rt = "==20.1.8"
+
+[feature.dev.dependencies]
+python = ">=3.14.2,<3.15"
+
+[feature.dev.pypi-dependencies]
+pre-commit = "*"
+
+[environments]
+default = []
+dev = ["dev", "default"]
+
+[feature.dev.tasks]
+check = "pre-commit run --all-files"
+test = "xmake test --verbose"
+
+[tasks.configure]
+args = ["build_type"]
+cmd = "xmake config --clean --yes --mode={{ build_type }}{% if pixi.is_osx %} --toolchain=clang{% endif %}"
+
+[tasks]
+npm-install = { cmd = "pnpm install", inputs = ["pnpm-lock.yaml", "package.json"] }
+build = "xmake --verbose --diagnosis"
+
+[tasks.ci-build]
+args = ["build_type"]
+depends-on = [
+    { task = "npm-install" },
+    { task = "configure", args = ["{{ build_type }}"] },
+    { task = "build" },
+    { task = "test" },
+]
+
+[tasks.ci-check]
+depends-on = [
+    { task = "npm-install" },
+    { task = "check" },
+]

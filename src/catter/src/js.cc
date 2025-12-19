@@ -140,6 +140,7 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
         qjs::Value c_resolve_func{
             ctx.js_context(),
             JS_NewCFunction(ctx.js_context(), on_promise_resolve, "__catter_onResolve", 1)};
+
         qjs::Value c_reject_func{
             ctx.js_context(),
             JS_NewCFunction(ctx.js_context(), on_promise_reject, "__catter_onReject", 1)};
@@ -148,6 +149,8 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
         JSValue args[2] = {c_resolve_func.value(), c_reject_func.value()};
         auto then_func = promise_ret.value()["then"];
         JSValue res = JS_Call(ctx.js_context(), then_func.value(), promise_obj.value(), 2, args);
+
+        JS_FreeValue(ctx.js_context(), res);
 
         JSContext* ctx1;
         int err;

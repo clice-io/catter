@@ -1,7 +1,7 @@
 
 
 
-add_requires("libuv", {system = false, version = "v1.51.0"})
+add_requires("libuv", {version = "v1.51.0"})
 
 target("common")
     set_kind("static")
