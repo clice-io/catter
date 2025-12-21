@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "cleanup": "xmake l os.rmdir ./output",
+    "cleanup": "xmake l os.tryrm ./output",
     "prebuild": "pnpm run cleanup",
     "bundle-js": "rollup -c ./rollup.config.js",
     "bundle-dts": "tsc --project tsconfig.app.json && api-extractor run",
