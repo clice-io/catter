@@ -42,7 +42,7 @@ static std::unordered_map<int, std::fstream> open_files;
 CAPI(file_open, (std::string path)->int64_t) {
     std::fstream fs;
     fs.exceptions(std::fstream::badbit);
-    fs.open(catter::capi::util::absolute_of(path), std::ios::in | std::ios::out);
+    fs.open(catter::capi::util::absolute_of(path), std::ios::in | std::ios::out | std::ios::binary);
     if(!fs.is_open()) {
         throw catter::qjs::Exception("Failed to open file: " + path);
     }

@@ -643,7 +643,11 @@ export class TextFileStream {
    * ```
    */
   public readLine(): string {
-    return this.readUntil("\n");
+    let res = this.readUntil("\n");
+    if (res.endsWith("\r")) {
+      res = res.slice(0, -1);
+    }
+    return res;
   }
 
   /**

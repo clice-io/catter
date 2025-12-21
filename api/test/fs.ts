@@ -17,6 +17,7 @@ const aTmpStream = new io.TextFileStream(
   fs.path.joinAll(testEnvPath, "a", "tmp.txt"),
 );
 
+// read
 const entireBinary = aTmpStream.readLines();
 debug.assertThrow(
   entireBinary.length === 4 &&
@@ -27,15 +28,16 @@ debug.assertThrow(
 );
 aTmpStream.close();
 
+const endPat = /\r\n/g;
 // write
 io.TextFileStream.with(
   fs.path.joinAll(testEnvPath, "b", "tmp2.txt"),
   "ascii",
   (stream) => {
     stream.append("Appended line.\n");
-    io.println(stream.readEntireFile());
     debug.assertThrow(
-      stream.readEntireFile() === "Ok computer!\nAppended line.\n",
+      stream.readEntireFile().replace(endPat, "\n") ===
+        "Ok computer!\nAppended line.\n",
     );
   },
 );
