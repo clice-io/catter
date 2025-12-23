@@ -132,15 +132,16 @@ uv::async::Lazy<void> loop() {
     }
 
     std::vector<uv::async::Lazy<void>> acceptors;
-    server->data = &acceptors;
-    auto ret = uv_listen(uv::cast<uv_stream_t>(server), 128, [](uv_stream_t* server, int status) {
+    
+    auto listen_cb = [&](uv_stream_t* server, int status) {
         if(status < 0) {
             std::println("Listen error: {}", uv_strerror(status));
             return;
         }
-        auto& acceptors = *static_cast<std::vector<uv::async::Lazy<void>>*>(server->data);
         acceptors.push_back(accept(server));
-    });
+    };
+
+    auto ret = uv::listen(uv::cast<uv_stream_t>(server), 128, listen_cb);
 
     if(ret < 0) {
         std::println("Listen error: {}", uv_strerror(ret));

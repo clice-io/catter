@@ -10,44 +10,51 @@ ut::suite<"util::lazy"> util_lazy = [] {
     using namespace catter;
 
     ut::test("Lazy<int>") = [] {
-        coro::Lazy<int> lazy_value = []() -> coro::Lazy<int> {
+        coro::Lazy<int> task = []() -> coro::Lazy<int> {
             co_return 42;
         }();
 
-        ut::expect(lazy_value.get() == 42);
+        ut::expect(task.get() == 42);
     };
 
     ut::test("Lazy<void>") = [] {
         bool executed = false;
 
-        coro::Lazy<void> lazy_value = [&]() -> coro::Lazy<void> {
+        coro::Lazy<void> task = [&]() -> coro::Lazy<void> {
             executed = true;
             co_return;
         }();
 
         ut::expect(executed);
-        lazy_value.get();
+        ut::expect(task.done());
     };
 
     ut::test("Lazy with exception") = [] {
-        coro::Lazy<int> lazy_value = []() -> coro::Lazy<int> {
+        auto task = []() -> coro::Lazy<void> {
             throw std::runtime_error("Test exception");
-            co_return 0;
-        }();
+            co_return;
+        };
 
-        ut::expect(ut::throws([&] { lazy_value.get(); }));
+        ut::expect(ut::throws([&] { task().get(); }));
+
+        auto task2 = [&]() -> coro::Lazy<void> {
+            co_return co_await task();
+        };
+
+        ut::expect(ut::throws([&] { task2().get(); }));
+
     };
 
     ut::test("Lazy with suspend") = [] {
-        coro::Lazy<void> lazy_value = []() -> coro::Lazy<void> {
+        coro::Lazy<void> task = []() -> coro::Lazy<void> {
             co_await std::suspend_always{};
 
             co_return;
         }();
 
-        ut::expect(lazy_value.done() == false);
-        lazy_value.resume();
-        ut::expect(lazy_value.done() == true);
+        ut::expect(task.done() == false);
+        task.resume();
+        ut::expect(task.done() == true);
     };
 
     ut::test("Awaiting Lazy") = [] {
