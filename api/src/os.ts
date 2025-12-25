@@ -9,7 +9,3 @@ export function platform(): "linux" | "windows" | "macos" {
 export function arch(): "x86" | "x64" | "arm" | "arm64" {
   return os_arch();
 }
-
-export function dir_sep(): "/" | "\\" {
-  return os_name() === "windows" ? "\\" : "/";
-}

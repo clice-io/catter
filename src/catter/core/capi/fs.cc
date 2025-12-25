@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <fstream>
+#include <print>
 #include <quickjs.h>
 #include <string>
 #include <system_error>
@@ -82,12 +83,17 @@ CAPI(fs_path_extension, (std::string path)->std::string) {
 }
 
 CAPI(fs_path_relative_to, (std::string base, std::string path)->std::string) {
-    auto rel = fs::relative(absolute_of(path), base);
+    auto rel = fs::relative(absolute_of(path), absolute_of(base));
     return rel.string();
 }
 
 CAPI(fs_path_absolute, (std::string path)->std::string) {
     return absolute_of(path).string();
+}
+
+CAPI(fs_path_lexical_normal, (std::string path)->std::string) {
+    fs::path p = path;
+    return p.lexically_normal().string();
 }
 
 CAPI(fs_create_dir_recursively, (std::string path)->bool) {

@@ -34,7 +34,7 @@ io.TextFileStream.with(
   fs.path.joinAll(testEnvPath, "b", "tmp2.txt"),
   "ascii",
   (stream) => {
-    stream.append("Appended line.\n");
+    stream.append("Appended line.\r\n");
     debug.assertThrow(
       stream.readEntireFile().replace(endPat, "\n") ===
         "Ok computer!\nAppended line.\n",
@@ -53,7 +53,15 @@ debug.assertThrow(fs.path.extension("a/n") === "");
 debug.assertThrow(fs.path.filename("a/b/c.ext") === "c.ext");
 debug.assertThrow(fs.path.filename("a/b/c") === "c");
 debug.assertThrow(
-  fs.path.toAncestor("a/b/c/d/e.txt", 2) === fs.path.joinAll("a", "b", "c"),
+  fs.path.lexicalNormal(fs.path.toAncestor("a/b/c/d/e.txt", 2)) ===
+    fs.path.lexicalNormal(fs.path.joinAll("a", "b", "c")),
+);
+debug.assertThrow(
+  fs.path.lexicalNormal(fs.path.relativeTo("a/b", "a/b/c/d/e")) ===
+    fs.path.lexicalNormal(fs.path.joinAll("c", "d", "e")),
+);
+debug.assertThrow(
+  fs.path.lexicalNormal("a/b/../c/./d") === fs.path.lexicalNormal("a/c/d"),
 );
 
 // create and remove dir/file recursively

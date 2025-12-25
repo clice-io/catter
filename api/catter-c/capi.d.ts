@@ -20,6 +20,7 @@ export function fs_path_ancestor_n(path: string, n: number): string;
 export function fs_path_filename(path: string): string;
 export function fs_path_extension(path: string): string;
 export function fs_path_absolute(path: string): string;
+export function fs_path_lexical_normal(path: string): string;
 export function fs_path_relative_to(base: string, path: string): string;
 
 export function fs_create_dir_recursively(path: string): boolean;
