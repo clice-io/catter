@@ -27,7 +27,6 @@ ut::suite<"js"> js = [] {
         if(js_file.path().extension() != ".js") {
             continue;
         }
-        auto name = std::format("js test: file {}", js_file.path().string());
 
         ut::test(std::string_view{name}) = [&] {
             std::string content;
