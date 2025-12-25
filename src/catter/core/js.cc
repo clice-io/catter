@@ -35,10 +35,10 @@ void init_qjs(const RuntimeConfig& config) {
     for(auto& reg: catter::apitool::api_registers()) {
         reg(mod, ctx);
     }
+    auto js_lib_trim =
+        config::data::js_lib.substr(0, config::data::js_lib.find_last_not_of('\0') + 1);
     // init js lib
-    assert(config::data::js_lib.data()[config::data::js_lib.size()] == '\0');
-    std::println("{}", config::data::js_lib);
-    ctx.eval(catter::config::data::js_lib, "catter", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+    ctx.eval(js_lib_trim, "catter", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
     ctx.eval("import * as catter from 'catter'; globalThis.__catter_mod = catter;",
              "get-mod.js",
              JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);

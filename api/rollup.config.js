@@ -28,6 +28,7 @@ export default {
       },
     }),
     terser({
+
     }),
   ],
   external: ["catter-c"],
