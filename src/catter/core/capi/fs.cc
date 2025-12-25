@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <fstream>
-#include <print>
 #include <quickjs.h>
 #include <string>
 #include <system_error>
