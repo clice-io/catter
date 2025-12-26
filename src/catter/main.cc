@@ -132,7 +132,7 @@ uv::async::Lazy<void> loop() {
     }
 
     std::vector<uv::async::Lazy<void>> acceptors;
-    
+
     auto listen_cb = [&](uv_stream_t* server, int status) {
         if(status < 0) {
             std::println("Listen error: {}", uv_strerror(status));

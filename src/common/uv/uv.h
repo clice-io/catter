@@ -68,21 +68,17 @@ inline auto wait(Task&& task) {
     return task.get();
 }
 
-template<typename Invocable>
+template <typename Invocable>
 int listen(uv_stream_t* stream, int backlog, Invocable& cb) noexcept {
     stream->data = std::addressof(cb);
-    return uv_listen(
-        stream,
-        backlog,
-        [](uv_stream_t* server_stream, int status) {
-            (*static_cast<Invocable*>(server_stream->data))(server_stream, status);
-        });
+    return uv_listen(stream, backlog, [](uv_stream_t* server_stream, int status) {
+        (*static_cast<Invocable*>(server_stream->data))(server_stream, status);
+    });
 }
 
 inline int listen(uv_stream_t* stream, int backlog, uv_connection_cb cb) noexcept {
     return listen(stream, backlog, cb);
 }
-
 
 }  // namespace catter::uv
 
@@ -262,24 +258,27 @@ private:
 class TCPConnect : public Base<TCPConnect, int> {
 public:
     TCPConnect(uv_tcp_t* tcp, const struct sockaddr* addr) : tcp{tcp}, addr{addr} {}
+
     int init() {
         return uv_tcp_connect(&this->req, this->tcp, this->addr, [](uv_connect_t* req, int status) {
             static_cast<TCPConnect*>(req->data)->connect_cb(status);
         });
     }
+
     void*& data() {
         return this->req.data;
     }
+
 private:
     void connect_cb(int status) {
         this->get_result() = status;
         this->resume();
     }
+
     uv_connect_t req{};
     uv_tcp_t* tcp{nullptr};
     const struct sockaddr* addr{nullptr};
 };
-
 
 class Spawn : public Base<Spawn, int64_t> {
 public:

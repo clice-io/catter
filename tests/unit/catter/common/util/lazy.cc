@@ -42,7 +42,6 @@ ut::suite<"util::lazy"> util_lazy = [] {
         };
 
         ut::expect(ut::throws([&] { task2().get(); }));
-
     };
 
     ut::test("Lazy with suspend") = [] {

@@ -7,7 +7,6 @@ using namespace boost;
 using namespace catter;
 
 ut::suite<"uv"> uv = [] {
-    
     ut::test("default_loop") = [] {
         uv_loop_t* loop1 = uv::default_loop();
         uv_loop_t* loop2 = uv_default_loop();
@@ -25,21 +24,16 @@ ut::suite<"uv"> uv = [] {
         ut::expect(ret >= 0);
     };
 
-    
     ut::test("is_base_of_v") = [] {
         ut::expect(uv::is_base_of_v<uv_stream_t, uv_tcp_t>);
         ut::expect(uv::is_base_of_v<uv_stream_t, uv_pipe_t>);
         ut::expect(uv::is_base_of_v<uv_handle_t, uv_stream_t>);
 
         ut::expect(!uv::is_base_of_v<uv_tcp_t, uv_stream_t>);
-
     };
-
 };
 
-
 ut::suite<"uv::async"> uv_async = [] {
-    
     ut::test("Lazy<int>") = [] {
         uv::async::Lazy<int> task = []() -> uv::async::Lazy<int> {
             co_return 42;
@@ -73,7 +67,6 @@ ut::suite<"uv::async"> uv_async = [] {
         };
 
         ut::expect(ut::throws([&] { task2().get(); }));
-
     };
 
     ut::test("Lazy with suspend") = [] {
@@ -113,7 +106,6 @@ ut::suite<"uv::async"> uv_async = [] {
         ut::expect(task.get() == 42);
     };
 
-
     ut::test("raii of uv_handle_t") = [] {
         uv::async::Lazy<void> task = []() -> uv::async::Lazy<void> {
             uv_pipe_t* pipe = co_await uv::async::Create<uv_pipe_t>(uv::default_loop(), 0);
@@ -127,7 +119,7 @@ ut::suite<"uv::async"> uv_async = [] {
 
     ut::test("read and write") = [] {
         auto test_str = std::string_view{"Hello, uv async read and write!"} |
-                                     std::ranges::to<std::vector<char>>();
+                        std::ranges::to<std::vector<char>>();
 
         auto accept_task = [&](uv_stream_t* server) -> uv::async::Lazy<void> {
             auto conn = co_await uv::async::Create<uv_tcp_t>(uv::default_loop());
@@ -135,10 +127,10 @@ ut::suite<"uv::async"> uv_async = [] {
 
             ut::expect(co_await uv::async::write(uv::cast<uv_stream_t>(conn), test_str) == 0);
 
-
             std::vector<char> read_buf(test_str.size());
-            auto nread = co_await uv::async::read(
-                uv::cast<uv_stream_t>(conn), read_buf.data(), read_buf.size());
+            auto nread = co_await uv::async::read(uv::cast<uv_stream_t>(conn),
+                                                  read_buf.data(),
+                                                  read_buf.size());
             ut::expect(nread == static_cast<int>(test_str.size()));
             ut::expect(read_buf == test_str);
         };
@@ -148,7 +140,8 @@ ut::suite<"uv::async"> uv_async = [] {
 
             sockaddr_in server_addr;
             ut::expect(uv_ip4_addr("127.0.0.1", 11451, &server_addr) == 0);
-            ut::expect(uv_tcp_bind(server, reinterpret_cast<const sockaddr*>(&server_addr), 0) == 0);
+            ut::expect(uv_tcp_bind(server, reinterpret_cast<const sockaddr*>(&server_addr), 0) ==
+                       0);
 
             uv::async::Lazy<void> acceptor;
 
@@ -161,20 +154,21 @@ ut::suite<"uv::async"> uv_async = [] {
             auto client = co_await uv::async::Create<uv_tcp_t>(uv::default_loop());
 
             ut::expect(co_await uv::async::awaiter::TCPConnect(
-                client,
-                reinterpret_cast<const sockaddr*>(&server_addr)) == 0);
-            
+                           client,
+                           reinterpret_cast<const sockaddr*>(&server_addr)) == 0);
 
             std::vector<char> read_buf(test_str.size());
-            auto nread = co_await uv::async::read(
-                uv::cast<uv_stream_t>(client), read_buf.data(), read_buf.size());
+            auto nread = co_await uv::async::read(uv::cast<uv_stream_t>(client),
+                                                  read_buf.data(),
+                                                  read_buf.size());
             ut::expect(nread == static_cast<int>(test_str.size()));
             ut::expect(read_buf == test_str);
 
             ut::expect(co_await uv::async::write(uv::cast<uv_stream_t>(client), test_str) == 0);
-            
-            auto eof = co_await uv::async::read(
-                uv::cast<uv_stream_t>(client), read_buf.data(), read_buf.size());
+
+            auto eof = co_await uv::async::read(uv::cast<uv_stream_t>(client),
+                                                read_buf.data(),
+                                                read_buf.size());
             ut::expect(eof == UV_EOF);
 
             co_return;
@@ -186,16 +180,14 @@ ut::suite<"uv::async"> uv_async = [] {
     ut::test("spawn process") = [] {
         auto task = []() -> uv::async::Lazy<void> {
 #ifdef CATTER_WINDOWS
-            int64_t exit_status = co_await uv::async::spawn(
-                "cmd.exe", {"/C", "exit", "123"}, true);
+            int64_t exit_status = co_await uv::async::spawn("cmd.exe", {"/C", "exit", "123"}, true);
 #else
-            int64_t exit_status = co_await uv::async::spawn(
-                "/bin/sh", {"-c", "exit 123"}, true);
+            int64_t exit_status = co_await uv::async::spawn("/bin/sh", {"-c", "exit 123"}, true);
 #endif
             ut::expect(exit_status == 123);
             co_return;
         }();
-        
+
         ut::expect(ut::nothrow([&] { uv::wait(task); }));
     };
 };
