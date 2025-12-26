@@ -135,7 +135,7 @@ ut::suite<"uv::async"> uv_async = [] {
             ut::expect(read_buf == test_str);
         };
 
-        uv::async::Lazy<void> task = [&]() -> uv::async::Lazy<void> {
+        auto task = [&]() -> uv::async::Lazy<void> {
             auto server = co_await uv::async::Create<uv_tcp_t>(uv::default_loop());
 
             sockaddr_in server_addr;
@@ -172,9 +172,9 @@ ut::suite<"uv::async"> uv_async = [] {
             ut::expect(eof == UV_EOF);
 
             co_return;
-        }();
+        };
 
-        ut::expect(ut::nothrow([&] { uv::wait(task); }));
+        ut::expect(ut::nothrow([&] { uv::wait(task()); }));
     };
 
     ut::test("spawn process") = [] {
