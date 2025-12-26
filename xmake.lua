@@ -180,6 +180,7 @@ rule("build.js")
                     format = format,
                     arch = target:arch(),
                     plat = target:plat(),
+                    zeroend = true
                 })
             end
         end, {
