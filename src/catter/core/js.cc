@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
-#include <print>
 #include <quickjs.h>
 #include "config/js-lib.h"
 #include "apitool.h"
