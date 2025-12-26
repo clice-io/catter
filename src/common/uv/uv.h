@@ -77,7 +77,7 @@ int listen(uv_stream_t* stream, int backlog, Invocable& cb) noexcept {
 }
 
 inline int listen(uv_stream_t* stream, int backlog, uv_connection_cb cb) noexcept {
-    return listen(stream, backlog, cb);
+    return uv_listen(stream, backlog, cb);
 }
 
 }  // namespace catter::uv

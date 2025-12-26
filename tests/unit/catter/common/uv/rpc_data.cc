@@ -14,9 +14,8 @@ ut::suite<"rpc::data"> rpc_data = [] {
         };
 
         auto serialized = Serde<rpc::data::command>::serialize(cmd);
-
+        size_t offset = 0;
         auto deserialized = Serde<rpc::data::command>::deserialize([&](char* buf, size_t size) {
-            static size_t offset = 0;
             size_t to_copy = std::min(size, serialized.size() - offset);
             std::memcpy(buf, serialized.data() + offset, to_copy);
             offset += to_copy;
