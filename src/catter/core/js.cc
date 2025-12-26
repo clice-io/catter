@@ -1,6 +1,5 @@
 #include "js.h"
 #include "qjs.h"
-#include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <format>
