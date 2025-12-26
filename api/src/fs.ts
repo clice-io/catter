@@ -10,6 +10,7 @@ import {
   fs_path_extension,
   fs_path_filename,
   fs_path_join_all,
+  fs_path_lexical_normal,
   fs_path_relative_to,
   fs_pwd,
   fs_remove_recursively,
@@ -357,5 +358,18 @@ export const path = {
    */
   filename(path: string): string {
     return fs_path_filename(path);
+  },
+
+  /**
+   * Converts a path to its lexically normalized form.
+   * Removes redundant components like "." and ".." without accessing the filesystem and replace the separators to platform-specific ones.
+   *
+   * See https://en.cppreference.com/w/cpp/filesystem/path/lexically_normal.
+   *
+   * @param path - The input path string.
+   * @returns The lexically normalized path string.
+   */
+  lexicalNormal(path: string): string {
+    return fs_path_lexical_normal(path);
   },
 };

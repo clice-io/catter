@@ -7,14 +7,11 @@
 #include <exception>
 #include <filesystem>
 #include <format>
-#include <print>
 #include <filesystem>
 #include <string>
 #include <string_view>
 #include "config/js-test.h"
-#include "qjs.h"
 #include "util/output.h"
-namespace ut = boost::ut;
 
 namespace fs = std::filesystem;
 using namespace boost::ut::literals;

@@ -92,6 +92,10 @@ export function coloredPrintln(
   return coloredPrint(content + "\n", color);
 }
 
+export function dir_sep(): "/" | "\\" {
+  return capi.os_name() === "windows" ? "\\" : "/";
+}
+
 /**
  * Enumeration for file seek position reference.
  *
