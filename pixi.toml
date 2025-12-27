@@ -67,3 +67,18 @@ depends-on = [
     { task = "npm-install" },
     { task = "check" },
 ]
+
+[target.unix.activation.env]
+PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
+
+[target.win.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+
+[tasks.build-js-lib]
+cmd = "rm -rf ./api/output && run-p bundle-dts bundle-js"
+cwd = "api"
+
+[tasks.build-js-test]
+cmd = "tsc --project tsconfig.test.json && cp -r ./test/res/fs-test-env/ ./output/test/res/fs-test-env"
+cwd = "api"
+depends-on = "build-js-lib"

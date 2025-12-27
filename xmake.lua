@@ -10,12 +10,23 @@ if has_config("dev") then
     -- Don't fetch system package
     set_policy("package.install_only", true)
     set_policy("build.ccache", true)
-    add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
-    if is_plat("windows") then
-        set_runtimes("MD")
-    end
     if is_mode("debug") then
         set_policy("build.sanitizer.address", true)
+    end
+
+    add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+
+    if is_plat("windows") then
+        set_runtimes("MD")
+
+        local toolchain = get_config("toolchain")
+        if toolchain == "clang" then
+            add_ldflags("-fuse-ld=lld-link")
+            add_shflags("-fuse-ld=lld-link")
+        elseif toolchain == "clang-cl" then
+            set_toolset("ld", "lld-link")
+            set_toolset("sh", "lld-link")
+        end
     end
 end
 
@@ -96,31 +107,30 @@ target("ut-catter")
     add_tests("default")
 
 
-if is_plat("windows") then
-    target("catter-hook-win64")
-        set_kind("shared")
-        add_includedirs("src/catter-hook/")
-        add_files("src/catter-hook/win/payload/main.cc")
-        add_syslinks("user32", "advapi32")
-        add_packages("microsoft-detours")
-        add_cxxflags("-fno-exceptions -fno-rtti")
+target("catter-hook-win64")
+    set_default(is_plat("windows"))
+    set_kind("shared")
+    add_includedirs("src/catter-hook/")
+    add_files("src/catter-hook/win/payload/main.cc")
+    add_syslinks("user32", "advapi32")
+    add_packages("microsoft-detours")
+    add_cxxflags("-fno-exceptions", "-fno-rtti")
 
-elseif is_plat("linux", "macosx") then
-    target("catter-hook-unix")
-        set_kind("shared")
-        if is_mode("debug") then
-            add_deps("common")
-        end
+target("catter-hook-unix")
+    set_default(is_plat("linux", "macosx"))
+    set_kind("shared")
+    if is_mode("debug") then
+        add_deps("common")
+    end
 
-        add_includedirs("src/catter-hook/")
-        add_includedirs("src/catter-hook/linux-mac/payload/")
-        add_files("src/catter-hook/linux-mac/payload/**.cc")
-        add_syslinks("dl")
-        if is_mode("release") then
-            add_cxxflags("-fvisibility=hidden")
-            add_cxxflags("-nostdlib++")
-        end
-end
+    add_includedirs("src/catter-hook/")
+    add_includedirs("src/catter-hook/linux-mac/payload/")
+    add_files("src/catter-hook/linux-mac/payload/**.cc")
+    add_syslinks("dl")
+    if is_mode("release") then
+        add_cxxflags("-fvisibility=hidden")
+        add_cxxflags("-nostdlib++")
+    end
 
 target("catter-hook")
     set_kind("object")
