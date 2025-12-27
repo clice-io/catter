@@ -8,6 +8,7 @@ using namespace catter;
 ut::suite<"rpc::data"> rpc_data = [] {
     ut::test("serialize and deserialize command") = [] {
         rpc::data::command cmd{
+            .working_dir = "/home/user",
             .executable = "/bin/ls",
             .args = {"-l",            "-a"             },
             .env = {"PATH=/usr/bin", "HOME=/home/user"}
@@ -21,7 +22,7 @@ ut::suite<"rpc::data"> rpc_data = [] {
             offset += to_copy;
             return to_copy;
         });
-
+        ut::expect(deserialized.working_dir == cmd.working_dir);
         ut::expect(deserialized.executable == cmd.executable);
         ut::expect(deserialized.args == cmd.args);
         ut::expect(deserialized.env == cmd.env);

@@ -12,6 +12,7 @@ using timestamp_t = uint64_t;
 
 struct command {
     /// do not ensure that this is a file path, this may be the name in PATH env
+    std::string working_dir{};
     std::string executable{};
     std::vector<std::string> args{};
     std::vector<std::string> env{};
@@ -58,7 +59,8 @@ struct Serde<rpc::data::Request> {
 template <>
 struct Serde<rpc::data::command> {
     static std::vector<char> serialize(const rpc::data::command& cmd) {
-        return merge_range_to_vector(Serde<std::string>::serialize(cmd.executable),
+        return merge_range_to_vector(Serde<std::string>::serialize(cmd.working_dir),
+                                     Serde<std::string>::serialize(cmd.executable),
                                      Serde<std::vector<std::string>>::serialize(cmd.args),
                                      Serde<std::vector<std::string>>::serialize(cmd.env));
     }
@@ -66,6 +68,7 @@ struct Serde<rpc::data::command> {
     template <Reader Invocable>
     static rpc::data::command deserialize(Invocable&& reader) {
         rpc::data::command cmd;
+        cmd.working_dir = Serde<std::string>::deserialize(std::forward<Invocable>(reader));
         cmd.executable = Serde<std::string>::deserialize(std::forward<Invocable>(reader));
         cmd.args = Serde<std::vector<std::string>>::deserialize(std::forward<Invocable>(reader));
         cmd.env = Serde<std::vector<std::string>>::deserialize(std::forward<Invocable>(reader));
@@ -75,6 +78,8 @@ struct Serde<rpc::data::command> {
     template <CoReader Invocable>
     static coro::Lazy<rpc::data::command> co_deserialize(Invocable&& reader) {
         rpc::data::command cmd;
+        cmd.working_dir =
+            co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
         cmd.executable =
             co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
         cmd.args = co_await Serde<std::vector<std::string>>::co_deserialize(
