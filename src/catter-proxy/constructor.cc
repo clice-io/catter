@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <stdexcept>
 
 #include "uv/rpc_data.h"
@@ -9,6 +10,7 @@ rpc::data::command build_raw_cmd(char* arg_start[], char* arg_end[]) {
         throw std::invalid_argument("No command provided");
     }
     rpc::data::command cmd;
+    cmd.working_dir = std::filesystem::current_path().string();
     cmd.executable = *arg_start;
     for(char** arg_i = arg_start + 1; arg_i < arg_end; ++arg_i) {
         cmd.args.emplace_back(*arg_i);
