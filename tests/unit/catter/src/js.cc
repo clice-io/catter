@@ -37,7 +37,7 @@ ut::suite<"js"> js = [] {
                 catter::core::js::run_js_file(content, js_file.path().string());
             } catch(std::exception& e) {
                 catter::output::redLn("\n{}", e.what());
-                std::exit(-1);
+                ut::expect(false);
             }
         };
     }
