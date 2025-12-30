@@ -78,7 +78,7 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                     }
 
                     auto act = rpc::data::action{
-                        .type = rpc::data::action::WRAP,
+                        .type = rpc::data::action::INJECT,
                         .cmd = cmd,
                     };
 
