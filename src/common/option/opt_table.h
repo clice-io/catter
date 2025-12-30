@@ -300,7 +300,6 @@ public:
                     unsigned flags_to_exclude) const;
 
     void parse_args(InputArgVec& argv,
-                    OptSpecifier unknown,
                     std::function<void(std::expected<ParsedArgument, std::string>)> fn) const;
 
     void internal_parse_args(InputArgVec& argv,

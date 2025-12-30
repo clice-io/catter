@@ -97,7 +97,7 @@ struct ParsedArgumentBase {
     /// Convert to string for pass to a excutable
     /// It does not ensure that it is equal to the original argv, but it has the same meaning
     /// according to the table
-    void to_arg_str(std::ostream o, OptionEnum::RenderStyleKind render_kind) {
+    void to_arg_str(std::ostream& o, OptionEnum::RenderStyleKind render_kind) {
         switch(render_kind) {
             case OptionEnum::RenderCommaJoinedStyle: {
                 o << this->get_spelling_view();
@@ -106,6 +106,7 @@ struct ParsedArgumentBase {
                 }
             }; break;
             case OptionEnum::RenderJoinedStyle:
+                assert(!this->values.empty() && "Joined option must have at least one value!");
                 o << this->get_spelling_view() << this->values[0];
                 break;
             case OptionEnum::RenderSeparateStyle: {

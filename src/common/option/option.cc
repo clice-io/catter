@@ -301,6 +301,7 @@ std::optional<ParsedArgument> Option::accept(const ArgList& args,
     // FlagClass aliases can have AliasArgs<>; add those to the unaliased arg.
     // eg. -O => --optimize 2
     if(const char* val = this->alias_args()) {
+        a->unaliased_addition_values = {};
         while(*val != '\0') {
             a->unaliased_addition_values->push_back(val);
             // Move past the '\0' to the next argument.
@@ -309,6 +310,7 @@ std::optional<ParsedArgument> Option::accept(const ArgList& args,
     }
     if(this->owner->option(a->unaliased_option_id.value()).kind() == JoinedClass &&
        !this->alias_args()) {
+        a->unaliased_addition_values = {};
         // A Flag alias for a Joined option must provide an argument.
         a->unaliased_addition_values->push_back("");
     }

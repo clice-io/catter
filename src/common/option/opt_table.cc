@@ -54,11 +54,8 @@ bool starts_with_insensitive(std::string_view text, std::string_view prefix) {
 }
 
 int compare_insensitive(std::string_view str1, std::string_view str2) {
-    if(str1.size() != str2.size()) {
-        return false;
-    }
-
-    for(size_t i = 0; i < str1.size(); ++i) {
+    size_t mn = std::min(str1.size(), str2.size());
+    for(size_t i = 0; i < mn; ++i) {
         auto c1 = safe_tolower(str1[i]);
         auto c2 = safe_tolower(str2[i]);
 
@@ -67,8 +64,10 @@ int compare_insensitive(std::string_view str1, std::string_view str2) {
         }
         return (c1 < c2) ? -1 : 1;
     }
-
-    return true;
+    if(str1.size() == str2.size()) {
+        return 0;
+    }
+    return str1.size() < str2.size() ? -1 : 1;
 }
 
 // Comparison function for Option strings (option names & prefixes).
@@ -418,7 +417,6 @@ void OptTable::parse_args(InputArgVec& argv,
 
 void
     OptTable::parse_args(InputArgVec& argv,
-                         OptSpecifier unknown,
                          std::function<void(std::expected<ParsedArgument, std::string>)> fn) const {
 
     unsigned MAI, MAC;
@@ -454,7 +452,7 @@ void OptTable::internal_parse_args(
             while(++index < end) {
                 fn(ParsedArgument{
                     .option_id = this->input_option_id,
-                    .spelling = str,
+                    .spelling = std::string_view(argv[index]),
                     .values = {},
                     .index = index,
                 });
