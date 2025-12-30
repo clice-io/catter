@@ -53,7 +53,7 @@ public:
     }
 
     OptionClass kind() const {
-        assert(Info && "Must have a valid info!");
+        assert(this->info && "Must have a valid info!");
         return OptionClass(this->info->kind);
     }
 
