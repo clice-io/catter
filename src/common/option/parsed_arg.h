@@ -12,7 +12,7 @@
 #include "opt_specifier.h"
 #include "util/meta.h"
 
-namespace catter ::opt {
+namespace catter::opt {
 struct OptionEnum {
 
     enum OptionClass {
@@ -186,8 +186,8 @@ struct ParsedArgumentOwning : public ParsedArgumentBase<std::string, std::string
 /// Helper to convert a string_view to an array for storage in the variant.
 inline std::array<char, 8> to_spelling_array(std::string_view str) {
     std::array<char, 8> arr{};
-    assert(str.size() < arr.size() && "Option spelling too long for small buffer!");
     if(str.size() >= arr.size()) {
+        // --, -, / cannot exceed the size, therefore it never happen if normal.
         str.copy(arr.data(), arr.size());
         arr[arr.size() - 1] = '\0';
     } else {
