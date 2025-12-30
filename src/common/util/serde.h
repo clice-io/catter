@@ -29,8 +29,8 @@ void append_range_to_vector(std::vector<T>& buffer, Range&& range) {
 #endif
 }
 
-template <typename... Args, typename T = std::common_type_t<
-                                              std::ranges::range_value_t<std::decay_t<Args>>...>>
+template <typename... Args,
+          typename T = std::common_type_t<std::ranges::range_value_t<std::decay_t<Args>>...>>
     requires (std::ranges::range<std::decay_t<Args>> && ...)
 std::vector<T> merge_range_to_vector(Args&&... args) {
     std::vector<T> buffer;
