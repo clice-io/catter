@@ -24,6 +24,7 @@
 
 #include "util/crossplat.h"
 #include "util/lazy.h"
+#include "util/serde.h"
 #include "uv/uv.h"
 #include "uv/rpc_data.h"
 
@@ -123,7 +124,7 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
     co_return;
 }
 
-uv::async::Lazy<void> loop() {
+uv::async::Lazy<void> loop(std::string exe_path, std::vector<std::string> args) {
     auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
 
     if(auto ret = uv_pipe_bind(server, catter::config::rpc::PIPE_NAME); ret < 0) {
@@ -148,13 +149,9 @@ uv::async::Lazy<void> loop() {
         co_return;
     }
 
-    co_await std::suspend_always{};  // placeholder to keep the server running
+    // co_await std::suspend_always{};  // placeholder to keep the server running
 
-    auto exe_path = util::get_catter_root_path() / catter::config::proxy::EXE_NAME;
-
-    std::vector<std::string> args = {"-p", std::to_string(++id_generator), "--", "make", "-j"};
-
-    auto proxy_ret = co_await uv::async::spawn(exe_path.string(), args, true);
+    auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
 
     std::println("catter-proxy exited with code {}", proxy_ret);
 
@@ -172,20 +169,22 @@ uv::async::Lazy<void> loop() {
     co_return;
 }
 
-int main(int argc, char* argv[], char* envp[]) {
-    catter::core::js::init_qjs({.pwd = std::filesystem::current_path()});
-    try {
-        catter::core::js::run_js_file(
-            R"(
-        import * as catter from "catter";
-        catter.o.print("Hello from Catter!");
-    )",
-            "inline.js");
+int main(int argc, char* argv[]) {
 
-        uv::wait(loop());
-    } catch(const catter::qjs::Exception& ex) {
-        std::println("JavaScript Exception: {}", ex.what());
+    if(argc < 2 || std::string(argv[1]) != "--") {
+        std::println("Usage: catter -- <target program> [args...]");
         return 1;
+    }
+    auto exe_path = util::get_catter_root_path() / catter::config::proxy::EXE_NAME;
+
+    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--"};
+
+    for(int i = 2; i < argc; ++i) {
+        args.push_back(argv[i]);
+    }
+
+    try {
+        uv::wait(loop(exe_path.string(), args));
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());
         return 1;
