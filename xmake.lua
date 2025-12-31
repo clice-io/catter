@@ -67,12 +67,40 @@ if has_config("test") then
     add_requires("boost_ut", {version = "v2.3.1"})
 end
 
-target("common")
+target("catter-config")
+    set_kind("headeronly")
+    add_includedirs("src/common", {public = true})
+
+target("catter-option")
     set_kind("static")
     add_includedirs("src/common", {public = true})
-    add_files("src/common/**.cc")
+    add_files("src/common/option/**.cc")
+
+target("catter-opt-data")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_deps("catter-option")
+    add_files("src/common/opt-data/**/*.cc")
+
+target("catter-uv")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/uv/**.cc")
     add_packages("libuv", {public = true})
+
+target("catter-util")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/util/**.cc")
     add_packages("spdlog", {public = true})
+
+target("common")
+    set_kind("static")
+    add_deps("catter-config", {public = true})
+    add_deps("catter-option", {public = true})
+    add_deps("catter-opt-data", {public = true})
+    add_deps("catter-uv", {public = true})
+    add_deps("catter-util", {public = true})
 
 target("catter-core")
     -- use object, avoid register invalid
