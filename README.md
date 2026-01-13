@@ -1,47 +1,31 @@
-# Catter: A Universal Compilation Command Capture Tool
+# Catter: A New Build Process Interception Tool
 
 ![C++ Standard](https://img.shields.io/badge/C++-23-blue.svg)
 [![GitHub license](https://img.shields.io/github/license/clice-io/catter)](https://github.com/clice-io/catter/blob/main/LICENSE)
 
 > [!IMPORTANT]
-> This project is currently under active development.
+> This project is under active development. Stay tuned for future updates!
 
-## The Problem
+## Motivation
 
-A significant challenge in the C++ ecosystem is that many build tools do not natively support the generation of a Compilation Database (CDB), which is essential for modern C++ language tooling. Examples include traditional Makefiles, CMake when using the MSBuild generator, and other complex build systems like Bazel or MSBuild itself.
+We are developing a new C++ language server, [clice](https://github.com/clice-io/clice). For it to work correctly, users often need to provide a [Compilation Database (CDB)](https://clang.llvm.org/docs/JSONCompilationDatabase.html). This is a JSON file that records the compilation commands for all source files.
 
-While solutions like `bear` exist, they often require installing a different, specialized tool for each build system, which is inconvenient and limits cross-platform usability.
+Unfortunately, not all C++ build systems support the generation of CDB files. For example, CMake only supports this feature when using `Makefile` or `Ninja` as the build backend. Furthermore, C++ has many other popular build systems, and many of them do not natively support CDB generation, often requiring special workarounds. In some situations, you might not even be able to access a CDB even if it is generated; for instance, when a Python package builds C++ code, you often have no control over the build directory and thus cannot retrieve the corresponding CDB file.
 
-We are developing a new C++ language server that relies on a CDB to locate files and provide accurate language features. To ensure a seamless experience for our users, we aim to create **catter**, a single, unified, cross-platform tool to capture compilation commands from **any** build process.
+Moreover, even with a CDB, a language server might still not function correctly. A classic example is LLVM. Why? Because LLVM uses its own compiled `tablegen` tool for code generation. The generated files are placed in a specific directory, which is then added to the compilation flags with `-I`. This means that if you only run `cmake configure`, these generated files will be missing, causing the language server to fail. You must run `cmake build` to generate them. Unfortunately, it's difficult to configure LLVM to *only* generate these necessary headers for a minimal build, especially if your goal is just to read the code. A full build of LLVM takes a very long time. It would be ideal if we could build only the minimal required components.
 
-## Features
+Currently, there is no cross-platform tool that completely solves all these issues. This is why we decided to create `catter`.
 
-### 1. Cross-Platform Support
+## Core Features
 
-`catter` is engineered to be fully operational on all major desktop operating systems:
-* **Windows**
-* **macOS**
-* **Linux**
+`catter`'s underlying principle is similar to [Bear](https://github.com/rizsotto/Bear) or [scan-build](https://github.com/rizsotto/scan-build). It works by using hooks to intercept any child process creation (including compilation tasks) initiated by the target process. It also integrates QuickJS, allowing you to write JavaScript scripts to process these events—for example, to log or modify compilation arguments, analyze build times, and so on.
 
-And it actually applies to any scenario where a series of tree-like commands need to be invoked in sequence. You can use catter's JavaScript script to capture, analyze and replace them in real time.
+Although its initial motivation was to record compilation commands to generate a CDB, we quickly realized it could be used for much more:
 
+*   **Analyze Linker Commands to Infer Target Information**: By capturing linker commands, `catter` can analyze the dependency graph between targets. This provides richer target information, which is essential for language servers to properly support C++20 modules. The C++ standard stipulates that a program can have at most one module with the same name, and it is the target information that distinguishes different programs (e.g., libraries vs. executables). This crucial information is missing from the current CDB standard, with no prospects for improvement in the near future. With `catter`, we can solve this problem once and for all, across all build systems.
 
-### 2. Build-System Agnostic via Process Interception
+*   **Perform "Fake" Compilations**: Instead of forwarding compilation tasks to the actual compiler, `catter` can generate fake placeholder object files. This allows the build system to proceed with its tasks without performing a full, time-consuming compilation. This way, you can obtain a complete CDB without waiting for the entire build process to finish. **Note**: If the build involves code generators, those tools must still be genuinely built. `catter` can automatically analyze dependencies to ensure that only these essential tools are compiled, achieving a true minimal build.
 
-`catter` captures compilation commands without requiring modifications to the user's existing build scripts. This is achieved by:
+*   **Profile the Build Process**: Due to issues in the build system's design or poorly written build scripts, the actual degree of build parallelism can be very low. We can capture process information (start times, durations, parent-child relationships) and render it visually, allowing users to inspect the build's parallelism and performance bottlenecks in real-time in a browser.
 
-* **Process Monitoring/Interception:** On each platform, `catter` monitors the build process tree to capture invocations of all commands invoked more than command of known C/C++ compilers (`g++`, `clang`, `cl.exe`, etc.) and their full command-line arguments.
-
-### 3. Extensibility and Scripting with JavaScript
-
-To provide ultimate flexibility, `catter` includes a full JavaScript runtime environment for advanced control over the compilation command capture process.
-
-* **Full Scripting Support:** Users can write custom JavaScript scripts to **intercept, modify, and replace** *all* commands executed during the compilation period.
-* **Dynamic Profiling:** The tool supports real-time command sensing, enabling users to write dynamic JavaScript scripts for advanced build **profiling** and analysis.
-* **Custom CDB Generation:** Users can leverage the scripting engine to implement their own custom logic for transforming captured commands, or even *generating* the Compilation Database entirely via script, giving unprecedented control over the final `compile_commands.json`.
-* **Avoid Full Compilation (If Possible):** We can just writes scripts to easily intercept the compiler call and redirecting it to a "fake" compiler that simply records the command and creates an empty object file (`.o`, `.obj`), enabling **dry run** and **fake run** scenarios without a time-consuming full build.
-
-
-## Architecture
-
-User run `catter` in command line, `catter` will call `catter-proxy` responsible to invoke commands. Every system call for real command will be replaced with `catter-proxy` in hooked program, therefore we can log the command instantly.
+*   **Patch the Build Process with Custom Scripts**: Thanks to the embedded QuickJS engine, users can write their own scripts to patch any command during the build process. This gives you the power to dynamically modify arguments, redirect commands, or inject custom logic into your build without altering the original build files.
