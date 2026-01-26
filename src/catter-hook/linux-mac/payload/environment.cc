@@ -18,7 +18,7 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept {
         if(current[key_size] != '=')
             continue;
         // It must be the one! Calculate the address of the value.
-        INFO("env key: {} found, value: {}", key, current + key_size + 1);
+        INFO("env key: {} found, value: {}", key, current.data() + key_size + 1);
         return current.data() + key_size + 1;
     }
     INFO("env key: {} not found", key);
