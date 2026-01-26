@@ -178,9 +178,10 @@ target("catter-hook-unix")
         add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
     end
     if is_plat("macosx") then
-        add_shflags("-Wl,-exported_symbols_list,/dev/null")
+        add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true})
     end
     add_syslinks("dl")
+    add_cxxflags("")
     add_cxflags("-ffunction-sections", "-fdata-sections")
     add_shflags("-static-libstdc++", "-static-libgcc", {force = true})
     add_shflags("-Wl,--gc-sections", {force = true})
