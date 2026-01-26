@@ -1,16 +1,23 @@
 #include "session.h"
 
-#include "buffer.h"
 #include "linux-mac/debug.h"
 #include "environment.h"
 #include "linux-mac/config.h"
+#include <string>
+
+namespace {
+std::string proxy_path_string;
+std::string self_id_string;
+}  // namespace
 
 namespace catter::session {
 
 void from(Session& session, const char** environment) noexcept {
-    session.proxy_path =
+    proxy_path_string =
         catter::env::get_env_value(environment, config::hook::KEY_CATTER_PROXY_PATH);
-    session.self_id = catter::env::get_env_value(environment, config::hook::KEY_CATTER_COMMAND_ID);
+    self_id_string = catter::env::get_env_value(environment, config::hook::KEY_CATTER_COMMAND_ID);
+    session.proxy_path = proxy_path_string;
+    session.self_id = self_id_string;
     if(!is_valid(session)) {
         WARN("session is invalid");
         return;
@@ -23,18 +30,7 @@ void from(Session& session, const char** environment) noexcept {
     INFO("session from env: catter_proxy={}, self_id={}", session.proxy_path, session.self_id);
 }
 
-void persist(Session& session, char* begin, char* end) noexcept {
-    if(!is_valid(session))
-        return;
-
-    Buffer buffer(begin, end);
-    session.proxy_path = buffer.store(session.proxy_path);
-    session.self_id = buffer.store(session.self_id);
-    session.necessary_envp_entry[0] = buffer.store(session.necessary_envp_entry[0]);
-    session.necessary_envp_entry[1] = buffer.store(session.necessary_envp_entry[1]);
-}
-
 bool is_valid(const Session& session) noexcept {
-    return (session.proxy_path != nullptr && session.self_id != nullptr);
+    return (!session.proxy_path.empty() && !session.self_id.empty());
 }
 }  // namespace catter::session

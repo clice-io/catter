@@ -1,7 +1,6 @@
 
 #include "command.h"
 #include "linker.h"
-#include "resolver.h"
 #include "session.h"
 
 namespace catter {
@@ -25,7 +24,7 @@ namespace catter {
  */
 class Executor {
 public:
-    Executor(const Linker& linker, const Session& session, Resolver& resolver) noexcept;
+    Executor(const Linker& linker, const Session& session) noexcept;
 
     ~Executor() noexcept = default;
 
@@ -53,7 +52,6 @@ public:
 private:
     const catter::Linker& linker_;
     const catter::Session& session_;
-    catter::Resolver& resolver_;
     catter::CmdBuilder cmd_builder_;
 };
 }  // namespace catter

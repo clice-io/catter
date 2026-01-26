@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 namespace catter::env {
 
 /**
@@ -12,7 +14,7 @@ namespace catter::env {
  * @param key the name of the environment.
  * @return the value of the environment.
  */
-const char* get_env_value(const char** envp, const char* key) noexcept;
+const char* get_env_value(const char** envp, std::string_view key) noexcept;
 
 /**
  * Returns the entry for the given environment name, from the given
@@ -24,6 +26,6 @@ const char* get_env_value(const char** envp, const char* key) noexcept;
  * @param key the name of the environment.
  * @return the entry of the environment.
  */
-const char* get_env_entry(const char** envp, const char* const key) noexcept;
+const char* get_env_entry(const char** envp, std::string_view key) noexcept;
 
 }  // namespace catter::env

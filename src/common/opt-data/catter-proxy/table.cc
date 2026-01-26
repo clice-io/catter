@@ -40,5 +40,6 @@ namespace catter::optdata::catter_proxy {
 opt::OptTable catter_proxy_opt_table =
     opt::OptTable(std::span<const opt::OptTable::Info>(opt_infos))
         .set_tablegen_mode(false)
-        .set_dash_dash_parsing(true);
+        .set_dash_dash_parsing(true)
+        .set_dash_dash_as_single_pack(true);
 }  // namespace catter::optdata::catter_proxy

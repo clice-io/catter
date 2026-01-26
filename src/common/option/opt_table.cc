@@ -442,7 +442,15 @@ void OptTable::internal_parse_args(InputArgv argv,
         // In DashDashParsing mode, the first "--" stops option scanning and
         // treats all subsequent arguments as positional.
         if(this->dash_dash_parsing && str == "--") {
-            if(!this->dash_dash_as_single_pack) {
+            if(this->dash_dash_as_single_pack) {
+                arg_callback(ParsedArgument{
+                    .option_id = this->input_option_id,
+                    .spelling = "--",
+                    .values = std::vector<std::string_view>(argv.begin() + index + 1, argv.end()),
+                    .index = index,
+                });
+                index = end;
+            } else {
                 while(++index < end) {
                     arg_callback(ParsedArgument{
                         .option_id = this->input_option_id,
@@ -451,14 +459,6 @@ void OptTable::internal_parse_args(InputArgv argv,
                         .index = index,
                     });
                 }
-            } else {
-                arg_callback(ParsedArgument{
-                    .option_id = this->input_option_id,
-                    .spelling = "--",
-                    .values = std::vector<std::string_view>(argv.begin() + index + 1, argv.end()),
-                    .index = index,
-                });
-                index = end;
             }
             break;
         }

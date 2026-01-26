@@ -53,9 +53,9 @@ static ut::suite<"opt-catter-proxy"> ocp = [] {
                     ut::expect(arg->index == 2);
                 } else {
                     ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_INPUT);
-                    ut::expect(arg->get_spelling_view() == "clang++" ||
-                               arg->get_spelling_view() == "--version");
-                    ut::expect(arg->index == 5 || arg->index == 6);
+                    ut::expect(arg->get_spelling_view() == "--");
+                    ut::expect(arg->values.size() == 2);
+                    ut::expect(arg->index == 4);
                 }
             });
     };
