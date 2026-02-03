@@ -15,7 +15,7 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept {
         if(!current.starts_with(key))
             continue;
         // Is the next character is the equal sign?
-        if(current[key_size] != '=')
+        if(current.size() <= key_size || current[key_size] != '=')
             continue;
         // It must be the one! Calculate the address of the value.
         INFO("env key: {} found, value: {}", key, current.data() + key_size + 1);
