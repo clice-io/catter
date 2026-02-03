@@ -7,6 +7,7 @@ void push_proxy_args(catter::CmdBuilder::command::ArgvTy& argv,
                      catter::Session& sess,
                      std::string_view exec_path,
                      bool error = false) {
+    argv.emplace_back(sess.proxy_path);
     argv.emplace_back("-p");
     argv.emplace_back(sess.self_id);
     argv.emplace_back("--exec");

@@ -161,7 +161,9 @@ target("catter-hook-unix-support")
     if is_mode("debug") then
         add_deps("common")
     end
-    add_syslinks("dl")
+    if is_plat("linux") then
+        add_syslinks("dl")
+    end
     add_includedirs("src/catter-hook/", { public = true })
     add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
     add_files("src/catter-hook/linux-mac/payload/*.cc")
@@ -176,16 +178,18 @@ target("catter-hook-unix")
     add_cxxflags("-fvisibility-inlines-hidden")
     if is_plat("linux") then
         add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
+        add_syslinks("dl")
     end
     if is_plat("macosx") then
         add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true})
+        add_shflags("-Wl,-dead_strip", {force = true})
+        set_policy("check.auto_ignore_flags", false)
     end
-    add_syslinks("dl")
-    add_cxxflags("")
     add_cxflags("-ffunction-sections", "-fdata-sections")
     add_shflags("-static-libstdc++", "-static-libgcc", {force = true})
-    add_shflags("-Wl,--gc-sections", {force = true})
-
+    if is_plat("linux") then
+        add_shflags("-Wl,--gc-sections", {force = true})
+    end
     add_includedirs("src/catter-hook/")
     add_includedirs("src/catter-hook/linux-mac/payload/")
     add_files("src/catter-hook/linux-mac/payload/**.cc")

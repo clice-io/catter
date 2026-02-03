@@ -15,21 +15,23 @@ namespace catter {
  * The resolution logic implemented as a class to be able to unit test
  * the code and avoid memory allocation.
  */
-namespace resolver {
-/**
- * Resolve the executable from system environments.
- *
- * @return resolved executable path as absolute path.
- */
-[[nodiscard]]
-std::expected<std::filesystem::path, int> from_current_directory(std::string_view file);
+struct Resolver {
+    /**
+     * Resolve the executable from system environments.
+     *
+     * @return resolved executable path as absolute path.
+     */
+    [[nodiscard]]
+    virtual std::expected<std::filesystem::path, int>
+        from_current_directory(std::string_view file) const;
 
-[[nodiscard]]
-std::expected<std::filesystem::path, int> from_path(std::string_view file, const char** envp);
+    [[nodiscard]]
+    virtual std::expected<std::filesystem::path, int> from_path(std::string_view file,
+                                                                const char** envp) const;
 
-[[nodiscard]]
-std::expected<std::filesystem::path, int> from_search_path(std::string_view file,
-                                                           const char* search_path);
+    [[nodiscard]]
+    virtual std::expected<std::filesystem::path, int>
+        from_search_path(std::string_view file, const char* search_path) const;
 
-};  // namespace resolver
+};  // namespace Resolver
 }  // namespace catter

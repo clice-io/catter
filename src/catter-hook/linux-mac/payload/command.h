@@ -20,12 +20,13 @@ public:
             return !path.empty();
         }
 
-        std::vector<const char*> c_argv() {
+        std::vector<const char*> c_argv() const {
             std::vector<const char*> res;
             res.reserve(argv.size() + 1);
-            for(const auto arg: argv) {
+            for(const auto& arg: argv) {
                 res.push_back(arg.c_str());
             }
+            res.push_back(nullptr);
             return res;
         }
     };

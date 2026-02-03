@@ -34,7 +34,7 @@ std::expected<catter::CmdBuilder::command, int>
     }
     if(!catter::session::is_valid(sess)) {
         return catter::CmdBuilder(sess).error_cmd(
-            "invalid enviroment of hook library, lost required value",
+            "invalid environment of hook library, lost required value",
             str,
             argv);
     }
@@ -43,6 +43,9 @@ std::expected<catter::CmdBuilder::command, int>
 
 catter::CmdBuilder::ArgvRef spanify(char* const* argv) {
     int argc = 0;
+    if(argv == nullptr) {
+        return {};
+    }
     while(argv[argc] != 0) {
         argc++;
     }
@@ -55,13 +58,15 @@ namespace catter {
 
 /// We separate the log and execute process, ensuring that even if the logging fails,
 /// the execution can still proceed.
-Executor::Executor(const Linker& linker, const Session& session) noexcept :
-    linker_(linker), session_(session), cmd_builder_(session) {}
+Executor::Executor(const Linker& linker,
+                   const Session& session,
+                   const Resolver& resolver /* = {}*/) noexcept :
+    linker_(linker), session_(session), resolver_(resolver), cmd_builder_(session) {}
 
 int Executor::execve(const char* path, char* const* argv, char* const* envp) {
     auto argv_ref = spanify(argv);
     ELSE_RETURN(cmd, precheck(session_, path, argv_ref))
-    ELSE_RETURN(executable, resolver::from_current_directory(path));
+    ELSE_RETURN(executable, resolver_.from_current_directory(path));
     // if no error, we build it
     if(!cmd.valid()) {
         cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
@@ -79,7 +84,7 @@ int Executor::execve(const char* path, char* const* argv, char* const* envp) {
 int Executor::execvpe(const char* file, char* const* argv, char* const* envp) {
     auto argv_ref = spanify(argv);
     ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
-    ELSE_RETURN(executable, resolver::from_path(file, const_cast<const char**>(envp)));
+    ELSE_RETURN(executable, resolver_.from_path(file, const_cast<const char**>(envp)));
     // if no error, we build it
     if(!cmd.valid()) {
         cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
@@ -100,7 +105,7 @@ int Executor::execvP(const char* file,
                      char* const* envp) {
     auto argv_ref = spanify(argv);
     ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
-    ELSE_RETURN(executable, resolver::from_search_path(file, search_path));
+    ELSE_RETURN(executable, resolver_.from_search_path(file, search_path));
     // if no error, we build it
     if(!cmd.valid()) {
         cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
@@ -123,7 +128,7 @@ int Executor::posix_spawn(pid_t* pid,
                           char* const* envp) {
     auto argv_ref = spanify(argv);
     ELSE_RETURN(cmd, precheck(session_, path, argv_ref));
-    ELSE_RETURN(executable, resolver::from_current_directory(path));
+    ELSE_RETURN(executable, resolver_.from_current_directory(path));
     // if no error, we build it
     if(!cmd.valid()) {
         cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
@@ -150,7 +155,7 @@ int Executor::posix_spawnp(pid_t* pid,
                            char* const* envp) {
     auto argv_ref = spanify(argv);
     ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
-    ELSE_RETURN(executable, resolver::from_path(file, const_cast<const char**>(envp)));
+    ELSE_RETURN(executable, resolver_.from_path(file, const_cast<const char**>(envp)));
     // if no error, we build it
     if(!cmd.valid()) {
         cmd = cmd_builder_.proxy_cmd(executable, argv_ref);

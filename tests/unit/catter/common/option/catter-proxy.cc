@@ -1,3 +1,4 @@
+#include "opt-data/catter-proxy/parser.h"
 #include "util.h"
 #include "util/output.h"
 #include <boost/ut.hpp>
@@ -86,5 +87,68 @@ static ut::suite<"opt-catter-proxy"> ocp = [] {
                 ut::expect(!arg.has_value());
                 catter::output::blueLn("Test Error: {}", arg.error());
             });
+    };
+};
+
+static ut::suite<"opt-catter-proxy-parser"> ocp_parser = [] {
+    ut::test("parse_opt success") = [&] {
+        char* const argv[] =
+            {(char*)"", (char*)"-p", (char*)"5678", (char*)"--exec", (char*)"/bin/echo", nullptr};
+        auto res = optdata::catter_proxy::parse_opt(argv);
+        ut::expect(res.has_value());
+        if(res.has_value()) {
+            ut::expect(res->parent_id == "5678");
+            ut::expect(res->executable == std::filesystem::path("/bin/echo"));
+            ut::expect(res->raw_argv_or_err.has_value());
+            if(res->raw_argv_or_err.has_value()) {
+                ut::expect(res->raw_argv_or_err->size() == 0);
+            }
+        }
+    };
+    ut::test("parse_opt with input args") = [&] {
+        char* const argv[] = {(char*)"",
+                              (char*)"-p",
+                              (char*)"91011",
+                              (char*)"--exec",
+                              (char*)"/usr/bin/python3",
+                              (char*)"--",
+                              (char*)"script.py",
+                              (char*)"--verbose",
+                              nullptr};
+        auto res = optdata::catter_proxy::parse_opt(argv);
+        ut::expect(res.has_value());
+        if(res.has_value()) {
+            ut::expect(res->parent_id == "91011");
+            ut::expect(res->executable == std::filesystem::path("/usr/bin/python3"));
+            ut::expect(res->raw_argv_or_err.has_value());
+            if(res->raw_argv_or_err.has_value()) {
+                ut::expect(res->raw_argv_or_err->size() == 2);
+                ut::expect(res->raw_argv_or_err->at(0) == "script.py");
+                ut::expect(res->raw_argv_or_err->at(1) == "--verbose");
+            }
+        }
+    };
+    ut::test("parse_opt error handling") = [&] {
+        char* const argv[] = {(char*)"", (char*)"-p", nullptr};
+        auto res = optdata::catter_proxy::parse_opt(argv);
+        ut::expect(!res.has_value());
+        if(!res.has_value()) {
+            catter::output::blueLn("Expected Error: {}", res.error());
+        }
+    };
+    ut::test("parse opt pass an err") = [&] {
+        char* const argv[] = {(char*)"",
+                              (char*)"-p",
+                              (char*)"91011",
+                              (char*)"--exec",
+                              (char*)"/usr/bin/python3",
+                              (char*)"report err!",
+                              nullptr};
+        auto res = optdata::catter_proxy::parse_opt(argv);
+        ut::expect(res.has_value());
+        ut::expect(!res->raw_argv_or_err.has_value());
+        if(!res->raw_argv_or_err.has_value()) {
+            catter::output::blueLn("Expected Error: {}", res->raw_argv_or_err.error());
+        }
     };
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <cstdlib>
 #include <string_view>
 
 namespace catter {

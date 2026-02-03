@@ -20,8 +20,8 @@ bool contains_dir_separator(const std::string_view& candidate) {
 
 namespace fs = std::filesystem;
 
-namespace catter::resolver {
-std::expected<fs::path, int> from_current_directory(std::string_view file) {
+namespace catter {
+std::expected<fs::path, int> Resolver::from_current_directory(std::string_view file) const {
     fs::path p(file);
     if(!fs::exists(p) || !fs::is_regular_file(p)) {
         return std::unexpected(ENOENT);
@@ -32,7 +32,7 @@ std::expected<fs::path, int> from_current_directory(std::string_view file) {
     return std::unexpected(errno);
 }
 
-std::expected<fs::path, int> from_path(std::string_view file, const char** envp) {
+std::expected<fs::path, int> Resolver::from_path(std::string_view file, const char** envp) const {
     if(contains_dir_separator(file)) {
         // the file contains a dir separator, it is treated as path.
         return from_current_directory(file);
@@ -54,7 +54,8 @@ std::expected<fs::path, int> from_path(std::string_view file, const char** envp)
     }
 }
 
-std::expected<fs::path, int> from_search_path(std::string_view file, const char* search_path) {
+std::expected<fs::path, int> Resolver::from_search_path(std::string_view file,
+                                                        const char* search_path) const {
     if(contains_dir_separator(file)) {
         // the file contains a dir separator, it is treated as path.
         return from_current_directory(file);
@@ -82,4 +83,4 @@ std::expected<fs::path, int> from_search_path(std::string_view file, const char*
         return std::unexpected(ENOENT);
     }
 }
-}  // namespace catter::resolver
+}  // namespace catter

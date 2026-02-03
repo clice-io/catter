@@ -22,7 +22,7 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept {
         return current.data() + key_size + 1;
     }
     INFO("env key: {} not found", key);
-    return nullptr;
+    return "";
 }
 
 const char* get_env_entry(const char** envp, std::string_view key) noexcept {
@@ -41,7 +41,7 @@ const char* get_env_entry(const char** envp, std::string_view key) noexcept {
         return current.data();
     }
     INFO("env entry for key: {} not found", key);
-    return nullptr;
+    return "";
 }
 
 }  // namespace catter::env
