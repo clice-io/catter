@@ -29,6 +29,7 @@ clangxx = "==20.1.8"
 lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
+libcxx = "==20.1.8"
 
 [target.unix.activation.env]
 PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"

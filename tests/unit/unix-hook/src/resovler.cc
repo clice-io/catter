@@ -19,7 +19,6 @@ struct TempFileManager {
     void create(const fs::path& file, std::error_code& ec) noexcept {
         auto full_path = root / file;
         auto parent = full_path.parent_path();
-
         fs::create_directories(parent, ec);
         if(ec)
             return;
@@ -70,7 +69,7 @@ ut::suite<"resolver"> resolver = [] {
             std::format("/usr/bin:{}", fs::absolute(manager.root).string()).c_str());
         ut::expect(res1.has_value() && res1.value() == fs::absolute(p));
         auto res2 = resolver.from_search_path(
-            "aa",
+            "aap",
             std::format("/usr/bin:{}", fs::absolute(manager.root).string()).c_str());
         ut::expect(!res2.has_value());
         auto res3 = resolver.from_search_path(

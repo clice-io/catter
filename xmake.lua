@@ -34,6 +34,7 @@ end
 
 if is_plat("macosx") then
     -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
+    set_toolchains("clang")
     add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
@@ -140,6 +141,7 @@ target("ut-hook-unix")
     set_kind("binary")
     add_files("tests/unit/unix-hook/**.cc")
     add_packages("boost_ut")
+    add_deps("common")
     add_deps("catter-hook-unix-support")
     if is_plat("linux", "macosx") then
         add_tests("default")
@@ -168,31 +170,43 @@ target("catter-hook-unix-support")
     add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
     add_files("src/catter-hook/linux-mac/payload/*.cc")
 
+
 target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
+
     if is_mode("debug") then
         add_deps("common")
     end
+
     add_cxxflags("-fvisibility=hidden")
     add_cxxflags("-fvisibility-inlines-hidden")
-    if is_plat("linux") then
-        add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
-        add_syslinks("dl")
-    end
-    if is_plat("macosx") then
-        add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true})
-        add_shflags("-Wl,-dead_strip", {force = true})
-        set_policy("check.auto_ignore_flags", false)
-    end
     add_cxflags("-ffunction-sections", "-fdata-sections")
-    add_shflags("-static-libstdc++", "-static-libgcc", {force = true})
-    if is_plat("linux") then
-        add_shflags("-Wl,--gc-sections", {force = true})
-    end
+
     add_includedirs("src/catter-hook/")
     add_includedirs("src/catter-hook/linux-mac/payload/")
     add_files("src/catter-hook/linux-mac/payload/**.cc")
+
+    if is_plat("linux") then
+        add_shflags("-static-libstdc++", {force = true})
+        add_shflags("-static-libgcc", {force = true})
+
+        add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
+        add_syslinks("dl")
+        add_shflags("-Wl,--gc-sections", {force = true})
+    end
+
+    if is_plat("macosx") then
+        -- set_policy("check.auto_ignore_flags", false)
+        add_shflags("-nostdlib++", {force = true})
+        add_syslinks("System")
+        add_syslinks("c++abi")
+        local libcxx_lib = path.absolute("./.pixi/envs/default/lib/libc++.a")
+        add_shflags("-Wl,-force_load," .. libcxx_lib, {force = true})
+        add_shflags("-fuse-ld=lld")
+        add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true, force = true})
+        add_shflags("-Wl,-dead_strip", {force = true})
+    end
 
 target("catter-hook")
     set_kind("object")
