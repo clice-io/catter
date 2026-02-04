@@ -15,7 +15,6 @@ class Buffer;
 struct Session {
     std::string_view proxy_path{};
     std::string_view self_id{};
-    std::array<std::string_view, 2> necessary_envp_entry = {};
 };
 
 namespace session {

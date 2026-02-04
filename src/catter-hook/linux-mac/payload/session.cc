@@ -6,26 +6,35 @@
 #include <string>
 
 namespace {
-std::string proxy_path_string;
-std::string self_id_string;
+std::string proxy_path_string = "";
+std::string self_id_string = "";
 }  // namespace
 
 namespace catter::session {
 
 void from(Session& session, const char** environment) noexcept {
-    proxy_path_string =
-        catter::env::get_env_value(environment, config::hook::KEY_CATTER_PROXY_PATH);
-    self_id_string = catter::env::get_env_value(environment, config::hook::KEY_CATTER_COMMAND_ID);
+    auto proxy_path = catter::env::get_env_value(environment, config::hook::KEY_CATTER_PROXY_PATH);
+    if(proxy_path == nullptr) {
+        WARN("catter proxy path not found in environment");
+        proxy_path_string = "";
+        return;
+    } else {
+        proxy_path_string = proxy_path;
+    }
+    auto self_id = catter::env::get_env_value(environment, config::hook::KEY_CATTER_COMMAND_ID);
+    if(self_id == nullptr) {
+        WARN("catter self id not found in environment");
+        self_id_string = "";
+        return;
+    } else {
+        self_id_string = self_id;
+    }
     session.proxy_path = proxy_path_string;
     session.self_id = self_id_string;
     if(!is_valid(session)) {
         WARN("session is invalid");
         return;
     }
-    session.necessary_envp_entry[0] =
-        catter::env::get_env_entry(environment, config::hook::KEY_CATTER_PROXY_PATH);
-    session.necessary_envp_entry[1] =
-        catter::env::get_env_entry(environment, config::hook::KEY_CATTER_COMMAND_ID);
 
     INFO("session from env: catter_proxy={}, self_id={}", session.proxy_path, session.self_id);
 }

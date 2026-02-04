@@ -1,6 +1,5 @@
 #pragma once
 #include "session.h"
-#include <climits>
 #include <filesystem>
 #include <span>
 #include <string>
@@ -32,7 +31,7 @@ public:
     };
 
 public:
-    CmdBuilder(Session session) noexcept : session_(session) {};
+    CmdBuilder(Session session) : session_(session) {};
     CmdBuilder(const CmdBuilder&) = delete;
     CmdBuilder& operator= (const CmdBuilder&) = delete;
     CmdBuilder(CmdBuilder&&) noexcept = delete;
@@ -46,7 +45,7 @@ public:
      * @return the command string.
      * @example /proxy_path -p self_id -- path arg1 arg2 ...
      */
-    command proxy_cmd(const std::filesystem::path& path, ArgvRef argv) noexcept;
+    command proxy_cmd(const std::filesystem::path& path, ArgvRef argv);
     /**
      * Build the error command string.
      * @param msg error message.
@@ -56,9 +55,7 @@ public:
      * @example linux or mac error found in hook: msg in executing:
      *              --> path arg1 arg2 ...
      */
-    command error_cmd(const char* msg,
-                      const std::filesystem::path& path,
-                      ArgvRef argv = {}) noexcept;
+    command error_cmd(const char* msg, const std::filesystem::path& path, ArgvRef argv = {});
 
 private:
     Session session_;

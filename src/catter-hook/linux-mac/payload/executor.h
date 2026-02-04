@@ -24,8 +24,12 @@ namespace catter {
  *   and pass to these methods.
  */
 class Executor {
+    constexpr static auto default_resolver = Resolver{};
+
 public:
-    Executor(const Linker& linker, const Session& session, const Resolver& resolver = {}) noexcept;
+    Executor(const Linker& linker,
+             const Session& session,
+             const Resolver& resolver = default_resolver) noexcept;
 
     ~Executor() noexcept = default;
 
@@ -56,4 +60,5 @@ private:
     const catter::Resolver& resolver_;
     catter::CmdBuilder cmd_builder_;
 };
+
 }  // namespace catter

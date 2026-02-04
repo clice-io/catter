@@ -22,7 +22,7 @@ namespace fs = std::filesystem;
 
 namespace catter {
 
-CmdBuilder::command CmdBuilder::proxy_cmd(const fs::path& path, ArgvRef argv) noexcept {
+CmdBuilder::command CmdBuilder::proxy_cmd(const fs::path& path, ArgvRef argv) {
     command cmd;
     cmd.path = session_.proxy_path;
     push_proxy_args(cmd.argv, session_, path.string());
@@ -32,9 +32,7 @@ CmdBuilder::command CmdBuilder::proxy_cmd(const fs::path& path, ArgvRef argv) no
     return cmd;
 }
 
-CmdBuilder::command CmdBuilder::error_cmd(const char* msg,
-                                          const fs::path& path,
-                                          ArgvRef argv) noexcept {
+CmdBuilder::command CmdBuilder::error_cmd(const char* msg, const fs::path& path, ArgvRef argv) {
     command cmd;
     cmd.path = session_.proxy_path;
     push_proxy_args(cmd.argv, session_, path.string(), true);

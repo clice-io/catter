@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <string_view>
+
 namespace catter::config {
 constexpr static char OS_PATH_SEPARATOR = ':';
 constexpr static char OS_DIR_SEPARATOR = '/';
@@ -9,7 +12,8 @@ constexpr static char OS_DIR_SEPARATOR = '/';
 namespace catter::config::hook {
 constexpr static char KEY_CATTER_PROXY_PATH[] = "__key_catter_proxy_path_v1";
 constexpr static char KEY_CATTER_COMMAND_ID[] = "__key_catter_command_id_v1";
-constexpr static char ERROR_PREFIX[] = "linux or mac error found in hook:";
+constexpr static auto KEYS_TO_INJECT =
+    std::array<std::string_view, 2>{KEY_CATTER_PROXY_PATH, KEY_CATTER_COMMAND_ID};
 
 #if defined(CATTER_LINUX)
 constexpr static char KEY_PRELOAD[] = "LD_PRELOAD";
