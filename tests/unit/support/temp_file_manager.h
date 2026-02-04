@@ -23,6 +23,7 @@ struct TempFileManager {
 
         if(!ofs) {
             ec = std::make_error_code(std::errc::io_error);
+            return;
         }
         ofs << content;
         ofs.close();
