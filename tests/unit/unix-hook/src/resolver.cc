@@ -1,7 +1,6 @@
 #include <boost/ut.hpp>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <system_error>
 #include "resolver.h"
 #include "temp_file_manager.h"
