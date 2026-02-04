@@ -22,7 +22,7 @@
     "bundle-js": "rollup -c ./rollup.config.js",
     "bundle-dts": "tsc --project tsconfig.app.json && api-extractor run",
     "build": "pnpm run prebuild && run-p bundle-dts bundle-js",
-    "test-file": "pnpm run build && tsc --project tsconfig.test.json && xmake l os.cp ./test/res/fs-test-env/ ./output/test/res/fs-test-env"
+    "test-file": "pnpm run build && tsc --project tsconfig.test.json"
   },
   "keywords": [],
   "license": "Apache-2.0",

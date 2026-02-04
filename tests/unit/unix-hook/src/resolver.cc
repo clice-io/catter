@@ -4,53 +4,16 @@
 #include <fstream>
 #include <system_error>
 #include "resolver.h"
+#include "temp_file_manager.h"
 
 namespace ut = boost::ut;
 namespace fs = std::filesystem;
 namespace ct = catter;
 
-namespace {
-
-struct TempFileManager {
-    fs::path root;
-
-    TempFileManager(fs::path path) : root(std::move(path)) {}
-
-    void create(const fs::path& file, std::error_code& ec) noexcept {
-        auto full_path = root / file;
-        auto parent = full_path.parent_path();
-        fs::create_directories(parent, ec);
-        if(ec)
-            return;
-
-        std::ofstream ofs(full_path, std::ios::app);
-
-        if(!ofs) {
-            ec = std::make_error_code(std::errc::io_error);
-        }
-        ofs.close();
-        fs::permissions(full_path,
-                        fs::perms::owner_exec | fs::perms::group_exec | fs::perms::others_exec,
-                        fs::perm_options::add,
-                        ec);
-    }
-
-    ~TempFileManager() {
-        std::error_code ec;
-        if(fs::exists(root, ec)) {
-            fs::remove_all(root, ec);
-        }
-    }
-
-    TempFileManager(const TempFileManager&) = delete;
-    TempFileManager& operator= (const TempFileManager&) = delete;
-};
-};  // namespace
-
 ut::suite<"resolver"> resolver = [] {
     const auto resolver = ct::Resolver{};
     std::error_code ec;
-    TempFileManager manager("./tmp");
+    ct::TempFileManager manager("./tmp");
     ut::test("test current dir") = [&] {
         manager.create("./tmp1", ec);
         ut::expect(!ec);

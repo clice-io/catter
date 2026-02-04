@@ -122,15 +122,20 @@ target("catter")
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
+target("ut-support")
+    set_kind("headeronly")
+    add_includedirs("tests/unit/support/", {public = true})
+
 
 target("ut-catter")
     set_default(false)
     set_kind("binary")
     add_files("tests/unit/catter/**.cc")
     add_packages("boost_ut")
-    add_deps("catter-core", "common")
+    add_deps("catter-core", "common", "ut-support")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
+    add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
     add_rules("build.js", {js_target = "build-js-test"})
     add_files("api/src/*.ts", "api/test/*.ts", "api/test/res/**/*.txt")
 
@@ -141,8 +146,7 @@ target("ut-hook-unix")
     set_kind("binary")
     add_files("tests/unit/unix-hook/**.cc")
     add_packages("boost_ut")
-    add_deps("common")
-    add_deps("catter-hook-unix-support")
+    add_deps("common", "catter-hook-unix-support", "ut-support")
     if is_plat("linux", "macosx") then
         add_tests("default")
     end

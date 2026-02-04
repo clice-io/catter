@@ -5,4 +5,5 @@
 namespace catter::config::data {
 /// Use in test, the path of js test files
 constexpr std::string_view js_test_path = JS_TEST_PATH;
+constexpr std::string_view js_test_res_path = JS_TEST_RES_PATH;
 }  // namespace catter::config::data
