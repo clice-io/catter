@@ -1,5 +1,6 @@
 #include "./linker.h"
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
 #include <expected>

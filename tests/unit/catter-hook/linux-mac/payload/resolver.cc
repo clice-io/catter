@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <system_error>
 
 namespace fs = std::filesystem;
