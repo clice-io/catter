@@ -122,34 +122,7 @@ target("catter")
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
-target("ut-support")
-    set_kind("headeronly")
-    add_includedirs("tests/unit/support/", {public = true})
 
-
-target("ut-catter")
-    set_default(false)
-    set_kind("binary")
-    add_files("tests/unit/catter/**.cc")
-    add_packages("eventide")
-    add_deps("catter-core", "common", "ut-support")
-
-    add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
-    add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
-    add_rules("build.js", {js_target = "build-js-test"})
-    add_files("api/src/*.ts", "api/test/*.ts", "api/test/res/**/*.txt")
-
-    add_tests("default")
-
-target("ut-hook-unix")
-    set_default(false)
-    set_kind("binary")
-    add_files("tests/unit/unix-hook/**.cc")
-    add_packages("eventide")
-    add_deps("common", "catter-hook-unix-support", "ut-support")
-    if is_plat("linux", "macosx") then
-        add_tests("default")
-    end
 
 
 target("catter-hook-win64")
@@ -161,18 +134,7 @@ target("catter-hook-win64")
     add_packages("microsoft-detours")
     add_cxxflags("-fno-exceptions", "-fno-rtti")
 
-target("catter-hook-unix-support")
-    set_default(is_plat("linux", "macosx"))
-    set_kind("object")
-    if is_mode("debug") then
-        add_deps("common")
-    end
-    if is_plat("linux") then
-        add_syslinks("dl")
-    end
-    add_includedirs("src/catter-hook/", { public = true })
-    add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
-    add_files("src/catter-hook/linux-mac/payload/*.cc")
+
 
 
 target("catter-hook-unix")
@@ -228,6 +190,62 @@ target("catter-proxy")
     add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/main.cc", "src/catter-proxy/constructor.cc")
+
+target("ut-support")
+    set_kind("headeronly")
+    add_includedirs("tests/unit/support/", {public = true})
+
+
+target("ut-common")
+    set_default(false)
+    set_kind("binary")
+    add_files("tests/unit/common/**.cc")
+    add_packages("eventide")
+    add_deps("common", "ut-support")
+
+target("ut-catter")
+    set_default(false)
+    set_kind("binary")
+    add_files("tests/unit/catter/**.cc")
+    add_packages("eventide")
+    add_deps("catter-core", "common", "ut-support")
+
+    add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
+    add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
+    add_rules("build.js", {js_target = "build-js-test"})
+    add_files("api/src/*.ts", "api/test/*.ts")
+
+    add_tests("default")
+
+target("ut-catter-hook-unix")
+    set_default(is_plat("linux", "macosx"))
+    set_kind("object")
+    if is_plat("linux") then
+        add_syslinks("dl")
+    end
+    add_includedirs("src/catter-hook/", { public = true })
+    add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
+    add_files("src/catter-hook/linux-mac/payload/*.cc")
+    add_files("tests/unit/catter-hook/linux-mac/payload/*.cc")
+
+    add_packages("eventide")
+    add_deps("common", "ut-support")
+    
+target("ut-catter-hook")
+    set_default(false)
+    set_kind("binary")
+
+    if is_plat("windows") then
+        -- skip
+    elseif is_plat("linux", "macosx") then
+        add_deps("ut-catter-hook-unix")
+    end
+    add_files("tests/unit/catter-hook/main.cc")
+
+    add_packages("eventide")
+    add_deps("common", "ut-support")
+
+    add_tests("default")
 
 rule("build.js")
     set_extensions(".ts", ".d.ts", ".js", ".txt")
