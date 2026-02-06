@@ -1,18 +1,17 @@
+# tombi: format.rules.table-keys-order.disabled = true
 [workspace]
 name = "catter"
 version = "0.0.1"
 description = "A new tool to capture C++ compilation command"
 authors = [
-    "star9029 <hengxing9029@outlook.com>",
-    "clice contributors <clice@clice.io>",
+  "star9029 <hengxing9029@outlook.com>",
+  "clice contributors <clice@clice.io>",
 ]
-
 license = "Apache-2.0"
 license-file = "LICENSE"
 readme = "README.md"
 documentation = "https://clice.io"
 repository = "https://github.com/clice-io/catter"
-
 channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
@@ -30,6 +29,13 @@ clangxx = "==20.1.8"
 lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
+libcxx = "==20.1.8"
+
+[target.unix.activation.env]
+PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
+
+[target.win.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
 
 [feature.dev.dependencies]
 python = ">=3.14.2,<3.15"
@@ -37,42 +43,39 @@ python = ">=3.14.2,<3.15"
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
 
+[feature.dev.tasks]
+check = "pre-commit run --all-files"
+test = "xmake test --verbose"
+
 [environments]
 default = []
 dev = ["dev", "default"]
 
-[feature.dev.tasks]
-check = "pre-commit run --all-files"
-test = "xmake test --verbose"
+[tasks]
+npm-install = { cmd = "pnpm install", inputs = [
+  "pnpm-lock.yaml",
+  "package.json"
+] }
+build = "xmake --verbose --diagnosis"
 
 [tasks.configure]
 args = ["build_type"]
 cmd = "xmake config --clean --yes --mode={{ build_type }}{% if pixi.is_osx %} --toolchain=clang{% endif %}"
 
-[tasks]
-npm-install = { cmd = "pnpm install", inputs = ["pnpm-lock.yaml", "package.json"] }
-build = "xmake --verbose --diagnosis"
-
 [tasks.ci-build]
 args = ["build_type"]
 depends-on = [
-    { task = "npm-install" },
-    { task = "configure", args = ["{{ build_type }}"] },
-    { task = "build" },
-    { task = "test" },
+  { task = "npm-install" },
+  { task = "configure", args = ["{{ build_type }}"] },
+  { task = "build" },
+  { task = "test" },
 ]
 
 [tasks.ci-check]
 depends-on = [
-    { task = "npm-install" },
-    { task = "check" },
+  { task = "npm-install" },
+  { task = "check" },
 ]
-
-[target.unix.activation.env]
-PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
-
-[target.win.activation.env]
-PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
 
 [tasks.build-js-lib]
 cmd = "rm -rf ./api/output && run-p bundle-dts bundle-js"

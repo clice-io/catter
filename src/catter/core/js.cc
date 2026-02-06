@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <format>
+#include <print>
 #include <quickjs.h>
 #include "config/js-lib.h"
 #include "apitool.h"
@@ -36,6 +37,7 @@ void init_qjs(const RuntimeConfig& config) {
     auto js_lib_trim =
         config::data::js_lib.substr(0, config::data::js_lib.find_last_not_of('\0') + 1);
     // init js lib
+
     ctx.eval(js_lib_trim, "catter", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
     ctx.eval("import * as catter from 'catter'; globalThis.__catter_mod = catter;",
              "get-mod.js",

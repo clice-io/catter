@@ -1,4 +1,0 @@
-Alpha!
-Beta!
-Kid A;
-end;

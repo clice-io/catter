@@ -1,108 +1,51 @@
 #include "command.h"
-#include "buffer.h"
-#include "linux-mac/debug.h"
-#include "linux-mac/config.h"
+#include "session.h"
+#include <format>
+
+namespace {
+void push_proxy_args(catter::CmdBuilder::command::ArgvTy& argv,
+                     catter::Session& sess,
+                     std::string_view exec_path,
+                     bool error = false) {
+    argv.emplace_back(sess.proxy_path);
+    argv.emplace_back("-p");
+    argv.emplace_back(sess.self_id);
+    argv.emplace_back("--exec");
+    argv.emplace_back(exec_path);
+    if(!error) {
+        argv.emplace_back("--");
+    }
+}
+};  // namespace
+
+namespace fs = std::filesystem;
 
 namespace catter {
 
-const char* CmdBuilder::store_arg(Buffer& buf, const char* str) noexcept {
-    if(append_argv_ptr >= argv + MAX_ARGC - 1)  // reserve null
-        return nullptr;
-
-    const char* stored = buf.store(str);
-    if(!stored)
-        return nullptr;
-
-    *append_argv_ptr++ = const_cast<char*>(stored);
-    return stored;
-}
-
-CmdBuilder::CmdBuilder(const char* proxy_path, const char* self_id) noexcept {
-
-    append_ptr = cmd_buf_area;
-    append_argv_ptr = argv;
-
-    Buffer buf(cmd_buf_area, cmd_buf_area + BUF_SIZE);
-
-    // at lease we provide a space enough for proxy_path, -p, self_id, "", and null
-    // therefore we do not check the return value here
-    executable_path_ptr = store_arg(buf, proxy_path);
-    store_arg(buf, "-p");
-    store_arg(buf, self_id);
-
-    append_ptr = const_cast<char*>(buf.store(""));
-}
-
-CmdBuilder::command CmdBuilder::proxy_str(const char* path, char* const* argv_in) noexcept {
-
-    auto argv_backup = append_argv_ptr;
-    auto ptr_backup = append_ptr;
-
-    Buffer buf(append_ptr, cmd_buf_area + BUF_SIZE);
-
-    if(!store_arg(buf, "--") || !store_arg(buf, path)) {
-        WARN("Overflow when building proxy command");
-        goto rollback;
+CmdBuilder::command CmdBuilder::proxy_cmd(const fs::path& path, ArgvRef argv) {
+    command cmd;
+    cmd.path = session_.proxy_path;
+    push_proxy_args(cmd.argv, session_, path.string());
+    for(const auto arg: argv) {
+        cmd.argv.emplace_back(arg);
     }
+    return cmd;
+}
 
-    for(unsigned i = 1; argv_in[i]; ++i) {
-        if(!store_arg(buf, argv_in[i])) {
-            WARN("Overflow when building proxy command args");
-            goto rollback;
+CmdBuilder::command CmdBuilder::error_cmd(const char* msg, const fs::path& path, ArgvRef argv) {
+    command cmd;
+    cmd.path = session_.proxy_path;
+    push_proxy_args(cmd.argv, session_, path.string(), true);
+    std::string res_msg = std::format("Catter Proxy Error: {}\n", msg);
+    if(!argv.empty()) {
+        res_msg.append(std::format("in command: "));
+        for(const auto arg: argv) {
+            res_msg += arg;
+            res_msg += ' ';
         }
     }
-    *append_argv_ptr++ = nullptr;
-    append_argv_ptr = argv_backup;
-    append_ptr = ptr_backup;
-    INFO("Built proxy command:");
-    for(auto it = this->argv; *it != nullptr; ++it) {
-        INFO("arg: {}", *it);
-    }
-    return {executable_path_ptr, this->argv};
-
-rollback:
-    append_argv_ptr = argv_backup;
-    append_ptr = ptr_backup;
-    return error_str("Overflow when building command", path);
-}
-
-CmdBuilder::command CmdBuilder::error_str(const char* msg,
-                                          const char* path,
-                                          char* const* argv_in) noexcept {
-
-    auto* argv_backup = append_argv_ptr;
-    char* ptr_backup = append_ptr;
-
-    Buffer buf(append_ptr, cmd_buf_area + BUF_SIZE);
-
-    buf.push(catter::config::hook::ERROR_PREFIX);
-    buf.push(" ");
-    buf.push(msg);
-    buf.push(" in executing:\n    --->");
-    buf.push(path);
-
-    if(argv_in != nullptr) {
-        for(unsigned i = 1; argv_in[i]; ++i) {
-            buf.push(" ");
-            buf.push(argv_in[i]);
-        }
-    }
-    auto res = buf.store("");
-
-    if(!res) {
-        ERROR("failed to build error string: buffer overflow");
-        append_argv_ptr = argv_backup;
-        append_ptr = ptr_backup;
-        return {path, argv_in};
-    }
-
-    *append_argv_ptr++ = append_ptr;
-    *append_argv_ptr++ = nullptr;
-
-    append_argv_ptr = argv_backup;
-    append_ptr = ptr_backup;
-    ERROR("{}", append_ptr);
-    return {executable_path_ptr, this->argv};
+    cmd.argv.emplace_back(res_msg);
+    return cmd;
 }
 
 }  // namespace catter

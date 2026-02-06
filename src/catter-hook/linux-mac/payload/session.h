@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <string_view>
+
 namespace catter {
 
 class Buffer;
@@ -10,20 +13,14 @@ class Buffer;
  * It does not own the memory (of the pointed areas).
  */
 struct Session {
-    /// we execute proxy_path instead of cmd
-    const char* proxy_path = nullptr;
-    /// we pass self_id to proxy_path
-    const char* self_id = nullptr;
-    const char* necessary_envp_entry[2] = {nullptr, nullptr};
+    std::string_view proxy_path{};
+    std::string_view self_id{};
 };
 
 namespace session {
 
 // Util method to initialize instance.
 void from(Session& session, const char** environment) noexcept;
-
-// Util method to store the values.
-void persist(Session& session, char* begin, char* end) noexcept;
 
 // Util method to check if session is initialized.
 bool is_valid(const Session& session) noexcept;

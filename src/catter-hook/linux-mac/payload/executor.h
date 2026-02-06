@@ -1,4 +1,4 @@
-
+#pragma once
 #include "command.h"
 #include "linker.h"
 #include "resolver.h"
@@ -24,8 +24,12 @@ namespace catter {
  *   and pass to these methods.
  */
 class Executor {
+    constexpr static auto default_resolver = Resolver{};
+
 public:
-    Executor(const Linker& linker, const Session& session, Resolver& resolver) noexcept;
+    Executor(const Linker& linker,
+             const Session& session,
+             const Resolver& resolver = default_resolver) noexcept;
 
     ~Executor() noexcept = default;
 
@@ -53,7 +57,8 @@ public:
 private:
     const catter::Linker& linker_;
     const catter::Session& session_;
-    catter::Resolver& resolver_;
+    const catter::Resolver& resolver_;
     catter::CmdBuilder cmd_builder_;
 };
+
 }  // namespace catter

@@ -8,69 +8,71 @@
 
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <expected>
 #include <limits.h>
+#include <span>
 #include <unistd.h>
 
 namespace {
 
-#define INIT_EXEC() CmdBuilder::command final_cmd_or_error = {nullptr, nullptr};
+#define ELSE_RETURN(NAME, OPTION)                                                                  \
+    auto NAME##_res = OPTION;                                                                      \
+    if(!NAME##_res.has_value()) {                                                                  \
+        errno = NAME##_res.error();                                                                \
+        return -1;                                                                                 \
+    }                                                                                              \
+    auto NAME = NAME##_res.value();
 
-#define CHECK_SESSION(SESSION_, EXEC, ARGV)                                                        \
-    do {                                                                                           \
-        if(!catter::session::is_valid(SESSION_)) {                                                 \
-            final_cmd_or_error = cmd_builder_.error_str(                                           \
-                "invalid enviroment variables of hook library, lost required value",               \
-                EXEC,                                                                              \
-                ARGV);                                                                             \
-        }                                                                                          \
-    } while(false)
+std::expected<catter::CmdBuilder::command, int>
+    precheck(const catter::Session& sess,
+             const char* str,
+             catter::CmdBuilder::ArgvRef argv) noexcept {
+    if(str == nullptr) {
+        errno = EFAULT;
+        return std::unexpected(-1);
+    }
+    if(!catter::session::is_valid(sess)) {
+        return catter::CmdBuilder(sess).error_cmd(
+            "invalid environment of hook library, lost required value",
+            str,
+            argv);
+    }
+    return {};
+}
 
-#define CHECK_POINTER(PTR_)                                                                        \
-    do {                                                                                           \
-        if(nullptr == (PTR_)) {                                                                    \
-            errno = EFAULT;                                                                        \
-            return -1;                                                                             \
-        }                                                                                          \
-    } while(false)
-
-#define CHECK_EXEC_RESULT(RES_, EXEC, ARGV)                                                        \
-    do {                                                                                           \
-        INFO("CHECK_EXEC_RESULT");                                                                 \
-        if(!RES_.has_value()) {                                                                    \
-            final_cmd_or_error =                                                                   \
-                cmd_builder_.error_str("Unable to locate executable", EXEC, ARGV);                 \
-            return RES_.error();                                                                   \
-        }                                                                                          \
-    } while(false)
+catter::CmdBuilder::ArgvRef spanify(char* const* argv) {
+    int argc = 0;
+    if(argv == nullptr) {
+        return {};
+    }
+    while(argv[argc] != 0) {
+        argc++;
+    }
+    return std::span(argv, argc);
+}
 
 }  // namespace
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvla"
 
 namespace catter {
 
 /// We separate the log and execute process, ensuring that even if the logging fails,
 /// the execution can still proceed.
-Executor::Executor(const Linker& linker, const Session& session, Resolver& resolver) noexcept :
-    linker_(linker), session_(session), resolver_(resolver),
-    cmd_builder_(session.proxy_path, session_.self_id) {}
+Executor::Executor(const Linker& linker,
+                   const Session& session,
+                   const Resolver& resolver /* = {}*/) noexcept :
+    linker_(linker), session_(session), resolver_(resolver), cmd_builder_(session) {}
 
 int Executor::execve(const char* path, char* const* argv, char* const* envp) {
-
-    INIT_EXEC();
-    CHECK_POINTER(path);
-    CHECK_SESSION(session_, path, argv);
-
-    auto executable_res = resolver_.from_current_directory(path);
-    CHECK_EXEC_RESULT(executable_res, path, argv);
+    auto argv_ref = spanify(argv);
+    ELSE_RETURN(cmd, precheck(session_, path, argv_ref))
+    ELSE_RETURN(executable, resolver_.from_current_directory(path));
     // if no error, we build it
-    if(!final_cmd_or_error.valid()) {
-        final_cmd_or_error = cmd_builder_.proxy_str(executable_res.value(), argv);
+    if(!cmd.valid()) {
+        cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
     }
-    auto [new_path, new_argv] = final_cmd_or_error;
-    auto run_res = linker_.execve(new_path, new_argv, envp);
+    auto run_res =
+        linker_.execve(cmd.path.c_str(), const_cast<decltype(argv)>(cmd.c_argv().data()), envp);
     if(!run_res.has_value()) {
         ERROR("execve failed: {}", run_res.error());
         errno = ENOSYS;
@@ -80,16 +82,15 @@ int Executor::execve(const char* path, char* const* argv, char* const* envp) {
 }
 
 int Executor::execvpe(const char* file, char* const* argv, char* const* envp) {
-    INIT_EXEC();
-    CHECK_POINTER(file);
-    CHECK_SESSION(session_, file, argv);
-    auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
-    CHECK_EXEC_RESULT(executable_res, file, argv);
-    if(!final_cmd_or_error.valid()) {
-        final_cmd_or_error = cmd_builder_.proxy_str(executable_res.value(), argv);
+    auto argv_ref = spanify(argv);
+    ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
+    ELSE_RETURN(executable, resolver_.from_path(file, const_cast<const char**>(envp)));
+    // if no error, we build it
+    if(!cmd.valid()) {
+        cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
     }
-    auto [new_path, new_argv] = final_cmd_or_error;
-    auto run_res = linker_.execve(new_path, new_argv, envp);
+    auto run_res =
+        linker_.execve(cmd.path.c_str(), const_cast<decltype(argv)>(cmd.c_argv().data()), envp);
     if(!run_res.has_value()) {
         ERROR("execvpe failed: {}", run_res.error());
         errno = ENOSYS;
@@ -102,18 +103,17 @@ int Executor::execvP(const char* file,
                      const char* search_path,
                      char* const* argv,
                      char* const* envp) {
-    INIT_EXEC();
-    CHECK_POINTER(file);
-    CHECK_SESSION(session_, file, argv);
-
-    auto executable_res = resolver_.from_search_path(file, search_path);
-    CHECK_EXEC_RESULT(executable_res, file, argv);
-    if(!final_cmd_or_error.valid()) {
-        final_cmd_or_error = cmd_builder_.proxy_str(executable_res.value(), argv);
+    auto argv_ref = spanify(argv);
+    ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
+    ELSE_RETURN(executable, resolver_.from_search_path(file, search_path));
+    // if no error, we build it
+    if(!cmd.valid()) {
+        cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
     }
-    auto [new_path, new_argv] = final_cmd_or_error;
-    auto run_res = linker_.execve(new_path, new_argv, envp);
+    auto run_res =
+        linker_.execve(cmd.path.c_str(), const_cast<decltype(argv)>(cmd.c_argv().data()), envp);
     if(!run_res.has_value()) {
+        ERROR("execvP failed: {}", run_res.error());
         errno = ENOSYS;
         return -1;
     }
@@ -126,19 +126,22 @@ int Executor::posix_spawn(pid_t* pid,
                           const posix_spawnattr_t* attrp,
                           char* const* argv,
                           char* const* envp) {
-    INIT_EXEC();
-    CHECK_POINTER(path);
-    CHECK_SESSION(session_, path, argv);
-
-    auto executable_res = resolver_.from_current_directory(path);
-    CHECK_EXEC_RESULT(executable_res, path, argv);
-    if(!final_cmd_or_error.valid()) {
-        final_cmd_or_error = cmd_builder_.proxy_str(executable_res.value(), argv);
+    auto argv_ref = spanify(argv);
+    ELSE_RETURN(cmd, precheck(session_, path, argv_ref));
+    ELSE_RETURN(executable, resolver_.from_current_directory(path));
+    // if no error, we build it
+    if(!cmd.valid()) {
+        cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
     }
-    auto [new_path, new_argv] = final_cmd_or_error;
-    auto run_res = linker_.posix_spawn(pid, new_path, file_actions, attrp, new_argv, envp);
+    auto run_res = linker_.posix_spawn(pid,
+                                       cmd.path.c_str(),
+                                       file_actions,
+                                       attrp,
+                                       const_cast<decltype(argv)>(cmd.c_argv().data()),
+                                       envp);
     if(!run_res.has_value()) {
         errno = ENOSYS;
+        ERROR("posix_spawn failed: {}", run_res.error());
         return -1;
     }
     return run_res.value();
@@ -150,23 +153,24 @@ int Executor::posix_spawnp(pid_t* pid,
                            const posix_spawnattr_t* attrp,
                            char* const* argv,
                            char* const* envp) {
-    INIT_EXEC();
-    CHECK_POINTER(file);
-    CHECK_SESSION(session_, file, argv);
-
-    auto executable_res = resolver_.from_path(file, const_cast<const char**>(envp));
-    CHECK_EXEC_RESULT(executable_res, file, argv);
-    if(!final_cmd_or_error.valid()) {
-        final_cmd_or_error = cmd_builder_.proxy_str(executable_res.value(), argv);
+    auto argv_ref = spanify(argv);
+    ELSE_RETURN(cmd, precheck(session_, file, argv_ref));
+    ELSE_RETURN(executable, resolver_.from_path(file, const_cast<const char**>(envp)));
+    // if no error, we build it
+    if(!cmd.valid()) {
+        cmd = cmd_builder_.proxy_cmd(executable, argv_ref);
     }
-    auto [new_path, new_argv] = final_cmd_or_error;
-    auto run_res = linker_.posix_spawn(pid, new_path, file_actions, attrp, new_argv, envp);
+    auto run_res = linker_.posix_spawn(pid,
+                                       cmd.path.c_str(),
+                                       file_actions,
+                                       attrp,
+                                       const_cast<decltype(argv)>(cmd.c_argv().data()),
+                                       envp);
     if(!run_res.has_value()) {
         errno = ENOSYS;
+        ERROR("posix_spawnp failed: {}", run_res.error());
         return -1;
     }
     return run_res.value();
 }
 }  // namespace catter
-
-#pragma GCC diagnostic pop

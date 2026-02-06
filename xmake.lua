@@ -3,6 +3,8 @@ set_project("catter")
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
 set_allowedplats("windows", "linux", "macosx")
 
+set_languages("c++23")
+
 option("dev", {default = true})
 option("test", {default = true})
 
@@ -27,11 +29,15 @@ if has_config("dev") then
             set_toolset("ld", "lld-link")
             set_toolset("sh", "lld-link")
         end
-    elseif is_plat("macosx") then
-        -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
-        add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
-        add_ldflags("-fuse-ld=lld")
-        add_shflags("-fuse-ld=lld")
+    end
+end
+
+if is_plat("macosx") then
+    -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
+    set_toolchains("clang")
+    add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
+    add_ldflags("-fuse-ld=lld")
+    add_shflags("-fuse-ld=lld")
 
         add_requireconfs("**|cmake", {configs = {
             ldflags = "-fuse-ld=lld",
@@ -41,7 +47,6 @@ if has_config("dev") then
     end
 end
 
-set_languages("c++23")
 
 if is_mode("debug") and is_plat("linux", "macosx") then
     -- hook.so will use a static lib to log in debug mode
@@ -62,15 +67,43 @@ add_requires("libuv", {version = "v1.51.0"})
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 if has_config("test") then
-    add_requires("eventide")
+    add_requires("boost_ut", {version = "v2.3.1"})
 end
+
+target("catter-config")
+    set_kind("headeronly")
+    add_includedirs("src/common", {public = true})
+
+target("catter-option")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/option/**.cc")
+
+target("catter-opt-data")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_deps("catter-option")
+    add_files("src/common/opt-data/**/*.cc")
+
+target("catter-uv")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/uv/**.cc")
+    add_packages("libuv", {public = true})
+
+target("catter-util")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/util/**.cc")
+    add_packages("spdlog", {public = true})
 
 target("common")
     set_kind("static")
-    add_includedirs("src/common", {public = true})
-    add_files("src/common/**.cc")
-    add_packages("libuv", {public = true})
-    add_packages("spdlog", {public = true})
+    add_deps("catter-config", {public = true})
+    add_deps("catter-option", {public = true})
+    add_deps("catter-opt-data", {public = true})
+    add_deps("catter-uv", {public = true})
+    add_deps("catter-util", {public = true})
 
 target("catter-core")
     -- use object, avoid register invalid
@@ -90,19 +123,34 @@ target("catter")
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
+target("ut-support")
+    set_kind("headeronly")
+    add_includedirs("tests/unit/support/", {public = true})
+
 
 target("ut-catter")
     set_default(false)
     set_kind("binary")
     add_files("tests/unit/catter/**.cc")
-    add_packages("eventide")
-    add_deps("catter-core", "common")
+    add_packages("boost_ut")
+    add_deps("catter-core", "common", "ut-support")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
+    add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
     add_rules("build.js", {js_target = "build-js-test"})
     add_files("api/src/*.ts", "api/test/*.ts", "api/test/res/**/*.txt")
 
     add_tests("default")
+
+target("ut-hook-unix")
+    set_default(false)
+    set_kind("binary")
+    add_files("tests/unit/unix-hook/**.cc")
+    add_packages("boost_ut")
+    add_deps("common", "catter-hook-unix-support", "ut-support")
+    if is_plat("linux", "macosx") then
+        add_tests("default")
+    end
 
 
 target("catter-hook-win64")
@@ -114,20 +162,55 @@ target("catter-hook-win64")
     add_packages("microsoft-detours")
     add_cxxflags("-fno-exceptions", "-fno-rtti")
 
+target("catter-hook-unix-support")
+    set_default(is_plat("linux", "macosx"))
+    set_kind("object")
+    if is_mode("debug") then
+        add_deps("common")
+    end
+    if is_plat("linux") then
+        add_syslinks("dl")
+    end
+    add_includedirs("src/catter-hook/", { public = true })
+    add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
+    add_files("src/catter-hook/linux-mac/payload/*.cc")
+
+
 target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
+
     if is_mode("debug") then
         add_deps("common")
     end
 
+    add_cxxflags("-fvisibility=hidden")
+    add_cxxflags("-fvisibility-inlines-hidden")
+    add_cxflags("-ffunction-sections", "-fdata-sections")
+
     add_includedirs("src/catter-hook/")
     add_includedirs("src/catter-hook/linux-mac/payload/")
     add_files("src/catter-hook/linux-mac/payload/**.cc")
-    add_syslinks("dl")
-    if is_mode("release") then
-        add_cxxflags("-fvisibility=hidden")
-        add_cxxflags("-nostdlib++")
+
+    if is_plat("linux") then
+        add_shflags("-static-libstdc++", {force = true})
+        add_shflags("-static-libgcc", {force = true})
+
+        add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
+        add_syslinks("dl")
+        add_shflags("-Wl,--gc-sections", {force = true})
+    end
+
+    if is_plat("macosx") then
+        -- set_policy("check.auto_ignore_flags", false)
+        add_shflags("-nostdlib++", {force = true})
+        add_syslinks("System")
+        add_syslinks("c++abi")
+        local libcxx_lib = path.absolute("./.pixi/envs/default/lib/libc++.a")
+        add_shflags("-Wl,-force_load," .. libcxx_lib, {force = true})
+        add_shflags("-fuse-ld=lld")
+        add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true, force = true})
+        add_shflags("-Wl,-dead_strip", {force = true})
     end
 
 target("catter-hook")

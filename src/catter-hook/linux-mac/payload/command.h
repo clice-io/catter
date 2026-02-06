@@ -1,21 +1,37 @@
 #pragma once
-#include "buffer.h"
-#include <climits>
+#include "session.h"
+#include <filesystem>
+#include <span>
+#include <string>
+#include <vector>
 
 namespace catter {
 class CmdBuilder {
 public:
+    using ArgvRef = std::span<char* const>;
+
     struct command {
-        const char* path;
-        char* const* argv;
+        using ArgvTy = std::vector<std::string>;
+        std::string path;
+        ArgvTy argv;
 
         bool valid() const noexcept {
-            return path != nullptr;
+            return !path.empty();
+        }
+
+        std::vector<const char*> c_argv() const {
+            std::vector<const char*> res;
+            res.reserve(argv.size() + 1);
+            for(const auto& arg: argv) {
+                res.push_back(arg.c_str());
+            }
+            res.push_back(nullptr);
+            return res;
         }
     };
 
 public:
-    CmdBuilder(const char* proxy_path, const char* self_id) noexcept;
+    CmdBuilder(Session session) : session_(session) {};
     CmdBuilder(const CmdBuilder&) = delete;
     CmdBuilder& operator= (const CmdBuilder&) = delete;
     CmdBuilder(CmdBuilder&&) noexcept = delete;
@@ -29,7 +45,7 @@ public:
      * @return the command string.
      * @example /proxy_path -p self_id -- path arg1 arg2 ...
      */
-    command proxy_str(const char* path, char* const* argv) noexcept;
+    command proxy_cmd(const std::filesystem::path& path, ArgvRef argv);
     /**
      * Build the error command string.
      * @param msg error message.
@@ -39,22 +55,10 @@ public:
      * @example linux or mac error found in hook: msg in executing:
      *              --> path arg1 arg2 ...
      */
-    command error_str(const char* msg, const char* path, char* const* argv = nullptr) noexcept;
+    command error_cmd(const char* msg, const std::filesystem::path& path, ArgvRef argv = {});
 
 private:
-    // Helper function to store a string as an argument
-    const char* store_arg(Buffer& buf, const char* str) noexcept;
-
-private:
-    constexpr static auto BUF_SIZE = PATH_MAX * 100;
-    constexpr static auto MAX_ARGC = PATH_MAX;
-    constexpr static auto ARGV_RESERVED = 4;
-
-    char cmd_buf_area[BUF_SIZE]{0};
-    char* argv[MAX_ARGC]{nullptr};
-    char* append_ptr;
-    char** append_argv_ptr;
-    const char* executable_path_ptr;
+    Session session_;
 };
 
 }  // namespace catter
