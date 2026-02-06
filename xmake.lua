@@ -189,21 +189,27 @@ target("ut-catter")
 
     add_tests("default")
 
+
 target("ut-catter-hook-unix")
-    set_default(is_plat("linux", "macosx"))
-    set_kind("object")
+    set_default(false)
+    set_kind("binary")
     if is_plat("linux") then
         add_syslinks("dl")
     end
     add_includedirs("src/catter-hook/", { public = true })
     add_includedirs("src/catter-hook/linux-mac/payload/", { public = true })
     add_files("src/catter-hook/linux-mac/payload/*.cc")
-    add_files("tests/unit/catter-hook/linux-mac/payload/*.cc")
+
+    add_files("tests/unit/catter-hook/linux-mac/**.cc")
 
     add_packages("eventide")
     add_deps("common", "ut-support")
 
-target("ut-catter-hook")
+    if is_plat("linux", "macosx") then
+        add_tests("default")
+    end
+
+target("ut-catter-hook-win64")
     set_default(false)
     set_kind("binary")
 
@@ -212,12 +218,14 @@ target("ut-catter-hook")
     elseif is_plat("linux", "macosx") then
         add_deps("ut-catter-hook-unix")
     end
-    add_files("tests/unit/catter-hook/main.cc")
+    add_files("tests/unit/catter-hook/win/**.cc")
 
     add_packages("eventide")
     add_deps("common", "ut-support")
 
-    add_tests("default")
+    if is_plat("windows") then
+        add_tests("default")
+    end
 
 rule("build.js")
     set_extensions(".ts", ".d.ts", ".js", ".txt")
