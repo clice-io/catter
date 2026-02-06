@@ -282,7 +282,7 @@ package("eventide")
 
     add_deps("cpptrace v1.0.4")
     on_load(function (package)
-        package:add("cl::/Zc:preprocessor", "/Zc:preprocessor")
+        package:add_cxflags("cl::/Zc:preprocessor")
     end)
     on_install(function (package)
         local configs = {}
