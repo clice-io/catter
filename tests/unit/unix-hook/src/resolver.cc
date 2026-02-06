@@ -10,6 +10,7 @@
 
 namespace fs = std::filesystem;
 namespace ct = catter;
+
 namespace {
 const auto resolver = ct::Resolver{};
 std::error_code ec;
@@ -55,4 +56,4 @@ TEST_SUITE(resolver) {
         EXPECT_TRUE(!res2.has_value());
     };
 };
-}
+}  // namespace
