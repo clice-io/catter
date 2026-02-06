@@ -1,111 +1,112 @@
-#include "opt-data/catter-proxy/parser.h"
+
 #include "util.h"
 #include "util/output.h"
-#include <boost/ut.hpp>
-#include <opt-data/catter-proxy/table.h>
+#include "opt-data/catter-proxy/parser.h"
+
+#include <zest/zest.h>
+
 #include <string_view>
 #include <vector>
 
-using namespace boost;
 using namespace catter;
 using namespace std::literals::string_view_literals;
 
-static ut::suite<"opt-catter-proxy"> ocp = [] {
-    ut::test("option table has expected options") = [&] {
+TEST_SUITE(opt_catter_proxy) {
+    TEST_CASE(option_table_has_expected_options) {
         auto argv = std::vector<std::string>{"-p", "1234"};
         optdata::catter_proxy::catter_proxy_opt_table.parse_args(
             argv,
-            [](std::expected<opt::ParsedArgument, std::string> arg) {
-                ut::expect(arg.has_value());
+            [&](std::expected<opt::ParsedArgument, std::string> arg) {
+                EXPECT_TRUE(arg.has_value());
                 if(arg.has_value()) {
-                    ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_PARENT_ID);
-                    ut::expect(arg->values.size() == 1);
-                    ut::expect(arg->values[0] == "1234");
-                    ut::expect(arg->get_spelling_view() == "-p");
-                    ut::expect(arg->index == 0);
+                    EXPECT_TRUE(arg->option_id.id() == optdata::catter_proxy::OPT_PARENT_ID);
+                    EXPECT_TRUE(arg->values.size() == 1);
+                    EXPECT_TRUE(arg->values[0] == "1234");
+                    EXPECT_TRUE(arg->get_spelling_view() == "-p");
+                    EXPECT_TRUE(arg->index == 0);
                 }
             });
         argv = split2vec("--exec /bin/ls");
         optdata::catter_proxy::catter_proxy_opt_table.parse_args(
             argv,
-            [](std::expected<opt::ParsedArgument, std::string> arg) {
-                ut::expect(arg.has_value());
-                ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_EXEC);
-                ut::expect(arg->values.size() == 1);
-                ut::expect(arg->values[0] == "/bin/ls");
-                ut::expect(arg->get_spelling_view() == "--exec");
-                ut::expect(arg->index == 0);
+            [&](std::expected<opt::ParsedArgument, std::string> arg) {
+                EXPECT_TRUE(arg.has_value());
+                EXPECT_TRUE(arg->option_id.id() == optdata::catter_proxy::OPT_EXEC);
+                EXPECT_TRUE(arg->values.size() == 1);
+                EXPECT_TRUE(arg->values[0] == "/bin/ls");
+                EXPECT_TRUE(arg->get_spelling_view() == "--exec");
+                EXPECT_TRUE(arg->index == 0);
             });
 
         argv = split2vec("-p 12 --exec /usr/bin/clang++ -- clang++ --version");
         optdata::catter_proxy::catter_proxy_opt_table.parse_args(
             argv,
-            [](std::expected<opt::ParsedArgument, std::string> arg) {
-                ut::expect(arg.has_value());
+            [&](std::expected<opt::ParsedArgument, std::string> arg) {
+                EXPECT_TRUE(arg.has_value());
                 if(arg->option_id.id() == optdata::catter_proxy::OPT_PARENT_ID) {
-                    ut::expect(arg->values.size() == 1);
-                    ut::expect(arg->values[0] == "12");
-                    ut::expect(arg->get_spelling_view() == "-p");
-                    ut::expect(arg->index == 0);
+                    EXPECT_TRUE(arg->values.size() == 1);
+                    EXPECT_TRUE(arg->values[0] == "12");
+                    EXPECT_TRUE(arg->get_spelling_view() == "-p");
+                    EXPECT_TRUE(arg->index == 0);
                 } else if(arg->option_id.id() == optdata::catter_proxy::OPT_EXEC) {
-                    ut::expect(arg->values.size() == 1);
-                    ut::expect(arg->values[0] == "/usr/bin/clang++");
-                    ut::expect(arg->get_spelling_view() == "--exec");
-                    ut::expect(arg->index == 2);
+                    EXPECT_TRUE(arg->values.size() == 1);
+                    EXPECT_TRUE(arg->values[0] == "/usr/bin/clang++");
+                    EXPECT_TRUE(arg->get_spelling_view() == "--exec");
+                    EXPECT_TRUE(arg->index == 2);
                 } else {
-                    ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_INPUT);
-                    ut::expect(arg->get_spelling_view() == "--");
-                    ut::expect(arg->values.size() == 2);
-                    ut::expect(arg->index == 4);
+                    EXPECT_TRUE(arg->option_id.id() == optdata::catter_proxy::OPT_INPUT);
+                    EXPECT_TRUE(arg->get_spelling_view() == "--");
+                    EXPECT_TRUE(arg->values.size() == 2);
+                    EXPECT_TRUE(arg->index == 4);
                 }
             });
     };
-    ut::test("test unknown option") = [&] {
+    TEST_CASE(test_unknown_option) {
         auto argv = split2vec("--unknown-option value");
         optdata::catter_proxy::catter_proxy_opt_table.parse_args(
             argv,
-            [](std::expected<opt::ParsedArgument, std::string> arg) {
-                ut::expect(arg.has_value());
+            [&](std::expected<opt::ParsedArgument, std::string> arg) {
+                EXPECT_TRUE(arg.has_value());
                 if(arg->option_id.id() == optdata::catter_proxy::OPT_UNKNOWN) {
-                    ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_UNKNOWN);
-                    ut::expect(arg->get_spelling_view() == "--unknown-option");
-                    ut::expect(arg->values.size() == 0);
-                    ut::expect(arg->index == 0);
+                    EXPECT_TRUE(arg->option_id.id() == optdata::catter_proxy::OPT_UNKNOWN);
+                    EXPECT_TRUE(arg->get_spelling_view() == "--unknown-option");
+                    EXPECT_TRUE(arg->values.size() == 0);
+                    EXPECT_TRUE(arg->index == 0);
                 } else {
-                    ut::expect(arg->option_id.id() == optdata::catter_proxy::OPT_INPUT);
-                    ut::expect(arg->get_spelling_view() == "value");
-                    ut::expect(arg->values.size() == 0);
-                    ut::expect(arg->index == 1);
+                    EXPECT_TRUE(arg->option_id.id() == optdata::catter_proxy::OPT_INPUT);
+                    EXPECT_TRUE(arg->get_spelling_view() == "value");
+                    EXPECT_TRUE(arg->values.size() == 0);
+                    EXPECT_TRUE(arg->index == 1);
                 }
             });
     };
-    ut::test("test missing value") = [&] {
+    TEST_CASE(test_missing_value) {
         auto argv = split2vec("-p");
         optdata::catter_proxy::catter_proxy_opt_table.parse_args(
             argv,
-            [](std::expected<opt::ParsedArgument, std::string> arg) {
-                ut::expect(!arg.has_value());
+            [&](std::expected<opt::ParsedArgument, std::string> arg) {
+                EXPECT_TRUE(!arg.has_value());
                 catter::output::blueLn("Test Error: {}", arg.error());
             });
     };
 };
 
-static ut::suite<"opt-catter-proxy-parser"> ocp_parser = [] {
-    ut::test("parse_opt success") = [&] {
+TEST_SUITE(opt_catter_proxy_parser) {
+    TEST_CASE(parse_opt_success) {
         char* const argv[] =
             {(char*)"", (char*)"-p", (char*)"5678", (char*)"--exec", (char*)"/bin/echo", nullptr};
         auto res = optdata::catter_proxy::parse_opt(argv);
-        ut::expect(res.has_value());
+        EXPECT_TRUE(res.has_value());
         if(res.has_value()) {
-            ut::expect(res->parent_id == "5678");
-            ut::expect(res->executable == std::filesystem::path("/bin/echo"));
-            ut::expect(res->raw_argv_or_err.has_value());
+            EXPECT_TRUE(res->parent_id == "5678");
+            EXPECT_TRUE(res->executable == std::filesystem::path("/bin/echo"));
+            EXPECT_TRUE(res->raw_argv_or_err.has_value());
             if(res->raw_argv_or_err.has_value()) {
-                ut::expect(res->raw_argv_or_err->size() == 0);
+                EXPECT_TRUE(res->raw_argv_or_err->size() == 0);
             }
         }
     };
-    ut::test("parse_opt with input args") = [&] {
+    TEST_CASE(parse_opt_with_input_args) {
         char* const argv[] = {(char*)"",
                               (char*)"-p",
                               (char*)"91011",
@@ -116,27 +117,27 @@ static ut::suite<"opt-catter-proxy-parser"> ocp_parser = [] {
                               (char*)"--verbose",
                               nullptr};
         auto res = optdata::catter_proxy::parse_opt(argv);
-        ut::expect(res.has_value());
+        EXPECT_TRUE(res.has_value());
         if(res.has_value()) {
-            ut::expect(res->parent_id == "91011");
-            ut::expect(res->executable == std::filesystem::path("/usr/bin/python3"));
-            ut::expect(res->raw_argv_or_err.has_value());
+            EXPECT_TRUE(res->parent_id == "91011");
+            EXPECT_TRUE(res->executable == std::filesystem::path("/usr/bin/python3"));
+            EXPECT_TRUE(res->raw_argv_or_err.has_value());
             if(res->raw_argv_or_err.has_value()) {
-                ut::expect(res->raw_argv_or_err->size() == 2);
-                ut::expect(res->raw_argv_or_err->at(0) == "script.py");
-                ut::expect(res->raw_argv_or_err->at(1) == "--verbose");
+                EXPECT_TRUE(res->raw_argv_or_err->size() == 2);
+                EXPECT_TRUE(res->raw_argv_or_err->at(0) == "script.py");
+                EXPECT_TRUE(res->raw_argv_or_err->at(1) == "--verbose");
             }
         }
     };
-    ut::test("parse_opt error handling") = [&] {
+    TEST_CASE(parse_opt_error_handling) {
         char* const argv[] = {(char*)"", (char*)"-p", nullptr};
         auto res = optdata::catter_proxy::parse_opt(argv);
-        ut::expect(!res.has_value());
+        EXPECT_TRUE(!res.has_value());
         if(!res.has_value()) {
             catter::output::blueLn("Expected Error: {}", res.error());
         }
     };
-    ut::test("parse opt pass an err") = [&] {
+    TEST_CASE(parse_opt_pass_an_err) {
         char* const argv[] = {(char*)"",
                               (char*)"-p",
                               (char*)"91011",
@@ -145,8 +146,8 @@ static ut::suite<"opt-catter-proxy-parser"> ocp_parser = [] {
                               (char*)"report err!",
                               nullptr};
         auto res = optdata::catter_proxy::parse_opt(argv);
-        ut::expect(res.has_value());
-        ut::expect(!res->raw_argv_or_err.has_value());
+        EXPECT_TRUE(res.has_value());
+        EXPECT_TRUE(!res->raw_argv_or_err.has_value());
         if(!res->raw_argv_or_err.has_value()) {
             catter::output::blueLn("Expected Error: {}", res->raw_argv_or_err.error());
         }

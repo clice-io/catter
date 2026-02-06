@@ -39,12 +39,11 @@ if is_plat("macosx") then
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
 
-        add_requireconfs("**|cmake", {configs = {
-            ldflags = "-fuse-ld=lld",
-            shflags = "-fuse-ld=lld",
-            cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
-        }})
-    end
+    add_requireconfs("**|cmake", {configs = {
+        ldflags = "-fuse-ld=lld",
+        shflags = "-fuse-ld=lld",
+        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
+    }})
 end
 
 
@@ -67,7 +66,7 @@ add_requires("libuv", {version = "v1.51.0"})
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 if has_config("test") then
-    add_requires("boost_ut", {version = "v2.3.1"})
+    add_requires("eventide")
 end
 
 target("catter-config")
@@ -132,7 +131,7 @@ target("ut-catter")
     set_default(false)
     set_kind("binary")
     add_files("tests/unit/catter/**.cc")
-    add_packages("boost_ut")
+    add_packages("eventide")
     add_deps("catter-core", "common", "ut-support")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
@@ -146,7 +145,7 @@ target("ut-hook-unix")
     set_default(false)
     set_kind("binary")
     add_files("tests/unit/unix-hook/**.cc")
-    add_packages("boost_ut")
+    add_packages("eventide")
     add_deps("common", "catter-hook-unix-support", "ut-support")
     if is_plat("linux", "macosx") then
         add_tests("default")

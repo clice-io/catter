@@ -1,11 +1,7 @@
-#include <cstdio>
-#include <print>
 #include <string>
 #include <string_view>
 
 #include "zest/zest.h"
-#include "eventide/loop.h"
-#include "eventide/stream.h"
 
 int main(int argc, char** argv) {
     std::string filter;

@@ -3,7 +3,6 @@
 #include <zest/macro.h>
 #include <zest/zest.h>
 
-
 using namespace catter;
 
 TEST_SUITE(rpc_data) {
