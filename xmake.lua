@@ -281,7 +281,9 @@ package("eventide")
     -- add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
 
     add_deps("cpptrace v1.0.4")
-
+    on_load(function (package)
+        package:add("cl::/Zc:preprocessor", "/Zc:preprocessor")
+    end)
     on_install(function (package)
         local configs = {}
         configs.dev = false
