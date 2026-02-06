@@ -9,7 +9,7 @@
 
 namespace fs = std::filesystem;
 
-TEST_SUITE(js) {
+TEST_SUITE(js_tests) {
     TEST_CASE(run_js_files) {
         auto js_path = fs::path(catter::config::data::js_test_path.data());
         auto js_path_res = fs::path(catter::config::data::js_test_res_path.data());
