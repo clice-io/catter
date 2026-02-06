@@ -133,9 +133,7 @@ target("catter-hook-unix")
         add_shflags("-Wl,--version-script=src/catter-hook/linux-mac/payload/inject/exports.map")
         add_syslinks("dl")
         add_shflags("-Wl,--gc-sections", {force = true})
-    end
-
-    if is_plat("macosx") then
+    elseif is_plat("macosx") then
         -- set_policy("check.auto_ignore_flags", false)
         add_shflags("-nostdlib++", {force = true})
         add_syslinks("System")
