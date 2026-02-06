@@ -202,6 +202,7 @@ target("ut-common")
     add_files("tests/unit/common/**.cc")
     add_packages("eventide")
     add_deps("common", "ut-support")
+    add_tests("default")
 
 target("ut-catter")
     set_default(false)

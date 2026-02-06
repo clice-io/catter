@@ -1,7 +1,7 @@
 #include <string>
 #include <string_view>
 
-#include "zest/zest.h"
+#include <zest/zest.h>
 
 int main(int argc, char** argv) {
     std::string filter;
