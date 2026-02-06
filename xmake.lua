@@ -230,7 +230,7 @@ target("ut-catter-hook-unix")
 
     add_packages("eventide")
     add_deps("common", "ut-support")
-    
+
 target("ut-catter-hook")
     set_default(false)
     set_kind("binary")
