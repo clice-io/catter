@@ -280,11 +280,12 @@ package("eventide")
     -- version from `git rev-list --count HEAD`
     -- add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
 
+    add_deps("libuv 1.51.0")
     add_deps("cpptrace v1.0.4")
-    on_load(function (package)
-        package:add("cxxflags", "cl::/Zc:preprocessor")
-    end)
+
     on_install(function (package)
+        package:add("cxflags", "cl::/Zc:preprocessor")
+
         local configs = {}
         configs.dev = false
         configs.test = false
