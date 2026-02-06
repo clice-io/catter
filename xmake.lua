@@ -27,20 +27,18 @@ if has_config("dev") then
             set_toolset("ld", "lld-link")
             set_toolset("sh", "lld-link")
         end
+    elseif is_plat("macosx") then
+        -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
+        add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
+        add_ldflags("-fuse-ld=lld")
+        add_shflags("-fuse-ld=lld")
+
+        add_requireconfs("**|cmake", {configs = {
+            ldflags = "-fuse-ld=lld",
+            shflags = "-fuse-ld=lld",
+            cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
+        }})
     end
-end
-
-if is_plat("macosx") then
-    -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
-    add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
-    add_ldflags("-fuse-ld=lld")
-    add_shflags("-fuse-ld=lld")
-
-    add_requireconfs("**|cmake", {configs = {
-        ldflags = "-fuse-ld=lld",
-        shflags = "-fuse-ld=lld",
-        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
-    }})
 end
 
 set_languages("c++23")
@@ -64,7 +62,7 @@ add_requires("libuv", {version = "v1.51.0"})
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 if has_config("test") then
-    add_requires("boost_ut", {version = "v2.3.1"})
+    add_requires("eventide")
 end
 
 target("common")
@@ -97,7 +95,7 @@ target("ut-catter")
     set_default(false)
     set_kind("binary")
     add_files("tests/unit/catter/**.cc")
-    add_packages("boost_ut")
+    add_packages("eventide")
     add_deps("catter-core", "common")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
@@ -198,4 +196,21 @@ rule("build.js")
             dependfile = target:dependfile(objectfile),
             changed = target:is_rebuilt(),
         })
+    end)
+
+package("eventide")
+    set_homepage("https://clice.io")
+    set_license("Apache-2.0")
+
+    set_urls("https://github.com/clice-io/eventide.git")
+    -- version from `git rev-list --count HEAD`
+    add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
+
+    add_deps("cpptrace v1.0.4")
+
+    on_install(function (package)
+        local configs = {}
+        configs.dev = false
+        configs.test = false
+        import("package.tools.xmake").install(package, configs, {target = "ztest"})
     end)
