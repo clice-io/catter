@@ -204,7 +204,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
+    -- add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
 
     add_deps("cpptrace v1.0.4")
 
@@ -212,5 +212,5 @@ package("eventide")
         local configs = {}
         configs.dev = false
         configs.test = false
-        import("package.tools.xmake").install(package, configs, {target = "ztest"})
+        import("package.tools.xmake").install(package, configs)
     end)

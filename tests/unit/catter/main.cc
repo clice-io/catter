@@ -1,8 +1,26 @@
-#include <boost/ut.hpp>
+#include <cstdio>
+#include <print>
+#include <string>
+#include <string_view>
 
-namespace ut = boost::ut;
+#include "zest/zest.h"
+#include "eventide/loop.h"
+#include "eventide/stream.h"
 
-int main(int argc, const char** argv) {
-    bool failed = ut::cfg<ut::override>.run();
-    return -failed;
+int main(int argc, char** argv) {
+    std::string filter;
+    constexpr std::string_view filter_prefix = "--test-filter=";
+    for(int i = 1; i < argc; ++i) {
+        std::string_view arg{argv[i]};
+        if(arg.starts_with(filter_prefix)) {
+            filter.assign(arg.substr(filter_prefix.size()));
+            continue;
+        }
+        if(arg == "--test-filter" && i + 1 < argc) {
+            filter.assign(argv[++i]);
+            continue;
+        }
+    }
+
+    return zest::Runner::instance().run_tests(filter);
 }

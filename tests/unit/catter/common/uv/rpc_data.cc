@@ -1,12 +1,13 @@
-#include <boost/ut.hpp>
-
 #include "uv/rpc_data.h"
 
-using namespace boost;
+#include <zest/macro.h>
+#include <zest/zest.h>
+
+
 using namespace catter;
 
-ut::suite<"rpc::data"> rpc_data = [] {
-    ut::test("serialize and deserialize command") = [] {
+TEST_SUITE(rpc_data) {
+    TEST_CASE(serialize_and_deserialize_command) {
         rpc::data::command cmd{
             .working_dir = "/home/user",
             .executable = "/bin/ls",
@@ -22,13 +23,14 @@ ut::suite<"rpc::data"> rpc_data = [] {
             offset += to_copy;
             return to_copy;
         });
-        ut::expect(deserialized.working_dir == cmd.working_dir);
-        ut::expect(deserialized.executable == cmd.executable);
-        ut::expect(deserialized.args == cmd.args);
-        ut::expect(deserialized.env == cmd.env);
+
+        EXPECT_TRUE(deserialized.working_dir == cmd.working_dir);
+        EXPECT_TRUE(deserialized.executable == cmd.executable);
+        EXPECT_TRUE(deserialized.args == cmd.args);
+        EXPECT_TRUE(deserialized.env == cmd.env);
     };
 
-    ut::test("serialize and deserialize action") = [] {
+    TEST_CASE(serialize_and_deserialize_action) {
         rpc::data::action act{
             .type = rpc::data::action::WRAP,
             .cmd = {.executable = "/bin/echo", .args = {"Hello, World!"}, .env = {}}
@@ -44,9 +46,9 @@ ut::suite<"rpc::data"> rpc_data = [] {
             return to_copy;
         });
 
-        ut::expect(deserialized.type == act.type);
-        ut::expect(deserialized.cmd.executable == act.cmd.executable);
-        ut::expect(deserialized.cmd.args == act.cmd.args);
-        ut::expect(deserialized.cmd.env == act.cmd.env);
+        EXPECT_TRUE(deserialized.type == act.type);
+        EXPECT_TRUE(deserialized.cmd.executable == act.cmd.executable);
+        EXPECT_TRUE(deserialized.cmd.args == act.cmd.args);
+        EXPECT_TRUE(deserialized.cmd.env == act.cmd.env);
     };
 };
