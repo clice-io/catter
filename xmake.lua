@@ -284,7 +284,9 @@ package("eventide")
     add_deps("cpptrace v1.0.4")
 
     on_install(function (package)
-        package:add("cxflags", "cl::/Zc:preprocessor")
+        if package:has_tool("cxx", "cl", "clang_cl") then
+            package:add("cxxflags", "/Zc:__cplusplus", "/Zc:preprocessor")
+        end
 
         local configs = {}
         configs.dev = false
