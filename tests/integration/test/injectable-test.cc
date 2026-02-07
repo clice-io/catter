@@ -99,7 +99,6 @@ using namespace std::string_view_literals;
 
 int main(int argc, const char** argv) {
     if(argc == 1) {
-        printf("%t\n");
         return -1;
     }
     // call by hook proxy

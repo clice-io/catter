@@ -14,7 +14,7 @@ def get_cmd_output(cmd: str, fn: Callable[[str], str]) -> str:
     except Exception as e:
         print(f"Error parsing output of  {cmd}: {e}")
     if not res:
-        raise RuntimeError("Could not find info from {cmd}")
+        raise RuntimeError(f"Could not find info from {cmd}")
     return res
 
 
