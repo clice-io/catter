@@ -24,7 +24,7 @@ def get_cmd_output(cmd: str, fn: Callable[[str], str]) -> str:
     except Exception as e:
         print(f"Error parsing output of {cmd}: {e}")
         print(f"Original output was: {process.stdout}")
-        raise RuntimeError(f"Could not parse info from {cmd}")
+        raise RuntimeError(f"Could not parse info from {cmd}") from e
 
 
 llvm_config = cfg.LLVMConfig(lit_config, config)
