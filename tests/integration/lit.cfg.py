@@ -67,7 +67,9 @@ if is_linux or is_macos:
     else:
         config.substitutions.append(("%cc", "g++ -std=c++23 %s -o %t"))
         if mode == "debug":
-            asan_path = get_cmd_output("g++ -print-file-name=libasan.so", lambda x: x)
+            asan_path = get_cmd_output(
+                "g++ -print-file-name=libasan.so", lambda x: x.strip()
+            )
             hook_path = f"{asan_path}:{hook_path}"
 
     inject_cmd_str = (
