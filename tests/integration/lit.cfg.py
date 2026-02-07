@@ -5,6 +5,7 @@ import subprocess
 import json
 from typing import Callable
 import lit.formats
+from lit.llvm import config as cfg
 
 
 def get_cmd_output(cmd: str, fn: Callable[[str], str]) -> str:
@@ -25,6 +26,8 @@ def get_cmd_output(cmd: str, fn: Callable[[str], str]) -> str:
         print(f"Original output was: {process.stdout}")
         raise RuntimeError(f"Could not parse info from {cmd}")
 
+
+llvm_config = cfg.LLVMConfig(lit_config, config)
 
 config.name = "Catter Integration Test"
 config.test_format = lit.formats.ShTest(True)
