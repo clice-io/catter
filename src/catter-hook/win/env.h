@@ -16,15 +16,15 @@ template <typename char_t>
 concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
 
 template <CharT char_t>
-constexpr char_t ENV_VAR_RPC_ID[] = {};
+constexpr char_t ENV_VAR_IPC_ID[] = {};
 
 template <>
-constexpr char ENV_VAR_RPC_ID<char>[] = "CATTER_RPC_ID";
+constexpr char ENV_VAR_IPC_ID<char>[] = "CATTER_IPC_ID";
 
 template <>
-constexpr wchar_t ENV_VAR_RPC_ID<wchar_t>[] = L"CATTER_RPC_ID";
+constexpr wchar_t ENV_VAR_IPC_ID<wchar_t>[] = L"CATTER_IPC_ID";
 
-using rpc_id_t = int64_t;
+using ipc_id_t = int64_t;
 
 }  // namespace
 }  // namespace catter::win

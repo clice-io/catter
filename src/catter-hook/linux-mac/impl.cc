@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
-#include "uv/rpc_data.h"
+#include "util/ipc-data.h"
 #include "util/crossplat.h"
 #include "util/log.h"
 
@@ -21,7 +21,7 @@
  * @param command The command to run
  * @return The exit code of the command
  */
-static int run_command(const catter::rpc::data::command& command) {
+static int run_command(const catter::ipc::data::command& command) {
     std::vector<char*> argv_ptrs;
     // add argv[0]
     argv_ptrs.push_back(const_cast<char*>(command.executable.c_str()));
@@ -59,7 +59,7 @@ static int run_command(const catter::rpc::data::command& command) {
 
 namespace catter::proxy::hook {
 
-void locate_exe(rpc::data::command& command) {
+void locate_exe(ipc::data::command& command) {
     std::string result;
     std::array<char, 128> buffer;
 
@@ -92,7 +92,7 @@ std::filesystem::path get_hook_path() {
            catter::config::hook::RELATIVE_PATH_OF_HOOK_LIB;
 }
 
-int run(rpc::data::command command, rpc::data::command_id_t id) {
+int run(ipc::data::command command, ipc::data::command_id_t id) {
     const auto lib_path = get_hook_path();
     LOG_INFO("new command id is: {}", id);
     // check hook_lib exists

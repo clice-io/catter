@@ -59,16 +59,16 @@ std::basic_string<char_t> concat_cmdline(const char_t* application_name,
 }
 
 template <CharT char_t>
-std::basic_string<char_t> get_rpc_id() {
+std::basic_string<char_t> get_ipc_id() {
     constexpr size_t buffer_size = 64;
     char_t buffer[buffer_size];
 
     if constexpr(std::is_same_v<char_t, char>) {
-        if(!GetEnvironmentVariableA(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
+        if(!GetEnvironmentVariableA(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size)) {
             // TODO: log
         }
     } else {
-        if(!GetEnvironmentVariableW(catter::win::ENV_VAR_RPC_ID<char_t>, buffer, buffer_size)) {
+        if(!GetEnvironmentVariableW(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size)) {
             // TODO: log
         }
     }
@@ -91,7 +91,7 @@ bool is_key_match(std::basic_string_view<char_t> entry, std::basic_string_view<c
 
 template <CharT char_t>
 std::vector<char_t> fix_env_block_helper(char_t* env_block,
-                                         const std::basic_string<char_t>& rpc_id_entry) {
+                                         const std::basic_string<char_t>& ipc_id_entry) {
     constexpr char_t char_zero = []() {
         if constexpr(std::is_same_v<char_t, char>) {
             return '\0';
@@ -109,13 +109,13 @@ std::vector<char_t> fix_env_block_helper(char_t* env_block,
 
         result.append_range(span);
         std::advance(current, span.size());
-        if(is_key_match<char_t>(sv, catter::win::ENV_VAR_RPC_ID<char_t>)) {
+        if(is_key_match<char_t>(sv, catter::win::ENV_VAR_IPC_ID<char_t>)) {
             found = true;
         }
     }
 
     if(!found) {
-        std::span<const char_t> span(rpc_id_entry.c_str(), rpc_id_entry.size() + 1);
+        std::span<const char_t> span(ipc_id_entry.c_str(), ipc_id_entry.size() + 1);
         result.append_range(span);
     }
 
@@ -135,20 +135,20 @@ auto fix_env_block(DWORD dwCreationFlags, void* lpEnvironment) {
     }
 
     if(dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) {
-        auto rpc_id_entry = std::format(L"{}={}",
-                                        catter::win::ENV_VAR_RPC_ID<wchar_t>,
-                                        catter::win::get_rpc_id<wchar_t>());
+        auto ipc_id_entry = std::format(L"{}={}",
+                                        catter::win::ENV_VAR_IPC_ID<wchar_t>,
+                                        catter::win::get_ipc_id<wchar_t>());
         auto ret =
             result{.raiiW = catter::win::fix_env_block_helper<wchar_t>((wchar_t*)lpEnvironment,
-                                                                       rpc_id_entry)};
+                                                                       ipc_id_entry)};
         ret.env_block = ret.raiiW.data();
         return ret;
     } else {
-        auto rpc_id_entry = std::format("{}={}",
-                                        catter::win::ENV_VAR_RPC_ID<char>,
-                                        catter::win::get_rpc_id<char>());
+        auto ipc_id_entry = std::format("{}={}",
+                                        catter::win::ENV_VAR_IPC_ID<char>,
+                                        catter::win::get_ipc_id<char>());
         auto ret = result{
-            .raiiA = catter::win::fix_env_block_helper<char>((char*)lpEnvironment, rpc_id_entry)};
+            .raiiA = catter::win::fix_env_block_helper<char>((char*)lpEnvironment, ipc_id_entry)};
         ret.env_block = ret.raiiA.data();
         return ret;
     }
@@ -181,7 +181,7 @@ struct CreateProcessA {
         auto converted_cmdline =
             std::format("{} -p {} -- {}",
                         catter::win::get_catter_exe_path().string(),
-                        catter::win::get_rpc_id<char>(),
+                        catter::win::get_ipc_id<char>(),
                         catter::win::concat_cmdline<char>(lpApplicationName, lpCommandLine));
 
         return target(nullptr,
@@ -217,7 +217,7 @@ struct CreateProcessW {
         auto converted_cmdline =
             std::format(L"{} -p {} -- {}",
                         catter::win::get_catter_exe_path().wstring(),
-                        catter::win::get_rpc_id<wchar_t>(),
+                        catter::win::get_ipc_id<wchar_t>(),
                         catter::win::concat_cmdline<wchar_t>(lpApplicationName, lpCommandLine));
 
         return target(nullptr,

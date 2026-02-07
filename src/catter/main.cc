@@ -19,14 +19,14 @@
 
 #include "js.h"
 
-#include "config/rpc.h"
+#include "config/ipc.h"
 #include "config/catter-proxy.h"
 
 #include "util/crossplat.h"
 #include "util/lazy.h"
 #include "util/serde.h"
 #include "uv/uv.h"
-#include "uv/rpc_data.h"
+#include "util/ipc-data.h"
 
 using namespace catter;
 
@@ -50,26 +50,26 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
 
     try {
         while(true) {
-            rpc::data::Request req = co_await Serde<rpc::data::Request>::co_deserialize(reader);
+            ipc::data::Request req = co_await Serde<ipc::data::Request>::co_deserialize(reader);
             switch(req) {
-                case rpc::data::Request::CREATE: {
-                    rpc::data::command_id_t parent_id =
-                        co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+                case ipc::data::Request::CREATE: {
+                    ipc::data::command_id_t parent_id =
+                        co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
 
                     std::println("ID [{}] created from [{}]", id, parent_id);
 
                     auto ret =
                         co_await uv::async::write(uv::cast<uv_stream_t>(client),
-                                                  Serde<rpc::data::command_id_t>::serialize(id));
+                                                  Serde<ipc::data::command_id_t>::serialize(id));
                     if(ret < 0) {
                         throw std::runtime_error(uv_strerror(ret));
                     }
                     break;
                 }
 
-                case rpc::data::Request::MAKE_DECISION: {
-                    rpc::data::command cmd =
-                        co_await Serde<rpc::data::command>::co_deserialize(reader);
+                case ipc::data::Request::MAKE_DECISION: {
+                    ipc::data::command cmd =
+                        co_await Serde<ipc::data::command>::co_deserialize(reader);
 
                     std::string line = cmd.executable;
 
@@ -77,30 +77,30 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                         line.append(std::format(" {}", arg));
                     }
 
-                    auto act = rpc::data::action{
-                        .type = rpc::data::action::INJECT,
+                    auto act = ipc::data::action{
+                        .type = ipc::data::action::INJECT,
                         .cmd = cmd,
                     };
 
                     std::println("ID [{}] decision: {}", id, line);
 
                     auto ret = co_await uv::async::write(uv::cast<uv_stream_t>(client),
-                                                         Serde<rpc::data::action>::serialize(act));
+                                                         Serde<ipc::data::action>::serialize(act));
 
                     if(ret < 0) {
                         throw std::runtime_error(uv_strerror(ret));
                     }
                     break;
                 }
-                case rpc::data::Request::FINISH: {
+                case ipc::data::Request::FINISH: {
                     int ret_code = co_await Serde<int>::co_deserialize(reader);
                     std::println("ID [{}] finish code: {}", id, ret_code);
                     break;
                 }
-                case rpc::data::Request::REPORT_ERROR: {
+                case ipc::data::Request::REPORT_ERROR: {
                     auto parent_id =
-                        co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
-                    auto cmd_id = co_await Serde<rpc::data::command_id_t>::co_deserialize(reader);
+                        co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
+                    auto cmd_id = co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
                     std::string error_msg = co_await Serde<std::string>::co_deserialize(reader);
                     std::println("ID [{}] from [{}] reported error: {}",
                                  cmd_id,
@@ -127,7 +127,7 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
 uv::async::Lazy<void> loop(std::string exe_path, std::vector<std::string> args) {
     auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
 
-    if(auto ret = uv_pipe_bind(server, catter::config::rpc::PIPE_NAME); ret < 0) {
+    if(auto ret = uv_pipe_bind(server, catter::config::ipc::PIPE_NAME); ret < 0) {
         std::println("Bind error: {}", uv_strerror(ret));
         co_return;
     }

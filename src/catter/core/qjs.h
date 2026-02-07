@@ -16,6 +16,7 @@
 #include <utility>
 #include <format>
 
+#include <reflection/name.h>
 #include <quickjs.h>
 
 #include "util/meta.h"
@@ -485,7 +486,7 @@ public:
         if(auto it = Register::find(rt); it != Register::end()) {
             id = it->second;
         } else {
-            auto class_name = std::format("qjs.{}", meta::type_name<Invocable&&>());
+            auto class_name = std::format("qjs.{}", refl::type_name<Invocable&&>());
             if constexpr(std::is_convertible_v<Invocable, Sign*> ||
                          std::is_lvalue_reference_v<Invocable&&>) {
                 JSClassDef def{class_name.c_str(),

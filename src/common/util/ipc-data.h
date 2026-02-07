@@ -4,7 +4,7 @@
 
 #include "util/serde.h"
 
-namespace catter::rpc::data {
+namespace catter::ipc::data {
 
 using command_id_t = int32_t;
 using thread_id_t = int32_t;
@@ -34,31 +34,31 @@ enum class Request : uint8_t {
     REPORT_ERROR,
     FINISH,
 };
-}  // namespace catter::rpc::data
+}  // namespace catter::ipc::data
 
 namespace catter {
 template <>
-struct Serde<rpc::data::Request> {
-    static std::vector<char> serialize(const rpc::data::Request& req) {
+struct Serde<ipc::data::Request> {
+    static std::vector<char> serialize(const ipc::data::Request& req) {
         return Serde<uint8_t>::serialize(static_cast<uint8_t>(req));
     }
 
     template <Reader Invocable>
-    static rpc::data::Request deserialize(Invocable&& reader) {
+    static ipc::data::Request deserialize(Invocable&& reader) {
         uint8_t value = Serde<uint8_t>::deserialize(std::forward<Invocable>(reader));
-        return static_cast<rpc::data::Request>(value);
+        return static_cast<ipc::data::Request>(value);
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<rpc::data::Request> co_deserialize(Invocable&& reader) {
+    static coro::Lazy<ipc::data::Request> co_deserialize(Invocable&& reader) {
         uint8_t value = co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader));
-        co_return static_cast<rpc::data::Request>(value);
+        co_return static_cast<ipc::data::Request>(value);
     }
 };
 
 template <>
-struct Serde<rpc::data::command> {
-    static std::vector<char> serialize(const rpc::data::command& cmd) {
+struct Serde<ipc::data::command> {
+    static std::vector<char> serialize(const ipc::data::command& cmd) {
         return merge_range_to_vector(Serde<std::string>::serialize(cmd.working_dir),
                                      Serde<std::string>::serialize(cmd.executable),
                                      Serde<std::vector<std::string>>::serialize(cmd.args),
@@ -66,8 +66,8 @@ struct Serde<rpc::data::command> {
     }
 
     template <Reader Invocable>
-    static rpc::data::command deserialize(Invocable&& reader) {
-        rpc::data::command cmd;
+    static ipc::data::command deserialize(Invocable&& reader) {
+        ipc::data::command cmd;
         cmd.working_dir = Serde<std::string>::deserialize(std::forward<Invocable>(reader));
         cmd.executable = Serde<std::string>::deserialize(std::forward<Invocable>(reader));
         cmd.args = Serde<std::vector<std::string>>::deserialize(std::forward<Invocable>(reader));
@@ -76,8 +76,8 @@ struct Serde<rpc::data::command> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<rpc::data::command> co_deserialize(Invocable&& reader) {
-        rpc::data::command cmd;
+    static coro::Lazy<ipc::data::command> co_deserialize(Invocable&& reader) {
+        ipc::data::command cmd;
         cmd.working_dir =
             co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
         cmd.executable =
@@ -91,28 +91,28 @@ struct Serde<rpc::data::command> {
 };
 
 template <>
-struct Serde<rpc::data::action> {
-    static std::vector<char> serialize(const rpc::data::action& act) {
+struct Serde<ipc::data::action> {
+    static std::vector<char> serialize(const ipc::data::action& act) {
         return merge_range_to_vector(Serde<uint8_t>::serialize(static_cast<uint8_t>(act.type)),
-                                     Serde<rpc::data::command>::serialize(act.cmd));
+                                     Serde<ipc::data::command>::serialize(act.cmd));
     }
 
     template <Reader Invocable>
-    static rpc::data::action deserialize(Invocable&& reader) {
-        using enum_type = decltype(rpc::data::action::type);
+    static ipc::data::action deserialize(Invocable&& reader) {
+        using enum_type = decltype(ipc::data::action::type);
         return {
             static_cast<enum_type>(Serde<uint8_t>::deserialize(std::forward<Invocable>(reader))),
-            Serde<rpc::data::command>::deserialize(std::forward<Invocable>(reader))};
+            Serde<ipc::data::command>::deserialize(std::forward<Invocable>(reader))};
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<rpc::data::action> co_deserialize(Invocable&& reader) {
-        using enum_type = decltype(rpc::data::action::type);
-        rpc::data::action act;
+    static coro::Lazy<ipc::data::action> co_deserialize(Invocable&& reader) {
+        using enum_type = decltype(ipc::data::action::type);
+        ipc::data::action act;
         act.type = static_cast<enum_type>(
             co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader)));
         act.cmd =
-            co_await Serde<rpc::data::command>::co_deserialize(std::forward<Invocable>(reader));
+            co_await Serde<ipc::data::command>::co_deserialize(std::forward<Invocable>(reader));
         co_return act;
     }
 };
