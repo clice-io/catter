@@ -144,8 +144,7 @@ target("catter-hook-unix")
     end
     on_load(function (target)
         if is_plat("macosx") then
-          local libcxx_lib, err = os.iorun("clang++ -print-file-name=libc++.a"):trim()
-          printf("found libc++.a in %s\n", libcxx_lib)
+          local libcxx_lib = os.iorun("clang++ -print-file-name=libc++.a"):trim()
           target:add("shflags", "-Wl,-force_load," .. libcxx_lib, {force = true})
         end
     end
