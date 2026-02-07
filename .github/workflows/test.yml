@@ -1,4 +1,4 @@
-name: unitest
+name: test
 
 on:
   push:
