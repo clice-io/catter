@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <format>
 #include <string>
+#include <sys/wait.h>
 #include <system_error>
 
 
@@ -32,17 +33,7 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
                     .windows_verbatim_arguments = true,
                 },
             };
-            auto spawn_ret = eventide::process::spawn(opts, ::default_loop());
-            if(!spawn_ret) {
-                std::println("process spawn failed: {}", spawn_ret.error().message());
-                return -1;
-            }
-            auto ret = ::wait(spawn_ret->proc.wait());
-            if(!ret) {
-                std::println("process wait failed: {}", ret.error().message());
-                return -1;
-            }
-            return ret->status;
+            return wait(spawn(opts));
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);

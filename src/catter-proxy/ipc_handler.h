@@ -68,11 +68,11 @@ private:
     template <typename... Args>
     void write(Args&&... payload) {
         //TODO
-        (::wait(this->client_pipe.write(std::forward<Args>(payload))), ...);
+        (wait(this->client_pipe.write(std::forward<Args>(payload))), ...);
     }
 
     void read(char* dst, size_t len) {
-        auto ret = ::wait(this->client_pipe.read_some({dst, len}));
+        auto ret = wait(this->client_pipe.read_some({dst, len}));
 
         if(ret == 0) {
             throw std::runtime_error("ipc_handler read failed: EOF/invalid");
@@ -80,7 +80,7 @@ private:
     }
 
     ipc_handler() noexcept {
-        auto ret = ::wait(eventide::pipe::connect(config::ipc::PIPE_NAME, eventide::pipe::options(), default_loop()));
+        auto ret = wait(eventide::pipe::connect(config::ipc::PIPE_NAME, eventide::pipe::options(), default_loop()));
         if(!ret) {
             std::println("pipe connect failed: {}", ret.error().message());
             std::terminate();

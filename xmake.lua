@@ -167,25 +167,31 @@ target("catter-proxy")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/main.cc", "src/catter-proxy/constructor.cc")
 
-target("ut-support")
-    set_kind("headeronly")
-    add_includedirs("tests/unit/support/", {public = true})
 
+rule("ut-base")
+    on_load(function (target)
+        target:add("includedirs", "tests/unit/base/")
+        target:add("files", "tests/unit/base/**.cc")
+        target:add("packages", "eventide")
+    end)
 
 target("ut-common")
     set_default(false)
     set_kind("binary")
+    add_rules("ut-base")
+
     add_files("tests/unit/common/**.cc")
-    add_packages("eventide")
-    add_deps("common", "ut-support")
+
+    add_deps("common")
     add_tests("default")
 
 target("ut-catter")
     set_default(false)
     set_kind("binary")
+    add_rules("ut-base")
+
     add_files("tests/unit/catter/**.cc")
-    add_packages("eventide")
-    add_deps("catter-core", "common", "ut-support")
+    add_deps("catter-core", "common")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
     add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
@@ -198,6 +204,8 @@ target("ut-catter")
 target("ut-catter-hook-unix")
     set_default(false)
     set_kind("binary")
+    add_rules("ut-base")
+
     if is_plat("linux") then
         add_syslinks("dl")
     end
@@ -207,8 +215,7 @@ target("ut-catter-hook-unix")
 
     add_files("tests/unit/catter-hook/linux-mac/**.cc")
 
-    add_packages("eventide")
-    add_deps("common", "ut-support")
+    add_deps("common")
 
     if is_plat("linux", "macosx") then
         add_tests("default")
@@ -217,6 +224,7 @@ target("ut-catter-hook-unix")
 target("ut-catter-hook-win64")
     set_default(false)
     set_kind("binary")
+    add_rules("ut-base")
 
     if is_plat("windows") then
         -- skip
@@ -225,8 +233,7 @@ target("ut-catter-hook-win64")
     end
     add_files("tests/unit/catter-hook/win/**.cc")
 
-    add_packages("eventide")
-    add_deps("common", "ut-support")
+    add_deps("common")
 
     if is_plat("windows") then
         add_tests("default")
