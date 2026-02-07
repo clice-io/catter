@@ -138,12 +138,18 @@ target("catter-hook-unix")
         add_shflags("-nostdlib++", {force = true})
         add_syslinks("System")
         add_syslinks("c++abi")
-        local libcxx_lib = path.absolute("./.pixi/envs/default/lib/libc++.a")
-        add_shflags("-Wl,-force_load," .. libcxx_lib, {force = true})
         add_shflags("-fuse-ld=lld")
         add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true, force = true})
         add_shflags("-Wl,-dead_strip", {force = true})
     end
+    on_load(function (target)
+        if is_plat("macosx") then
+          local libcxx_lib, err = os.iorun("clang++ -print-file-name=libc++.a"):trim()
+          printf("found libc++.a in %s\n", libcxx_lib)
+          target:add("shflags", "-Wl,-force_load," .. libcxx_lib, {force = true})
+        end
+    end
+    )
 
 target("catter-hook")
     set_kind("object")
