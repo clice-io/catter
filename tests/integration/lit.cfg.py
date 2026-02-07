@@ -8,14 +8,22 @@ import lit.formats
 
 
 def get_cmd_output(cmd: str, fn: Callable[[str], str]) -> str:
-    res = ""
+    process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    if process.returncode != 0:
+        error_msg = f"Command '{cmd}' failed with exit code {process.returncode}:\n{process.stderr}"
+        print(error_msg, file=sys.stderr)
+        raise RuntimeError(error_msg)
+
     try:
-        res = fn(subprocess.getoutput(cmd))
+        res = fn(process.stdout)
+        if not res:
+            raise ValueError("Parser returned empty result")
+        return res
     except Exception as e:
-        print(f"Error parsing output of  {cmd}: {e}")
-    if not res:
-        raise RuntimeError(f"Could not find info from {cmd}")
-    return res
+        print(f"Error parsing output of {cmd}: {e}")
+        print(f"Original output was: {process.stdout}")
+        raise RuntimeError(f"Could not parse info from {cmd}")
 
 
 config.name = "Catter Integration Test"
