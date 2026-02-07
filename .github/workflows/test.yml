@@ -1,4 +1,4 @@
-name: unitest
+name: test
 
 on:
   push:
@@ -53,6 +53,7 @@ jobs:
           activate-environment: true
           cache: true
           locked: true
+          environments: dev
 
       - name: Build (debug)
         run: |

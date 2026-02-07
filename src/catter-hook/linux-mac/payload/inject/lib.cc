@@ -20,10 +20,6 @@
 
 #define IF_IN_PROXY(statement)                                                                     \
     do {                                                                                           \
-        const char* in_proxy = getenv(catter::config::proxy::CATTER_PROXY_ENV_KEY);                \
-        if(in_proxy != nullptr) {                                                                  \
-            statement                                                                              \
-        }                                                                                          \
     } while(false)
 
 namespace {
@@ -225,7 +221,6 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execl)(const char* path, const char* arg,
 INJECT_FUNCTION(execl);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execlp)(const char* file, const char* arg, ...) {
-
     // Count the number of arguments.
     va_list ap;
     va_start(ap, arg);
