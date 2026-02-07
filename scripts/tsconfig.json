@@ -1,13 +1,13 @@
 {
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "lib": [
-      "ES2020",
+    "extends": "../tsconfig.base.json",
+    "compilerOptions": {
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "lib": [
+            "ES2020",
+        ],
+    },
+    "exclude": [
+        "node_modules"
     ],
-  },
-  "exclude": [
-    "node_modules"
-  ],
 }
