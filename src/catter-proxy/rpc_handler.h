@@ -1,12 +1,25 @@
 #pragma once
 #include <print>
+#include <span>
 #include <stdexcept>
 
-#include <uv.h>
+#include <eventide/loop.h>
+#include <eventide/stream.h>
 
-#include "uv/rpc_data.h"
-#include "uv/uv.h"
 #include "config/rpc.h"
+#include "uv/rpc_data.h"
+
+inline auto& default_loop() noexcept {
+    static eventide::event_loop loop{};
+    return loop;
+}
+
+template <typename Task>
+auto wait(Task&& task) {
+    default_loop().schedule(task);
+    default_loop().run();
+    return task.result();
+}
 
 // TODO
 namespace catter::proxy {
@@ -65,36 +78,32 @@ public:
 private:
     template <typename... Args>
     void write(Args&&... payload) {
-        auto ret = uv::wait(uv::async::write(uv::cast<uv_stream_t>(&this->client_pipe),
-                                             std::forward<Args>(payload)...));
-        if(ret < 0) {
-            throw std::runtime_error("rpc_handler write failed: " + std::string(uv_strerror(ret)));
-        }
+        //TODO
+        (::wait(this->client_pipe.write(std::forward<Args>(payload))), ...);
     }
 
     void read(char* dst, size_t len) {
-        auto ret = uv::wait(uv::async::read(uv::cast<uv_stream_t>(&this->client_pipe), dst, len));
-        if(ret < 0) {
-            throw std::runtime_error("rpc_handler read failed: " + std::string(uv_strerror(ret)));
+        auto ret = ::wait(this->client_pipe.read_some({dst, len}));
+
+        if(ret == 0) {
+            throw std::runtime_error("rpc_handler read failed: EOF/invalid");
         }
     }
 
     rpc_handler() noexcept {
-        uv_pipe_init(uv::default_loop(), &this->client_pipe, 0);
-        uv_connect_t connect_req{};
-        uv_pipe_connect(&connect_req, &this->client_pipe, config::rpc::PIPE_NAME, nullptr);
-
-        uv::run();
+        auto ret = ::wait(eventide::pipe::connect(config::rpc::PIPE_NAME, eventide::pipe::options(), default_loop()));
+        if(!ret) {
+            std::println("pipe connect failed: {}", ret.error().message());
+            std::terminate();
+        }
+        this->client_pipe = std::move(ret.value());
     };
 
-    ~rpc_handler() {
-        uv_close(uv::cast<uv_handle_t>(&this->client_pipe), nullptr);
-        uv::run();
-    };
+    ~rpc_handler() = default;
 
 private:
     rpc::data::command_id_t parent_id{-1};
     rpc::data::command_id_t id{-1};
-    uv_pipe_t client_pipe{};
+    eventide::pipe client_pipe{};
 };
 }  // namespace catter::proxy

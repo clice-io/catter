@@ -62,7 +62,7 @@ elseif is_plat("windows") then
     add_requires("microsoft-detours", {version = "2023.6.8"})
 end
 
-add_requires("libuv", {version = "v1.51.0"})
+
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 if has_config("test") then
@@ -75,7 +75,7 @@ target("common")
     add_files("src/common/**.cc")
 
     add_packages("spdlog", {public = true})
-    add_packages("libuv", {public = true})
+    add_packages("eventide", {public = true})
 
 target("catter-core")
     -- use object, avoid register invalid
@@ -295,7 +295,7 @@ package("eventide")
         end
 
         local configs = {}
-        configs.dev = false
+        configs.dev = has_config("dev")
         configs.test = false
         import("package.tools.xmake").install(package, configs)
     end)

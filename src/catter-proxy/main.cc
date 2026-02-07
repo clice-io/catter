@@ -5,6 +5,9 @@
 #include <string>
 #include <system_error>
 
+
+#include <eventide/process.h>
+
 #include "hook.h"
 #include "constructor.h"
 #include "rpc_handler.h"
@@ -21,7 +24,25 @@ int run(rpc::data::action act, rpc::data::command_id_t id) {
     using catter::rpc::data::action;
     switch(act.type) {
         case action::WRAP: {
-            return uv::wait(uv::async::spawn(act.cmd.executable, act.cmd.args));
+            eventide::process::options opts{
+                .file = act.cmd.executable,
+                .args = act.cmd.args,
+                .creation = {
+                    .windows_hide = true,
+                    .windows_verbatim_arguments = true,
+                },
+            };
+            auto spawn_ret = eventide::process::spawn(opts, ::default_loop());
+            if(!spawn_ret) {
+                std::println("process spawn failed: {}", spawn_ret.error().message());
+                return -1;
+            }
+            auto ret = ::wait(spawn_ret->proc.wait());
+            if(!ret) {
+                std::println("process wait failed: {}", ret.error().message());
+                return -1;
+            }
+            return ret->status;
         }
         case action::INJECT: {
             return catter::proxy::hook::run(act.cmd, id);
