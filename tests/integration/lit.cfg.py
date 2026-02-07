@@ -72,6 +72,11 @@ if is_linux or is_macos:
             asan_path = get_cmd_output(
                 "g++ -print-file-name=libasan.so", lambda x: x.strip()
             )
+            if not os.path.isabs(asan_path):
+                raise RuntimeError(
+                    f"Could not resolve absolute path for libasan.so (got '{asan_path}'). "
+                    "Is ASan installed?"
+                )
             hook_path = f"{asan_path}:{hook_path}"
 
     inject_cmd_str = (
