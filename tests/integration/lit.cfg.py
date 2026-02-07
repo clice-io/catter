@@ -54,7 +54,6 @@ if is_linux or is_macos:
 
     preload_var_name = "DYLD_INSERT_LIBRARIES" if is_macos else "LD_PRELOAD"
 
-    proxy_script = os.path.join(project_root, "scripts", "src", "fake-catter-proxy.ts")
     catter_proxy_cmd = "%t"
 
     key_parent_id = "__key_catter_command_id_v1"
