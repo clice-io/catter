@@ -39,7 +39,7 @@ struct FuncDecomposer<Ret(Args...)> {
 }  // namespace catter::meta
 
 namespace catter::meta {
-    
+
 template <typename T, template <typename...> class TT>
 struct is_specialization_of : std::false_type {};
 

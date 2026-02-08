@@ -3,9 +3,7 @@
 #include <filesystem>
 #include <format>
 #include <string>
-#include <sys/wait.h>
 #include <system_error>
-
 
 #include <eventide/process.h>
 
@@ -14,7 +12,6 @@
 #include "linux-mac/config.h"
 
 #include "util/crossplat.h"
-#include "util/lazy.h"
 #include "util/log.h"
 #include "util/output.h"
 #include "config/catter-proxy.h"
@@ -28,10 +25,11 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
                 .cwd = act.cmd.working_dir,
-                .creation = {
-                    .windows_hide = true,
-                    .windows_verbatim_arguments = true,
-                },
+                .creation =
+                    {
+                               .windows_hide = true,
+                               .windows_verbatim_arguments = true,
+                               },
             };
             return wait(spawn(opts));
         }

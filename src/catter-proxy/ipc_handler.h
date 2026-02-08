@@ -10,7 +10,6 @@
 #include "util/ipc-data.h"
 #include "util/eventide.h"
 
-
 namespace catter::proxy {
 class ipc_handler {
 public:
@@ -67,12 +66,12 @@ public:
 private:
     template <typename... Args>
     void write(Args&&... payload) {
-        //TODO
+        // TODO
         (wait(this->client_pipe.write(std::forward<Args>(payload))), ...);
     }
 
     void read(char* dst, size_t len) {
-        //TODO
+        // TODO
         auto ret = wait(this->client_pipe.read_some({dst, len}));
 
         if(ret == 0) {
@@ -81,7 +80,9 @@ private:
     }
 
     ipc_handler() noexcept {
-        auto ret = wait(eventide::pipe::connect(config::ipc::PIPE_NAME, eventide::pipe::options(), default_loop()));
+        auto ret = wait(eventide::pipe::connect(config::ipc::PIPE_NAME,
+                                                eventide::pipe::options(),
+                                                default_loop()));
         if(!ret) {
             std::println("pipe connect failed: {}", ret.error().message());
             std::terminate();

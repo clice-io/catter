@@ -4,7 +4,6 @@
 #include <filesystem>
 #include <format>
 
-
 #include <limits.h>
 #include <spawn.h>
 #include <unistd.h>
@@ -17,7 +16,6 @@
 #include "util/log.h"
 #include "util/eventide.h"
 #include "linux-mac/config.h"
-
 
 namespace catter::proxy::hook {
 
@@ -78,7 +76,7 @@ int run(ipc::data::command command, ipc::data::command_id_t id) {
         cmd_for_print += " " + arg;
     }
     LOG_INFO("| -> Catter-Proxy Final Executing command: {}", cmd_for_print);
-    
+
     eventide::process::options opts{
         .file = command.executable,
         .args = command.args,

@@ -10,7 +10,7 @@
 #include "config/ipc.h"
 #include "ipc-data.h"
 
-namespace catter{
+namespace catter {
 
 inline auto& default_loop() noexcept {
     static eventide::event_loop loop{};
@@ -24,17 +24,17 @@ auto wait(Task&& task) {
     return task.result();
 }
 
-
 inline eventide::task<int64_t> spawn(const eventide::process::options& opts) {
     auto spawn_ret = eventide::process::spawn(opts, default_loop());
     if(!spawn_ret) {
-        throw std::runtime_error(std::format("process spawn failed: {}", spawn_ret.error().message()));
+        throw std::runtime_error(
+            std::format("process spawn failed: {}", spawn_ret.error().message()));
     }
-    auto ret =  co_await spawn_ret->proc.wait();
+    auto ret = co_await spawn_ret->proc.wait();
     if(!ret) {
         throw std::runtime_error(std::format("process wait failed: {}", ret.error().message()));
     }
     co_return ret->status;
 }
-    
-}
+
+}  // namespace catter

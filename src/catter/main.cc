@@ -1,12 +1,10 @@
-
-
 #include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
-#include <reflection/name.h>
+#include <list>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -17,17 +15,19 @@
 #include <format>
 #include <print>
 
-#include <uv.h>
+
+#include <eventide/process.h>
+#include <eventide/stream.h>
+#include <eventide/loop.h>
+#include <reflection/name.h>
+
 
 #include "js.h"
-
 #include "config/ipc.h"
 #include "config/catter-proxy.h"
-
 #include "util/crossplat.h"
-#include "util/lazy.h"
+#include "util/eventide.h"
 #include "util/serde.h"
-#include "uv/uv.h"
 #include "util/ipc-data.h"
 
 using namespace catter;
@@ -39,26 +39,51 @@ void print_hex(char* data, size_t len) {
         std::print("{:02x} ", static_cast<unsigned char>(data[i]));
     }
     std::print(" -> ");
-    for (size_t i = 0; i < len; ++i) {
+    for(size_t i = 0; i < len; ++i) {
         char c = data[i];
         std::print("{}", (std::isprint(static_cast<unsigned char>(c)) ? c : '.'));
     }
     std::println();
 }
 
-uv::async::Lazy<void> accept(uv_stream_t* server) {
+eventide::task<void> spawn(std::vector<std::string> shell,
+                           eventide::acceptor<eventide::pipe>& acceptor) {
+
+    std::string exe_path =
+        (util::get_catter_root_path() / catter::config::proxy::EXE_NAME).string();
+
+    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--"};
+
+    append_range_to_vector(args, shell);
+
+    eventide::process::options opts{
+        .file = exe_path,
+        .args = args,
+        .creation =
+            {
+                       .windows_hide = true,
+                       .windows_verbatim_arguments = true,
+                       },
+        .streams =
+            {
+                       eventide::process::stdio::ignore(),
+                       eventide::process::stdio::ignore(),
+                       eventide::process::stdio::ignore(),
+                       },
+    };
+    auto ret = co_await catter::spawn(opts);
+    // acceptor.stop();  // Stop accepting new clients after spawning the process
+    co_return;
+}
+
+eventide::task<void> accept(eventide::pipe&& c) {
+    eventide::pipe client(std::move(c));
     auto id = ++id_generator;
 
-    auto client = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
-    if(auto ret = uv_accept(server, uv::cast<uv_stream_t>(client)); ret < 0) {
-        std::println("Accept error: {}", uv_strerror(ret));
-        co_return;
-    }
-
-    auto reader = [&](char* dst, size_t len) -> coro::Lazy<void> {
-        auto ret = co_await uv::async::read(uv::cast<uv_stream_t>(client), dst, len);
-        if(ret < 0) {
-            throw ret;
+    auto reader = [&](char* dst, size_t len) -> eventide::task<void> {
+        auto ret = co_await client.read_some({dst, len});
+        if(ret == 0 || ret != len) {
+            throw ret;  // Propagate error to the caller
         }
     };
 
@@ -72,12 +97,8 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
 
                     std::println("ID [{}] created from [{}]", id, parent_id);
 
-                    auto ret =
-                        co_await uv::async::write(uv::cast<uv_stream_t>(client),
-                                                  Serde<ipc::data::command_id_t>::serialize(id));
-                    if(ret < 0) {
-                        throw std::runtime_error(uv_strerror(ret));
-                    }
+                    // TODO
+                    co_await client.write(Serde<ipc::data::command_id_t>::serialize(id));
                     break;
                 }
 
@@ -92,18 +113,15 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                     }
 
                     auto act = ipc::data::action{
-                        .type = ipc::data::action::WRAP,
+                        .type = ipc::data::action::INJECT,
                         .cmd = cmd,
                     };
 
                     std::println("ID [{}] decision: {}", id, line);
 
-                    auto ret = co_await uv::async::write(uv::cast<uv_stream_t>(client),
-                                                         Serde<ipc::data::action>::serialize(act));
+                    // TODO
+                    co_await client.write(Serde<ipc::data::action>::serialize(act));
 
-                    if(ret < 0) {
-                        throw std::runtime_error(uv_strerror(ret));
-                    }
                     break;
                 }
                 case ipc::data::Request::FINISH: {
@@ -126,11 +144,11 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                 default: std::println("Unknown request received.");
             }
         }
-    } catch(ssize_t err) {
-        if(err == UV_EOF) {
+    } catch(size_t err) {
+        if(err == 0) {
             std::println("ID [{}] disconnected.", id);
         } else {
-            std::println("ID [{}] disconnected with error: {}", id, uv_strerror(err));
+            std::println("ID [{}] read error: {}", id, err);
         }
     } catch(const std::exception& ex) {
         std::println("Exception while handling request: {}", ex.what());
@@ -138,70 +156,56 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
     co_return;
 }
 
-uv::async::Lazy<void> loop(std::string exe_path, std::vector<std::string> args) {
-    auto server = co_await uv::async::Create<uv_pipe_t>(uv::default_loop());
-
-    if(auto ret = uv_pipe_bind(server, catter::config::ipc::PIPE_NAME); ret < 0) {
-        std::println("Bind error: {}", uv_strerror(ret));
-        co_return;
-    }
-
-    std::vector<uv::async::Lazy<void>> acceptors;
-
-    auto listen_cb = [&](uv_stream_t* server, int status) {
-        if(status < 0) {
-            std::println("Listen error: {}", uv_strerror(status));
-            return;
+eventide::task<void> loop(eventide::acceptor<eventide::pipe>& acceptor) {
+    std::vector<eventide::task<void>> linked_clients;
+    while(true) {
+        auto client = co_await acceptor.accept();
+        if(!client) {
+            std::println("Failed to accept client: {}", client.error().message());
+            break;
         }
-        acceptors.push_back(accept(server));
-    };
-
-    auto ret = uv::listen(uv::cast<uv_stream_t>(server), 128, listen_cb);
-
-    if(ret < 0) {
-        std::println("Listen error: {}", uv_strerror(ret));
-        co_return;
+        linked_clients.push_back(accept(std::move(*client)));
+        default_loop().schedule(linked_clients.back());
     }
 
-    co_await std::suspend_always{};  // placeholder to keep the server running
-
-    auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
-
-    std::println("catter-proxy exited with code {}", proxy_ret);
-
-    for(auto& acceptor: acceptors) {
-        if(!acceptor.done()) {
-            std::println("Error: acceptor coroutine not done yet.");
-        } else {
-            try {
-                acceptor.get();
-            } catch(const std::exception& ex) {
-                std::println("Exception in acceptor coroutine: {}", ex.what());
-            }
+    try {
+        for(auto& client_task: linked_clients) {
+            client_task.result();  // Await completion and propagate exceptions
         }
-    }
-    co_return;
+    } catch(const std::exception& ex) {}
 }
 
 int main(int argc, char* argv[]) {
-    if (std::filesystem::exists(catter::config::ipc::PIPE_NAME)) {
+#ifndef _WIN32
+    if(std::filesystem::exists(catter::config::ipc::PIPE_NAME)) {
         std::filesystem::remove(catter::config::ipc::PIPE_NAME);
     }
+#endif
 
     if(argc < 2 || std::string(argv[1]) != "--") {
         std::println("Usage: catter -- <target program> [args...]");
         return 1;
     }
-    auto exe_path = util::get_catter_root_path() / catter::config::proxy::EXE_NAME;
 
-    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--"};
+    std::vector<std::string> shell;
 
     for(int i = 2; i < argc; ++i) {
-        args.push_back(argv[i]);
+        shell.push_back(argv[i]);
+    }
+
+    auto acceptor = eventide::pipe::listen(catter::config::ipc::PIPE_NAME,
+                                           eventide::pipe::options(),
+                                           default_loop());
+
+    if(!acceptor) {
+        std::println("Failed to create pipe server: {}", acceptor.error().message());
+        return 1;
     }
 
     try {
-        uv::wait(loop(exe_path.string(), args));
+        default_loop().schedule(loop(*acceptor));
+        default_loop().schedule(spawn(shell, *acceptor));
+        default_loop().run();
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());
         return 1;

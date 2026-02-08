@@ -32,7 +32,3 @@ constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.dylib";
 constexpr static char LOG_PATH_REL[] = "log/catter-hook.log";
 
 }  // namespace catter::config::hook
-
-namespace catter::config::proxy {
-constexpr static char CATTER_PROXY_ENV_KEY[] = "exec_is_catter_proxy_v1";
-}  // namespace catter::config::proxy

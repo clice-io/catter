@@ -50,7 +50,7 @@ struct Serde<ipc::data::Request> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<ipc::data::Request> co_deserialize(Invocable&& reader) {
+    static eventide::task<ipc::data::Request> co_deserialize(Invocable&& reader) {
         uint8_t value = co_await Serde<uint8_t>::co_deserialize(std::forward<Invocable>(reader));
         co_return static_cast<ipc::data::Request>(value);
     }
@@ -76,7 +76,7 @@ struct Serde<ipc::data::command> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<ipc::data::command> co_deserialize(Invocable&& reader) {
+    static eventide::task<ipc::data::command> co_deserialize(Invocable&& reader) {
         ipc::data::command cmd;
         cmd.working_dir =
             co_await Serde<std::string>::co_deserialize(std::forward<Invocable>(reader));
@@ -106,7 +106,7 @@ struct Serde<ipc::data::action> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<ipc::data::action> co_deserialize(Invocable&& reader) {
+    static eventide::task<ipc::data::action> co_deserialize(Invocable&& reader) {
         using enum_type = decltype(ipc::data::action::type);
         ipc::data::action act;
         act.type = static_cast<enum_type>(

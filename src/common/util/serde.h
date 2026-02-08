@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 
-#include "util/lazy.h"
+#include <eventide/task.h>
 
 namespace catter {
 
@@ -61,7 +61,7 @@ struct Serde<T> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<T> co_deserialize(Invocable&& reader) {
+    static eventide::task<T> co_deserialize(Invocable&& reader) {
         T value;
         co_await reader(reinterpret_cast<char*>(&value), sizeof(T));
         co_return value;
@@ -83,7 +83,7 @@ struct Serde<std::string> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<std::string> co_deserialize(Invocable&& reader) {
+    static eventide::task<std::string> co_deserialize(Invocable&& reader) {
         size_t len = co_await Serde<size_t>::co_deserialize(std::forward<Invocable>(reader));
         std::string str(len, '\0');
         co_await reader(str.data(), len);
@@ -115,7 +115,7 @@ struct Serde<std::vector<T>> {
     }
 
     template <CoReader Invocable>
-    static coro::Lazy<std::vector<T>> co_deserialize(Invocable&& reader) {
+    static eventide::task<std::vector<T>> co_deserialize(Invocable&& reader) {
         std::vector<T> vec;
         size_t len = co_await Serde<size_t>::co_deserialize(std::forward<Invocable>(reader));
         vec.reserve(len);

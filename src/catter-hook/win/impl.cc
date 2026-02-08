@@ -56,7 +56,7 @@ std::string quote_win32_arg(std::string_view arg) noexcept {
 }
 
 std::string cmdline_of(const catter::ipc::data::command& cmd) noexcept {
-    std::string full_cmd = quote_win32_arg(cmd.executable);
+    std::string full_cmd;
     for(const auto& arg: cmd.args) {
         full_cmd += " " + quote_win32_arg(arg);
     }
@@ -68,7 +68,6 @@ std::string cmdline_of(const catter::ipc::data::command& cmd) noexcept {
 namespace catter::proxy::hook {
 
 int run(ipc::data::command cmd, ipc::data::command_id_t id) {
-    std::string cmdline = cmdline_of(cmd);
 
     SetEnvironmentVariableA(catter::win::ENV_VAR_IPC_ID<char>, std::to_string(id).c_str());
 
@@ -86,7 +85,8 @@ int run(ipc::data::command cmd, ipc::data::command_id_t id) {
 
     std::filesystem::path dll_path = catter::util::get_catter_root_path() / catter::win::DLL_NAME;
 
-    auto ret = DetourCreateProcessWithDllExA(nullptr,
+    std::string cmdline = cmdline_of(cmd);
+    auto ret = DetourCreateProcessWithDllExA(cmd.executable.c_str(),
                                              cmdline.data(),
                                              nullptr,
                                              nullptr,
