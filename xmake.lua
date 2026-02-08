@@ -165,7 +165,7 @@ target("catter-proxy")
     set_kind("binary")
     add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
-    add_files("src/catter-proxy/main.cc", "src/catter-proxy/constructor.cc")
+    add_files("src/catter-proxy/**.cc")
 
 
 rule("ut-base")

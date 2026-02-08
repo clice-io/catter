@@ -10,7 +10,6 @@
 #include <eventide/process.h>
 
 #include "hook.h"
-#include "constructor.h"
 #include "ipc_handler.h"
 #include "linux-mac/config.h"
 
@@ -28,6 +27,7 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
             eventide::process::options opts{
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
+                .cwd = act.cmd.working_dir,
                 .creation = {
                     .windows_hide = true,
                     .windows_verbatim_arguments = true,
@@ -46,6 +46,21 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
         }
     }
 }
+
+ipc::data::command build_raw_cmd(char* arg_start[], char* arg_end[]) {
+    if(arg_start >= arg_end) {
+        throw std::invalid_argument("No command provided");
+    }
+    ipc::data::command cmd;
+    cmd.working_dir = std::filesystem::current_path().string();
+    cmd.executable = *arg_start;
+    for(char** arg_i = arg_start; arg_i < arg_end; ++arg_i) {
+        cmd.args.emplace_back(*arg_i);
+    }
+    cmd.env = catter::util::get_environment();
+    return cmd;
+}
+
 }  // namespace catter::proxy
 
 // we do not output in proxy, it must be invoked by main program.
@@ -59,10 +74,7 @@ int main(int argc, char* argv[], char* envp[]) {
         // cannot init logger
         catter::log::mute_logger();
     }
-#ifndef CATTER_WINDOWS
-    // To let hook in this process stop working
-    setenv(catter::config::proxy::CATTER_PROXY_ENV_KEY, "v1", 0);
-#endif
+
     // single instance of ipc handler
     auto& ipc_ins = catter::proxy::ipc_handler::instance();
 

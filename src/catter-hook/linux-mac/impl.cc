@@ -1,61 +1,23 @@
-#include "hook.h"
-#include "linux-mac/config.h"
-
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+
+
 #include <limits.h>
-#include "linux-mac/config.h"
 #include <spawn.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
+
+#include "hook.h"
 #include "util/ipc-data.h"
 #include "util/crossplat.h"
 #include "util/log.h"
+#include "util/eventide.h"
+#include "linux-mac/config.h"
 
-/**
- * @brief Run a command using posix_spawn
- * @param command The command to run
- * @return The exit code of the command
- */
-static int run_command(const catter::ipc::data::command& command) {
-    std::vector<char*> argv_ptrs;
-    // add argv[0]
-    argv_ptrs.push_back(const_cast<char*>(command.executable.c_str()));
-    for(auto& arg: command.args) {
-        argv_ptrs.push_back(const_cast<char*>(arg.c_str()));
-    }
-    argv_ptrs.push_back(nullptr);
-
-    std::vector<char*> envp_ptrs;
-    for(auto& env: command.env) {
-        envp_ptrs.push_back(const_cast<char*>(env.c_str()));
-    }
-    envp_ptrs.push_back(nullptr);
-    pid_t pid = 0;
-    int spawn_res = posix_spawn(&pid,
-                                command.executable.c_str(),
-                                nullptr,  // file actions use parent
-                                nullptr,  // spawn attributes use parent
-                                argv_ptrs.data(),
-                                envp_ptrs.data());
-    if(spawn_res != 0) {
-        return -1;
-    }
-
-    int status = 0;
-    if(waitpid(pid, &status, 0) == -1) {
-        return -1;
-    }
-
-    if(WIFEXITED(status)) {
-        return WEXITSTATUS(status);
-    }
-    return 0;
-}
 
 namespace catter::proxy::hook {
 
@@ -100,12 +62,6 @@ int run(ipc::data::command command, ipc::data::command_id_t id) {
         throw std::runtime_error(
             std::format("Catter-Proxy Hook library not found at path: {}", lib_path.string()));
     }
-    std::string joined_command = "";
-#ifdef CATTER_MAC
-#ifdef DEBUG
-    joined_command += "DYLD_PRINT_INTERPOSING=1 ";
-#endif  // DEBUG
-#endif  // CATTER_MAC
 
     command.env.push_back(std::format("{}={}",
                                       //   "/usr/lib/gcc/x86_64-linux-gnu/14/libasan.so",
@@ -115,12 +71,6 @@ int run(ipc::data::command command, ipc::data::command_id_t id) {
     command.env.push_back(std::format("{}={}",
                                       catter::config::hook::KEY_CATTER_PROXY_PATH,
                                       util::get_executable_path().string()));
-    // remove CATTER_PROXY_ENV_KEY from env to enable hooking in the child process
-    auto rm_it =
-        std::remove_if(command.env.begin(), command.env.end(), [](const std::string& env_entry) {
-            return env_entry.starts_with(config::proxy::CATTER_PROXY_ENV_KEY);
-        });
-    command.env.erase(rm_it, command.env.end());
 
     std::string cmd_for_print = "";
     cmd_for_print += command.executable;
@@ -128,7 +78,14 @@ int run(ipc::data::command command, ipc::data::command_id_t id) {
         cmd_for_print += " " + arg;
     }
     LOG_INFO("| -> Catter-Proxy Final Executing command: {}", cmd_for_print);
-    return run_command(command);
+    
+    eventide::process::options opts{
+        .file = command.executable,
+        .args = command.args,
+        .env = command.env,
+        .cwd = command.working_dir,
+    };
+    return catter::wait(catter::spawn(opts));
 };
 
 };  // namespace catter::proxy::hook

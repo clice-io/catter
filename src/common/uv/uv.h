@@ -178,7 +178,7 @@ private:
     }
 
     void read_cb(ssize_t nread) {
-        if(nread > 0) {
+        if(nread >= 0) {
             this->dst += nread;
             this->remaining -= nread;
             this->get_result() += nread;

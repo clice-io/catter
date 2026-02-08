@@ -10,7 +10,7 @@
 #include "util/ipc-data.h"
 #include "util/eventide.h"
 
-// TODO
+
 namespace catter::proxy {
 class ipc_handler {
 public:
@@ -72,6 +72,7 @@ private:
     }
 
     void read(char* dst, size_t len) {
+        //TODO
         auto ret = wait(this->client_pipe.read_some({dst, len}));
 
         if(ret == 0) {

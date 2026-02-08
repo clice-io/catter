@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
+#include <reflection/name.h>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -31,6 +33,18 @@
 using namespace catter;
 
 static int id_generator = 0;
+
+void print_hex(char* data, size_t len) {
+    for(size_t i = 0; i < len; ++i) {
+        std::print("{:02x} ", static_cast<unsigned char>(data[i]));
+    }
+    std::print(" -> ");
+    for (size_t i = 0; i < len; ++i) {
+        char c = data[i];
+        std::print("{}", (std::isprint(static_cast<unsigned char>(c)) ? c : '.'));
+    }
+    std::println();
+}
 
 uv::async::Lazy<void> accept(uv_stream_t* server) {
     auto id = ++id_generator;
@@ -71,14 +85,14 @@ uv::async::Lazy<void> accept(uv_stream_t* server) {
                     ipc::data::command cmd =
                         co_await Serde<ipc::data::command>::co_deserialize(reader);
 
-                    std::string line = cmd.executable;
+                    std::string line = std::format("exe = {} args =", cmd.executable);
 
                     for(auto& arg: cmd.args) {
                         line.append(std::format(" {}", arg));
                     }
 
                     auto act = ipc::data::action{
-                        .type = ipc::data::action::INJECT,
+                        .type = ipc::data::action::WRAP,
                         .cmd = cmd,
                     };
 
@@ -149,7 +163,7 @@ uv::async::Lazy<void> loop(std::string exe_path, std::vector<std::string> args) 
         co_return;
     }
 
-    // co_await std::suspend_always{};  // placeholder to keep the server running
+    co_await std::suspend_always{};  // placeholder to keep the server running
 
     auto proxy_ret = co_await uv::async::spawn(exe_path, args, true);
 
@@ -170,6 +184,9 @@ uv::async::Lazy<void> loop(std::string exe_path, std::vector<std::string> args) 
 }
 
 int main(int argc, char* argv[]) {
+    if (std::filesystem::exists(catter::config::ipc::PIPE_NAME)) {
+        std::filesystem::remove(catter::config::ipc::PIPE_NAME);
+    }
 
     if(argc < 2 || std::string(argv[1]) != "--") {
         std::println("Usage: catter -- <target program> [args...]");
