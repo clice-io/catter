@@ -79,9 +79,9 @@ eventide::task<void> accept(eventide::pipe client) {
 
     auto reader = [&](char* dst, size_t len) -> eventide::task<void> {
         size_t total_read = 0;
-        while (total_read < len) {
+        while(total_read < len) {
             auto ret = co_await client.read_some({dst + total_read, len - total_read});
-            if (ret == 0) {
+            if(ret == 0) {
                 throw total_read;  // EOF
             }
             total_read += ret;
