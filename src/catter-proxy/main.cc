@@ -25,11 +25,10 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
                 .cwd = act.cmd.working_dir,
-                .creation =
-                    {
-                               .windows_hide = true,
-                               .windows_verbatim_arguments = true,
-                               },
+                .creation = {
+                             .windows_hide = true,
+                             .windows_verbatim_arguments = true,
+                             }
             };
             return wait(spawn(opts));
         }

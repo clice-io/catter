@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <print>
 #include <span>
 #include <stdexcept>
@@ -25,7 +26,7 @@ public:
 
     auto reader() {
         return [this](char* dst, size_t len) {
-            read(dst, len);
+            this->read(dst, len);
         };
     }
 
@@ -71,11 +72,13 @@ private:
     }
 
     void read(char* dst, size_t len) {
-        // TODO
-        auto ret = wait(this->client_pipe.read_some({dst, len}));
-
-        if(ret == 0) {
-            throw std::runtime_error("ipc_handler read failed: EOF/invalid");
+        size_t total_read = 0;
+        while (total_read < len) {
+            auto ret = wait(this->client_pipe.read_some({dst + total_read, len - total_read}));
+            if (ret == 0) {
+                throw std::runtime_error("ipc_handler read failed: EOF/invalid");
+            }
+            total_read += ret;
         }
     }
 
