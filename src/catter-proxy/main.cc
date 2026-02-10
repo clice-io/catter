@@ -75,7 +75,7 @@ int main(int argc, char* argv[], char* envp[]) {
         auto received_act = ipc_ins.make_decision(cmd);
 
         int ret = catter::proxy::run(received_act, id);
-        
+
         ipc_ins.finish(ret);
 
         return ret;

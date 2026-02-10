@@ -36,16 +36,16 @@ TEST_SUITE(cmd_builder) {
 
         // 2. Verify argv[0] convention
         EXPECT_TRUE(cmd.argv.at(0) == session.proxy_path);
-        
+
         auto f = [&]() {
             auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
-                EXPECT_TRUE(parse_res.parent_id == "session-99");
-                EXPECT_TRUE(parse_res.executable == target_path);
+            EXPECT_TRUE(parse_res.parent_id == "session-99");
+            EXPECT_TRUE(parse_res.executable == target_path);
 
-                auto& args = parse_res.raw_argv;
-                EXPECT_TRUE(args.size() == 3);
-                EXPECT_TRUE(args.at(0) == "gcc");
-                EXPECT_TRUE(args.at(2) == "main.c");         
+            auto& args = parse_res.raw_argv;
+            EXPECT_TRUE(args.size() == 3);
+            EXPECT_TRUE(args.at(0) == "gcc");
+            EXPECT_TRUE(args.at(2) == "main.c");
         };
         EXPECT_NOTHROWS(f());
     };
