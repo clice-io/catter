@@ -47,7 +47,9 @@ int run(ipc::data::command command, ipc::data::command_id_t id) {
     for(auto& arg: command.args) {
         cmd_for_print += " " + arg;
     }
-    LOG_INFO("| -> Catter-Proxy Final Executing command: exe: {}, args:{}", command.executable, cmd_for_print);
+    LOG_INFO("| -> Catter-Proxy Final Executing command: exe: {}, args:{}",
+             command.executable,
+             cmd_for_print);
 
     eventide::process::options opts{
         .file = command.executable,

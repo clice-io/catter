@@ -86,7 +86,7 @@ int main(int argc, char* argv[], char* envp[]) {
         return ret;
     } catch(const std::exception& e) {
         std::string args;
-        for (int i = 0; i < argc; ++i) {
+        for(int i = 0; i < argc; ++i) {
             args += std::format("{} ", argv[i]);
         }
 

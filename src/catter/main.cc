@@ -35,14 +35,14 @@ using namespace catter;
 static int id_generator = 0;
 using acceptor = eventide::acceptor<eventide::pipe>;
 
-eventide::task<void> spawn(std::vector<std::string> shell,
-                           std::shared_ptr<acceptor> acceptor) {
+eventide::task<void> spawn(std::vector<std::string> shell, std::shared_ptr<acceptor> acceptor) {
     // co_await std::suspend_always{};  // placeholder
 
     std::string exe_path =
         (util::get_catter_root_path() / catter::config::proxy::EXE_NAME).string();
 
-    std::vector<std::string> args = {exe_path, "-p", std::to_string(id_generator), "--exec", shell[0], "--"};
+    std::vector<std::string> args =
+        {exe_path, "-p", std::to_string(id_generator), "--exec", shell[0], "--"};
 
     append_range_to_vector(args, shell);
 
@@ -65,7 +65,8 @@ eventide::task<void> spawn(std::vector<std::string> shell,
     if(error) {
         std::println("Failed to stop acceptor: {}", error.message());
     }
-    acceptor.reset();  // We can release our reference to the acceptor since we won't accept new clients
+    acceptor
+        .reset();  // We can release our reference to the acceptor since we won't accept new clients
     co_return;
 }
 
@@ -164,8 +165,9 @@ eventide::task<void> loop(std::shared_ptr<acceptor> acceptor) {
     while(true) {
         auto client = co_await acceptor->accept();
         if(!client) {
-            if (client.error() != eventide::error::operation_aborted) {  
-                // Accept can fail with operation_aborted when the acceptor is stopped, which is expected
+            if(client.error() != eventide::error::operation_aborted) {
+                // Accept can fail with operation_aborted when the acceptor is stopped, which is
+                // expected
                 std::println("Failed to accept client: {}", client.error().message());
             }
             break;
@@ -218,8 +220,9 @@ int main(int argc, char* argv[]) {
         auto spawn_task = spawn(shell, acc);
         default_loop().schedule(loop_task);
         default_loop().schedule(spawn_task);
-        
-        acc.reset();  // We can release our reference to the acceptor since the loop task will keep it alive
+
+        acc.reset();  // We can release our reference to the acceptor since the loop task will keep
+                      // it alive
         default_loop().run();
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());
