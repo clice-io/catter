@@ -296,7 +296,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    -- add_versions("22", "b573881204c3c95f5c98fdc23ef39160a9e413fa")
+    add_versions("34", "500ea2f8a5fde57637560159753ce0b3522b6c83")
 
     add_deps("libuv 1.51.0")
     add_deps("cpptrace v1.0.4")

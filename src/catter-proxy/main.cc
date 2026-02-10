@@ -85,7 +85,12 @@ int main(int argc, char* argv[], char* envp[]) {
 
         return ret;
     } catch(const std::exception& e) {
-        LOG_CRITICAL("Exception in catter-proxy: {}", e.what());
+        std::string args;
+        for (int i = 0; i < argc; ++i) {
+            args += std::format("{} ", argv[i]);
+        }
+
+        LOG_CRITICAL("Exception in catter-proxy: {}. Args: {}", e.what(), args);
         ipc_ins.report_error(e.what());
         return -1;
     } catch(...) {

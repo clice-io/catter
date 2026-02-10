@@ -5,6 +5,7 @@
 #include <exception>
 #include <filesystem>
 #include <list>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -32,15 +33,16 @@
 using namespace catter;
 
 static int id_generator = 0;
+using acceptor = eventide::acceptor<eventide::pipe>;
 
 eventide::task<void> spawn(std::vector<std::string> shell,
-                           eventide::acceptor<eventide::pipe>& acceptor) {
-    co_await std::suspend_always{};  // placeholder
+                           std::shared_ptr<acceptor> acceptor) {
+    // co_await std::suspend_always{};  // placeholder
 
     std::string exe_path =
         (util::get_catter_root_path() / catter::config::proxy::EXE_NAME).string();
 
-    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--exec", shell[0], "--"};
+    std::vector<std::string> args = {exe_path, "-p", std::to_string(id_generator), "--exec", shell[0], "--"};
 
     append_range_to_vector(args, shell);
 
@@ -59,7 +61,11 @@ eventide::task<void> spawn(std::vector<std::string> shell,
                        }
     };
     auto ret = co_await catter::spawn(opts);
-    // acceptor.stop();  // Stop accepting new clients after spawning the process
+    auto error = acceptor->stop();  // Stop accepting new clients after spawning the process
+    if(error) {
+        std::println("Failed to stop acceptor: {}", error.message());
+    }
+    acceptor.reset();  // We can release our reference to the acceptor since we won't accept new clients
     co_return;
 }
 
@@ -88,8 +94,13 @@ eventide::task<void> accept(eventide::pipe client) {
 
                     std::println("ID [{}] created from [{}]", id, parent_id);
 
-                    // TODO
-                    co_await client.write(Serde<ipc::data::command_id_t>::serialize(id));
+                    auto err = co_await client.write(Serde<ipc::data::command_id_t>::serialize(id));
+
+                    if(err.has_error()) {
+                        throw std::runtime_error(
+                            std::format("Failed to send command ID to client: {}", err.message()));
+                    }
+
                     break;
                 }
 
@@ -110,8 +121,11 @@ eventide::task<void> accept(eventide::pipe client) {
 
                     std::println("ID [{}] decision: {}", id, line);
 
-                    // TODO
-                    co_await client.write(Serde<ipc::data::action>::serialize(act));
+                    auto err = co_await client.write(Serde<ipc::data::action>::serialize(act));
+                    if(err.has_error()) {
+                        throw std::runtime_error(
+                            std::format("Failed to send action to client: {}", err.message()));
+                    }
 
                     break;
                 }
@@ -145,12 +159,15 @@ eventide::task<void> accept(eventide::pipe client) {
     co_return;
 }
 
-eventide::task<void> loop(eventide::acceptor<eventide::pipe>& acceptor) {
+eventide::task<void> loop(std::shared_ptr<acceptor> acceptor) {
     std::list<eventide::task<void>> linked_clients;
     while(true) {
-        auto client = co_await acceptor.accept();
+        auto client = co_await acceptor->accept();
         if(!client) {
-            std::println("Failed to accept client: {}", client.error().message());
+            if (client.error() != eventide::error::operation_aborted) {  
+                // Accept can fail with operation_aborted when the acceptor is stopped, which is expected
+                std::println("Failed to accept client: {}", client.error().message());
+            }
             break;
         }
         linked_clients.push_back(accept(std::move(*client)));
@@ -164,6 +181,8 @@ eventide::task<void> loop(eventide::acceptor<eventide::pipe>& acceptor) {
     } catch(const std::exception& ex) {
         std::println("Exception in client task: {}", ex.what());
     }
+    acceptor.reset();  // Ensure acceptor is destroyed after exiting loop
+    co_return;
 }
 
 int main(int argc, char* argv[]) {
@@ -194,10 +213,13 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        auto loop_task = loop(*acceptor);
-        auto spawn_task = spawn(shell, *acceptor);
+        auto acc = std::make_shared<eventide::acceptor<eventide::pipe>>(std::move(*acceptor));
+        auto loop_task = loop(acc);
+        auto spawn_task = spawn(shell, acc);
         default_loop().schedule(loop_task);
         default_loop().schedule(spawn_task);
+        
+        acc.reset();  // We can release our reference to the acceptor since the loop task will keep it alive
         default_loop().run();
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());

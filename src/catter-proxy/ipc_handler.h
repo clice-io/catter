@@ -67,8 +67,15 @@ public:
 private:
     template <typename... Args>
     void write(Args&&... payload) {
-        // TODO
-        (wait(this->client_pipe.write(std::forward<Args>(payload))), ...);
+        (this->write(std::forward<Args>(payload)), ...);
+    }
+
+    template <typename T>
+    void write(T&& payload) {
+        auto err = wait(this->client_pipe.write(std::forward<T>(payload)));
+        if(err.has_error()) {
+            throw std::runtime_error(std::format("ipc_handler write failed: {}", err.message()));
+        }
     }
 
     void read(char* dst, size_t len) {
