@@ -74,7 +74,12 @@ TEST_SUITE(cmd_builder) {
         EXPECT_TRUE(last_arg.find("Catter Proxy Error: File not found") != std::string::npos);
         EXPECT_TRUE(last_arg.find("in command: invalid --help") != std::string::npos);
 
-        EXPECT_THROWS(ct::optdata::catter_proxy::parse_opt(cmd.argv));
+        auto f = [&]() {
+            auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
+            EXPECT_FALSE(parse_res.error_msg.empty());
+        };
+
+        EXPECT_NOTHROWS(f());
     };
 };
 }  // namespace

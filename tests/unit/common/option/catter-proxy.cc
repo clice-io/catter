@@ -135,6 +135,11 @@ TEST_SUITE(opt_catter_proxy_parser) {
             "/usr/bin/python3",
             "report err!",
         };
-        EXPECT_THROWS((optdata::catter_proxy::parse_opt(argc, (char**)argv)));
+        auto f = [&]() {
+            auto parse_res = optdata::catter_proxy::parse_opt(argc, (char**)argv);
+            EXPECT_FALSE(parse_res.error_msg.empty());
+        };
+
+        EXPECT_NOTHROWS(f());
     };
 };

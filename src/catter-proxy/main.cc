@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 
@@ -63,6 +64,10 @@ int main(int argc, char* argv[], char* envp[]) {
     try {
 
         auto opt = catter::optdata::catter_proxy::parse_opt(argc, argv);
+
+        if(!opt.error_msg.empty()) {
+            throw std::runtime_error(std::format("Error from hook: {}", opt.error_msg));
+        }
         catter::ipc::data::command cmd = {
             .working_dir = std::filesystem::current_path().string(),
             .executable = opt.executable,

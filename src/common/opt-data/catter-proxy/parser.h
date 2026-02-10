@@ -17,6 +17,7 @@ namespace catter::optdata::catter_proxy {
 struct Option {
     std::string parent_id;
     std::string executable;
+    std::string error_msg;
     std::vector<std::string> raw_argv;
 };
 
@@ -28,12 +29,12 @@ inline Option parse_opt(std::span<std::string> argv_span, bool with_program_name
         throw std::invalid_argument("no arguments provided");
     }
 
-    std::string error_msg = "";
+    std::string error = "";
     catter_proxy_opt_table.parse_args(
         argv,
         [&](const std::expected<opt::ParsedArgument, std::string>& arg) {
             if(!arg.has_value()) {
-                error_msg = std::format("error parsing arguments: {}", arg.error());
+                error = std::format("error parsing arguments: {}", arg.error());
             }
 
             switch(arg->option_id.id()) {
@@ -50,19 +51,18 @@ inline Option parse_opt(std::span<std::string> argv_span, bool with_program_name
                         option.raw_argv =
                             std::vector<std::string>(arg->values.begin(), arg->values.end());
                     } else {
-                        error_msg =
-                            std::format("error msg from hook: {}", arg->get_spelling_view());
+                        option.error_msg = arg->get_spelling_view();
                     }
                     break;
                 }
                 default: {
-                    error_msg = std::format("unknown argument: {}", argv[arg->index]);
+                    error = std::format("unknown argument: {}", argv[arg->index]);
                     break;
                 }
             }
         });
-    if(!error_msg.empty()) {
-        throw std::invalid_argument(error_msg);
+    if(!error.empty()) {
+        throw std::invalid_argument(error);
     }
     return option;
 };
