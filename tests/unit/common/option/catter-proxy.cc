@@ -3,6 +3,7 @@
 #include "util/output.h"
 #include "opt-data/catter-proxy/parser.h"
 
+#include <zest/macro.h>
 #include <zest/zest.h>
 
 #include <string_view>
@@ -93,63 +94,47 @@ TEST_SUITE(opt_catter_proxy) {
 
 TEST_SUITE(opt_catter_proxy_parser) {
     TEST_CASE(parse_opt_success) {
-        char* const argv[] =
-            {(char*)"", (char*)"-p", (char*)"5678", (char*)"--exec", (char*)"/bin/echo", nullptr};
-        auto res = optdata::catter_proxy::parse_opt(argv);
-        EXPECT_TRUE(res.has_value());
-        if(res.has_value()) {
-            EXPECT_TRUE(res->parent_id == "5678");
-            EXPECT_TRUE(res->executable == std::filesystem::path("/bin/echo"));
-            EXPECT_TRUE(res->raw_argv_or_err.has_value());
-            if(res->raw_argv_or_err.has_value()) {
-                EXPECT_TRUE(res->raw_argv_or_err->size() == 0);
-            }
-        }
+        int argc = 5;
+        const char* argv[] = {"", "-p", "5678", "--exec", "/bin/echo"};
+
+        auto f = [&]() {
+            auto res = optdata::catter_proxy::parse_opt(argc, (char**)argv);
+            EXPECT_TRUE(res.parent_id == "5678");
+            EXPECT_TRUE(res.executable == "/bin/echo");
+            EXPECT_TRUE(res.raw_argv.size() == 0);
+        };
+        EXPECT_NOTHROWS(f());
     };
     TEST_CASE(parse_opt_with_input_args) {
-        char* const argv[] = {(char*)"",
-                              (char*)"-p",
-                              (char*)"91011",
-                              (char*)"--exec",
-                              (char*)"/usr/bin/python3",
-                              (char*)"--",
-                              (char*)"script.py",
-                              (char*)"--verbose",
-                              nullptr};
-        auto res = optdata::catter_proxy::parse_opt(argv);
-        EXPECT_TRUE(res.has_value());
-        if(res.has_value()) {
-            EXPECT_TRUE(res->parent_id == "91011");
-            EXPECT_TRUE(res->executable == std::filesystem::path("/usr/bin/python3"));
-            EXPECT_TRUE(res->raw_argv_or_err.has_value());
-            if(res->raw_argv_or_err.has_value()) {
-                EXPECT_TRUE(res->raw_argv_or_err->size() == 2);
-                EXPECT_TRUE(res->raw_argv_or_err->at(0) == "script.py");
-                EXPECT_TRUE(res->raw_argv_or_err->at(1) == "--verbose");
-            }
-        }
+        int argc = 8;
+        const char* argv[] =
+            {"", "-p", "91011", "--exec", "/usr/bin/python3", "--", "script.py", "--verbose"};
+        auto f = [&]() {
+            auto res = optdata::catter_proxy::parse_opt(argc, (char**)argv);
+            EXPECT_TRUE(res.parent_id == "91011");
+            EXPECT_TRUE(res.executable == "/usr/bin/python3");
+            EXPECT_TRUE(res.raw_argv.size() == 2);
+            EXPECT_TRUE(res.raw_argv.at(0) == "script.py");
+            EXPECT_TRUE(res.raw_argv.at(1) == "--verbose");
+        };
+        EXPECT_NOTHROWS(f());
     };
     TEST_CASE(parse_opt_error_handling) {
-        char* const argv[] = {(char*)"", (char*)"-p", nullptr};
-        auto res = optdata::catter_proxy::parse_opt(argv);
-        EXPECT_TRUE(!res.has_value());
-        if(!res.has_value()) {
-            catter::output::blueLn("Expected Error: {}", res.error());
-        }
+        int argc = 2;
+        const char* argv[] = {"", "-p"};
+
+        EXPECT_THROWS((optdata::catter_proxy::parse_opt(argc, (char**)argv)));
     };
     TEST_CASE(parse_opt_pass_an_err) {
-        char* const argv[] = {(char*)"",
-                              (char*)"-p",
-                              (char*)"91011",
-                              (char*)"--exec",
-                              (char*)"/usr/bin/python3",
-                              (char*)"report err!",
-                              nullptr};
-        auto res = optdata::catter_proxy::parse_opt(argv);
-        EXPECT_TRUE(res.has_value());
-        EXPECT_TRUE(!res->raw_argv_or_err.has_value());
-        if(!res->raw_argv_or_err.has_value()) {
-            catter::output::blueLn("Expected Error: {}", res->raw_argv_or_err.error());
-        }
+        int argc = 6;
+        const char* argv[] = {
+            "",
+            "-p",
+            "91011",
+            "--exec",
+            "/usr/bin/python3",
+            "report err!",
+        };
+        EXPECT_THROWS((optdata::catter_proxy::parse_opt(argc, (char**)argv)));
     };
 };

@@ -9,61 +9,63 @@
 #include <format>
 #include <print>
 #include <string>
-#include <filesystem>
 #include <vector>
 
 namespace catter::optdata::catter_proxy {
-namespace fs = std::filesystem;
 
 struct Option {
     std::string parent_id;
-    fs::path executable;
-    std::expected<std::vector<std::string>, std::string> raw_argv_or_err;
+    std::string executable;
+    std::vector<std::string> raw_argv;
 };
 
-inline std::expected<Option, std::string> parse_opt(std::span<std::string> argv_span,
-                                                    bool with_program_name = true) {
-    std::string err = "";
+inline Option parse_opt(std::span<std::string> argv_span, bool with_program_name = true) {
     Option option{};
+
     auto argv = with_program_name ? argv_span.subspan(1) : argv_span;
     if(argv.empty()) {
-        err = "no arguments provided";
-        return std::unexpected(err);
+        throw std::invalid_argument("no arguments provided");
     }
     catter_proxy_opt_table.parse_args(
         argv,
         [&](const std::expected<opt::ParsedArgument, std::string>& arg) {
-            if(!err.empty()) {
-                return;
-            }
             if(!arg.has_value()) {
-                err = arg.error();
-                return;
+                throw std::invalid_argument(
+                    std::format("error parsing arguments: {}", arg.error()));
             }
+
             switch(arg->option_id.id()) {
-                case OPT_PARENT_ID: option.parent_id = arg->values[0]; break;
-                case OPT_EXEC: option.executable = fs::path(arg->values[0]); break;
-                case OPT_INPUT:
+                case OPT_PARENT_ID: {
+                    option.parent_id = arg->values[0];
+                    break;
+                }
+                case OPT_EXEC: {
+                    option.executable = arg->values[0];
+                    break;
+                }
+                case OPT_INPUT: {
                     if(arg->get_spelling_view() == "--") {
-                        option.raw_argv_or_err =
+                        option.raw_argv =
                             std::vector<std::string>(arg->values.begin(), arg->values.end());
                     } else {
-                        option.raw_argv_or_err = std::unexpected(arg->get_spelling_view());
+                        throw std::invalid_argument(
+                            std::format("unexpected argument for raw argv: {}",
+                                        arg->get_spelling_view()));
                     }
                     break;
-                default: err = std::format("unknown arg {}", argv_span[arg->index]); break;
+                }
+                default: {
+                    throw std::invalid_argument(
+                        std::format("unknown arg {}", argv_span[arg->index]));
+                    break;
+                }
             }
         });
-    if(err.empty()) {
-        return option;
-    } else {
-        return std::unexpected(err);
-    }
+    return option;
 };
 
-inline std::expected<Option, std::string> parse_opt(char* const argv[],
-                                                    bool with_program_name = true) {
-    auto argv_vec = catter::util::save_argv(argv);
+inline Option parse_opt(int argc, char* argv[], bool with_program_name = true) {
+    auto argv_vec = catter::util::save_argv(argc, argv);
     auto argv_span = std::span<std::string>(argv_vec);
     return parse_opt(argv_span, with_program_name);
 };

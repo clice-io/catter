@@ -4,9 +4,9 @@
 #include <vector>
 
 namespace catter::util {
-inline std::vector<std::string> save_argv(char* const argv[]) {
+inline std::vector<std::string> save_argv(int argc, char* argv[]) {
     std::vector<std::string> result;
-    for(int i = 0; argv[i] != nullptr; ++i) {
+    for(int i = 0; i < argc; ++i) {
         result.emplace_back(argv[i]);
     }
     return result;

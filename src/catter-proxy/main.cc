@@ -6,6 +6,7 @@
 #include <system_error>
 
 #include <eventide/process.h>
+#include <vector>
 
 #include "hook.h"
 #include "ipc_handler.h"
@@ -14,6 +15,7 @@
 #include "util/crossplat.h"
 #include "util/log.h"
 #include "util/output.h"
+#include "opt-data/catter-proxy/parser.h"
 #include "config/catter-proxy.h"
 
 namespace catter::proxy {
@@ -43,21 +45,6 @@ int run(ipc::data::action act, ipc::data::command_id_t id) {
         }
     }
 }
-
-ipc::data::command build_raw_cmd(char* arg_start[], char* arg_end[]) {
-    if(arg_start >= arg_end) {
-        throw std::invalid_argument("No command provided");
-    }
-    ipc::data::command cmd;
-    cmd.working_dir = std::filesystem::current_path().string();
-    cmd.executable = *arg_start;
-    for(char** arg_i = arg_start; arg_i < arg_end; ++arg_i) {
-        cmd.args.emplace_back(*arg_i);
-    }
-    cmd.env = catter::util::get_environment();
-    return cmd;
-}
-
 }  // namespace catter::proxy
 
 // we do not output in proxy, it must be invoked by main program.
@@ -71,60 +58,26 @@ int main(int argc, char* argv[], char* envp[]) {
         // cannot init logger
         catter::log::mute_logger();
     }
-
-    // single instance of ipc handler
     auto& ipc_ins = catter::proxy::ipc_handler::instance();
-
-    if(argc < 4) {
-        // -p is the parent of this
-        LOG_CRITICAL("Expected at least 4 arguments, got {}", argc);
-        ipc_ins.report_error("Insufficient arguments in catter-proxy");
-        return -1;
-    }
-
-    char** arg_end = argv + argc;
 
     try {
 
-        if(std::string(argv[1]) != "-p") {
-            LOG_CRITICAL("Expected '-p' as the first argument");
-            ipc_ins.report_error("Invalid arguments in catter-proxy");
-            return -1;
-        }
+        auto opt = catter::optdata::catter_proxy::parse_opt(argc, argv);
+        catter::ipc::data::command cmd = {
+            .working_dir = std::filesystem::current_path().string(),
+            .executable = opt.executable,
+            .args = opt.raw_argv,
+            .env = catter::util::get_environment(),
+        };
 
-        catter::ipc::data::command_id_t parent_id = std::stoi(argv[2]);
+        auto id = ipc_ins.create(std::stoi(opt.parent_id));
 
-        auto id = ipc_ins.create(parent_id);
-
-        if(std::string(argv[3]) != "--") {
-            if(argv[3] != nullptr) {
-                // a msg from hook
-                ipc_ins.report_error(argv[3]);
-                return -1;
-            }
-            LOG_CRITICAL("Expected '--' as the third argument");
-            ipc_ins.report_error("Invalid arguments in catter-proxy");
-            return -1;
-        }
-
-        // 1. read command from args
-        auto cmd = catter::proxy::build_raw_cmd(argv + 4, arg_end);
-
-        // 2. locate executable, which means resolve PATH if needed
-        catter::proxy::hook::locate_exe(cmd);
-
-        // 3. remote procedure call, wait server make decision
         auto received_act = ipc_ins.make_decision(cmd);
-        // received cmd maybe not a path, either, so we need locate again
-        catter::proxy::hook::locate_exe(received_act.cmd);
 
-        // 4. run command
         int ret = catter::proxy::run(received_act, id);
-
-        // 5. report finish
+        
         ipc_ins.finish(ret);
 
-        // 5. return exit code
         return ret;
     } catch(const std::exception& e) {
         LOG_CRITICAL("Exception in catter-proxy: {}", e.what());

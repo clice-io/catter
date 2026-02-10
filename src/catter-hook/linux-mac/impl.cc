@@ -19,33 +19,6 @@
 
 namespace catter::proxy::hook {
 
-void locate_exe(ipc::data::command& command) {
-    std::string result;
-    std::array<char, 128> buffer;
-
-    // we use `command -v` instead of `which`, because formmer is in POSIX standard.
-    std::string find_cmd = "command -v " + command.executable;
-    auto fp = popen(find_cmd.c_str(), "r");
-    if(!fp) {
-        throw std::runtime_error("popen failed when locating executable");
-    }
-    if(fgets(buffer.data(), buffer.size(), fp) != nullptr) {
-        result = buffer.data();
-        // remove trailing newline
-        if(!result.empty() && result.back() == '\n') {
-            result.pop_back();
-        }
-    }
-    auto ret = pclose(fp);
-    if(ret == -1 || WEXITSTATUS(ret) != 0) {
-        throw std::runtime_error("command -v failed to locate executable");
-    }
-    if(result.empty()) {
-        throw std::runtime_error("executable not found");
-    }
-    command.executable = result;
-}
-
 std::filesystem::path get_hook_path() {
     auto exe_path = util::get_executable_path();
     return std::filesystem::path(exe_path).parent_path() /

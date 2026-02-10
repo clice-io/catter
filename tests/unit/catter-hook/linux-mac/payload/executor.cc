@@ -36,21 +36,17 @@ TEST_SUITE(executor) {
                     session.proxy_path);  // << "Should intercept and execute proxy";
 
         // Verify the proxy received the correct intercepted instructions
-        auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
+        auto f = [&]() {
+            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
+            EXPECT_TRUE(parse_res.parent_id == session.self_id);
+            EXPECT_TRUE(parse_res.executable == "/bin/ls");
 
-        EXPECT_TRUE(parse_res.has_value());  // << "Proxy args should be parseable";
-        if(parse_res.has_value()) {
-            EXPECT_TRUE(parse_res->parent_id == session.self_id);
-            EXPECT_TRUE(parse_res->executable == fs::path("/bin/ls"));
-
-            EXPECT_TRUE(parse_res->raw_argv_or_err.has_value());
-            if(parse_res->raw_argv_or_err.has_value()) {
-                auto& raw_args = parse_res->raw_argv_or_err.value();
-                EXPECT_TRUE(raw_args.size() == 2);
-                EXPECT_TRUE(raw_args[0] == "ls");
-                EXPECT_TRUE(raw_args[1] == "-la");
-            }
-        }
+            auto& raw_args = parse_res.raw_argv;
+            EXPECT_TRUE(raw_args.size() == 2);
+            EXPECT_TRUE(raw_args[0] == "ls");
+            EXPECT_TRUE(raw_args[1] == "-la");
+        };
+        EXPECT_NOTHROWS(f());
     };
 
     TEST_CASE(execvpe_success_using_mock_PATH_resolution) {
@@ -64,12 +60,11 @@ TEST_SUITE(executor) {
         EXPECT_TRUE(res == 0);
         EXPECT_TRUE(linker.last_path == session.proxy_path);
         // Verify translation of relative 'python' to absolute path
-
-        auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
-        EXPECT_TRUE(parse_res.has_value());
-        if(parse_res.has_value()) {
-            EXPECT_TRUE(parse_res->executable == fs::path("/usr/bin/python"));
-        }
+        auto f = [&]() {
+            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
+            EXPECT_TRUE(parse_res.executable == "/usr/bin/python");
+        };
+        EXPECT_NOTHROWS(f());
     };
 
     TEST_CASE(posix_spawn_success_flow) {
@@ -84,13 +79,12 @@ TEST_SUITE(executor) {
         EXPECT_TRUE(res == 0);
         EXPECT_TRUE(linker.last_path == session.proxy_path);
 
-        auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
-        EXPECT_TRUE(parse_res.has_value());
-        if(parse_res.has_value()) {
-            EXPECT_TRUE(parse_res->executable == fs::path("/app/run"));
-            EXPECT_TRUE(parse_res->raw_argv_or_err.has_value());
-            EXPECT_TRUE(parse_res->raw_argv_or_err->at(1) == "--arg1");
-        }
+        auto f = [&]() {
+            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
+            EXPECT_TRUE(parse_res.executable == "/app/run");
+            EXPECT_TRUE(parse_res.raw_argv.at(1) == "--arg1");
+        };
+        EXPECT_NOTHROWS(f());
     };
 
     TEST_CASE(executor_handles_linker_failure) {

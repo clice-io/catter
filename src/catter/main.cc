@@ -27,22 +27,11 @@
 #include "util/eventide.h"
 #include "util/serde.h"
 #include "util/ipc-data.h"
+#include "opt-data/catter/table.h"
 
 using namespace catter;
 
 static int id_generator = 0;
-
-void print_hex(char* data, size_t len) {
-    for(size_t i = 0; i < len; ++i) {
-        std::print("{:02x} ", static_cast<unsigned char>(data[i]));
-    }
-    std::print(" -> ");
-    for(size_t i = 0; i < len; ++i) {
-        char c = data[i];
-        std::print("{}", (std::isprint(static_cast<unsigned char>(c)) ? c : '.'));
-    }
-    std::println();
-}
 
 eventide::task<void> spawn(std::vector<std::string> shell,
                            eventide::acceptor<eventide::pipe>& acceptor) {
@@ -51,7 +40,7 @@ eventide::task<void> spawn(std::vector<std::string> shell,
     std::string exe_path =
         (util::get_catter_root_path() / catter::config::proxy::EXE_NAME).string();
 
-    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--"};
+    std::vector<std::string> args = {"-p", std::to_string(id_generator), "--exec", shell[0], "--"};
 
     append_range_to_vector(args, shell);
 
@@ -157,14 +146,13 @@ eventide::task<void> accept(eventide::pipe client) {
 }
 
 eventide::task<void> loop(eventide::acceptor<eventide::pipe>& acceptor) {
-    std::vector<eventide::task<void>> linked_clients;
+    std::list<eventide::task<void>> linked_clients;
     while(true) {
         auto client = co_await acceptor.accept();
         if(!client) {
             std::println("Failed to accept client: {}", client.error().message());
             break;
         }
-        std::println("Client connected.");
         linked_clients.push_back(accept(std::move(*client)));
         default_loop().schedule(linked_clients.back());
     }
@@ -173,7 +161,9 @@ eventide::task<void> loop(eventide::acceptor<eventide::pipe>& acceptor) {
         for(auto& client_task: linked_clients) {
             client_task.result();  // Await completion and propagate exceptions
         }
-    } catch(const std::exception& ex) {}
+    } catch(const std::exception& ex) {
+        std::println("Exception in client task: {}", ex.what());
+    }
 }
 
 int main(int argc, char* argv[]) {

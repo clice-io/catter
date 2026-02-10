@@ -124,8 +124,4 @@ int run(ipc::data::command cmd, ipc::data::command_id_t id) {
     return static_cast<int>(exit_code);
 };
 
-void locate_exe(ipc::data::command& command) {
-    return;
-}
-
 };  // namespace catter::proxy::hook

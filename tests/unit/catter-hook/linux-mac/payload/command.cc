@@ -3,6 +3,7 @@
 
 #include "opt-data/catter-proxy/parser.h"
 
+#include <zest/macro.h>
 #include <zest/zest.h>
 
 #include <filesystem>
@@ -35,22 +36,18 @@ TEST_SUITE(cmd_builder) {
 
         // 2. Verify argv[0] convention
         EXPECT_TRUE(cmd.argv.at(0) == session.proxy_path);
+        
+        auto f = [&]() {
+            auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
+                EXPECT_TRUE(parse_res.parent_id == "session-99");
+                EXPECT_TRUE(parse_res.executable == target_path);
 
-        auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
-
-        EXPECT_TRUE(parse_res.has_value());
-        if(parse_res.has_value()) {
-            EXPECT_TRUE(parse_res->parent_id == "session-99");
-            EXPECT_TRUE(parse_res->executable == target_path);
-
-            EXPECT_TRUE(parse_res->raw_argv_or_err.has_value());
-            if(parse_res->raw_argv_or_err.has_value()) {
-                auto& args = parse_res->raw_argv_or_err.value();
+                auto& args = parse_res.raw_argv;
                 EXPECT_TRUE(args.size() == 3);
                 EXPECT_TRUE(args.at(0) == "gcc");
-                EXPECT_TRUE(args.at(2) == "main.c");
-            }
-        }
+                EXPECT_TRUE(args.at(2) == "main.c");         
+        };
+        EXPECT_NOTHROWS(f());
     };
 
     TEST_CASE(error_cmd_formats_message_correctly_without_separator) {
@@ -76,10 +73,8 @@ TEST_SUITE(cmd_builder) {
         std::string last_arg = cmd.argv.back();
         EXPECT_TRUE(last_arg.find("Catter Proxy Error: File not found") != std::string::npos);
         EXPECT_TRUE(last_arg.find("in command: invalid --help") != std::string::npos);
-        auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
 
-        EXPECT_TRUE(parse_res.has_value());
-        EXPECT_TRUE(!parse_res->raw_argv_or_err.has_value());
+        EXPECT_THROWS(ct::optdata::catter_proxy::parse_opt(cmd.argv));
     };
 };
 }  // namespace
