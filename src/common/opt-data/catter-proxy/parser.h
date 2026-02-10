@@ -35,6 +35,7 @@ inline Option parse_opt(std::span<std::string> argv_span, bool with_program_name
         [&](const std::expected<opt::ParsedArgument, std::string>& arg) {
             if(!arg.has_value()) {
                 error = std::format("error parsing arguments: {}", arg.error());
+                return;
             }
 
             switch(arg->option_id.id()) {
