@@ -3,14 +3,15 @@
 #include "unix/payload/environment.h"
 #include <cstddef>
 #include <cstring>
+#include <list>
 #include <ranges>
 #include <string_view>
 
 namespace {
-bool handle_env(char* entry) noexcept {
+const char* handle_env(std::list<std::string>& new_preload, char* entry) noexcept {
     for(const auto& key: catter::config::hook::KEYS_TO_INJECT) {
         if(catter::env::is_entry_of(entry, key)) {
-            return false;
+            return nullptr;
         }
     }
 
@@ -18,43 +19,35 @@ bool handle_env(char* entry) noexcept {
         std::string_view full_entry(entry);
         size_t eq_pos = full_entry.find('=');
         if(eq_pos == std::string_view::npos)
-            return true;
+            return entry;
 
         auto value = full_entry.substr(eq_pos + 1);
-        char* write_ptr = entry + eq_pos + 1;
-        size_t current_offset = 0;
-        bool first = true;
-
-        for(auto part: std::ranges::views::split(value, catter::config::OS_PATH_SEPARATOR)) {
-            std::string_view path_sv(part);
-
-            if(!path_sv.ends_with(catter::config::hook::RELATIVE_PATH_OF_HOOK_LIB)) {
-                if(!first) {
-                    write_ptr[current_offset++] = catter::config::OS_PATH_SEPARATOR;
-                }
-                std::memmove(write_ptr + current_offset, path_sv.data(), path_sv.size());
-                current_offset += path_sv.size();
-                first = false;
-            }
-        }
-        write_ptr[current_offset] = '\0';
+        new_preload.push_back(catter::config::hook::LD_PRELOAD_INIT_ENTRY +
+                              (std::views::split(value, catter::config::OS_PATH_SEPARATOR) |
+                               std::views::filter([](auto lib) {
+                                   return !std::string_view(lib).ends_with(
+                                       catter::config::hook::HOOK_LIB_NAME);
+                               }) |
+                               std::views::join_with(catter::config::OS_PATH_SEPARATOR) |
+                               std::ranges::to<std::string>()));
+        return new_preload.back().c_str();
     }
-    return true;
+    return entry;
 }
 }  // namespace
 
 namespace catter {
 EnvGuard::EnvGuard(const char*** env_ptr) noexcept {
-    new_envs.reserve(64);
+    new_envs_.reserve(64);
 
     for(size_t i = 0; (*env_ptr)[i] != nullptr; ++i) {
         char* env = const_cast<char*>((*env_ptr)[i]);
-        if(handle_env(env)) {
-            new_envs.push_back(env);
+        if(auto new_entry = handle_env(new_preload_, env); new_entry != nullptr) {
+            new_envs_.push_back(const_cast<char*>(new_entry));
         }
     }
-    new_envs.push_back(nullptr);
+    new_envs_.push_back(nullptr);
 
-    *env_ptr = const_cast<const char**>(new_envs.data());
+    *env_ptr = const_cast<const char**>(new_envs_.data());
 }
 }  // namespace catter

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+#include <string>
 #include <vector>
 
 namespace catter {
@@ -17,6 +19,7 @@ public:
     EnvGuard& operator= (EnvGuard&&) = delete;
 
 private:
-    std::vector<char*> new_envs;
+    std::vector<char*> new_envs_;
+    std::list<std::string> new_preload_;
 };
 }  // namespace catter
