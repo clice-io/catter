@@ -5,21 +5,21 @@
 
 namespace catter::env {
 
+bool is_entry_of(const char* entry, std::string_view key) noexcept {
+    std::string_view sv = entry;
+    return sv.starts_with(key) && sv.size() > key.size() && sv[key.size()] == '=';
+}
+
 const char* get_env_value(const char** envp, std::string_view key) noexcept {
     const std::size_t key_size = key.size();
     INFO("getting env value for key: {}", key);
 
     for(const char** it = envp; *it != nullptr; ++it) {
-        std::string_view current = *it;
-        // Is the key a prefix of the pointed string?
-        if(!current.starts_with(key))
-            continue;
-        // Is the next character is the equal sign?
-        if(current.size() <= key_size || current[key_size] != '=')
+        if(!is_entry_of(*it, key))
             continue;
         // It must be the one! Calculate the address of the value.
-        INFO("env key: {} found, value: {}", key, current.data() + key_size + 1);
-        return current.data() + key_size + 1;
+        INFO("env key: {} found, value: {}", key, *it + key_size + 1);
+        return *it + key_size + 1;
     }
     INFO("env key: {} not found", key);
     return nullptr;
@@ -30,15 +30,9 @@ const char* get_env_entry(const char** envp, std::string_view key) noexcept {
     INFO("getting env entry for key: {}", key);
 
     for(const char** it = envp; *it != nullptr; ++it) {
-        std::string_view current = *it;
-        // Is the key a prefix of the pointed string?
-        if(!current.starts_with(key))
+        if(!is_entry_of(*it, key))
             continue;
-        // Is the next character is the equal sign?
-        if(current.size() <= key_size || current[key_size] != '=')
-            continue;
-        // It must be the one! Return the entry.
-        return current.data();
+        return *it;
     }
     INFO("env entry for key: {} not found", key);
     return nullptr;

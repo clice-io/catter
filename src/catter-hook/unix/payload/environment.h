@@ -4,6 +4,8 @@
 
 namespace catter::env {
 
+bool is_entry_of(const char* entry, std::string_view key) noexcept;
+
 /**
  * Returns the value for the given environment name, from the given
  * environment array.

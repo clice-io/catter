@@ -49,7 +49,10 @@ pre-commit = "*"
 [feature.dev.tasks]
 check = "pre-commit run --all-files"
 unitest = "xmake test --verbose"
-integration-test = "lit ./tests/integration -av"
+
+[feature.dev.tasks.integration-test]
+cmd = "lit ./tests/integration -sav"
+depends-on = [{ task = "build" }]
 
 [environments]
 default = []

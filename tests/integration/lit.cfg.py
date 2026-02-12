@@ -59,15 +59,25 @@ if is_linux or is_macos:
     key_parent_id = "__key_catter_command_id_v1"
     key_proxy_path = "__key_catter_proxy_path_v1"
 
+    macros = "".join(
+        (
+            rf" -D_KEY_PID=\"{key_parent_id}\"",
+            rf" -D_KEY_PROXY_PATH=\"{key_proxy_path}\"",
+            rf" -D_KEY_PRELOAD=\"{preload_var_name}\"",
+        )
+    )
+
     config.substitutions.append(("%catter-proxy", catter_proxy_cmd))
     config.substitutions.append(("%catter-hook-path", hook_path))
     config.substitutions.append(("%filecheck", "FileCheck"))
 
     # in debug mode, we need asan
     if is_macos:
-        config.substitutions.append(("%cc", "clang++ -std=c++23 -fuse-ld=lld %s -o %t"))
+        config.substitutions.append(
+            ("%cc", f"clang++ -std=c++23 {macros} -fuse-ld=lld %s -o %t")
+        )
     else:
-        config.substitutions.append(("%cc", "g++ -std=c++23 %s -o %t"))
+        config.substitutions.append(("%cc", f"g++ -std=c++23 {macros} %s -o %t"))
         if mode == "debug":
             asan_path = get_cmd_output(
                 "g++ -print-file-name=libasan.so", lambda x: x.strip()
