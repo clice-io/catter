@@ -19,17 +19,25 @@ const char* handle_env(std::list<std::string>& new_preload, char* entry) noexcep
         std::string_view full_entry(entry);
         size_t eq_pos = full_entry.find('=');
         if(eq_pos == std::string_view::npos)
-            return entry;
+            return nullptr;
 
         auto value = full_entry.substr(eq_pos + 1);
-        new_preload.push_back(catter::config::hook::LD_PRELOAD_INIT_ENTRY +
-                              (std::views::split(value, catter::config::OS_PATH_SEPARATOR) |
-                               std::views::filter([](auto lib) {
-                                   return !std::string_view(lib).ends_with(
-                                       catter::config::hook::HOOK_LIB_NAME);
-                               }) |
-                               std::views::join_with(catter::config::OS_PATH_SEPARATOR) |
-                               std::ranges::to<std::string>()));
+        std::string new_value;
+        for(const auto& lib: value | std::views::split(catter::config::OS_PATH_SEPARATOR)) {
+            std::string_view lib_sv(lib.begin(), lib.end());
+            if(lib_sv.ends_with(catter::config::hook::HOOK_LIB_NAME)) {
+                continue;
+            }
+            if(!new_value.empty()) {
+                new_value += catter::config::OS_PATH_SEPARATOR;
+            }
+            new_value += lib_sv;
+        }
+        if(new_value.empty()) {
+            // If the new value is empty, we just skip this entry.
+            return nullptr;
+        }
+        new_preload.push_back(catter::config::hook::LD_PRELOAD_INIT_ENTRY + new_value);
         return new_preload.back().c_str();
     }
     return entry;

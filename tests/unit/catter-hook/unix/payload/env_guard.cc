@@ -67,9 +67,7 @@ TEST_SUITE(env_guard) {
         ct::EnvGuard guard(&envp);
 
         auto cleaned_preload = find_entry(envp, cfg::KEY_PRELOAD);
-        EXPECT_TRUE(cleaned_preload != nullptr);
-        std::string expected_preload = std::string(cfg::KEY_PRELOAD) + "=";
-        EXPECT_TRUE(std::string_view(cleaned_preload) == expected_preload);
+        EXPECT_TRUE(cleaned_preload == nullptr);
     };
 };
 
