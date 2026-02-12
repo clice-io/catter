@@ -5,7 +5,7 @@
 #include "resolver.h"
 #include "linker.h"
 #include "session.h"
-#include "unix/payload/env_guard.h"
+#include "env_guard.h"
 
 #include <cerrno>
 #include <cstdlib>

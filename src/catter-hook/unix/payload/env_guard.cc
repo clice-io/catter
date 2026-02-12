@@ -1,10 +1,8 @@
 #include "env_guard.h"
 #include "unix/config.h"
 #include "unix/payload/environment.h"
-#include "unix/payload/session.h"
 #include <cstddef>
 #include <cstring>
-#include <print>
 #include <ranges>
 #include <string_view>
 

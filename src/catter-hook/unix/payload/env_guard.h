@@ -1,6 +1,5 @@
 #pragma once
 
-#include "unix/payload/session.h"
 #include <vector>
 
 namespace catter {
