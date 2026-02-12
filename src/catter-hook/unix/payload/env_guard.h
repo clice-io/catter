@@ -10,7 +10,7 @@ namespace catter {
 /// not be affected by them.
 class EnvGuard {
 public:
-    explicit EnvGuard(const char*** env_ptr) noexcept;
+    explicit EnvGuard(const char*** env_ptr);
     ~EnvGuard() noexcept = default;
 
     EnvGuard(const EnvGuard&) = delete;

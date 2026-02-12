@@ -34,25 +34,28 @@ public:
     ~Executor() noexcept = default;
 
 public:
-    int execve(const char* path, char* const argv[], char* const envp[]);
+    int execve(const char* path, char* const argv[], char* const envp[]) noexcept;
 
-    int execvpe(const char* file, char* const argv[], char* const envp[]);
+    int execvpe(const char* file, char* const argv[], char* const envp[]) noexcept;
 
-    int execvP(const char* file, const char* search_path, char* const argv[], char* const envp[]);
+    int execvP(const char* file,
+               const char* search_path,
+               char* const argv[],
+               char* const envp[]) noexcept;
 
     int posix_spawn(pid_t* pid,
                     const char* path,
                     const posix_spawn_file_actions_t* file_actions,
                     const posix_spawnattr_t* attrp,
                     char* const argv[],
-                    char* const envp[]);
+                    char* const envp[]) noexcept;
 
     int posix_spawnp(pid_t* pid,
                      const char* file,
                      const posix_spawn_file_actions_t* file_actions,
                      const posix_spawnattr_t* attrp,
                      char* const argv[],
-                     char* const envp[]);
+                     char* const envp[]) noexcept;
 
 private:
     const catter::Linker& linker_;
