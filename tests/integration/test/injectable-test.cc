@@ -105,8 +105,11 @@ int main(int argc, const char** argv) {
         assert(pid == nullptr);
         auto proxy_path = std::getenv(_KEY_PROXY_PATH);
         assert(proxy_path == nullptr);
-        std::string_view preload = std::getenv(_KEY_PRELOAD);
-        assert(preload.find("libcatter-hook") == std::string_view::npos);
+        auto preload = std::getenv(_KEY_PRELOAD);
+        if(preload != nullptr) {
+            std::string_view preload_sv(preload);
+            assert(preload_sv.find("libcatter-hook") == std::string_view::npos);
+        }
         print_args(argc, argv);
         return 0;
     }
