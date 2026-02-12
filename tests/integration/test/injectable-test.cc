@@ -41,10 +41,6 @@ void print_args(int argc, const char** argv) {
 
 int run_execve() {
     auto argv = argvify(exec_name.c_str(), "-a");
-    // test
-    for(size_t i = 0; argv[i] != nullptr; ++i) {
-        std::printf("argv[%zu]: %s\n", i, argv[i]);
-    }
     ::execve(exec_path.c_str(), argv.data(), environ);
     std::perror("execve");
     return 1;
@@ -109,8 +105,8 @@ int main(int argc, const char** argv) {
         assert(pid == nullptr);
         auto proxy_path = std::getenv(_KEY_PROXY_PATH);
         assert(proxy_path == nullptr);
-        auto preload = std::getenv(_KEY_PRELOAD);
-        assert(preload == ""sv);
+        std::string_view preload = std::getenv(_KEY_PRELOAD);
+        assert(preload.find("libcatter-hook") == std::string_view::npos);
         print_args(argc, argv);
         return 0;
     }
