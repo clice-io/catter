@@ -11,6 +11,11 @@ public:
     explicit EnvGuard(const char*** env_ptr) noexcept;
     ~EnvGuard() noexcept = default;
 
+    EnvGuard(const EnvGuard&) = delete;
+    EnvGuard& operator=(const EnvGuard&) = delete;
+    EnvGuard(EnvGuard&&) = delete;
+    EnvGuard& operator=(EnvGuard&&) = delete;
+
 private:
     std::vector<char*> new_envs;
 };
