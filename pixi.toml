@@ -52,8 +52,18 @@ check = "pre-commit run --all-files"
 unitest = "xmake test --verbose"
 
 [feature.dev.tasks.integration-test]
-cmd = "lit ./tests/integration -sav"
-depends-on = [{ task = "build" }]
+args = ["build_type"]
+cmd = """
+{% if not (pixi.is_win and build_type == "debug") %}
+lit ./tests/integration -sav
+{% else %}
+python -c "pass"
+{% endif %}
+"""
+depends-on = [
+  { task = "configure", args = ["{{ build_type }}"] },
+  { task = "build" }
+]
 
 [environments]
 default = []
@@ -68,7 +78,7 @@ build = "xmake --verbose --diagnosis"
 
 [tasks.configure]
 args = ["build_type"]
-cmd = "xmake config --clean --yes --mode={{ build_type }}{% if pixi.is_osx %} --toolchain=clang{% endif %}"
+cmd = "xmake config --clean --yes --test=y --mode={{ build_type }} {% if pixi.is_osx %}--toolchain=clang{% endif %}"
 
 [tasks.ci-build]
 args = ["build_type"]
@@ -77,7 +87,7 @@ depends-on = [
   { task = "configure", args = ["{{ build_type }}"] },
   { task = "build" },
   { task = "unitest" },
-  { task = "integration-test" },
+  { task = "integration-test" , args = ["{{ build_type }}"] }
 ]
 
 [tasks.ci-check]

@@ -1,3 +1,8 @@
+
+
+// clang-format off
+// RUN: %it_catter_proxy
+// clang-format on
 #include <coroutine>
 #include <cstddef>
 #include <cstdint>
@@ -21,7 +26,6 @@
 #include <eventide/loop.h>
 #include <reflection/name.h>
 
-#include "js.h"
 #include "config/ipc.h"
 #include "config/catter-proxy.h"
 #include "util/crossplat.h"
@@ -32,19 +36,15 @@
 
 using namespace catter;
 
-static int id_generator = 0;
 using acceptor = eventide::acceptor<eventide::pipe>;
 
-eventide::task<void> spawn(std::vector<std::string> shell, std::shared_ptr<acceptor> acceptor) {
+eventide::task<void> spawn(std::shared_ptr<acceptor> acceptor) {
     // co_await std::suspend_always{};  // placeholder
 
     std::string exe_path =
         (util::get_catter_root_path() / catter::config::proxy::EXE_NAME).string();
 
-    std::vector<std::string> args =
-        {exe_path, "-p", std::to_string(id_generator), "--exec", shell[0], "--"};
-
-    append_range_to_vector(args, shell);
+    std::vector<std::string> args = {exe_path, "-p", "0", "--exec", "echo", "--", "Hello, World!"};
 
     eventide::process::options opts{
         .file = exe_path,
@@ -63,7 +63,6 @@ eventide::task<void> spawn(std::vector<std::string> shell, std::shared_ptr<accep
 }
 
 eventide::task<void> accept(eventide::pipe client) {
-    auto id = ++id_generator;
 
     auto reader = [&](char* dst, size_t len) -> eventide::task<void> {
         size_t total_read = 0;
@@ -77,17 +76,21 @@ eventide::task<void> accept(eventide::pipe client) {
         co_return;
     };
 
+    bool create_received = false;
+    bool finish_received = false;
+    bool decision_received = false;
+
     try {
         while(true) {
             ipc::data::Request req = co_await Serde<ipc::data::Request>::co_deserialize(reader);
             switch(req) {
                 case ipc::data::Request::CREATE: {
+                    create_received = true;
+
                     ipc::data::command_id_t parent_id =
                         co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
-
-                    std::println("ID [{}] created from [{}]", id, parent_id);
-
-                    auto err = co_await client.write(Serde<ipc::data::command_id_t>::serialize(id));
+                    std::println("create with parent ID [{}]", parent_id);
+                    auto err = co_await client.write(Serde<ipc::data::command_id_t>::serialize(0));
 
                     if(err.has_error()) {
                         throw std::runtime_error(
@@ -98,6 +101,7 @@ eventide::task<void> accept(eventide::pipe client) {
                 }
 
                 case ipc::data::Request::MAKE_DECISION: {
+                    decision_received = true;
                     ipc::data::command cmd =
                         co_await Serde<ipc::data::command>::co_deserialize(reader);
 
@@ -108,11 +112,11 @@ eventide::task<void> accept(eventide::pipe client) {
                     }
 
                     auto act = ipc::data::action{
-                        .type = ipc::data::action::INJECT,
+                        .type = ipc::data::action::WRAP,
                         .cmd = cmd,
                     };
 
-                    std::println("ID [{}] decision: {}", id, line);
+                    std::println("decision: {}", line);
 
                     auto err = co_await client.write(Serde<ipc::data::action>::serialize(act));
                     if(err.has_error()) {
@@ -123,8 +127,9 @@ eventide::task<void> accept(eventide::pipe client) {
                     break;
                 }
                 case ipc::data::Request::FINISH: {
+                    finish_received = true;
                     int ret_code = co_await Serde<int>::co_deserialize(reader);
-                    std::println("ID [{}] finish code: {}", id, ret_code);
+                    std::println("finish code: {}", ret_code);
                     break;
                 }
                 case ipc::data::Request::REPORT_ERROR: {
@@ -132,11 +137,11 @@ eventide::task<void> accept(eventide::pipe client) {
                         co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
                     auto cmd_id = co_await Serde<ipc::data::command_id_t>::co_deserialize(reader);
                     std::string error_msg = co_await Serde<std::string>::co_deserialize(reader);
-                    std::println("ID [{}] from [{}] reported error: {}",
-                                 cmd_id,
-                                 parent_id,
-                                 error_msg);
-
+                    throw std::runtime_error(
+                        std::format("Error reported from parent ID [{}], command ID [{}]: {}",
+                                    parent_id,
+                                    cmd_id,
+                                    error_msg));
                     break;
                 }
                 default: std::println("Unknown request received.");
@@ -144,10 +149,23 @@ eventide::task<void> accept(eventide::pipe client) {
         }
     } catch(size_t err) {
         if(err == 0) {
-            std::println("ID [{}] disconnected.", id);
+            std::println("Client disconnected.");
+        } else {
+            throw std::runtime_error("Error while reading from client: unexpected EOF");
         }
-    } catch(const std::exception& ex) {
-        std::println("Exception while handling request: {}", ex.what());
+    }
+
+    std::string missing_reqs;
+    if(!create_received)
+        missing_reqs.append("CREATE ");
+    if(!decision_received)
+        missing_reqs.append("MAKE_DECISION ");
+    if(!finish_received)
+        missing_reqs.append("FINISH ");
+    if(!missing_reqs.empty()) {
+        throw std::runtime_error(
+            std::format("Client disconnected before sending all expected requests. Missing: {}",
+                        missing_reqs));
     }
     co_return;
 }
@@ -168,12 +186,8 @@ eventide::task<void> loop(std::shared_ptr<acceptor> acceptor) {
         default_loop().schedule(linked_clients.back());
     }
 
-    try {
-        for(auto& client_task: linked_clients) {
-            client_task.result();  // Await completion and propagate exceptions
-        }
-    } catch(const std::exception& ex) {
-        std::println("Exception in client task: {}", ex.what());
+    for(auto& client_task: linked_clients) {
+        client_task.result();  // Await completion and propagate exceptions
     }
     co_return;
 }
@@ -184,17 +198,6 @@ int main(int argc, char* argv[]) {
         std::filesystem::remove(catter::config::ipc::PIPE_NAME);
     }
 #endif
-
-    if(argc < 2 || std::string(argv[1]) != "--") {
-        std::println("Usage: catter -- <target program> [args...]");
-        return 1;
-    }
-
-    std::vector<std::string> shell;
-
-    for(int i = 2; i < argc; ++i) {
-        shell.push_back(argv[i]);
-    }
 
     auto acc_ret = eventide::pipe::listen(catter::config::ipc::PIPE_NAME,
                                           eventide::pipe::options(),
@@ -209,7 +212,7 @@ int main(int argc, char* argv[]) {
         auto acc = std::make_shared<acceptor>(std::move(*acc_ret));
         // becareful, msvc has a bug that asan will report false positive UAF
         default_loop().schedule(loop(acc));
-        default_loop().schedule(spawn(shell, acc));
+        default_loop().schedule(spawn(acc));
         acc.reset();  // We can release our reference to the acceptor since the loop task will keep
                       // it alive
         default_loop().run();

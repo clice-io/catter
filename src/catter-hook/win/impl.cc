@@ -12,6 +12,7 @@
 #include <windows.h>
 #include <detours.h>
 
+#include "util/log.h"
 #include "util/ipc-data.h"
 #include "util/crossplat.h"
 
@@ -58,7 +59,7 @@ std::string quote_win32_arg(std::string_view arg) noexcept {
 std::string cmdline_of(const catter::ipc::data::command& cmd) noexcept {
     std::string full_cmd;
     for(const auto& arg: cmd.args) {
-        full_cmd += " " + quote_win32_arg(arg);
+        full_cmd += quote_win32_arg(arg) + " ";
     }
     return full_cmd;
 }
@@ -67,9 +68,12 @@ std::string cmdline_of(const catter::ipc::data::command& cmd) noexcept {
 
 namespace catter::proxy::hook {
 
-int run(ipc::data::command cmd, ipc::data::command_id_t id) {
+int run(ipc::data::command cmd, ipc::data::command_id_t id, std::string proxy_path) {
+
+    LOG_INFO("new command id is: {}", id);
 
     SetEnvironmentVariableA(catter::win::ENV_VAR_IPC_ID<char>, std::to_string(id).c_str());
+    SetEnvironmentVariableA(catter::win::ENV_VAR_PROXY_PATH<char>, proxy_path.c_str());
 
     std::vector<char> env_block;
 
@@ -86,6 +90,11 @@ int run(ipc::data::command cmd, ipc::data::command_id_t id) {
     std::filesystem::path dll_path = catter::util::get_catter_root_path() / catter::win::DLL_NAME;
 
     std::string cmdline = cmdline_of(cmd);
+
+    LOG_INFO("| -> Catter-Proxy Final Executing command: \n    exe = {} \n    args = {}",
+             cmd.executable,
+             cmdline);
+
     auto ret = DetourCreateProcessWithDllExA(cmd.executable.c_str(),
                                              cmdline.data(),
                                              nullptr,

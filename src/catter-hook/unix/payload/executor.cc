@@ -1,7 +1,7 @@
 #include "executor.h"
 
 #include "command.h"
-#include "unix/debug.h"
+#include "debug.h"
 #include "resolver.h"
 #include "linker.h"
 #include "session.h"

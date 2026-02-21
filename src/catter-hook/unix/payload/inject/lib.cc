@@ -3,8 +3,8 @@
 #include "linker.h"
 #include "session.h"
 #include "executor.h"
-#include "unix/debug.h"
-#include "unix/crossplat.h"
+#include "debug.h"
+#include "crossplat.h"
 #include "unix/config.h"
 
 #include <limits.h>
@@ -95,6 +95,10 @@ extern "C" EXPORT_SYMBOL void on_load() {
     // Test whether on_load was called already.
     if(LOADED.exchange(true))
         return;
+#ifdef DEBUG
+    auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;
+    catter::log::init_logger("catter-hook", path, false);
+#endif
     INFO("catter hook library loaded, from executable path: {}", get_executable_path());
     // TODO: initialization code here
     ct::session::from(SESSION, environment());

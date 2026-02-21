@@ -18,44 +18,50 @@
 
 namespace catter::win {
 namespace {
-
-HINSTANCE& dll_instance() {
-    static HINSTANCE instance = nullptr;
-    return instance;
-}
-
-std::filesystem::path current_path() {
-    std::vector<char> data;
-    data.resize(MAX_PATH);
-
-    while(true) {
-        if(GetModuleFileNameA(dll_instance(), data.data(), data.size()) == data.size() &&
-           GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-            data.resize(data.size() * 2);
-        } else {
-            break;
+template <CharT char_t>
+std::basic_string<char_t> get_app_name(const char_t* application_name, const char_t* command_line) {
+    if(application_name == nullptr) {
+        if(command_line == nullptr) {
+            return {};
         }
+        auto view = std::basic_string_view<char_t>(command_line);
+        auto first_space = view.find_first_of(char_t(' '));
+        return std::basic_string<char_t>(view.substr(0, first_space));
+    } else {
+        return std::basic_string<char_t>(application_name);
     }
-
-    return std::filesystem::path(data.data()).parent_path();
-}
-
-std::filesystem::path get_catter_exe_path() {
-    return current_path() / EXE_NAME;
 }
 
 template <CharT char_t>
-std::basic_string<char_t> concat_cmdline(const char_t* application_name,
-                                         const char_t* command_line) {
-    if(application_name == nullptr) {
-        return std::basic_string<char_t>(command_line);
+DWORD FixGetEnvironmentVariable(const char_t* name, char_t* buffer, DWORD size) {
+    if constexpr(std::is_same_v<char_t, char>) {
+        return GetEnvironmentVariableA(name, buffer, size);
     } else {
-        if constexpr(std::is_same_v<char_t, char>) {
-            return std::format("\"{}\" {}", application_name, command_line);
-        } else {
-            return std::format(L"\"{}\" {}", application_name, command_line);
-        }
+        return GetEnvironmentVariableW(name, buffer, size);
     }
+}
+
+template <CharT char_t>
+std::basic_string<char_t> get_proxy_path() {
+    constexpr size_t buffer_size = 256;
+    char_t buffer[buffer_size];
+
+    auto len = FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_PROXY_PATH<char_t>,
+                                                 buffer,
+                                                 buffer_size);
+    if(len == 0) {
+        return {};
+    }
+
+    if(len < buffer_size) {
+        return std::basic_string<char_t>(buffer, len);
+    }
+
+    std::basic_string<char_t> path;
+    path.resize(len);
+    FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_PROXY_PATH<char_t>, path.data(), len);
+    path.pop_back();
+    return path;
 }
 
 template <CharT char_t>
@@ -63,96 +69,23 @@ std::basic_string<char_t> get_ipc_id() {
     constexpr size_t buffer_size = 64;
     char_t buffer[buffer_size];
 
-    if constexpr(std::is_same_v<char_t, char>) {
-        if(!GetEnvironmentVariableA(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size)) {
-            // TODO: log
-        }
-    } else {
-        if(!GetEnvironmentVariableW(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size)) {
-            // TODO: log
-        }
+    auto len =
+        FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size);
+    if(len == 0) {
+        return {};
     }
-    return buffer;
+
+    if(len < buffer_size) {
+        return std::basic_string<char_t>(buffer, len);
+    }
+
+    std::basic_string<char_t> id;
+    id.resize(len);
+    FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_IPC_ID<char_t>, id.data(), len);
+    id.pop_back();
+    return id;
 }
 
-template <CharT char_t>
-bool is_key_match(std::basic_string_view<char_t> entry, std::basic_string_view<char_t> target_key) {
-
-    if(entry.length() <= target_key.length()) {
-        return false;
-    }
-
-    if(entry[target_key.length()] != '=') {
-        return false;
-    }
-
-    return entry.substr(0, target_key.length()) == target_key;
-}
-
-template <CharT char_t>
-std::vector<char_t> fix_env_block_helper(char_t* env_block,
-                                         const std::basic_string<char_t>& ipc_id_entry) {
-    constexpr char_t char_zero = []() {
-        if constexpr(std::is_same_v<char_t, char>) {
-            return '\0';
-        } else {
-            return L'\0';
-        }
-    }();
-
-    std::vector<char_t> result;
-
-    bool found = false;
-    for(auto current = env_block; *current != char_zero;) {
-        std::basic_string_view<char_t> sv(current);
-        std::span<const char_t> span(sv.data(), sv.size() + 1);
-
-        result.append_range(span);
-        std::advance(current, span.size());
-        if(is_key_match<char_t>(sv, catter::win::ENV_VAR_IPC_ID<char_t>)) {
-            found = true;
-        }
-    }
-
-    if(!found) {
-        std::span<const char_t> span(ipc_id_entry.c_str(), ipc_id_entry.size() + 1);
-        result.append_range(span);
-    }
-
-    result.push_back(char_zero);  // Double null termination
-    return result;
-}
-
-auto fix_env_block(DWORD dwCreationFlags, void* lpEnvironment) {
-    struct result {
-        std::vector<char> raiiA{};
-        std::vector<wchar_t> raiiW{};
-        void* env_block{};
-    };
-
-    if(lpEnvironment == nullptr) {
-        return result{.env_block = nullptr};
-    }
-
-    if(dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) {
-        auto ipc_id_entry = std::format(L"{}={}",
-                                        catter::win::ENV_VAR_IPC_ID<wchar_t>,
-                                        catter::win::get_ipc_id<wchar_t>());
-        auto ret =
-            result{.raiiW = catter::win::fix_env_block_helper<wchar_t>((wchar_t*)lpEnvironment,
-                                                                       ipc_id_entry)};
-        ret.env_block = ret.raiiW.data();
-        return ret;
-    } else {
-        auto ipc_id_entry = std::format("{}={}",
-                                        catter::win::ENV_VAR_IPC_ID<char>,
-                                        catter::win::get_ipc_id<char>());
-        auto ret = result{
-            .raiiA = catter::win::fix_env_block_helper<char>((char*)lpEnvironment, ipc_id_entry)};
-        ret.env_block = ret.raiiA.data();
-        return ret;
-    }
-}
 }  // namespace
 
 }  // namespace catter::win
@@ -176,13 +109,12 @@ struct CreateProcessA {
                               LPSTARTUPINFOA lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        auto fixed_env = catter::win::fix_env_block(dwCreationFlags, lpEnvironment);
-
         auto converted_cmdline =
-            std::format("{} -p {} -- {}",
-                        catter::win::get_catter_exe_path().string(),
+            std::format("{} -p {} --exec {} -- {}",
+                        catter::win::get_proxy_path<char>(),
                         catter::win::get_ipc_id<char>(),
-                        catter::win::concat_cmdline<char>(lpApplicationName, lpCommandLine));
+                        catter::win::get_app_name<char>(lpApplicationName, lpCommandLine),
+                        std::string_view(lpCommandLine ? lpCommandLine : ""));
 
         return target(nullptr,
                       converted_cmdline.data(),
@@ -190,7 +122,7 @@ struct CreateProcessA {
                       lpThreadAttributes,
                       bInheritHandles,
                       dwCreationFlags,
-                      fixed_env.env_block,
+                      lpEnvironment,
                       lpCurrentDirectory,
                       lpStartupInfo,
                       lpProcessInformation);
@@ -212,13 +144,12 @@ struct CreateProcessW {
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        auto fixed_env = catter::win::fix_env_block(dwCreationFlags, lpEnvironment);
-
         auto converted_cmdline =
-            std::format(L"{} -p {} -- {}",
-                        catter::win::get_catter_exe_path().wstring(),
+            std::format(L"{} -p {} --exec {} -- {}",
+                        catter::win::get_proxy_path<wchar_t>(),
                         catter::win::get_ipc_id<wchar_t>(),
-                        catter::win::concat_cmdline<wchar_t>(lpApplicationName, lpCommandLine));
+                        catter::win::get_app_name<wchar_t>(lpApplicationName, lpCommandLine),
+                        std::wstring_view(lpCommandLine ? lpCommandLine : L""));
 
         return target(nullptr,
                       converted_cmdline.data(),
@@ -226,7 +157,7 @@ struct CreateProcessW {
                       lpThreadAttributes,
                       bInheritHandles,
                       dwCreationFlags,
-                      fixed_env.env_block,
+                      lpEnvironment,
                       lpCurrentDirectory,
                       lpStartupInfo,
                       lpProcessInformation);
@@ -334,8 +265,6 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
     }
 
     if(dwReason == DLL_PROCESS_ATTACH) {
-        catter::win::dll_instance() = hinst;
-
         DetourRestoreAfterWith();
 
         DetourTransactionBegin();
