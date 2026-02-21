@@ -190,7 +190,7 @@ private:
 
     bool grouped_short_options = false;
     bool dash_dash_parsing = false;
-
+    bool input_random_index = false;
     bool dash_dash_as_single_pack = false;
     const char* env_var = nullptr;
 
@@ -335,6 +335,11 @@ public:
     /// therefore we can use bipartite search to find the option.
     auto set_tablegen_mode(bool value) {
         this->tablegen_mode = value;
+        return *this;
+    }
+
+    auto set_input_random_index(bool value) {
+        this->input_random_index = value;
         return *this;
     }
 

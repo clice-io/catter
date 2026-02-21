@@ -99,17 +99,21 @@ OptTable::OptTable(std::span<const OptTable::Info> option_infos,
     // value-initialization on MinGW with gcc 4.3.5.
 
     // Find start of normal options.
-    for(unsigned i = 0, e = this->num_options(); i != e; ++i) {
-        unsigned kind = this->info(i + 1).kind;
-        if(kind == Option::InputClass) {
-            assert(!this->input_option_id && "Cannot have multiple input options!");
-            this->input_option_id = this->info(i + 1).id;
-        } else if(kind == Option::UnknownClass) {
-            assert(!this->unknown_option_id && "Cannot have multiple unknown options!");
-            this->unknown_option_id = this->info(i + 1).id;
-        } else if(kind != Option::GroupClass) {
-            this->first_searchable_index = i;
-            break;
+    if(this->input_random_index) {
+        this->first_searchable_index = 0;
+    } else {
+        for(unsigned i = 0, e = this->num_options(); i != e; ++i) {
+            unsigned kind = this->info(i + 1).kind;
+            if(kind == Option::InputClass) {
+                assert(!this->input_option_id && "Cannot have multiple input options!");
+                this->input_option_id = this->info(i + 1).id;
+            } else if(kind == Option::UnknownClass) {
+                assert(!this->unknown_option_id && "Cannot have multiple unknown options!");
+                this->unknown_option_id = this->info(i + 1).id;
+            } else if(kind != Option::GroupClass) {
+                this->first_searchable_index = i;
+                break;
+            }
         }
     }
 
