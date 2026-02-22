@@ -1,9 +1,8 @@
 #pragma once
-#include <concepts>
+#include "option/parsed_arg.h"
+#include "trait.h"
 #include <optional>
-#include <string>
 #include <string_view>
-#include <type_traits>
 #include <vector>
 
 namespace deco::decl {
@@ -28,70 +27,48 @@ enum class KVStyle : char {
     Separate = 1
 };
 
-struct Prefix {
-    enum { Dash = 0b1, DashDash = 0b10, Slash = 0b100 };
-
-    unsigned char value = 0;
-
-    constexpr Prefix() = default;
-
-    constexpr Prefix(unsigned char v) : value(v) {}
-
-    constexpr bool empty() const {
-        return value == 0;
-    }
+struct DecoFields {
+    // if true, this option must be provided, otherwise it's optional
+    bool required = true;
+    // if true, options in the same category cannot be set at the same time, otherwise they must be
+    // set together
+    bool exclusive = false;
+    // the category of this option, 0 means no category, options in the same category must be all
+    // set or all unset
+    unsigned category = 0;
 };
 
-struct CommonOptionFields {
+struct CommonOptionFields : DecoFields {
     std::string_view help;
-    bool required = true;
+    std::string_view meta_var;
 
     constexpr CommonOptionFields() = default;
+
+    virtual ~CommonOptionFields() = default;
+    // return error message if parsing fails, otherwise return std::nullopt
+    // virtual std::optional<std::string> into(backend::ParsedArgument&& arg) = 0;
+};
+
+// just to override the default value in this area
+struct ConfigFields : CommonOptionFields {
+    enum class Type : char {
+        Start = 0,
+        End = 1,
+        Next = 2,  // just make sense to next
+    };
+    Type type;
 };
 
 struct NamedOptionFields : CommonOptionFields {
-    Prefix prefix = Prefix::DashDash;
-    std::string_view name;
-    std::vector<std::string_view> alias;
+
+    std::vector<std::string_view> names;
 
     constexpr NamedOptionFields() = default;
 };
 
-template <typename Ty>
-using BaseResultTy = std::remove_cvref_t<Ty>;
-
-template <typename Ty>
-struct VectorResultTraits {
-    constexpr static bool is_vector = false;
-};
-
-template <typename ElemTy, typename AllocTy>
-struct VectorResultTraits<std::vector<ElemTy, AllocTy>> {
-    constexpr static bool is_vector = true;
-    using value_type = ElemTy;
-};
-
-template <typename Ty>
-concept StringResultType =
-    std::same_as<BaseResultTy<Ty>, std::string> || std::same_as<BaseResultTy<Ty>, std::string_view>;
-
-template <typename Ty>
-concept ScalarResultType = std::integral<BaseResultTy<Ty>> ||
-                           std::floating_point<BaseResultTy<Ty>> || StringResultType<Ty>;
-
-template <typename Ty>
-concept MultiResultType = VectorResultTraits<BaseResultTy<Ty>>::is_vector && requires {
-    typename VectorResultTraits<BaseResultTy<Ty>>::value_type;
-} && ScalarResultType<typename VectorResultTraits<BaseResultTy<Ty>>::value_type>;
-
-template <typename Ty>
-concept SingleResultType = ScalarResultType<Ty>;
-
 template <typename ResTy>
 struct InputOption : CommonOptionFields {
-    static_assert(
-        SingleResultType<ResTy>,
-        "InputOption ResTy must be bool/number/string (std::string or std::string_view).");
+    static_assert(trait::ScalarResultType<ResTy>, DecScalarResultErrString);
     using result_type = ResTy;
     constexpr static DecoType decoTy = DecoType::Input;
     std::optional<ResTy> value = std::nullopt;
@@ -101,8 +78,7 @@ struct InputOption : CommonOptionFields {
 
 template <typename ResTy>
 struct PackOption : CommonOptionFields {
-    static_assert(MultiResultType<ResTy>,
-                  "PackOption ResTy must be std::vector<T>, where T is bool/number/string.");
+    static_assert(trait::VectorResultType<ResTy>, DecVectorResultErrString);
     using result_type = ResTy;
     constexpr static DecoType decoTy = DecoType::TrailingInput;
     std::optional<ResTy> value = std::nullopt;
@@ -120,8 +96,7 @@ struct FlagOption : NamedOptionFields {
 
 template <typename ResTy>
 struct KVOption : NamedOptionFields {
-    static_assert(SingleResultType<ResTy>,
-                  "KVOption ResTy must be bool/number/string (std::string or std::string_view).");
+    static_assert(trait::ScalarResultType<ResTy>, DecScalarResultErrString);
     using result_type = ResTy;
     constexpr static DecoType decoTy = DecoType::KV;
     KVStyle style = KVStyle::Separate;
@@ -132,8 +107,7 @@ struct KVOption : NamedOptionFields {
 
 template <typename ResTy>
 struct CommaJoinedOption : NamedOptionFields {
-    static_assert(MultiResultType<ResTy>,
-                  "CommaJoinedOption ResTy must be std::vector<T>, where T is bool/number/string.");
+    static_assert(trait::VectorResultType<ResTy>, DecVectorResultErrString);
     using result_type = ResTy;
     constexpr static DecoType decoTy = DecoType::CommaJoined;
     std::optional<ResTy> value = std::nullopt;
@@ -143,8 +117,7 @@ struct CommaJoinedOption : NamedOptionFields {
 
 template <typename ResTy>
 struct MultiOption : NamedOptionFields {
-    static_assert(MultiResultType<ResTy>,
-                  "MultiOption ResTy must be std::vector<T>, where T is bool/number/string.");
+    static_assert(trait::VectorResultType<ResTy>, DecVectorResultErrString);
     using result_type = ResTy;
     constexpr static DecoType decoTy = DecoType::Multi;
     unsigned arg_num = 1;
