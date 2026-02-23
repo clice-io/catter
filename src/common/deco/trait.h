@@ -44,8 +44,8 @@ concept CustomStringResultTy = requires(BaseResultTy<Ty>& value, std::string_vie
 };
 
 template <typename Ty>
-concept CustomStringVectorRsultTy = requires(BaseResultTy<Ty>& value,
-                                             std::vector<std::string_view>& vals) {
+concept CustomStringVectorResultTy = requires(BaseResultTy<Ty>& value,
+                                              std::vector<std::string_view>& vals) {
     requires std::convertible_to<OptionalResultType<decltype(value.into(vals))>, std::string_view>;
 };
 
@@ -70,7 +70,7 @@ concept PrimitiveVectorResultType =
     } && PrimitiveScalarResultType<std::ranges::range_value_t<BaseResultTy<Ty>>>;
 
 template <typename Ty>
-concept VectorResultType = PrimitiveVectorResultType<Ty> || CustomStringVectorRsultTy<Ty>;
+concept VectorResultType = PrimitiveVectorResultType<Ty> || CustomStringVectorResultTy<Ty>;
 }  // namespace deco::trait
 
 #define DecoScalarResultErrString                                                                  \

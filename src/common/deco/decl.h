@@ -317,7 +317,7 @@ std::optional<std::string> assign_scalar(std::optional<ResTy>& target, std::stri
 template <typename ResTy>
 std::optional<std::string> assign_vector(std::optional<ResTy>& target,
                                          std::span<const std::string_view> values) {
-    if constexpr(trait::CustomStringVectorRsultTy<ResTy>) {
+    if constexpr(trait::CustomStringVectorResultTy<ResTy>) {
         auto& res = target.emplace();
         std::vector<std::string_view> custom_values(values.begin(), values.end());
         const auto err = res.into(custom_values);

@@ -129,7 +129,8 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
     // check category requirements
     const auto& c_map = storage.category_map();
     std::set<const decl::Category*> required_categories;
-    for(std::size_t i = 0; i < c_map.size(); ++i) {
+    // 0 is dummy
+    for(std::size_t i = 1; i < c_map.size(); ++i) {
         const auto* category = c_map[i];
         if(category != nullptr && category->required) {
             required_categories.insert(category);

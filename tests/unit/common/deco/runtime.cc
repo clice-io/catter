@@ -2,9 +2,7 @@
 #include "deco/macro.h"
 #include "deco/runtime.h"
 #include "zest/zest.h"
-#include <iostream>
 #include <optional>
-#include <print>
 #include <sstream>
 #include <string_view>
 #include <vector>
@@ -182,7 +180,6 @@ TEST_CASE(when_error) {
 
     auto res6 = deco::cli::parse<WebCliOpt>(into_deco_args("--", "a", "b"));
     EXPECT_FALSE(res6.has_value());
-    std::println("Error message: {}", res6.error().message);
     EXPECT_TRUE(res6.error().type == deco::cli::ParseError::Type::BackendParsing &&
                 res6.error().message.contains("unknown option"));
 }
@@ -193,7 +190,7 @@ TEST_SUITE(dispatcher){
     TEST_CASE(dispatching){auto dispactcher = deco::cli::Dispatcher<WebCliOpt>("webcli [OPTIONS]");
 std::stringstream ss;
 dispactcher.dispatch(WebCliOpt::Cate::version_category, [&](auto) { ss << "Version 1.0.0"; })
-    .dispatch(WebCliOpt::Cate::help_category, [&](auto) { dispactcher.usage(std::cout, true); })
+    .dispatch(WebCliOpt::Cate::help_category, [&](auto) { dispactcher.usage(ss, true); })
     .dispatch(WebCliOpt::Cate::request_category,
               [&](WebCliOpt opt) {
                   EXPECT_TRUE(opt.request.method.value.has_value());

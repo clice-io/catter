@@ -630,11 +630,12 @@ public:
     }
 
     auto make_opt_table() const& {
-        return backend::OptTable(option_infos())
+        return backend::OptTable(option_infos(), false, {}, false)
             .set_tablegen_mode(false)
             .set_input_random_index(true)
             .set_dash_dash_parsing(has_trailing_pack_)
-            .set_dash_dash_as_single_pack(has_trailing_pack_);
+            .set_dash_dash_as_single_pack(has_trailing_pack_)
+            .build();
     }
 
     auto make_opt_table() const&& = delete;

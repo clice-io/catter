@@ -92,8 +92,15 @@ struct OptNameLess {
 OptTable::OptTable(std::span<const OptTable::Info> option_infos,
                    bool ignore_case,
                    //    std::span<SubCommand> SubCommands,
-                   std::vector<std::string_view> prefixes_union) :
+                   std::vector<std::string_view> prefixes_union,
+                   bool build_now) :
     option_infos(option_infos), ignore_case(ignore_case), _prefixes_union(prefixes_union) {
+    if(build_now) {
+        this->build();
+    }
+}
+
+OptTable& OptTable::build() {
     // Explicitly zero initialize the error to work around a bug in array
     // value-initialization on MinGW with gcc 4.3.5.
 
@@ -132,6 +139,7 @@ OptTable::OptTable(std::span<const OptTable::Info> option_infos,
     }
 
     buildPrefixChars();
+    return *this;
 }
 
 const Option OptTable::option(OptSpecifier opt) const {

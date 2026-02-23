@@ -225,7 +225,10 @@ public:
     OptTable(std::span<const OptTable::Info> option_infos,
              bool ignore_case = false,
              //    std::span<SubCommand> SubCommands = {},
-             std::vector<std::string_view> prefixes_union = {});
+             std::vector<std::string_view> prefixes_union = {},
+             bool build_now = true);
+
+    OptTable& build();
 
     /// Build (or rebuild) the PrefixChars member.
     void buildPrefixChars() {
