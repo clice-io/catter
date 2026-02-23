@@ -54,7 +54,6 @@
     DECO_CONFIG_IMPL(__COUNTER__, deco::decl::ConfigFields::Type::Start, __VA_ARGS__)
 #define DECO_CFG_END(...)                                                                          \
     DECO_CONFIG_IMPL(__COUNTER__, deco::decl::ConfigFields::Type::End, __VA_ARGS__)
-#define Deco_CFG_END(...) DECO_CFG_END(__VA_ARGS__)
 
 #define DECO_DECLARE_OPTION_TYPED_IMPL(id, option_base_ty, cfg_base_ty, using_block, ...)          \
     struct DECO_OPTION_STRUCT_NAME(id) : public option_base_ty {                                   \
