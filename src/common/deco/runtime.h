@@ -30,6 +30,14 @@ inline std::vector<std::string> argvify(int argc, const char* const* argv, unsig
 
 namespace deco::cli {
 
+template <typename Signature>
+using runtime_callable_t =
+#if defined(__APPLE__)
+    std::function<Signature>;
+#else
+    std::move_only_function<Signature>;
+#endif
+
 template <typename T>
 struct ParsedResult {
     T options;
@@ -157,8 +165,8 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
 
 template <typename T>
 class Dispatcher {
-    using handler_fn_t = std::move_only_function<void(T value)>;
-    using error_fn_t = std::move_only_function<void(ParseError)>;
+    using handler_fn_t = runtime_callable_t<void(T value)>;
+    using error_fn_t = runtime_callable_t<void(ParseError)>;
 
     handler_fn_t default_handler_ = [](auto) {
         return "nothing we can do with this options";
@@ -195,7 +203,7 @@ public:
     }
 
     template <typename Os>
-    constexpr void usage(Os& os, bool include_help = true) const {
+    void usage(Os& os, bool include_help = true) const {
         constexpr auto& storage = detail::build_storage<T>();
         std::map<const decl::Category*, std::vector<std::string>> category_usage_map;
         auto on_option = [&](auto, const auto& opt_fields, std::string_view field_name, auto) {
@@ -249,8 +257,8 @@ public:
 };
 
 class SubCommander {
-    using handler_fn_t = std::move_only_function<void(std::span<std::string>)>;
-    using error_fn_t = std::move_only_function<void(SubCommandError)>;
+    using handler_fn_t = runtime_callable_t<void(std::span<std::string>)>;
+    using error_fn_t = runtime_callable_t<void(SubCommandError)>;
 
     struct SubCommandHandler {
         std::string name;
@@ -349,7 +357,7 @@ public:
     }
 
     template <typename Os>
-    constexpr void usage(Os& os) const {
+    void usage(Os& os) const {
         if(!overview_.empty()) {
             os << overview_ << "\n\n";
         }

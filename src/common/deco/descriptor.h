@@ -21,7 +21,7 @@ constexpr inline bool has_help_text(std::string_view help_text) {
     return !help_text.empty() && help_text != k_default_help_text;
 }
 
-constexpr inline std::string category_desc(const decl::Category& category) {
+inline std::string category_desc(const decl::Category& category) {
     if(!category.name.empty() && !category.description.empty()) {
         return std::format("<{}> ({})", category.name, category.description);
     }
@@ -34,8 +34,7 @@ constexpr inline std::string category_desc(const decl::Category& category) {
     return std::string("<unnamed category>");
 }
 
-constexpr inline std::string field_desc(std::string_view field_name,
-                                        const decl::CommonOptionFields& cfg) {
+inline std::string field_desc(std::string_view field_name, const decl::CommonOptionFields& cfg) {
     if(has_help_text(cfg.help)) {
         return std::format("{} ({})", field_name, cfg.help);
     }
@@ -46,7 +45,7 @@ constexpr inline std::string field_desc(std::string_view field_name,
     return std::string(field_name);
 }
 
-constexpr inline std::string meta_var_token(std::string_view meta_var) {
+inline std::string meta_var_token(std::string_view meta_var) {
     if(meta_var.empty()) {
         return "<value>";
     }
@@ -56,8 +55,7 @@ constexpr inline std::string meta_var_token(std::string_view meta_var) {
     return std::format("<{}>", meta_var);
 }
 
-constexpr inline std::string join_strings(const std::vector<std::string>& parts,
-                                          std::string_view separator) {
+inline std::string join_strings(const std::vector<std::string>& parts, std::string_view separator) {
     if(parts.empty()) {
         return "";
     }
@@ -69,7 +67,7 @@ constexpr inline std::string join_strings(const std::vector<std::string>& parts,
     return joined;
 }
 
-constexpr inline std::string placeholder_name(decl::DecoType deco_field_ty) {
+inline std::string placeholder_name(decl::DecoType deco_field_ty) {
     switch(deco_field_ty) {
         case decl::DecoType::Flag: return "--<flag>";
         case decl::DecoType::KV: return "--<option>";
@@ -79,7 +77,7 @@ constexpr inline std::string placeholder_name(decl::DecoType deco_field_ty) {
     }
 }
 
-constexpr inline std::string normalize_member_name(std::string_view member_name) {
+inline std::string normalize_member_name(std::string_view member_name) {
     std::string normalized(member_name);
     for(auto& ch: normalized) {
         if(ch == '_') {
@@ -89,7 +87,7 @@ constexpr inline std::string normalize_member_name(std::string_view member_name)
     return normalized;
 }
 
-constexpr inline std::string default_name_from_member(std::string_view member_name) {
+inline std::string default_name_from_member(std::string_view member_name) {
     const auto normalized_name = normalize_member_name(member_name);
     if(normalized_name.empty()) {
         return "";
@@ -101,8 +99,7 @@ constexpr inline std::string default_name_from_member(std::string_view member_na
 }
 
 template <typename CfgTy>
-constexpr inline std::vector<std::string> named_aliases(const CfgTy& cfg,
-                                                        std::string_view fallback_name) {
+inline std::vector<std::string> named_aliases(const CfgTy& cfg, std::string_view fallback_name) {
     std::vector<std::string> aliases;
     if constexpr(std::is_base_of_v<decl::NamedOptionFields, CfgTy>) {
         aliases.reserve(cfg.names.size());
@@ -121,11 +118,11 @@ constexpr inline std::vector<std::string> named_aliases(const CfgTy& cfg,
     return aliases;
 }
 
-constexpr inline std::string join_aliases(const std::vector<std::string>& aliases, bool help_mode) {
+inline std::string join_aliases(const std::vector<std::string>& aliases, bool help_mode) {
     return join_strings(aliases, help_mode ? ", " : "|");
 }
 
-constexpr inline std::string kv_joined_alias(std::string_view alias, std::string_view value_token) {
+inline std::string kv_joined_alias(std::string_view alias, std::string_view value_token) {
     if(alias.starts_with("--")) {
         return std::format("{}={}", alias, value_token);
     }
@@ -135,19 +132,18 @@ constexpr inline std::string kv_joined_alias(std::string_view alias, std::string
     return std::format("{}{}", alias, value_token);
 }
 
-constexpr inline std::string comma_joined_alias(std::string_view alias,
-                                                std::string_view value_token) {
+inline std::string comma_joined_alias(std::string_view alias, std::string_view value_token) {
     return std::format("{},{}[,{}...]", alias, value_token, value_token);
 }
 
-constexpr inline std::string base_meta_name(std::string_view value_token) {
+inline std::string base_meta_name(std::string_view value_token) {
     if(value_token.size() >= 2 && value_token.front() == '<' && value_token.back() == '>') {
         return std::string(value_token.substr(1, value_token.size() - 2));
     }
     return std::string(value_token);
 }
 
-constexpr inline std::string repeated_meta_vars(std::string_view value_token, unsigned arg_num) {
+inline std::string repeated_meta_vars(std::string_view value_token, unsigned arg_num) {
     if(arg_num <= 1) {
         return std::string(value_token);
     }
@@ -162,9 +158,7 @@ constexpr inline std::string repeated_meta_vars(std::string_view value_token, un
 }
 
 template <typename CfgTy>
-constexpr inline std::string usage_text(const CfgTy& cfg,
-                                        bool help_mode,
-                                        std::string_view fallback_name) {
+inline std::string usage_text(const CfgTy& cfg, bool help_mode, std::string_view fallback_name) {
     const auto value_token = meta_var_token(cfg.meta_var);
 
     if constexpr(CfgTy::deco_field_ty == decl::DecoType::Input) {
@@ -202,7 +196,7 @@ constexpr inline std::string usage_text(const CfgTy& cfg,
 }
 
 template <typename CfgTy>
-constexpr inline std::string help_text(const CfgTy& cfg, std::string_view fallback_name) {
+inline std::string help_text(const CfgTy& cfg, std::string_view fallback_name) {
     const auto usage = usage_text(cfg, true, fallback_name);
     constexpr size_t usage_column_width = 32;
     if(usage.size() >= usage_column_width) {
@@ -219,9 +213,9 @@ constexpr inline std::string help_text(const CfgTy& cfg, std::string_view fallba
 }  // namespace detail
 
 template <ty::is_option_field T>
-constexpr inline std::string from_deco_option(const T& field,
-                                              bool include_help = false,
-                                              std::string_view fallback_name = {}) {
+inline std::string from_deco_option(const T& field,
+                                    bool include_help = false,
+                                    std::string_view fallback_name = {}) {
     const auto cfg = ty::dyn_cast(field);
     if(include_help) {
         return detail::help_text(cfg, fallback_name);
