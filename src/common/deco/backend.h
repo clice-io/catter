@@ -2,6 +2,7 @@
 #include "deco/decl.h"
 #include "deco/descriptor.h"
 #include "deco/ty.h"
+#include "option/opt_specifier.h"
 
 #include <algorithm>
 #include <array>
@@ -478,6 +479,10 @@ private:
 public:
     constexpr static unsigned unknown_option_id = 1;
 
+    constexpr bool is_unknown_option_id(backend::OptSpecifier id) const {
+        return id.id() == 0 || id.id() == unknown_option_id;
+    }
+
     constexpr explicit OptBuilder(std::size_t reserve_bytes = 0) : str_pool_(reserve_bytes) {
         if constexpr(counting) {
             pool_.reserve(16);
@@ -628,7 +633,7 @@ public:
         return backend::OptTable(option_infos())
             .set_tablegen_mode(false)
             .set_input_random_index(true)
-            .set_dash_dash_parsing(true)
+            .set_dash_dash_parsing(has_trailing_pack_)
             .set_dash_dash_as_single_pack(has_trailing_pack_);
     }
 

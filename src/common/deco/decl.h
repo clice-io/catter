@@ -396,4 +396,11 @@ struct VectorOption : DecoOption<ResTy> {
     }
 };
 
+struct SubCommand {
+    std::string_view name;
+    std::string_view description;
+    // if null, use name as subcommand
+    std::optional<std::string_view> command;
+};
+
 }  // namespace deco::decl

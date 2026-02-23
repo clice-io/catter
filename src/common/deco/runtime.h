@@ -10,10 +10,12 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace deco::util {
@@ -42,6 +44,14 @@ struct ParseError {
     std::string message;
 };
 
+struct SubCommandError {
+    enum class Type { Internal, MissingSubCommand, UnknownSubCommand };
+
+    Type type;
+
+    std::string message;
+};
+
 template <typename T>
 std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
     auto& storage = detail::build_storage<T>();
@@ -54,7 +64,7 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
             return false;
         }
 
-        if(arg->option_id == storage.unknown_option_id) {
+        if(storage.is_unknown_option_id(arg->option_id)) {
             err = {ParseError::Type::BackendParsing,
                    std::format("unknown option '{}'", arg->get_spelling_view())};
             return false;
@@ -118,9 +128,15 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
 
     // check category requirements
     const auto& c_map = storage.category_map();
-    for(std::size_t i = 0; i < c_map.size() && c_map[i] != nullptr; ++i) {
+    std::set<const decl::Category*> required_categories;
+    for(std::size_t i = 0; i < c_map.size(); ++i) {
         const auto* category = c_map[i];
-        if(category->required && !res.matched_categories.contains(category)) {
+        if(category != nullptr && category->required) {
+            required_categories.insert(category);
+        }
+    }
+    for(const auto* category: required_categories) {
+        if(!res.matched_categories.contains(category)) {
             err = {ParseError::Type::DecoParsing,
                    std::format("required {} is missing", desc::detail::category_desc(*category))};
             return std::unexpected(std::move(err));
@@ -130,7 +146,7 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
     for(auto category: res.matched_categories) {
         if(category->exclusive && res.matched_categories.size() > 1) {
             err = {ParseError::Type::DecoParsing,
-                   std::format("options in  are exclusive, but multiple categories are matched",
+                   std::format("options in {} are exclusive, but multiple categories are matched",
                                desc::detail::category_desc(*category))};
             return std::unexpected(std::move(err));
         }
@@ -140,14 +156,14 @@ std::expected<ParsedResult<T>, ParseError> parse(std::span<std::string> argv) {
 
 template <typename T>
 class Dispatcher {
-    using handler_fn_t = std::move_only_function<void(const decl::Category*)>;
-    using error_fn_t = std::move_only_function<void(std::string_view)>;
+    using handler_fn_t = std::move_only_function<void(T value)>;
+    using error_fn_t = std::move_only_function<void(ParseError)>;
 
     handler_fn_t default_handler_ = [](auto) {
         return "nothing we can do with this options";
     };
-    error_fn_t error_handler_ = [](std::string_view err) {
-        std::cerr << err << "\n";
+    error_fn_t error_handler_ = [](auto err) {
+        std::cerr << err.message << "\n";
     };
     std::map<const deco::decl::Category*, handler_fn_t> handlers_;
     std::string_view command_overview_;
@@ -171,8 +187,8 @@ public:
     }
 
     auto& when_err(std::ostream& os) {
-        error_handler_ = [&os](std::string_view err) {
-            os << err << "\n";
+        error_handler_ = [&os](const ParseError& err) {
+            os << err.message << "\n";
         };
         return *this;
     }
@@ -207,6 +223,191 @@ public:
                 os << "\n";
             }
         }
+    }
+
+    void parse(std::span<std::string> argv) {
+        auto res = cli::parse<T>(argv);
+        if(res.has_value()) {
+            const auto& matched_categories = res->matched_categories;
+            for(auto category: matched_categories) {
+                auto it = handlers_.find(category);
+                if(it != handlers_.end()) {
+                    it->second(std::move(res->options));
+                    return;
+                }
+            }
+            default_handler_(std::move(res->options));
+        } else {
+            error_handler_(std::move(res.error()));
+        }
+    }
+
+    void operator() (std::span<std::string> argv) {
+        return parse(argv);
+    }
+};
+
+class SubCommander {
+    using handler_fn_t = std::move_only_function<void(std::span<std::string>)>;
+    using error_fn_t = std::move_only_function<void(SubCommandError)>;
+
+    struct SubCommandHandler {
+        std::string name;
+        std::string description;
+        std::string command;
+        handler_fn_t handler;
+    };
+
+    error_fn_t error_handler_ = [](const SubCommandError& err) {
+        std::cerr << err.message << "\n";
+    };
+    std::optional<handler_fn_t> default_handler_;
+    std::vector<SubCommandHandler> handlers_;
+    std::map<std::string, std::size_t, std::less<>> command_to_handler_;
+
+    std::string command_overview_;
+    std::string overview_;
+
+    static auto command_of(const decl::SubCommand& subcommand) -> std::string {
+        if(subcommand.command.has_value()) {
+            return std::string(*subcommand.command);
+        }
+        return std::string(subcommand.name);
+    }
+
+    static auto display_name_of(const decl::SubCommand& subcommand, std::string_view command)
+        -> std::string {
+        if(!subcommand.name.empty()) {
+            return std::string(subcommand.name);
+        }
+        return std::string(command);
+    }
+
+public:
+    SubCommander(std::string_view command_overview, std::string_view overview = {}) :
+        command_overview_(command_overview), overview_(overview) {}
+
+    auto& add(const decl::SubCommand& subcommand, handler_fn_t handler) {
+        std::string command = command_of(subcommand);
+        if(command.empty()) {
+            error_handler_(
+                {SubCommandError::Type::Internal, "subcommand name/command must not be empty"});
+            return *this;
+        }
+
+        std::string name = display_name_of(subcommand, command);
+        std::string description(subcommand.description);
+
+        if(auto it = command_to_handler_.find(command); it != command_to_handler_.end()) {
+            auto& target = handlers_[it->second];
+            target.name = std::move(name);
+            target.description = std::move(description);
+            target.command = std::move(command);
+            target.handler = std::move(handler);
+            return *this;
+        }
+
+        command_to_handler_[command] = handlers_.size();
+        handlers_.push_back({
+            .name = std::move(name),
+            .description = std::move(description),
+            .command = std::move(command),
+            .handler = std::move(handler),
+        });
+        return *this;
+    }
+
+    template <typename OptTy>
+    auto& add(const decl::SubCommand& subcommand, Dispatcher<OptTy>& dispatcher) {
+        return add(subcommand,
+                   handler_fn_t([&dispatcher](std::span<std::string> argv) { dispatcher(argv); }));
+    }
+
+    template <typename OptTy>
+    auto& add(const decl::SubCommand& subcommand, Dispatcher<OptTy>&& dispatcher) {
+        return add(subcommand,
+                   handler_fn_t([dispatcher = std::move(dispatcher)](
+                                    std::span<std::string> argv) mutable { dispatcher(argv); }));
+    }
+
+    auto& add(handler_fn_t default_handler) {
+        default_handler_ = std::move(default_handler);
+        return *this;
+    }
+
+    auto& when_err(error_fn_t error_handler) {
+        error_handler_ = std::move(error_handler);
+        return *this;
+    }
+
+    auto& when_err(std::ostream& os) {
+        error_handler_ = [&os](const SubCommandError& err) {
+            os << err.message << "\n";
+        };
+        return *this;
+    }
+
+    template <typename Os>
+    constexpr void usage(Os& os) const {
+        if(!overview_.empty()) {
+            os << overview_ << "\n\n";
+        }
+
+        if(default_handler_.has_value()) {
+            os << "usage: " << command_overview_ << "\n";
+            if(!handlers_.empty()) {
+                os << "\n";
+            }
+        }
+
+        if(handlers_.empty()) {
+            return;
+        }
+
+        std::size_t max_name_len = 0;
+        for(const auto& it: handlers_) {
+            if(it.name.size() > max_name_len) {
+                max_name_len = it.name.size();
+            }
+        }
+
+        os << "Subcommands:\n";
+        for(const auto& it: handlers_) {
+            os << "  " << it.name;
+            if(!it.description.empty()) {
+                os << std::string(max_name_len - it.name.size() + 2, ' ') << it.description;
+            }
+            if(it.command != it.name) {
+                os << " (" << it.command << ")";
+            }
+            os << "\n";
+        }
+    }
+
+    void parse(std::span<std::string> argv) {
+        if(!argv.empty()) {
+            if(auto it = command_to_handler_.find(argv.front()); it != command_to_handler_.end()) {
+                handlers_[it->second].handler(argv.subspan(1));
+                return;
+            }
+        }
+
+        if(default_handler_.has_value()) {
+            (*default_handler_)(argv);
+            return;
+        }
+
+        if(argv.empty()) {
+            error_handler_({SubCommandError::Type::MissingSubCommand, "subcommand is required"});
+            return;
+        }
+
+        error_handler_({SubCommandError::Type::UnknownSubCommand,
+                        std::format("unknown subcommand '{}'", argv.front())});
+    }
+
+    void operator() (std::span<std::string> argv) {
+        return parse(argv);
     }
 };
 };  // namespace deco::cli

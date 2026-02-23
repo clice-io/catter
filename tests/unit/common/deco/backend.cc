@@ -147,20 +147,58 @@ struct MultiExclusiveCategoryOpt {
 
 using Parsed = catter::opt::ParsedArgument;
 
+struct ParsedArgs {
+    std::vector<std::string> argv_storage;
+    std::vector<Parsed> parsed;
+
+    std::size_t size() const {
+        return parsed.size();
+    }
+
+    bool empty() const {
+        return parsed.empty();
+    }
+
+    Parsed& operator[] (std::size_t index) {
+        return parsed[index];
+    }
+
+    const Parsed& operator[] (std::size_t index) const {
+        return parsed[index];
+    }
+
+    auto begin() {
+        return parsed.begin();
+    }
+
+    auto end() {
+        return parsed.end();
+    }
+
+    auto begin() const {
+        return parsed.begin();
+    }
+
+    auto end() const {
+        return parsed.end();
+    }
+};
+
 template <typename BuiltTy>
-std::expected<std::vector<Parsed>, std::string> parse_with(const BuiltTy& built,
-                                                           std::vector<std::string> argv) {
+std::expected<ParsedArgs, std::string> parse_with(const BuiltTy& built,
+                                                  std::vector<std::string> argv) {
     auto table = built.make_opt_table();
-    std::vector<Parsed> args;
+    ParsedArgs args;
+    args.argv_storage = std::move(argv);
     std::string err;
-    table.parse_args(argv, [&](std::expected<Parsed, std::string> parsed) {
+    table.parse_args(args.argv_storage, [&](std::expected<Parsed, std::string> parsed) {
         if(!parsed.has_value()) {
             if(err.empty()) {
                 err = parsed.error();
             }
             return;
         }
-        args.push_back(parsed.value());
+        args.parsed.push_back(parsed.value());
     });
     if(!err.empty()) {
         return std::unexpected(err);
@@ -212,7 +250,7 @@ TEST_CASE(parse_covers_flag_input_kv_comma_multi) {
     auto args = std::move(parsed_args.value());
     ParseAllOpt opt{};
 
-    EXPECT_TRUE(args.size() == 8);
+    EXPECT_TRUE(args.size() == 9);
 
     EXPECT_TRUE(args[0].get_spelling_view() == "--version");
     EXPECT_TRUE(args[0].values.empty());
@@ -246,13 +284,18 @@ TEST_CASE(parse_covers_flag_input_kv_comma_multi) {
     EXPECT_TRUE(args[5].values.empty());
     EXPECT_TRUE(built.field_ptr_of(args[5].option_id, opt) == static_cast<void*>(&opt.input));
 
-    EXPECT_TRUE(args[6].get_spelling_view() == "tail1");
+    EXPECT_TRUE(args[6].get_spelling_view() == "--");
     EXPECT_TRUE(args[6].values.empty());
-    EXPECT_TRUE(built.field_ptr_of(args[6].option_id, opt) == static_cast<void*>(&opt.input));
+    EXPECT_TRUE(built.field_ptr_of(args[6].option_id, opt) == nullptr);
+    EXPECT_TRUE(built.category_of(args[6].option_id) == nullptr);
 
-    EXPECT_TRUE(args[7].get_spelling_view() == "tail2");
+    EXPECT_TRUE(args[7].get_spelling_view() == "tail1");
     EXPECT_TRUE(args[7].values.empty());
     EXPECT_TRUE(built.field_ptr_of(args[7].option_id, opt) == static_cast<void*>(&opt.input));
+
+    EXPECT_TRUE(args[8].get_spelling_view() == "tail2");
+    EXPECT_TRUE(args[8].values.empty());
+    EXPECT_TRUE(built.field_ptr_of(args[8].option_id, opt) == static_cast<void*>(&opt.input));
 }
 
 TEST_CASE(parse_pack_covers_trailing_input_option) {
