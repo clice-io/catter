@@ -5,11 +5,14 @@
 #include "opt_specifier.h"
 #include <cassert>
 #include <expected>
+#include <format>
 #include <functional>
 #include <set>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace catter::opt {
@@ -355,42 +358,191 @@ public:
     using InputArgv = std::span<std::string>;
 
 public:
-    std::optional<opt::ParsedArgument> parse_one_arg_grouped(InputArgv argv, unsigned& index) const;
+    std::expected<PArg, const char*> parse_one_arg_grouped(InputArgv argv, unsigned& index) const;
 
-    std::optional<ParsedArgument> parse_one_arg(InputArgv argv,
-                                                unsigned& index,
-                                                Visibility visibility_mask = Visibility()) const;
+    std::expected<PArg, const char*> parse_one_arg(InputArgv argv,
+                                                   unsigned& index,
+                                                   Visibility visibility_mask = Visibility()) const;
 
-    std::optional<ParsedArgument> parse_one_arg(InputArgv argv,
-                                                unsigned& index,
-                                                unsigned flags_to_include,
-                                                unsigned flags_to_exclude) const;
-    std::optional<ParsedArgument>
+    std::expected<PArg, const char*> parse_one_arg(InputArgv argv,
+                                                   unsigned& index,
+                                                   unsigned flags_to_include,
+                                                   unsigned flags_to_exclude) const;
+    std::expected<PArg, const char*>
         internal_parse_one_arg(InputArgv argv,
                                unsigned& index,
                                std::function<bool(const Option&)> exclude_option) const;
 
-    void parse_args(InputArgv argv,
-                    unsigned& missing_arg_index,
-                    unsigned& missing_arg_count,
-                    std::function<void(ParsedArgument)> arg_callback,
-                    Visibility visibility_mask = Visibility()) const;
+private:
+    bool exclude_for_visibility(const Option& opt, Visibility visibility_mask) const;
+    bool exclude_for_flags(const Option& opt,
+                           unsigned flags_to_include,
+                           unsigned flags_to_exclude) const;
 
+    template <typename Callback, typename Arg>
+    static bool invoke_parse_callback(Callback&& callback, Arg&& arg) {
+        using result_t = std::invoke_result_t<Callback&&, Arg&&>;
+        if constexpr(std::is_void_v<result_t>) {
+            std::invoke(std::forward<Callback>(callback), std::forward<Arg>(arg));
+            return true;
+        } else {
+            static_assert(std::is_same_v<std::remove_cvref_t<result_t>, bool>,
+                          "parse callback must return void or bool");
+            return std::invoke(std::forward<Callback>(callback), std::forward<Arg>(arg));
+        }
+    }
+
+public:
+    template <typename ArgCallback>
     void parse_args(InputArgv argv,
                     unsigned& missing_arg_index,
                     unsigned& missing_arg_count,
-                    std::function<void(ParsedArgument)> arg_callback,
+                    ArgCallback&& arg_callback,
+                    Visibility visibility_mask = Visibility(),
+                    const char** missing_arg_reason = nullptr) const {
+        internal_parse_args(
+            argv,
+            missing_arg_index,
+            missing_arg_count,
+            std::forward<ArgCallback>(arg_callback),
+            [this, visibility_mask](const Option& opt) {
+                return this->exclude_for_visibility(opt, visibility_mask);
+            },
+            missing_arg_reason);
+    }
+
+    template <typename ArgCallback>
+    void parse_args(InputArgv argv,
+                    unsigned& missing_arg_index,
+                    unsigned& missing_arg_count,
+                    ArgCallback&& arg_callback,
                     unsigned flags_to_include,
-                    unsigned flags_to_exclude) const;
+                    unsigned flags_to_exclude,
+                    const char** missing_arg_reason = nullptr) const {
+        internal_parse_args(
+            argv,
+            missing_arg_index,
+            missing_arg_count,
+            std::forward<ArgCallback>(arg_callback),
+            [this, flags_to_include, flags_to_exclude](const Option& opt) {
+                return this->exclude_for_flags(opt, flags_to_include, flags_to_exclude);
+            },
+            missing_arg_reason);
+    }
 
-    void parse_args(
-        InputArgv argv,
-        std::function<void(std::expected<ParsedArgument, std::string>)> res_err_fn) const;
+    template <typename ResErrFn>
+    void parse_args(InputArgv argv, ResErrFn&& res_err_fn) const {
+        unsigned missing_arg_index = 0;
+        unsigned missing_arg_count = 0;
+        const char* missing_reason = nullptr;
 
+        this->parse_args(
+            argv,
+            missing_arg_index,
+            missing_arg_count,
+            [&](auto&& parsed) -> bool {
+                auto res = std::expected<ParsedArgument, std::string>(
+                    std::forward<decltype(parsed)>(parsed));
+                return invoke_parse_callback(res_err_fn, std::move(res));
+            },
+            Visibility(),
+            &missing_reason);
+
+        if(missing_arg_count) {
+            const auto failing_arg = missing_arg_index < argv.size()
+                                         ? std::string_view(argv[missing_arg_index])
+                                         : "<end-of-argv>";
+            const auto reason = missing_reason != nullptr ? missing_reason : "missing argument";
+            const auto noun = missing_arg_count == 1 ? "value" : "values";
+            auto res = std::expected<ParsedArgument, std::string>(
+                std::unexpected(std::format("failed to parse '{}' (arg #{}) : {} (missing {} {})",
+                                            failing_arg,
+                                            missing_arg_index,
+                                            reason,
+                                            missing_arg_count,
+                                            noun)));
+            (void)invoke_parse_callback(res_err_fn, std::move(res));
+        }
+    }
+
+    template <typename ArgCallback, typename ExcludeOption>
     void internal_parse_args(InputArgv argv,
                              unsigned& missing_arg_index,
                              unsigned& missing_arg_count,
-                             std::function<void(ParsedArgument)> arg_callback,
-                             std::function<bool(const Option&)> exclude_option) const;
+                             ArgCallback&& arg_callback,
+                             ExcludeOption&& exclude_option,
+                             const char** missing_arg_reason = nullptr) const {
+
+        // FIXME: Handle '@' args (or at least error on them).
+
+        missing_arg_index = missing_arg_count = 0;
+        if(missing_arg_reason != nullptr) {
+            *missing_arg_reason = nullptr;
+        }
+        unsigned index = 0, end = argv.size();
+        bool continue_parsing = true;
+
+        auto exclude_option_fn =
+            std::function<bool(const Option&)>(std::forward<ExcludeOption>(exclude_option));
+
+        while(continue_parsing && index < end) {
+            // Ignore empty arguments (other things may still take them as
+            // arguments).
+            auto str = std::string_view(argv[index]);
+            if(str.empty()) {
+                ++index;
+                continue;
+            }
+
+            // In DashDashParsing mode, the first "--" stops option scanning and
+            // treats all subsequent arguments as positional.
+            if(this->dash_dash_parsing && str == "--") {
+                if(this->dash_dash_as_single_pack) {
+                    continue_parsing = invoke_parse_callback(
+                        arg_callback,
+                        ParsedArgument{
+                            .option_id = this->input_option_id,
+                            .spelling = "--",
+                            .values =
+                                std::vector<std::string_view>(argv.begin() + index + 1, argv.end()),
+                            .index = index,
+                        });
+                    index = end;
+                } else {
+                    while(continue_parsing && ++index < end) {
+                        continue_parsing =
+                            invoke_parse_callback(arg_callback,
+                                                  ParsedArgument{
+                                                      .option_id = this->input_option_id,
+                                                      .spelling = std::string_view(argv[index]),
+                                                      .values = {},
+                                                      .index = index,
+                                                  });
+                    }
+                }
+                break;
+            }
+
+            unsigned prev = index;
+            auto a = this->grouped_short_options
+                         ? this->parse_one_arg_grouped(argv, index)
+                         : this->internal_parse_one_arg(argv, index, exclude_option_fn);
+            assert((index > prev || this->grouped_short_options) &&
+                   "Parser failed to consume argument.");
+
+            // Check for missing argument error.
+            if(!a.has_value()) {
+                assert(index >= end && "Unexpected parser error.");
+                assert(index - prev - 1 && "No missing arguments!");
+                missing_arg_index = prev;
+                missing_arg_count = index - prev - 1;
+                if(missing_arg_reason != nullptr) {
+                    *missing_arg_reason = a.error() != nullptr ? a.error() : "missing argument";
+                }
+                return;
+            }
+            continue_parsing = invoke_parse_callback(arg_callback, std::move(a).value());
+        }
+    }
 };
 }  // namespace catter::opt

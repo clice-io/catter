@@ -1,11 +1,12 @@
 #pragma once
 #include "deco/decl.h"
+#include "deco/descriptor.h"
 #include "deco/ty.h"
 
-#include "reflection/struct.h"
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <expected>
 #include <format>
 #include <limits>
 #include <optional>
@@ -18,12 +19,12 @@
 
 namespace deco::detail {
 struct ParsedNamedOption {
-    std::span<const std::string_view> prefixes = backend::pfx_none;
-    std::string_view prefix;
-    std::string_view name;
+    std::span<const std::string_view> prefixes_ = backend::pfx_none;
+    std::string_view prefix_;
+    std::string_view name_;
 };
 
-constexpr auto parseNamedOption(std::string_view full_name) {
+constexpr auto parse_named_option(std::string_view full_name) {
     if(full_name.starts_with("--")) {
         if(full_name.size() <= 2) {
             throw "Option name cannot be only '--'";
@@ -47,8 +48,8 @@ constexpr auto parseNamedOption(std::string_view full_name) {
 
 template <bool counting, std::size_t N = 0>
 class MemPool {
-    using PoolTy = std::conditional_t<counting, std::vector<char>, std::array<char, N>>;
-    PoolTy pool_{};
+    using pool_type = std::conditional_t<counting, std::vector<char>, std::array<char, N>>;
+    pool_type pool_{};
     std::size_t offset_ = 0;
 
 public:
@@ -76,7 +77,7 @@ public:
         }
     }
 
-    constexpr std::string_view addReplace(std::string_view str, char old_char, char new_char) {
+    constexpr std::string_view add_replace(std::string_view str, char old_char, char new_char) {
         if constexpr(counting) {
             offset_ += str.size() + 1;
             return str;
@@ -111,7 +112,7 @@ public:
         }
     }
 
-    constexpr const char* addCStr(std::string_view str) {
+    constexpr const char* add_c_str(std::string_view str) {
         if constexpr(counting) {
             add(str);
             return "";
@@ -123,94 +124,95 @@ public:
     constexpr std::size_t size() const {
         return offset_;
     }
-
-    constexpr const char* data() const {
-        if constexpr(counting) {
-            return nullptr;
-        } else {
-            return pool_.data();
-        }
-    }
-
-    constexpr auto storage() const {
-        return pool_;
-    }
 };
 
 struct BuildStats {
-    std::size_t opt_count = 0;
-    std::size_t strpool_bytes = 0;
-    bool has_trailing_pack = false;
+    std::size_t opt_count_ = 0;
+    std::size_t strpool_bytes_ = 0;
+    bool has_trailing_pack_ = false;
 };
 
 template <typename RootTy, bool counting, std::size_t OptN = 0, std::size_t StrN = 0>
 class OptBuilder {
 public:
-    using AccessorFn = void* (*)(void*);
+    using accessor_fn = void* (*)(void*);
 
 private:
-    using InfoItem = backend::OptTable::Info;
-    using PoolTy =
-        std::conditional_t<counting, std::vector<InfoItem>, std::array<InfoItem, OptN + 1>>;
-    using IdMapTy =
-        std::conditional_t<counting, std::vector<AccessorFn>, std::array<AccessorFn, OptN + 1>>;
+    using info_item = backend::OptTable::Info;
+    using pool_type =
+        std::conditional_t<counting, std::vector<info_item>, std::array<info_item, OptN + 1>>;
+    using id_map_type =
+        std::conditional_t<counting, std::vector<accessor_fn>, std::array<accessor_fn, OptN + 1>>;
+    using category_map_type = std::conditional_t<counting,
+                                                 std::vector<const decl::Category*>,
+                                                 std::array<const decl::Category*, OptN + 1>>;
+
+    struct config_state {
+        decl::ConfigFields cfg_{};
+        std::size_t level_ = 0;
+    };
 
     // Keep a dummy at index 0 so item.id can be used as direct index.
-    PoolTy pool_{};
-    MemPool<counting, StrN> strPool_;
-    IdMapTy idMap_{};
+    pool_type pool_{};
+    MemPool<counting, StrN> str_pool_;
+    id_map_type id_map_{};
+    category_map_type category_map_{};
 
     std::size_t offset_ = 0;
     bool has_input_slot_ = false;
+    bool has_trailing_slot_ = false;
     bool has_trailing_pack_ = false;
-    bool has_exclusive_category_ = false;
-    unsigned exclusive_category_ = 0;
+    unsigned input_option_id_ = 0;
+    accessor_fn trailing_accessor_ = nullptr;
+    const decl::Category* trailing_category_ = nullptr;
 
-    constexpr static auto makeDefaultItem(unsigned id) {
-        return InfoItem::unaliased_one(backend::pfx_none,
-                                       "",
-                                       id,
-                                       backend::Option::UnknownClass,
-                                       0,
-                                       "no help text",
-                                       "");
+    constexpr static auto make_default_item(unsigned id) {
+        return info_item::unaliased_one(backend::pfx_none,
+                                        "",
+                                        id,
+                                        backend::Option::UnknownClass,
+                                        0,
+                                        "no help text",
+                                        "");
     }
 
-    constexpr auto& itemById(unsigned id) {
-        if constexpr(counting) {
-            return pool_[id];
-        } else {
-            return pool_[id];
-        }
+    constexpr auto& item_by_id(unsigned id) {
+        return pool_[id];
     }
 
     template <typename ObjTy, std::size_t I>
-    constexpr static auto& fieldByPath(ObjTy& object) {
+    constexpr static auto& field_by_path(ObjTy& object) {
         return refl::field_of<I>(object);
     }
 
     template <typename ObjTy, std::size_t I, std::size_t J, std::size_t... Rest>
-    constexpr static auto& fieldByPath(ObjTy& object) {
+    constexpr static auto& field_by_path(ObjTy& object) {
         auto& nested = refl::field_of<I>(object);
-        return fieldByPath<std::remove_cvref_t<decltype(nested)>, J, Rest...>(nested);
+        return field_by_path<std::remove_cvref_t<decltype(nested)>, J, Rest...>(nested);
     }
 
     template <std::size_t... Path>
-    static void* fieldAccessor(void* object) {
+    static void* field_accessor(void* object) {
         if(object == nullptr) {
             return nullptr;
         }
-        auto& field = fieldByPath<RootTy, Path...>(*static_cast<RootTy*>(object));
+        auto& field = field_by_path<RootTy, Path...>(*static_cast<RootTy*>(object));
         return static_cast<void*>(&field);
     }
 
-    constexpr auto& newItem(AccessorFn mapped_accessor = nullptr) {
+    template <std::size_t... Path>
+    constexpr static accessor_fn accessor_from_path(std::index_sequence<Path...>) {
+        return &field_accessor<Path...>;
+    }
+
+    constexpr auto& new_item(accessor_fn mapped_accessor = nullptr) {
         if constexpr(counting) {
             const auto item_id = static_cast<unsigned>(pool_.size());
-            pool_.push_back(makeDefaultItem(item_id));
+            pool_.push_back(make_default_item(item_id));
             auto& item = pool_.back();
             item.id = item_id;
-            idMap_.push_back(mapped_accessor);
+            id_map_.push_back(mapped_accessor);
+            category_map_.push_back(nullptr);
             return item;
         } else {
             if(offset_ + 1 >= pool_.size()) {
@@ -218,298 +220,287 @@ private:
             }
             ++offset_;
             const auto item_id = static_cast<unsigned>(offset_);
-            pool_[item_id] = makeDefaultItem(item_id);
+            pool_[item_id] = make_default_item(item_id);
             pool_[item_id].id = item_id;
-            idMap_[item_id] = mapped_accessor;
+            id_map_[item_id] = mapped_accessor;
+            category_map_[item_id] = nullptr;
             return pool_[item_id];
         }
     }
 
-    constexpr void registerExclusiveCategory(const decl::CommonOptionFields& fields) {
-        if(!fields.exclusive) {
-            return;
-        }
-        if(fields.category == 0) {
-            throw "Exclusive option must set a non-zero category";
-        }
-        if(has_exclusive_category_ && exclusive_category_ != fields.category) {
-            throw "Only one exclusive category is allowed";
-        }
-        has_exclusive_category_ = true;
-        exclusive_category_ = fields.category;
+    constexpr void set_category_for_item(unsigned item_id, const decl::Category* category) {
+        category_map_[item_id] = category;
     }
 
-    constexpr static void configPush(std::vector<decl::ConfigFields>& config_stack,
-                                     const decl::ConfigFields& cfg) {
-        config_stack.push_back(cfg);
+    constexpr static void config_push(std::vector<config_state>& config_stack,
+                                      const decl::ConfigFields& cfg,
+                                      std::size_t level) {
+        config_stack.push_back(config_state{.cfg_ = cfg, .level_ = level});
     }
 
-    constexpr static void configPopNearestStart(std::vector<decl::ConfigFields>& config_stack) {
-        if(config_stack.empty()) {
-            throw "Unmatched config end field";
+    constexpr static void config_pop_nearest_start(std::vector<config_state>& config_stack) {
+        for(std::size_t i = config_stack.size(); i > 0; --i) {
+            if(config_stack[i - 1].cfg_.type == decl::ConfigFields::Type::Start) {
+                config_stack.resize(i - 1);
+                return;
+            }
         }
-        int i = config_stack.size() - 1;
-        while(i >= 0 && config_stack[i--].type != decl::ConfigFields::Type::Start) {}
-        if(config_stack[i + 1].type != decl::ConfigFields::Type::Start) {
-            throw "Unmatched config end field";
-        }
-        config_stack.resize(i + 1);
+        throw "Unmatched config end field";
     }
 
-    constexpr static void configConsumeNext(std::vector<decl::ConfigFields>& config_stack) {
+    constexpr static void config_consume_next(std::vector<config_state>& config_stack,
+                                              std::size_t level) {
         config_stack.erase(std::remove_if(config_stack.begin(),
                                           config_stack.end(),
-                                          [](const decl::ConfigFields& cfg) {
-                                              return cfg.type == decl::ConfigFields::Type::Next;
+                                          [level](const config_state& item) {
+                                              return item.level_ == level &&
+                                                     item.cfg_.type ==
+                                                         decl::ConfigFields::Type::Next;
                                           }),
                            config_stack.end());
     }
 
-    constexpr static void onConfigField(std::vector<decl::ConfigFields>& config_stack,
-                                        const decl::ConfigFields& cfg) {
+    constexpr static void on_config_field(std::vector<config_state>& config_stack,
+                                          const decl::ConfigFields& cfg,
+                                          std::size_t level) {
         switch(cfg.type) {
-            case decl::ConfigFields::Type::Start: configPush(config_stack, cfg); break;
-            case decl::ConfigFields::Type::End: configPopNearestStart(config_stack); break;
-            case decl::ConfigFields::Type::Next: configPush(config_stack, cfg); break;
+            case decl::ConfigFields::Type::Start: config_push(config_stack, cfg, level); break;
+            case decl::ConfigFields::Type::End: config_pop_nearest_start(config_stack); break;
+            case decl::ConfigFields::Type::Next: config_push(config_stack, cfg, level); break;
         }
     }
 
     template <typename OptTy>
-    constexpr static void applyCurrentConfig(OptTy& opt,
-                                             std::vector<decl::ConfigFields>& config_stack) {
-        for(const auto& cfg: config_stack) {
-            opt.required = cfg.required;
-            opt.exclusive = cfg.exclusive;
-            opt.category = cfg.category;
-            if(!cfg.help.empty()) {
-                opt.help = cfg.help;
+    constexpr static void apply_current_config(OptTy& opt,
+                                               const std::vector<config_state>& config_stack) {
+        for(const auto& cfg_state: config_stack) {
+            const auto& cfg = cfg_state.cfg_;
+            if(cfg.required.is_overridden()) {
+                opt.required = cfg.required.get();
+            }
+            if(cfg.category.is_overridden()) {
+                opt.category = cfg.category.get();
+            }
+            if(cfg.help.is_overridden()) {
+                opt.help = cfg.help.get();
+            }
+            if(cfg.meta_var.is_overridden()) {
+                opt.meta_var = cfg.meta_var.get();
             }
         }
-        configConsumeNext(config_stack);
     }
 
-    template <typename CurrentTy>
-    constexpr static void applyConfigPass(CurrentTy& object,
-                                          std::vector<decl::ConfigFields>& config_stack) {
-        refl::for_each(object, [&](auto field) {
-            using FieldTy = std::remove_cvref_t<typename decltype(field)::type>;
-            auto& value = field.value();
-            if constexpr(std::is_base_of_v<decl::ConfigFields, FieldTy>) {
-                onConfigField(config_stack, static_cast<const decl::ConfigFields&>(value));
-            } else if constexpr(ty::is_decoed<FieldTy>) {
-                applyCurrentConfig(static_cast<decl::CommonOptionFields&>(value), config_stack);
+    template <typename CfgTy>
+    constexpr static CfgTy make_configured_cfg(const std::vector<config_state>& config_stack) {
+        static_assert(std::is_base_of_v<decl::CommonOptionFields, CfgTy>);
+        CfgTy cfg{};
+        apply_current_config(static_cast<decl::CommonOptionFields&>(cfg), config_stack);
+        return cfg;
+    }
+
+    template <typename CurrentTy, typename OnOption, std::size_t... Path>
+    constexpr static bool visit_fields_impl(const CurrentTy& object,
+                                            std::vector<config_state>& config_stack,
+                                            std::size_t level,
+                                            OnOption& on_option) {
+        return refl::for_each(object, [&](auto field) {
+            using FieldTy = ty::base_ty<typename decltype(field)::type>;
+            constexpr auto idx = decltype(field)::index();
+            constexpr auto name = decltype(field)::name();
+            if constexpr(ty::is_config_field<FieldTy>) {
+                on_config_field(config_stack,
+                                static_cast<const decl::ConfigFields&>(field.value()),
+                                level);
+                return true;
+            } else if constexpr(ty::deco_option_like<FieldTy>) {
+                using CfgTy = ty::cfg_ty_of<FieldTy>;
+                const auto cfg = make_configured_cfg<CfgTy>(config_stack);
+                const bool keep_going =
+                    bool(on_option(field.value(), cfg, name, std::index_sequence<Path..., idx>{}));
+                config_consume_next(config_stack, level);
+                return keep_going;
             } else if constexpr(refl::reflectable_class<FieldTy>) {
-                applyConfigPass(value, config_stack);
+                const bool keep_going =
+                    visit_fields_impl<FieldTy, OnOption, Path..., idx>(field.value(),
+                                                                       config_stack,
+                                                                       level + 1,
+                                                                       on_option);
+                config_consume_next(config_stack, level);
+                return keep_going;
             } else {
                 static_assert(catter::meta::dep_true<FieldTy>,
                               "Only deco fields or nested option structs are supported.");
+                return true;
             }
         });
     }
 
-    constexpr auto& setCommonOptions(InfoItem& item, const decl::CommonOptionFields& fields) {
+    constexpr auto& set_common_options(info_item& item, const decl::CommonOptionFields& fields) {
         if(!fields.help.empty()) {
-            item.help_text = strPool_.addCStr(fields.help);
+            item.help_text = str_pool_.add_c_str(fields.help);
         }
         if(!fields.meta_var.empty()) {
-            item.meta_var = strPool_.addCStr(fields.meta_var);
+            item.meta_var = str_pool_.add_c_str(fields.meta_var);
         }
         return item;
     }
 
-    constexpr auto& setNamedOptions(unsigned item_id,
-                                    AccessorFn mapped_accessor,
-                                    std::string_view field_name,
-                                    const decl::NamedOptionFields& fields) {
-        auto& item = itemById(item_id);
+    constexpr auto& set_named_options(unsigned item_id,
+                                      accessor_fn mapped_accessor,
+                                      std::string_view field_name,
+                                      const decl::NamedOptionFields& fields) {
+        const auto category = fields.category.ptr();
+        auto& item = item_by_id(item_id);
 
-        auto setPrefixedName = [this](InfoItem& target, std::string_view full_name) {
-            auto parsed = parseNamedOption(full_name);
-            target._prefixes = parsed.prefixes;
-            target._prefixed_name = strPool_.add(parsed.prefix, parsed.name);
+        auto set_prefixed_name = [this](info_item& target, std::string_view full_name) {
+            auto parsed = parse_named_option(full_name);
+            target._prefixes = parsed.prefixes_;
+            target._prefixed_name = str_pool_.add(parsed.prefix_, parsed.name_);
         };
 
         if(fields.names.empty()) {
-            auto normalized_name = strPool_.addReplace(field_name, '_', '-');
+            auto normalized_name = str_pool_.add_replace(field_name, '_', '-');
             if(normalized_name.size() == 1) {
                 item._prefixes = backend::pfx_dash;
-                item._prefixed_name = strPool_.add("-", normalized_name);
+                item._prefixed_name = str_pool_.add("-", normalized_name);
             } else {
                 item._prefixes = backend::pfx_double;
-                item._prefixed_name = strPool_.add("--", normalized_name);
+                item._prefixed_name = str_pool_.add("--", normalized_name);
             }
-            setCommonOptions(item, fields);
+            set_common_options(item, fields);
+            set_category_for_item(item.id, category);
             return item;
         }
 
-        setPrefixedName(item, fields.names.front());
+        set_prefixed_name(item, fields.names.front());
+        set_category_for_item(item.id, category);
 
         const auto item_snapshot = item;
         for(std::size_t i = 1; i < fields.names.size(); ++i) {
-            auto& alias = newItem(mapped_accessor);
+            auto& alias = new_item(mapped_accessor);
             auto alias_id = alias.id;
             alias = item_snapshot;
             alias.id = alias_id;
-            setPrefixedName(alias, fields.names[i]);
-            setCommonOptions(alias, fields);
+            set_prefixed_name(alias, fields.names[i]);
+            set_common_options(alias, fields);
+            set_category_for_item(alias.id, category);
         }
 
-        setCommonOptions(itemById(item_id), fields);
-        return itemById(item_id);
+        set_common_options(item_by_id(item_id), fields);
+        return item_by_id(item_id);
     }
 
-    template <typename OptTy>
-    constexpr void addInputLikeOption(const OptTy& opt,
-                                      AccessorFn mapped_accessor,
-                                      bool trailing_pack) {
+    constexpr void add_input_option(const decl::CommonOptionFields& cfg,
+                                    accessor_fn mapped_accessor) {
         if(has_input_slot_) {
-            throw "Only one of DecoInput/DecoPack can be declared";
+            throw "Only one DecoInput can be declared";
         }
-        registerExclusiveCategory(opt);
         has_input_slot_ = true;
-        has_trailing_pack_ = trailing_pack;
-        auto& item = newItem(mapped_accessor);
-        item = InfoItem::input(item.id);
-        if constexpr(std::is_base_of_v<decl::CommonOptionFields, OptTy>) {
-            setCommonOptions(item, opt);
+        if(input_option_id_ == 0) {
+            auto& item = new_item(mapped_accessor);
+            item = info_item::input(item.id);
+            input_option_id_ = item.id;
+        }
+        id_map_[input_option_id_] = mapped_accessor;
+        set_common_options(item_by_id(input_option_id_), cfg);
+        set_category_for_item(input_option_id_, cfg.category.ptr());
+    }
+
+    constexpr void add_trailing_option(const decl::CommonOptionFields& cfg,
+                                       accessor_fn mapped_accessor) {
+        if(has_trailing_slot_) {
+            throw "Only one DecoPack can be declared";
+        }
+        has_trailing_slot_ = true;
+        has_trailing_pack_ = true;
+        trailing_accessor_ = mapped_accessor;
+        trailing_category_ = cfg.category.ptr();
+
+        // The backend only has one input id slot. If trailing appears first, reserve that slot
+        // now so parse_args can still emit a valid input option id.
+        if(input_option_id_ == 0) {
+            auto& item = new_item(mapped_accessor);
+            item = info_item::input(item.id);
+            input_option_id_ = item.id;
+            set_common_options(item, cfg);
+            set_category_for_item(item.id, cfg.category.ptr());
         }
     }
 
-    constexpr void addFlagOption(const decl::FlagOption& opt,
-                                 AccessorFn mapped_accessor,
-                                 std::string_view field_name) {
-        registerExclusiveCategory(opt);
-        auto& item = newItem(mapped_accessor);
+    constexpr void add_flag_option(const decl::FlagFields& cfg,
+                                   accessor_fn mapped_accessor,
+                                   std::string_view field_name) {
+        auto& item = new_item(mapped_accessor);
         item.kind = backend::Option::FlagClass;
         item.param = 0;
-        setNamedOptions(item.id, mapped_accessor, field_name, opt);
+        set_named_options(item.id, mapped_accessor, field_name, cfg);
     }
 
-    template <typename ResTy>
-    constexpr void addKVOption(const decl::KVOption<ResTy>& opt,
-                               AccessorFn mapped_accessor,
-                               std::string_view field_name) {
-        registerExclusiveCategory(opt);
-        auto& item = newItem(mapped_accessor);
-        item.kind = (opt.style == decl::KVStyle::Joined) ? backend::Option::JoinedClass
+    constexpr void add_kv_option(const decl::KVFields& cfg,
+                                 accessor_fn mapped_accessor,
+                                 std::string_view field_name) {
+        auto& item = new_item(mapped_accessor);
+        item.kind = (cfg.style == decl::KVStyle::Joined) ? backend::Option::JoinedClass
                                                          : backend::Option::SeparateClass;
         item.param = 1;
-        setNamedOptions(item.id, mapped_accessor, field_name, opt);
+        set_named_options(item.id, mapped_accessor, field_name, cfg);
     }
 
-    template <typename ResTy>
-    constexpr void addCommaOption(const decl::CommaJoinedOption<ResTy>& opt,
-                                  AccessorFn mapped_accessor,
-                                  std::string_view field_name) {
-        registerExclusiveCategory(opt);
-        auto& item = newItem(mapped_accessor);
+    constexpr void add_comma_option(const decl::CommaJoinedFields& cfg,
+                                    accessor_fn mapped_accessor,
+                                    std::string_view field_name) {
+        auto& item = new_item(mapped_accessor);
         item.kind = backend::Option::CommaJoinedClass;
         item.param = 1;
-        setNamedOptions(item.id, mapped_accessor, field_name, opt);
+        set_named_options(item.id, mapped_accessor, field_name, cfg);
     }
 
-    template <typename ResTy>
-    constexpr void addMultiOption(const decl::MultiOption<ResTy>& opt,
-                                  AccessorFn mapped_accessor,
-                                  std::string_view field_name) {
-        if(opt.arg_num == 0) {
+    constexpr void add_multi_option(const decl::MultiFields& cfg,
+                                    accessor_fn mapped_accessor,
+                                    std::string_view field_name) {
+        if(cfg.arg_num == 0) {
             throw "DecoMulti arg_num must be greater than 0";
         }
-        if(opt.arg_num > std::numeric_limits<unsigned char>::max()) {
+        if(cfg.arg_num > std::numeric_limits<unsigned char>::max()) {
             throw "DecoMulti arg_num exceeds backend param capacity";
         }
-        registerExclusiveCategory(opt);
-        auto& item = newItem(mapped_accessor);
+        auto& item = new_item(mapped_accessor);
         item.kind = backend::Option::MultiArgClass;
-        item.param = static_cast<unsigned char>(opt.arg_num);
-        setNamedOptions(item.id, mapped_accessor, field_name, opt);
-    }
-
-    template <bool input_pass, typename CurrentTy, std::size_t... Path>
-    constexpr void buildPass(CurrentTy& object) {
-        refl::for_each(object, [this](auto field) {
-            using FieldTy = std::remove_cvref_t<typename decltype(field)::type>;
-            auto& value = field.value();
-            constexpr auto idx = decltype(field)::index();
-            constexpr auto name = decltype(field)::name();
-
-            if constexpr(std::is_base_of_v<decl::ConfigFields, FieldTy>) {
-                return;
-            } else if constexpr(ty::is_decoed<FieldTy>) {
-                if constexpr(input_pass) {
-                    if constexpr(FieldTy::decoTy == decl::DecoType::Input) {
-                        addInputLikeOption(value, &fieldAccessor<Path..., idx>, false);
-                    } else if constexpr(FieldTy::decoTy == decl::DecoType::TrailingInput) {
-                        addInputLikeOption(value, &fieldAccessor<Path..., idx>, true);
-                    }
-                } else {
-                    if constexpr(FieldTy::decoTy == decl::DecoType::Flag) {
-                        addFlagOption(value, &fieldAccessor<Path..., idx>, name);
-                    } else if constexpr(FieldTy::decoTy == decl::DecoType::KV) {
-                        addKVOption(value, &fieldAccessor<Path..., idx>, name);
-                    } else if constexpr(FieldTy::decoTy == decl::DecoType::CommaJoined) {
-                        addCommaOption(value, &fieldAccessor<Path..., idx>, name);
-                    } else if constexpr(FieldTy::decoTy == decl::DecoType::Multi) {
-                        addMultiOption(value, &fieldAccessor<Path..., idx>, name);
-                    }
-                }
-            } else if constexpr(refl::reflectable_class<FieldTy>) {
-                buildPass<input_pass, FieldTy, Path..., idx>(value);
-            } else {
-                static_assert(catter::meta::dep_true<FieldTy>,
-                              "Only deco fields or nested option structs are supported.");
-            }
-        });
+        item.param = static_cast<unsigned char>(cfg.arg_num);
+        set_named_options(item.id, mapped_accessor, field_name, cfg);
     }
 
     template <typename DecoTy>
-    constexpr static bool isFieldPresent(const DecoTy& field) {
-        if constexpr(DecoTy::decoTy == decl::DecoType::Flag) {
-            return field.value;
-        } else {
-            return field.value.has_value();
-        }
-    }
-
-    template <typename CurrentTy, typename Callback>
-    constexpr bool visitDecoFields(const CurrentTy& object, const Callback& callback) const {
-        return refl::for_each(object, [this, &callback](auto field) {
-            using FieldTy = std::remove_cvref_t<typename decltype(field)::type>;
-            if constexpr(std::is_base_of_v<decl::ConfigFields, FieldTy>) {
-                return true;
-            } else if constexpr(ty::is_decoed<FieldTy>) {
-                return bool(
-                    callback(static_cast<const FieldTy&>(field.value()), decltype(field)::name()));
-            } else if constexpr(refl::reflectable_class<FieldTy>) {
-                return visitDecoFields(field.value(), callback);
-            } else {
-                static_assert(catter::meta::dep_true<FieldTy>,
-                              "Only deco fields or nested option structs are supported.");
-                return true;
-            }
-        });
+    constexpr static bool is_field_present(const DecoTy& field) {
+        return field.value.has_value();
     }
 
 public:
-    constexpr explicit OptBuilder(std::size_t reserve_bytes = 0) : strPool_(reserve_bytes) {
+    constexpr static unsigned unknown_option_id = 1;
+
+    constexpr explicit OptBuilder(std::size_t reserve_bytes = 0) : str_pool_(reserve_bytes) {
         if constexpr(counting) {
             pool_.reserve(16);
-            idMap_.reserve(16);
+            id_map_.reserve(16);
+            category_map_.reserve(16);
         } else {
-            idMap_.fill(nullptr);
+            id_map_.fill(nullptr);
+            category_map_.fill(nullptr);
         }
 
         // Dummy item: keeps id and index aligned (id 0 => index 0).
         if constexpr(counting) {
-            pool_.push_back(makeDefaultItem(0));
-            idMap_.push_back(nullptr);
+            pool_.push_back(make_default_item(0));
+            id_map_.push_back(nullptr);
+            category_map_.push_back(nullptr);
         } else {
-            pool_[0] = makeDefaultItem(0);
-            idMap_[0] = nullptr;
+            pool_[0] = make_default_item(0);
+            id_map_[0] = nullptr;
+            category_map_[0] = nullptr;
         }
 
-        auto& unknown = newItem(nullptr);
-        unknown = InfoItem::unknown(unknown.id);
+        auto& unknown = new_item(nullptr);
+        unknown = info_item::unknown(unknown.id);
     }
 
     constexpr explicit OptBuilder(std::in_place_t, std::size_t reserve_bytes = 0) :
@@ -517,14 +508,39 @@ public:
         build();
     }
 
+    template <typename OnOption>
+    constexpr bool visit_fields(const RootTy& object, OnOption&& on_option) const {
+        std::vector<config_state> config_stack;
+        return visit_fields_impl<RootTy>(object, config_stack, 0, on_option);
+    }
+
     constexpr void build() {
         static_assert(refl::reflectable_class<RootTy>,
                       "OptBuilder root type must be a reflectable struct");
         auto object = RootTy{};
-        std::vector<decl::ConfigFields> config_stack;
-        applyConfigPass(object, config_stack);
-        buildPass<true>(object);
-        buildPass<false>(object);
+        auto on_option =
+            [this](const auto& field, const auto& cfg, std::string_view field_name, auto path) {
+                using FieldTy = std::remove_cvref_t<decltype(field)>;
+                const auto mapped_accessor = accessor_from_path(path);
+                using CfgTy = ty::cfg_ty_of<FieldTy>;
+                if constexpr(CfgTy::deco_field_ty == decl::DecoType::Input) {
+                    add_input_option(cfg, mapped_accessor);
+                } else if constexpr(CfgTy::deco_field_ty == decl::DecoType::TrailingInput) {
+                    add_trailing_option(cfg, mapped_accessor);
+                } else if constexpr(CfgTy::deco_field_ty == decl::DecoType::Flag) {
+                    add_flag_option(cfg, mapped_accessor, field_name);
+                } else if constexpr(CfgTy::deco_field_ty == decl::DecoType::KV) {
+                    add_kv_option(cfg, mapped_accessor, field_name);
+                } else if constexpr(CfgTy::deco_field_ty == decl::DecoType::CommaJoined) {
+                    add_comma_option(cfg, mapped_accessor, field_name);
+                } else if constexpr(CfgTy::deco_field_ty == decl::DecoType::Multi) {
+                    add_multi_option(cfg, mapped_accessor, field_name);
+                } else {
+                    static_assert(catter::meta::dep_true<CfgTy>, "Unsupported deco cfg type.");
+                }
+                return true;
+            };
+        visit_fields(object, on_option);
     }
 
     constexpr std::size_t opt_size() const {
@@ -536,22 +552,31 @@ public:
     }
 
     constexpr std::size_t strpool_size() const {
-        return strPool_.size();
+        return str_pool_.size();
     }
 
     constexpr auto option_infos() const {
         if constexpr(counting) {
-            return std::span<const InfoItem>(pool_.data() + 1, pool_.size() - 1);
+            return std::span<const info_item>(pool_.data() + 1, pool_.size() - 1);
         } else {
-            return std::span<const InfoItem>(pool_.data() + 1, offset_);
+            return std::span<const info_item>(pool_.data() + 1, offset_);
         }
     }
 
     constexpr auto id_map() const {
         if constexpr(counting) {
-            return std::span<const AccessorFn>(idMap_.data(), idMap_.size());
+            return std::span<const accessor_fn>(id_map_.data(), id_map_.size());
         } else {
-            return std::span<const AccessorFn>(idMap_.data(), offset_ + 1);
+            return std::span<const accessor_fn>(id_map_.data(), offset_ + 1);
+        }
+    }
+
+    constexpr auto category_map() const {
+        if constexpr(counting) {
+            return std::span<const decl::Category* const>(category_map_.data(),
+                                                          category_map_.size());
+        } else {
+            return std::span<const decl::Category* const>(category_map_.data(), offset_ + 1);
         }
     }
 
@@ -563,90 +588,46 @@ public:
         if(id >= id_map().size()) {
             return nullptr;
         }
-        auto accessor = idMap_[id];
+        auto accessor = id_map_[id];
         if(accessor == nullptr) {
             return nullptr;
         }
         return accessor(static_cast<void*>(&object));
     }
 
-    std::optional<std::string> validate(const RootTy& object) const {
-        auto configured = object;
-        std::vector<decl::ConfigFields> config_stack;
-        applyConfigPass(configured, config_stack);
-
-        struct CategoryState {
-            unsigned category = 0;
-            unsigned total = 0;
-            unsigned present = 0;
-            bool exclusive = false;
-        };
-
-        std::vector<CategoryState> category_states;
-        std::optional<std::string> err = std::nullopt;
-
-        auto findOrAddCategory = [&](unsigned category) -> CategoryState& {
-            auto it = std::find_if(
-                category_states.begin(),
-                category_states.end(),
-                [category](const CategoryState& item) { return item.category == category; });
-            if(it == category_states.end()) {
-                category_states.push_back(CategoryState{.category = category});
-                return category_states.back();
-            }
-            return *it;
-        };
-
-        visitDecoFields(configured, [&](const auto& field, std::string_view field_name) {
-            const bool present = isFieldPresent(field);
-            if(field.required && !present) {
-                err = std::format("required option is missing: {}", field_name);
-                return false;
-            }
-            if(field.category != 0) {
-                auto& category_state = findOrAddCategory(field.category);
-                category_state.total += 1;
-                if(present) {
-                    category_state.present += 1;
-                }
-                category_state.exclusive = category_state.exclusive || field.exclusive;
-            }
-            return true;
-        });
-        if(err.has_value()) {
-            return err;
+    constexpr bool is_trailing_argument(const backend::ParsedArgument& arg) const {
+        if(arg.option_id.id() != input_option_id_) {
+            return false;
         }
+        return arg.get_spelling_view() == "--";
+    }
 
-        unsigned present_categories = 0;
-        unsigned present_exclusive_categories = 0;
-        unsigned exclusive_category = 0;
-        for(const auto& category_state: category_states) {
-            if(category_state.present != 0 && category_state.present != category_state.total) {
-                return std::string("category ") + std::to_string(category_state.category) +
-                       " must be all set or all unset";
-            }
-            if(category_state.present > 0) {
-                present_categories += 1;
-                if(category_state.exclusive) {
-                    present_exclusive_categories += 1;
-                    exclusive_category = category_state.category;
-                }
-            }
+    constexpr void* trailing_ptr_of(RootTy& object) const {
+        if(trailing_accessor_ == nullptr) {
+            return nullptr;
         }
+        return trailing_accessor_(static_cast<void*>(&object));
+    }
 
-        if(present_exclusive_categories > 1) {
-            return "multiple exclusive categories are present";
+    constexpr const decl::Category* trailing_category() const {
+        return trailing_category_;
+    }
+
+    constexpr const decl::Category* category_of(backend::OptSpecifier opt) const {
+        if(!opt.is_valid()) {
+            return nullptr;
         }
-        if(present_exclusive_categories == 1 && present_categories > 1) {
-            return std::string("exclusive category ") + std::to_string(exclusive_category) +
-                   " cannot be combined with other categories";
+        const auto id = opt.id();
+        if(id >= category_map().size()) {
+            return nullptr;
         }
-        return std::nullopt;
+        return category_map_[id];
     }
 
     auto make_opt_table() const& {
         return backend::OptTable(option_infos())
             .set_tablegen_mode(false)
+            .set_input_random_index(true)
             .set_dash_dash_parsing(true)
             .set_dash_dash_as_single_pack(has_trailing_pack_);
     }
@@ -656,9 +637,9 @@ public:
     constexpr BuildStats finish() const {
         static_assert(counting, "finish() is only for counting builders");
         return BuildStats{
-            .opt_count = pool_.size() - 1,
-            .strpool_bytes = strPool_.size(),
-            .has_trailing_pack = has_trailing_pack_,
+            .opt_count_ = pool_.size() - 1,
+            .strpool_bytes_ = str_pool_.size(),
+            .has_trailing_pack_ = has_trailing_pack_,
         };
     }
 };
@@ -673,9 +654,9 @@ consteval auto build_stats() {
 template <typename OptDeco>
 consteval const auto& build_storage() {
     constexpr auto stats = build_stats<OptDeco>();
-    constexpr static OptBuilder<OptDeco, false, stats.opt_count, stats.strpool_bytes> builder(
+    constexpr static OptBuilder<OptDeco, false, stats.opt_count_, stats.strpool_bytes_> builder(
         std::in_place,
-        stats.strpool_bytes);
+        stats.strpool_bytes_);
     return builder;
 }
 }  // namespace deco::detail

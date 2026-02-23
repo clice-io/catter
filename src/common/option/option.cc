@@ -3,13 +3,17 @@
 #include "opt_table.h"
 #include <cassert>
 #include <cstring>
-#include <optional>
 #include <ostream>
 #include <ranges>
 #include <string_view>
 #include <utility>
 
 namespace catter::opt {
+namespace {
+constexpr const char* k_no_match = "internal error: option does not match argument";
+constexpr const char* k_missing_value = "missing argument value";
+constexpr const char* k_missing_values = "missing one or more argument values";
+}  // namespace
 
 Option::Option(const OptTable::Info* info, const OptTable* owner) : info(info), owner(owner) {
     // Multi-level aliases are not supported. This just simplifies option
@@ -95,15 +99,15 @@ bool Option::matches(OptSpecifier opt) const {
     return false;
 }
 
-std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
-                                                      std::string_view spelling,
-                                                      unsigned& index) const {
+PArgResult Option::accept_internal(const ArgList& args,
+                                   std::string_view spelling,
+                                   unsigned& index) const {
     const size_t spelling_sz = spelling.size();
     const size_t args_idx_sz = args[index].size();
     switch(this->kind()) {
         case FlagClass: {
             if(spelling_sz != args_idx_sz) {
-                return std::nullopt;
+                return std::unexpected(k_no_match);
             }
             return ParsedArgument{
                 .option_id = this->id(),
@@ -141,12 +145,12 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
         case SeparateClass:
             // Matches iff this is an exact match.
             if(spelling_sz != args_idx_sz) {
-                return std::nullopt;
+                return std::unexpected(k_no_match);
             }
 
             index += 2;
             if(index > args.size() || args[index - 1].empty()) {
-                return std::nullopt;
+                return std::unexpected(k_missing_value);
             }
 
             return ParsedArgument{
@@ -158,12 +162,12 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
         case MultiArgClass: {
             // Matches iff this is an exact match.
             if(spelling_sz != args_idx_sz) {
-                return std::nullopt;
+                return std::unexpected(k_no_match);
             }
 
             index += 1 + this->num_args();
             if(index > args.size())
-                return std::nullopt;
+                return std::unexpected(k_missing_values);
 
             auto a = ParsedArgument{
                 .option_id = this->id(),
@@ -190,7 +194,7 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
             // Otherwise it must be separate.
             index += 2;
             if(index > args.size() || args[index - 1].empty()) {
-                return std::nullopt;
+                return std::unexpected(k_missing_value);
             }
             return ParsedArgument{
                 .option_id = this->id(),
@@ -203,7 +207,7 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
             // Always matches.
             index += 2;
             if(index > args.size() || args[index - 1].empty()) {
-                return std::nullopt;
+                return std::unexpected(k_missing_value);
             }
             return ParsedArgument{
                 .option_id = this->id(),
@@ -215,7 +219,7 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
         case RemainingArgsClass: {
             // Matches iff this is an exact match.
             if(spelling_sz != args_idx_sz) {
-                return std::nullopt;
+                return std::unexpected(k_no_match);
             }
             auto a = ParsedArgument{
                 .option_id = this->id(),
@@ -248,11 +252,11 @@ std::optional<ParsedArgument> Option::accept_internal(const ArgList& args,
     }
 }
 
-std::optional<ParsedArgument> Option::accept(const ArgList& args,
-                                             std::string_view spelling,
-                                             bool grouped_short_option,
-                                             unsigned& index) const {
-    std::optional<ParsedArgument> a;
+PArgResult Option::accept(const ArgList& args,
+                          std::string_view spelling,
+                          bool grouped_short_option,
+                          unsigned& index) const {
+    PArgResult a = std::unexpected(k_no_match);
     if(grouped_short_option && this->kind() == FlagClass) {
         // when grouped short option, it is a temporary spelling from argv
         // because argv[index] will be changed to the remaining part after this option
@@ -267,8 +271,8 @@ std::optional<ParsedArgument> Option::accept(const ArgList& args,
     } else {
         a = this->accept_internal(args, spelling, index);
     }
-    if(!a) {
-        return std::nullopt;
+    if(!a.has_value()) {
+        return a;
     }
 
     const Option& unaliased_opt = this->unaliased_option();

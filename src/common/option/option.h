@@ -3,11 +3,13 @@
 #include "opt_specifier.h"
 #include "opt_table.h"
 #include <cassert>
-#include <optional>
+#include <expected>
 #include <string_view>
 #include <utility>
 
 namespace catter::opt {
+
+using PArgResult = std::expected<PArg, const char*>;
 
 /// ArgStringList - A list of arguments that can be passed to an Option, eg. splitted argv
 using ArgStringList = std::span<std::string_view>;
@@ -196,15 +198,15 @@ public:
     /// underlying storage to represent a Joined argument.
     /// \p GroupedShortOption If true, we are handling the fallback case of
     /// parsing a prefix of the current argument as a short option.
-    std::optional<ParsedArgument> accept(const ArgList& args,
-                                         std::string_view cur_arg,
-                                         bool grouped_short_option,
-                                         unsigned& index) const;
+    PArgResult accept(const ArgList& args,
+                      std::string_view cur_arg,
+                      bool grouped_short_option,
+                      unsigned& index) const;
 
 private:
-    std::optional<ParsedArgument> accept_internal(const ArgList& args,
-                                                  std::string_view spelling,
-                                                  unsigned& index) const;
+    PArgResult accept_internal(const ArgList& args,
+                               std::string_view spelling,
+                               unsigned& index) const;
 
 public:
     void print(std::ostream& o, bool add_new_line) const;

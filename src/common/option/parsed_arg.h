@@ -161,6 +161,7 @@ struct ParsedArgumentBase {
  */
 using ParsedArgument =
     ParsedArgumentBase<std::variant<std::string_view, std::array<char, 8>>, std::string_view>;
+using PArg = ParsedArgument;
 
 struct ParsedArgumentOwning : public ParsedArgumentBase<std::string, std::string> {
     static ParsedArgumentOwning from_parsed_argument(const ParsedArgument& arg) {

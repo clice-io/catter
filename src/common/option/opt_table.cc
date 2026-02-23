@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <cstring>
 #include <expected>
-#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -102,6 +101,7 @@ OptTable::OptTable(std::span<const OptTable::Info> option_infos,
     if(this->input_random_index) {
         this->first_searchable_index = 0;
     } else {
+        bool found_searchable = false;
         for(unsigned i = 0, e = this->num_options(); i != e; ++i) {
             unsigned kind = this->info(i + 1).kind;
             if(kind == Option::InputClass) {
@@ -110,9 +110,9 @@ OptTable::OptTable(std::span<const OptTable::Info> option_infos,
             } else if(kind == Option::UnknownClass) {
                 assert(!this->unknown_option_id && "Cannot have multiple unknown options!");
                 this->unknown_option_id = this->info(i + 1).id;
-            } else if(kind != Option::GroupClass) {
+            } else if(kind != Option::GroupClass && !found_searchable) {
                 this->first_searchable_index = i;
-                break;
+                found_searchable = true;
             }
         }
     }
@@ -186,8 +186,8 @@ static bool opt_matches(const OptTable::Info& in, std::string_view option) {
 // GroupedShortOptions is true, -a matches "-abc" and the argument in Args
 // will be updated to "-bc". This overload does not support VisibilityMask
 // or case insensitive options.
-std::optional<ParsedArgument> OptTable::parse_one_arg_grouped(InputArgv argv,
-                                                              unsigned& index) const {
+std::expected<PArg, const char*> OptTable::parse_one_arg_grouped(InputArgv argv,
+                                                                 unsigned& index) const {
     // Anything that doesn't start with PrefixesUnion is an input, as is '-'
     // itself.
     std::string_view str = argv[index];
@@ -220,10 +220,11 @@ std::optional<ParsedArgument> OptTable::parse_one_arg_grouped(InputArgv argv,
         }
 
         Option opt(start, this);
-        if(auto a = opt.accept(argv,
-                               std::string_view(argv[index]).substr(0, arg_sz),
-                               /*GroupedShortOption=*/false,
-                               index)) {
+        auto a = opt.accept(argv,
+                            std::string_view(argv[index]).substr(0, arg_sz),
+                            /*GroupedShortOption=*/false,
+                            index);
+        if(a.has_value()) {
             return a;
         }
 
@@ -234,7 +235,7 @@ std::optional<ParsedArgument> OptTable::parse_one_arg_grouped(InputArgv argv,
 
         // Otherwise, see if the argument is missing, index will be changed in accept.
         if(prev != index)
-            return std::nullopt;
+            return std::unexpected(a.error() != nullptr ? a.error() : "missing argument");
     }
     if(fallback_opt) {
         Option opt(fallback_opt, this);
@@ -248,7 +249,8 @@ std::optional<ParsedArgument> OptTable::parse_one_arg_grouped(InputArgv argv,
             };
         }
 
-        if(auto a = opt.accept(argv, str.substr(0, 2), /*GroupedShortOption=*/true, index)) {
+        auto a = opt.accept(argv, str.substr(0, 2), /*GroupedShortOption=*/true, index);
+        if(a.has_value()) {
             argv[index] = '-' + std::string(str.substr(2));
             return a;
         }
@@ -275,18 +277,18 @@ std::optional<ParsedArgument> OptTable::parse_one_arg_grouped(InputArgv argv,
     };
 }
 
-std::optional<ParsedArgument> OptTable::parse_one_arg(InputArgv argv,
-                                                      unsigned& index,
-                                                      Visibility visibility_mask) const {
+std::expected<PArg, const char*> OptTable::parse_one_arg(InputArgv argv,
+                                                         unsigned& index,
+                                                         Visibility visibility_mask) const {
     return internal_parse_one_arg(argv, index, [visibility_mask](const Option& Opt) {
         return !Opt.has_visibility_flag(visibility_mask);
     });
 }
 
-std::optional<ParsedArgument> OptTable::parse_one_arg(InputArgv argv,
-                                                      unsigned& index,
-                                                      unsigned flags_to_include,
-                                                      unsigned flags_to_exclude) const {
+std::expected<PArg, const char*> OptTable::parse_one_arg(InputArgv argv,
+                                                         unsigned& index,
+                                                         unsigned flags_to_include,
+                                                         unsigned flags_to_exclude) const {
     return internal_parse_one_arg(argv,
                                   index,
                                   [flags_to_include, flags_to_exclude](const Option& opt) {
@@ -298,7 +300,21 @@ std::optional<ParsedArgument> OptTable::parse_one_arg(InputArgv argv,
                                   });
 }
 
-std::optional<ParsedArgument>
+bool OptTable::exclude_for_visibility(const Option& opt, Visibility visibility_mask) const {
+    return !opt.has_visibility_flag(visibility_mask);
+}
+
+bool OptTable::exclude_for_flags(const Option& opt,
+                                 unsigned flags_to_include,
+                                 unsigned flags_to_exclude) const {
+    if(flags_to_include && !opt.has_flag(flags_to_include))
+        return true;
+    if(opt.has_flag(flags_to_exclude))
+        return true;
+    return false;
+}
+
+std::expected<PArg, const char*>
     OptTable::internal_parse_one_arg(InputArgv argv,
                                      unsigned& index,
                                      std::function<bool(const Option&)> exclude_option) const {
@@ -350,16 +366,17 @@ std::optional<ParsedArgument>
         }
 
         // See if this option matches.
-        if(auto a = opt.accept(argv,
-                               std::string_view(argv[index]).substr(0, arg_sz),
-                               /*GroupedShortOption=*/false,
-                               index)) {
+        auto a = opt.accept(argv,
+                            std::string_view(argv[index]).substr(0, arg_sz),
+                            /*GroupedShortOption=*/false,
+                            index);
+        if(a.has_value()) {
             return a;
         }
 
         // Otherwise, see if this argument was missing values.
         if(prev != index)
-            return std::nullopt;
+            return std::unexpected(a.error() != nullptr ? a.error() : "missing argument");
     }
 
     // If we failed to find an option and this arg started with /, then it's
@@ -379,109 +396,4 @@ std::optional<ParsedArgument>
         .values = {},
         .index = index++,
     };
-}
-
-void OptTable::parse_args(InputArgv argv,
-                          unsigned& missing_arg_index,
-                          unsigned& missing_arg_count,
-                          std::function<void(ParsedArgument)> arg_callback,
-                          Visibility visibility_mask) const {
-    return internal_parse_args(
-        argv,
-        missing_arg_index,
-        missing_arg_count,
-        arg_callback,
-        [visibility_mask](const Option& opt) { return !opt.has_visibility_flag(visibility_mask); });
-}
-
-void OptTable::parse_args(InputArgv argv,
-                          unsigned& missing_arg_index,
-                          unsigned& missing_arg_count,
-                          std::function<void(ParsedArgument)> arg_callback,
-                          unsigned flags_to_include,
-                          unsigned flags_to_exclude) const {
-    return internal_parse_args(argv,
-                               missing_arg_index,
-                               missing_arg_count,
-                               arg_callback,
-                               [flags_to_include, flags_to_exclude](const Option& Opt) {
-                                   if(flags_to_include && !Opt.has_flag(flags_to_include))
-                                       return true;
-                                   if(Opt.has_flag(flags_to_exclude))
-                                       return true;
-                                   return false;
-                               });
-}
-
-void OptTable::parse_args(
-    InputArgv argv,
-    std::function<void(std::expected<ParsedArgument, std::string>)> res_err_fn) const {
-
-    unsigned MAI, MAC;
-    parse_args(argv, MAI, MAC, res_err_fn);
-    if(MAC) {
-        res_err_fn(std::unexpected(argv[MAI] + ": missing argument"));
-    }
-}
-
-void OptTable::internal_parse_args(InputArgv argv,
-                                   unsigned& missing_arg_index,
-                                   unsigned& missing_arg_count,
-                                   std::function<void(ParsedArgument)> arg_callback,
-                                   std::function<bool(const Option&)> exclude_option) const {
-
-    // FIXME: Handle '@' args (or at least error on them).
-
-    missing_arg_index = missing_arg_count = 0;
-    unsigned index = 0, end = argv.size();
-    while(index < end) {
-        // Ignore empty arguments (other things may still take them as
-        // arguments).
-        auto str = std::string_view(argv[index]);
-        if(str.empty()) {
-            ++index;
-            continue;
-        }
-
-        // In DashDashParsing mode, the first "--" stops option scanning and
-        // treats all subsequent arguments as positional.
-        if(this->dash_dash_parsing && str == "--") {
-            if(this->dash_dash_as_single_pack) {
-                arg_callback(ParsedArgument{
-                    .option_id = this->input_option_id,
-                    .spelling = "--",
-                    .values = std::vector<std::string_view>(argv.begin() + index + 1, argv.end()),
-                    .index = index,
-                });
-                index = end;
-            } else {
-                while(++index < end) {
-                    arg_callback(ParsedArgument{
-                        .option_id = this->input_option_id,
-                        .spelling = std::string_view(argv[index]),
-                        .values = {},
-                        .index = index,
-                    });
-                }
-            }
-            break;
-        }
-
-        unsigned prev = index;
-        auto a = this->grouped_short_options
-                     ? this->parse_one_arg_grouped(argv, index)
-                     : this->internal_parse_one_arg(argv, index, exclude_option);
-        assert((index > prev || this->grouped_short_options) &&
-               "Parser failed to consume argument.");
-
-        // Check for missing argument error.
-        if(!a) {
-            assert(index >= end && "Unexpected parser error.");
-            assert(index - prev - 1 && "No missing arguments!");
-            missing_arg_index = prev;
-            missing_arg_count = index - prev - 1;
-            return;
-        }
-        arg_callback(a.value());
-    }
 }
