@@ -1,7 +1,7 @@
 #include "util/data.h"
 
-#include <zest/macro.h>
-#include <zest/zest.h>
+#include <eventide/zest/macro.h>
+#include <eventide/zest/zest.h>
 
 using namespace catter;
 

@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 
-#include <eventide/task.h>
+#include <eventide/async/task.h>
 
 namespace catter {
 

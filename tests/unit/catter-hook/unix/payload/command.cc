@@ -3,8 +3,8 @@
 
 #include "opt-data/catter-proxy/parser.h"
 
-#include <zest/macro.h>
-#include <zest/zest.h>
+#include <eventide/zest/macro.h>
+#include <eventide/zest/zest.h>
 
 #include <filesystem>
 #include <string_view>

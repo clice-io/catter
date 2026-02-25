@@ -2,7 +2,7 @@
 #include "environment.h"
 #include "unix/config.h"
 
-#include <zest/zest.h>
+#include <eventide/zest/zest.h>
 
 #include <cstddef>
 #include <string>

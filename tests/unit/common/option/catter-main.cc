@@ -2,7 +2,7 @@
 #include "util/output.h"
 #include "opt-data/catter/table.h"
 
-#include <zest/zest.h>
+#include <eventide/zest/zest.h>
 
 #include <string_view>
 #include <vector>

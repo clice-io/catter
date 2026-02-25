@@ -4,7 +4,7 @@
 #include "mock/mock_linker.h"
 #include "mock/mock_resolver.h"
 
-#include <zest/zest.h>
+#include <eventide/zest/zest.h>
 
 #include <filesystem>
 

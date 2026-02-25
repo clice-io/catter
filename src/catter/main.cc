@@ -1,5 +1,15 @@
 #include <functional>
 #include <print>
+#include <ranges>
+#include <algorithm>
+#include <cassert>
+#include <format>
+#include <print>
+
+#include <eventide/async/process.h>
+#include <eventide/async/stream.h>
+#include <eventide/async/loop.h>
+#include <eventide/reflection/name.h>
 
 #include "js.h"
 #include "ipc.h"

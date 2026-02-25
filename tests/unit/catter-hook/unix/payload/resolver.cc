@@ -1,7 +1,7 @@
 #include "resolver.h"
 #include "temp_file_manager.h"
 
-#include <zest/zest.h>
+#include <eventide/zest/zest.h>
 
 #include <filesystem>
 #include <format>

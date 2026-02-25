@@ -16,7 +16,7 @@
 #include <utility>
 #include <format>
 
-#include <reflection/name.h>
+#include <eventide/reflection/name.h>
 #include <quickjs.h>
 
 #include "util/meta.h"
@@ -24,6 +24,9 @@
 // namespace meta
 
 namespace catter::qjs {
+
+namespace refl = eventide::refl;
+
 namespace detail {
 
 template <typename... Args>
