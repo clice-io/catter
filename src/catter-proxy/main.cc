@@ -76,6 +76,7 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
         std::string args;
         args.reserve(opt.args->size() * 5);
         for(int i = 0; i < opt.args->size(); ++i) {
+            args += ' ';
             args += (*opt.args)[i];
         }
 
