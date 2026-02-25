@@ -236,17 +236,13 @@ target("ut-catter-hook-win64")
 target("it-catter-hook")
     set_default(has_config("test"))
     set_kind("binary")
-
     add_files("tests/integration/test/catter-hook.cc")
-
     add_deps("catter-hook", "common")
 
 target("it-catter-proxy")
     set_default(has_config("test"))
     set_kind("binary")
-
     add_files("tests/integration/test/catter-proxy.cc")
-
     add_deps("common", "catter-core")
 
 rule("build.js")

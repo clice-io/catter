@@ -1,12 +1,14 @@
 #include "command.h"
 #include "session.h"
 
-#include "opt-data/catter-proxy/parser.h"
+#include "opt/proxy/option.h"
 
+#include <eventide/deco/runtime.h>
 #include <eventide/zest/macro.h>
 #include <eventide/zest/zest.h>
 
 #include <filesystem>
+#include <optional>
 #include <string_view>
 #include <vector>
 #include <span>
@@ -14,7 +16,7 @@
 namespace ct = catter;
 
 namespace {
-ct::Session session{.proxy_path = "/usr/local/bin/catter-proxy", .self_id = "session-99"};
+ct::Session session{.proxy_path = "/usr/local/bin/catter-proxy", .self_id = "99"};
 ct::CmdBuilder builder(session);
 
 TEST_SUITE(cmd_builder) {
@@ -38,11 +40,11 @@ TEST_SUITE(cmd_builder) {
         EXPECT_TRUE(cmd.argv.at(0) == session.proxy_path);
 
         auto f = [&]() {
-            auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
-            EXPECT_TRUE(parse_res.parent_id == "session-99");
-            EXPECT_TRUE(parse_res.executable == target_path);
-            EXPECT_TRUE(parse_res.argv.has_value());
-            auto& args = parse_res.argv.value();
+            auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv)->options;
+            EXPECT_TRUE(*parse_res.parent_id == 99);
+            EXPECT_TRUE(*parse_res.exec == target_path);
+            EXPECT_TRUE(parse_res.args.value.has_value());
+            auto& args = *parse_res.args;
             EXPECT_TRUE(args.size() == 3);
             EXPECT_TRUE(args.at(0) == "gcc");
             EXPECT_TRUE(args.at(2) == "main.c");
@@ -75,8 +77,8 @@ TEST_SUITE(cmd_builder) {
         EXPECT_TRUE(last_arg.find("in command: invalid --help") != std::string::npos);
 
         auto f = [&]() {
-            auto parse_res = ct::optdata::catter_proxy::parse_opt(cmd.argv);
-            EXPECT_FALSE(parse_res.argv.has_value());
+            auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv);
+            EXPECT_FALSE(parse_res->options.args.value.has_value());
         };
 
         EXPECT_NOTHROWS(f());

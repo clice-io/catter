@@ -15,6 +15,8 @@
 #include "ipc.h"
 #include "session.h"
 
+#include "util/ipc-data.h"
+
 using namespace catter;
 
 class ServiceImpl : public ipc::DefaultService {

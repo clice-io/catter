@@ -1,9 +1,10 @@
 #include "executor.h"
-#include "opt-data/catter-proxy/parser.h"
+#include "opt/proxy/option.h"
 #include "session.h"
 #include "mock/mock_linker.h"
 #include "mock/mock_resolver.h"
 
+#include <eventide/deco/runtime.h>
 #include <eventide/zest/zest.h>
 
 #include <filesystem>
@@ -37,11 +38,12 @@ TEST_SUITE(executor) {
 
         // Verify the proxy received the correct intercepted instructions
         auto f = [&]() {
-            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
-            EXPECT_TRUE(parse_res.parent_id == session.self_id);
-            EXPECT_TRUE(parse_res.executable == "/bin/ls");
-            EXPECT_TRUE(parse_res.argv.has_value());
-            auto& raw_args = parse_res.argv.value();
+            auto parse_res =
+                deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv)->options;
+            EXPECT_TRUE(std::to_string(*parse_res.parent_id) == session.self_id);
+            EXPECT_TRUE(*parse_res.exec == "/bin/ls");
+            EXPECT_TRUE(parse_res.args.value.has_value());
+            auto& raw_args = *parse_res.args;
             EXPECT_TRUE(raw_args.size() == 2);
             EXPECT_TRUE(raw_args[0] == "ls");
             EXPECT_TRUE(raw_args[1] == "-la");
@@ -61,8 +63,8 @@ TEST_SUITE(executor) {
         EXPECT_TRUE(linker.last_path == session.proxy_path);
         // Verify translation of relative 'python' to absolute path
         auto f = [&]() {
-            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
-            EXPECT_TRUE(parse_res.executable == "/usr/bin/python");
+            auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
+            EXPECT_TRUE(*parse_res->options.exec == "/usr/bin/python");
         };
         EXPECT_NOTHROWS(f());
     };
@@ -80,9 +82,9 @@ TEST_SUITE(executor) {
         EXPECT_TRUE(linker.last_path == session.proxy_path);
 
         auto f = [&]() {
-            auto parse_res = catter::optdata::catter_proxy::parse_opt(linker.last_argv);
-            EXPECT_TRUE(parse_res.executable == "/app/run");
-            EXPECT_TRUE(parse_res.argv.value().at(1) == "--arg1");
+            auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
+            EXPECT_TRUE(*parse_res->options.exec == "/app/run");
+            EXPECT_TRUE(parse_res->options.args->at(1) == "--arg1");
         };
         EXPECT_NOTHROWS(f());
     };

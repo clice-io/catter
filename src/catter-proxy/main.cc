@@ -6,7 +6,7 @@
 #include <system_error>
 
 #include <eventide/async/process.h>
-#include "option.h"
+#include "opt/proxy/option.h"
 #include "eventide/deco/runtime.h"
 #include <vector>
 
@@ -16,8 +16,7 @@
 #include "util/log.h"
 #include "util/eventide.h"
 #include "util/crossplat.h"
-#include "config/catter-proxy.h"
-#include "opt-data/catter-proxy/parser.h"
+#include "util/output.h"
 
 using namespace catter;
 
