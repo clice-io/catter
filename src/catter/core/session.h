@@ -10,9 +10,9 @@
 #include <type_traits>
 #include <vector>
 
-#include <eventide/process.h>
-#include <eventide/stream.h>
-#include <eventide/loop.h>
+#include <eventide/async/process.h>
+#include <eventide/async/stream.h>
+#include <eventide/async/loop.h>
 
 #include "ipc.h"
 #include "util/data.h"

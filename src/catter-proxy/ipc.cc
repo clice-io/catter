@@ -3,8 +3,8 @@
 #include <span>
 #include <stdexcept>
 
-#include <eventide/loop.h>
-#include <eventide/stream.h>
+#include <eventide/async/loop.h>
+#include <eventide/async/stream.h>
 
 #include "config/ipc.h"
 #include "util/data.h"

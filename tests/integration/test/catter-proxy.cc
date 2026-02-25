@@ -35,7 +35,6 @@
 #include "util/serde.h"
 #include "util/data.h"
 #include "util/log.h"
-#include "opt-data/catter/table.h"
 
 using namespace catter;
 

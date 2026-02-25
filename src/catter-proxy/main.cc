@@ -6,6 +6,7 @@
 #include <system_error>
 
 #include <eventide/async/process.h>
+#include "config/catter-proxy.h"
 #include "opt/proxy/option.h"
 #include "eventide/deco/runtime.h"
 #include <vector>
