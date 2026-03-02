@@ -181,7 +181,9 @@ struct Serde<T> {
     static std::vector<char> serialize(const T& value) {
         std::vector<char> buffer;
         eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
-            append_range_to_vector(buffer, Serde<std::remove_const_t<typename FieldType::type>>::serialize(field.value()));
+            append_range_to_vector(
+                buffer,
+                Serde<std::remove_const_t<typename FieldType::type>>::serialize(field.value()));
         });
         return buffer;
     }
@@ -190,7 +192,8 @@ struct Serde<T> {
     static T deserialize(Invocable&& reader) {
         T value{};
         eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
-            field.value() = Serde<std::remove_const_t<typename FieldType::type>>::deserialize(reader);
+            field.value() =
+                Serde<std::remove_const_t<typename FieldType::type>>::deserialize(reader);
         });
         return value;
     }
