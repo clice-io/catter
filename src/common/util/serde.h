@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include <eventide/async/task.h>
+#include <eventide/reflection/struct.h>
 
 namespace catter {
 
@@ -172,6 +173,26 @@ struct Serde<T> {
         enum_type value =
             co_await Serde<enum_type>::co_deserialize(std::forward<Invocable>(reader));
         co_return static_cast<T>(value);
+    }
+};
+
+template <eventide::refl::reflectable_class T>
+struct Serde<T> {
+    static std::vector<char> serialize(const T& value) {
+        std::vector<char> buffer;
+        eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+            append_range_to_vector(buffer, Serde<std::remove_const_t<typename FieldType::type>>::serialize(field.value()));
+        });
+        return buffer;
+    }
+
+    template <Reader Invocable>
+    static T deserialize(Invocable&& reader) {
+        T value{};
+        eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+            field.value() = Serde<std::remove_const_t<typename FieldType::type>>::deserialize(reader);
+        });
+        return value;
     }
 };
 
