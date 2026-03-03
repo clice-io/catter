@@ -35,7 +35,7 @@ template <typename Range>
              std::is_same_v<char, std::ranges::range_value_t<Range>>
 inline std::string to_hex(const Range& range, size_t max_bytes = 0) {
     std::string hex_str;
-    size_t count = max_bytes > 0 ? std::ranges::min(max_bytes, std::ranges::size(range))
+    size_t count = max_bytes > 0 ? (std::ranges::min)(max_bytes, std::ranges::size(range))
                                  : std::ranges::size(range);
     for(const auto& byte: std::ranges::views::take(range, count)) {
         hex_str += std::format("{:02x} ", static_cast<unsigned char>(byte));
