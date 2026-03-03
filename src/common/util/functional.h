@@ -62,7 +62,7 @@ public:
     function_ref& operator= (function_ref&&) = default;
 
 private:
-    constexpr function_ref(R (*proxy)(Erased, Args&...), Erased ctx) noexcept :
+    constexpr function_ref(R (*proxy)(const function_ref*, Args&...), Erased ctx) noexcept :
         proxy(proxy), erased(ctx) {}
 
     template <typename Class>
@@ -81,15 +81,15 @@ public:
         requires is_mem_fn_of<Class, MemFn>
     constexpr function_ref(Class* invokable, MemFn) noexcept :
         function_ref(
-            [](Erased ctx, Args&... args) -> R {
-                return (static_cast<Class*>(ctx.ctx)->*MemFn::get())(static_cast<Args>(args)...);
+            [](const function_ref* self, Args&... args) -> R {
+                return (static_cast<Class*>(self->erased.ctx)->*MemFn::get())(static_cast<Args>(args)...);
             },
             Erased{.ctx = invokable}) {}
 
     constexpr function_ref(Sign* invokable) noexcept :
         function_ref(
-            [](Erased ctx, Args&... args) -> R {
-                Sign* fn = ctx.fn;
+            [](const function_ref* self, Args&... args) -> R {
+                Sign* fn = self->erased.fn;
                 return (*fn)(static_cast<Args>(args)...);
             },
             Erased{.fn = invokable}) {};
@@ -108,11 +108,11 @@ public:
         static_assert(
             requires(Sign* fn, CallArgs&&... args) { fn(std::forward<CallArgs>(args)...); },
             "Invokable object must be callable with the given arguments");
-        return proxy(erased, args...);
+        return proxy(this, args...);
     }
 
 private:
-    R (*proxy)(Erased, Args&...);
+    R (*proxy)(const function_ref*, Args&...);
     Erased erased;
 };
 
@@ -140,10 +140,6 @@ public:
         this->erased = std::exchange(other.erased, Erased{});
         this->deleter = std::exchange(other.deleter, nullptr);
         std::memcpy(this->storage, other.storage, sizeof(this->storage));
-        // Fix SBO pointer: if ctx pointed to other's storage, redirect to ours
-        if(this->erased.ctx == other.storage) {
-            this->erased.ctx = this->storage;
-        }
     }
 
     function& operator= (const function&) = delete;
@@ -160,10 +156,10 @@ public:
     }
 
 private:
-    constexpr function(R (*proxy)(Erased, Args&...), Erased ctx) noexcept :
+    constexpr function(R (*proxy)(const function*, Args&...), Erased ctx) noexcept :
         proxy(proxy), erased(ctx), deleter(nullptr), storage() {}
 
-    constexpr function(R (*proxy)(Erased, Args&...), Erased ctx, Deleter* deleter) noexcept :
+    constexpr function(R (*proxy)(const function*, Args&...), Erased ctx, Deleter* deleter) noexcept :
         proxy(proxy), erased(ctx), deleter(deleter), storage() {}
 
     template <typename Class>
@@ -180,8 +176,8 @@ private:
 public:
     constexpr function(Sign* invokable) noexcept :
         function(
-            [](Erased ctx, Args&... args) -> R {
-                Sign* fn = ctx.fn;
+            [](const function* self, Args&... args) -> R {
+                Sign* fn = self->erased.fn;
                 return (*fn)(static_cast<Args>(args)...);
             },
             Erased{.fn = invokable}) {};
@@ -190,11 +186,11 @@ public:
         requires (sizeof(Class) <= 16) && is_mem_fn_of<Class, MemFn>
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
-            [](Erased ctx, Args&... args) -> R {
-                return (static_cast<ClassType*>(ctx.ctx)->*MemFn::get())(
+            [](const function* self, Args&... args) -> R {
+                return (self->storage_as<ClassType>()->*MemFn::get())(
                     static_cast<Args>(args)...);
             },
-            Erased{.ctx = this->storage},
+            Erased{},
             [](function* self) { std::destroy_at(self->storage_as<ClassType>()); }) {
         std::construct_at(this->storage_as<ClassType>(), std::forward<Class>(invokable));
     }
@@ -203,8 +199,8 @@ public:
         requires (sizeof(Class) > 16) && is_mem_fn_of<Class, MemFn>
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
-            [](Erased ctx, Args&... args) -> R {
-                return (static_cast<ClassType*>(ctx.ctx)->*MemFn::get())(
+            [](const function* self, Args&... args) -> R {
+                return (static_cast<ClassType*>(self->erased.ctx)->*MemFn::get())(
                     static_cast<Args>(args)...);
             },
             Erased{.ctx = new ClassType(std::forward<Class>(invokable))},
@@ -220,16 +216,21 @@ public:
         static_assert(
             requires(Sign* fn, CallArgs&&... args) { fn(std::forward<CallArgs>(args)...); },
             "Invokable object must be callable with the given arguments");
-        return proxy(erased, args...);
+        return proxy(this, args...);
     }
 
 private:
     template <typename Class>
-    Class* storage_as() {
+    const Class* storage_as() const {
+        return std::launder(reinterpret_cast<const Class*>(this->storage));
+    }
+
+    template <typename Class>
+    Class* storage_as()  {
         return std::launder(reinterpret_cast<Class*>(this->storage));
     }
 
-    R (*proxy)(Erased, Args&...);
+    R (*proxy)(const function*, Args&...);
     Erased erased;
     Deleter* deleter;
     std::byte storage[16];
