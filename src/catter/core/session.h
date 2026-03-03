@@ -16,7 +16,7 @@
 
 #include "ipc.h"
 #include "util/data.h"
-#include "util/function_ref.h"
+#include "util/functional.h"
 #include "util/crossplat.h"
 #include "util/eventide.h"
 #include "config/ipc.h"

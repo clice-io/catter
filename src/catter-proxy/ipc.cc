@@ -2,26 +2,19 @@
 #include <print>
 #include <span>
 #include <stdexcept>
-
-#include <eventide/async/loop.h>
-#include <eventide/async/stream.h>
 #include <type_traits>
 #include <vector>
 
+#include <eventide/async/loop.h>
+#include <eventide/async/stream.h>
+
 #include "config/ipc.h"
+#include "util/log.h"
 #include "util/data.h"
 #include "util/eventide.h"
 
 namespace catter::proxy::ipc {
 using namespace data;
-
-void print_packet(std::string msg, const packet& pkt) {
-    std::println("Packet ({} bytes): {}", pkt.size(), msg);
-    for(auto byte: pkt) {
-        std::print("{:02x} ", static_cast<unsigned char>(byte));
-    }
-    std::println();
-}
 
 class Impl {
 public:
@@ -52,9 +45,11 @@ private:
             }
             total_read += ret;
         }
+        LOG_DEBUG("Reading {} bytes: {}", len, log::to_hex(std::span<char>(dst, len)));
     }
 
     void write(const std::vector<char>& payload) {
+        LOG_DEBUG("Writing {} bytes: {}", payload.size(), log::to_hex(payload));
         auto err = wait(this->client_pipe.write(payload));
         if(err.has_error()) {
             throw std::runtime_error(std::format("ipc_handler write failed: {}", err.message()));

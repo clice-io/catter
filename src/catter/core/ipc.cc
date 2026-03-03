@@ -7,9 +7,10 @@
 
 #include "ipc.h"
 
+#include "util/log.h"
 #include "util/serde.h"
 #include "util/data.h"
-#include "util/function_ref.h"
+#include "util/functional.h"
 
 namespace catter::ipc {
 using namespace data;
@@ -59,7 +60,13 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
             }
             total_read += ret;
         }
+        LOG_DEBUG("Reading {} bytes: {}", len, log::to_hex(std::span<char>(dst, len)));
         co_return;
+    };
+
+    auto writer = [&](const std::vector<char>& payload) -> eventide::task<eventide::error> {
+        LOG_DEBUG("Writing {} bytes: {}", payload.size(), log::to_hex(payload));
+        return client.write(payload);
     };
 
     auto read_packet = [&]() -> eventide::task<packet> {
@@ -67,7 +74,7 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
     };
 
     auto write_packet = [&](const std::vector<char>& payload) -> eventide::task<eventide::error> {
-        co_return co_await client.write(Serde<packet>::serialize(payload));
+        co_return co_await writer(Serde<packet>::serialize(payload));
     };
 
     try {

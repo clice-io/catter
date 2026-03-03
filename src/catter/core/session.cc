@@ -1,9 +1,11 @@
 #include <cassert>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <list>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 
 #include "session.h"
 
