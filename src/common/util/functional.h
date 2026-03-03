@@ -147,13 +147,13 @@ public:
             this->deleter(this);
         }
     }
-
+private:
     constexpr function(R (*proxy)(Erased, Args&...), Erased ctx) noexcept :
         proxy(proxy), ctx(ctx), deleter(nullptr), storage() {}
 
     constexpr function(R (*proxy)(Erased, Args&...), Erased ctx, Deleter* deleter) noexcept :
         proxy(proxy), ctx(ctx), deleter(deleter), storage() {}
-
+public:
     constexpr function(Sign* invokable) noexcept :
         function(
             [](Erased ctx, Args&... args) -> R {
@@ -163,7 +163,9 @@ public:
             Erased{.fn = invokable}) {};
 
     template <typename Class, typename MemFn, typename ClassType = std::remove_cvref_t<Class>>
-        requires (sizeof(Class) <= 16)
+        requires (sizeof(Class) <= 16) && requires  {
+            typename MemFn::ClassType;
+        }
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
             [](Erased ctx, Args&... args) -> R {
@@ -177,6 +179,9 @@ public:
     }
 
     template <typename Class, typename MemFn, typename ClassType = std::remove_cvref_t<Class>>
+        requires (sizeof(Class) > 16) && requires  {
+            typename MemFn::ClassType;
+        }
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
             [](Erased ctx, Args&... args) -> R {
