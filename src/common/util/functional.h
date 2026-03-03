@@ -144,7 +144,7 @@ public:
 
     ~function() {
         if(this->deleter) {
-            this->deleter(this->ctx);
+            this->deleter(this);
         }
     }
 
@@ -171,9 +171,9 @@ public:
                     static_cast<Args>(args)...);
             },
             Erased{.ctx = this->storage},
-            [](function* self) { std::destroy_at(static_cast<ClassType*>(self->storage)); }) {
-        static_assert(std::is_same_v<Class, typename MemFn::ClassType>, "Class type mismatch!");
-        std::construct_at(static_cast<ClassType*>(this->ctx), std::forward<Class>(invokable));
+            [](function* self) { std::destroy_at(self->storage_as<ClassType>()); }) {
+        static_assert(std::is_same_v<ClassType, typename MemFn::ClassType>, "Class type mismatch!");
+        std::construct_at(this->storage_as<ClassType>(), std::forward<Class>(invokable));
     }
 
     template <typename Class, typename MemFn, typename ClassType = std::remove_cvref_t<Class>>
@@ -184,11 +184,12 @@ public:
                     static_cast<Args>(args)...);
             },
             Erased{.ctx = new ClassType(std::forward<Class>(invokable))},
-            [](function* self) { delete static_cast<ClassType*>(self->ctx); }) {
-        static_assert(std::is_same_v<Class, typename MemFn::ClassType>, "Class type mismatch!");
+            [](function* self) { delete static_cast<ClassType*>(self->ctx.ctx); }) {
+        static_assert(std::is_same_v<ClassType, typename MemFn::ClassType>, "Class type mismatch!");
     }
 
     template <typename Class>
+        requires (!std::is_same_v<std::remove_cvref_t<Class>, function>)
     constexpr function(Class&& invokable) noexcept :
         function(make(std::forward<Class>(invokable))) {}
 
@@ -201,6 +202,11 @@ public:
     }
 
 private:
+    template<typename Class>
+    Class* storage_as() {
+        return std::launder(reinterpret_cast<Class*>(this->storage));
+    }
+
     template <typename Class>
         requires std::is_invocable_r_v<R, Class, Args...>
     constexpr static function make(Class&& invokable) {
