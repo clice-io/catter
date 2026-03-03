@@ -82,7 +82,8 @@ public:
     constexpr function_ref(Class* invokable, MemFn) noexcept :
         function_ref(
             [](const function_ref* self, Args&... args) -> R {
-                return (static_cast<Class*>(self->erased.ctx)->*MemFn::get())(static_cast<Args>(args)...);
+                return (static_cast<Class*>(self->erased.ctx)->*MemFn::get())(
+                    static_cast<Args>(args)...);
             },
             Erased{.ctx = invokable}) {}
 
@@ -133,6 +134,12 @@ public:
 
     using Deleter = void(function*);
 
+    constexpr static std::size_t sbo_size = 16;
+    constexpr static std::size_t sbo_align = alignof(std::max_align_t);
+
+    template <typename T>
+    constexpr static bool sbo_eligible = sizeof(T) <= sbo_size && alignof(T) <= sbo_align;
+
     function(const function&) = delete;
 
     function(function&& other) noexcept {
@@ -159,8 +166,8 @@ private:
     constexpr function(R (*proxy)(const function*, Args&...), Erased ctx) noexcept :
         proxy(proxy), erased(ctx), deleter(nullptr), storage() {}
 
-    constexpr function(R (*proxy)(const function*, Args&...), Erased ctx, Deleter* deleter) noexcept :
-        proxy(proxy), erased(ctx), deleter(deleter), storage() {}
+    constexpr function(R (*proxy)(const function*, Args&...), Erased ctx, Deleter* deleter) noexcept
+        : proxy(proxy), erased(ctx), deleter(deleter), storage() {}
 
     template <typename Class>
         requires std::is_invocable_r_v<R, Class, Args...>
@@ -183,12 +190,11 @@ public:
             Erased{.fn = invokable}) {};
 
     template <typename Class, typename MemFn, typename ClassType = std::remove_cvref_t<Class>>
-        requires (sizeof(Class) <= 16) && is_mem_fn_of<Class, MemFn>
+        requires sbo_eligible<ClassType> && is_mem_fn_of<Class, MemFn>
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
             [](const function* self, Args&... args) -> R {
-                return (self->storage_as<ClassType>()->*MemFn::get())(
-                    static_cast<Args>(args)...);
+                return (self->storage_as<ClassType>()->*MemFn::get())(static_cast<Args>(args)...);
             },
             Erased{},
             [](function* self) { std::destroy_at(self->storage_as<ClassType>()); }) {
@@ -196,7 +202,7 @@ public:
     }
 
     template <typename Class, typename MemFn, typename ClassType = std::remove_cvref_t<Class>>
-        requires (sizeof(Class) > 16) && is_mem_fn_of<Class, MemFn>
+        requires (!sbo_eligible<ClassType>) && is_mem_fn_of<Class, MemFn>
     constexpr function(Class&& invokable, MemFn) noexcept :
         function(
             [](const function* self, Args&... args) -> R {
@@ -226,13 +232,13 @@ private:
     }
 
     template <typename Class>
-    Class* storage_as()  {
+    Class* storage_as() {
         return std::launder(reinterpret_cast<Class*>(this->storage));
     }
 
+    alignas(sbo_align) std::byte storage[sbo_size];
     R (*proxy)(const function*, Args&...);
     Erased erased;
     Deleter* deleter;
-    std::byte storage[16];
 };
 }  // namespace catter::util
