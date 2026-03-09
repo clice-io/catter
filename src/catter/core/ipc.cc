@@ -40,7 +40,7 @@ struct Helper<Req, Ret(Args...)> {
 
             if(ret.has_error()) {
                 throw std::runtime_error(std::format("Failed to send response [{}] to client: {}",
-                                                     eventide::refl::enum_name<Req>(),
+                                                     eventide::refl::enum_name(Req),
                                                      ret.message()));
             }
         } else {
