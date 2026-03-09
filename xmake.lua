@@ -59,7 +59,6 @@ elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
 elseif is_plat("windows") then
     add_defines("CATTER_WINDOWS")
-    add_requires("microsoft-detours", {version = "2023.6.8"})
     add_requires("minhook", {version = "v1.3.4"})
 end
 
@@ -104,7 +103,6 @@ target("catter-hook-win64")
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/main.cc")
     add_syslinks("user32", "advapi32")
-    add_packages("microsoft-detours")
     add_packages("minhook")
     add_cxxflags("-fno-exceptions", "-fno-rtti")
 
@@ -156,8 +154,7 @@ target("catter-hook")
     add_includedirs("src/catter-hook/", {public = true})
     add_deps("common")
     if is_plat("windows") then
-        add_files("src/catter-hook/win/impl.cc")
-        add_packages("microsoft-detours")
+        add_files("src/catter-hook/win/*.cc")
     elseif is_plat("linux", "macosx") then
         add_files("src/catter-hook/unix/impl.cc")
     end

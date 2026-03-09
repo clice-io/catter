@@ -105,7 +105,7 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    catter::log::mute_logger();
+    // catter::log::mute_logger();
     try {
         SessionImpl session;
         session.run({"echo", "Hello, World!"}, ServiceImpl::Factory{});

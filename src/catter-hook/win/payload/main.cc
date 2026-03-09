@@ -10,12 +10,8 @@
 
 #include <MinHook.h>
 #include <windows.h>
-#include <detours.h>
 
 #include "win/env.h"
-
-// https://github.com/microsoft/Detours/wiki/DetourCreateProcessWithDll#remarks
-#pragma comment(linker, "/export:DetourFinishHelperProcess,@1,NONAME")
 
 namespace catter::win {
 namespace {
@@ -215,7 +211,7 @@ struct CreateProcessAsUserW {
                               LPCWSTR lpCurrentDirectory,
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
-                                  
+
         return original(hToken,
                         lpApplicationName,
                         lpCommandLine,
@@ -240,12 +236,11 @@ struct minhook_meta {
 template <typename... args_t>
 auto collect_fn() noexcept {
     return std::array<minhook_meta, sizeof...(args_t)>{
-        minhook_meta{
-            args_t::name, 
-            (void**)args_t::target,
-            (void**)args_t::detour,
-            (void**)(&args_t::original)
-        }...
+        minhook_meta{args_t::name,
+                     (void*)args_t::target,
+                     (void*)args_t::detour,
+                     (void**)(&args_t::original)}
+        ...
     };
 }
 
@@ -260,6 +255,7 @@ void attach() noexcept {
         MH_CreateHook(m.target, m.detour_func, m.original_ptr);
     }
 }
+
 void detach() noexcept {
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();
@@ -268,24 +264,22 @@ void detach() noexcept {
 }  // namespace
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
-    switch (dwReason) {
+    switch(dwReason) {
         case DLL_PROCESS_ATTACH:
             // avoid the DLL_THREAD_ATTACH and DLL_THREAD_DETACH notifications to reduce overhead
             DisableThreadLibraryCalls(hinst);
 
-            if (MH_Initialize() != MH_OK) {
+            if(MH_Initialize() != MH_OK) {
                 return FALSE;
             }
             // trampoline hooking using MinHook
             minhook::attach();
-            if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
+            if(MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
                 return FALSE;
             }
             break;
 
-        case DLL_PROCESS_DETACH:
-            minhook::detach();
-            break;
+        case DLL_PROCESS_DETACH: minhook::detach(); break;
     }
     return TRUE;
 }

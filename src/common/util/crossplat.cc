@@ -122,7 +122,7 @@ std::filesystem::path get_executable_path() {
 }
 
 std::filesystem::path get_catter_data_path() {
-    return get_catter_root_path() / "logs";
+    return get_catter_root_path();
 }
 
 }  // namespace catter::util

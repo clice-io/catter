@@ -40,9 +40,7 @@ void CreateProcessA() {
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
     if(!CreateProcessA(nullptr, cmdline, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa
-        throw std::system_error(GetLastError(),
-                                std::system_category(),
-                                "Failed to create process with injected dll");
+        throw std::system_error(GetLastError(), std::system_category(), "Failed to create process");
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);
@@ -55,9 +53,7 @@ void CreateProcessW() {
     STARTUPINFOW si{.cb = sizeof(STARTUPINFOW)};
     if(!CreateProcessW(nullptr, cmdline, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
-        throw std::system_error(GetLastError(),
-                                std::system_category(),
-                                "Failed to create process with injected dll");
+        throw std::system_error(GetLastError(), std::system_category(), "Failed to create process");
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);

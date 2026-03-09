@@ -50,11 +50,10 @@ int64_t run(data::action act, data::ipcid_t id) {
 }
 
 int proxy_main(const catter::proxy::ProxyOption& opt) {
-    // This function is for the hook to call, it will never be called in this file.
-    // The implementation is in hook.cc
-    proxy::ipc::set_service_mode(data::ServiceMode::DEFAULT);
-
     try {
+        // This function is for the hook to call, it will never be called in this file.
+        // The implementation is in hook.cc
+        proxy::ipc::set_service_mode(data::ServiceMode::DEFAULT);
 
         data::command cmd = {
             .cwd = std::filesystem::current_path().string(),
