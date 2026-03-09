@@ -18,7 +18,7 @@
 namespace catter {
 
 eventide::task<void> Session::loop(
-    util::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor) {
+    eventide::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor) {
     std::list<eventide::task<void>> linked_clients;
     for(auto i: std::views::iota(data::ipcid_t(1))) {
         auto client = co_await this->acc->accept();

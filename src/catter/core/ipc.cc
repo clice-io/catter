@@ -4,13 +4,13 @@
 #include <utility>
 
 #include <eventide/reflection/enum.h>
+#include <eventide/common/functional.h>
 
 #include "ipc.h"
 
 #include "util/log.h"
 #include "util/serde.h"
 #include "util/data.h"
-#include "util/functional.h"
 
 namespace catter::ipc {
 using namespace data;
@@ -21,7 +21,7 @@ struct Helper {};
 template <Request Req, typename Ret, typename... Args>
 struct Helper<Req, Ret(Args...)> {
     template <typename Writer>
-    eventide::task<void> operator() (util::function_ref<Ret(Args...)> callback,
+    eventide::task<void> operator() (eventide::function_ref<Ret(Args...)> callback,
                                      BufferReader& buf_reader,
                                      Writer&& write_packet) {
         if constexpr(!std::is_same_v<Ret, void>) {
@@ -41,7 +41,7 @@ struct Helper<Req, Ret(Args...)> {
 };
 
 template <Request Req, typename Writer>
-eventide::task<void> handle_req(util::function_ref<RequestType<Req>> callback,
+eventide::task<void> handle_req(eventide::function_ref<RequestType<Req>> callback,
                                 BufferReader& buf_reader,
                                 Writer&& write_packet) {
     return Helper<Req, RequestType<Req>>{}(callback,
@@ -55,10 +55,14 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
         size_t total_read = 0;
         while(total_read < len) {
             auto ret = co_await client.read_some({dst + total_read, len - total_read});
-            if(ret == 0) {
-                throw total_read;  // EOF
+            if(!ret) {
+                throw std::runtime_error(
+                    std::format("ipc_handler read failed: {}", ret.error().message()));
             }
-            total_read += ret;
+            if(ret.value() == 0) {
+                throw ret.value();  // EOF or client disconnected
+            }
+            total_read += ret.value();
         }
         LOG_DEBUG("Reading {} bytes: {}", len, log::to_hex(std::span<char>(dst, len)));
         co_return;
@@ -88,7 +92,7 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
             switch(req) {
                 case Request::CREATE: {
                     co_await handle_req<Request::CREATE>(
-                        {service.get(), util::mem_fn<&DefaultService::create>{}},
+                        eventide::bind_ref<&DefaultService::create>(*service),
                         buf_reader,
                         write_packet);
                     break;
@@ -96,21 +100,21 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
 
                 case Request::MAKE_DECISION: {
                     co_await handle_req<Request::MAKE_DECISION>(
-                        {service.get(), util::mem_fn<&DefaultService::make_decision>{}},
+                        eventide::bind_ref<&DefaultService::make_decision>(*service),
                         buf_reader,
                         write_packet);
                     break;
                 }
                 case Request::FINISH: {
                     co_await handle_req<Request::FINISH>(
-                        {service.get(), util::mem_fn<&DefaultService::finish>{}},
+                        eventide::bind_ref<&DefaultService::finish>(*service),
                         buf_reader,
                         write_packet);
                     break;
                 }
                 case Request::REPORT_ERROR: {
                     co_await handle_req<Request::REPORT_ERROR>(
-                        {service.get(), util::mem_fn<&DefaultService::report_error>{}},
+                        eventide::bind_ref<&DefaultService::report_error>(*service),
                         buf_reader,
                         write_packet);
                     break;

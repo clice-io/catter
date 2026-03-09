@@ -10,13 +10,13 @@
 #include <type_traits>
 #include <vector>
 
+#include <eventide/common/functional.h>
 #include <eventide/async/process.h>
 #include <eventide/async/stream.h>
 #include <eventide/async/loop.h>
 
 #include "ipc.h"
 #include "util/data.h"
-#include "util/functional.h"
 #include "util/crossplat.h"
 #include "util/eventide.h"
 #include "config/ipc.h"
@@ -102,8 +102,8 @@ public:
     }
 
 private:
-    eventide::task<void>
-        loop(util::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor);
+    eventide::task<void> loop(
+        eventide::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor);
 
     eventide::task<int64_t> spawn(std::string executable, std::vector<std::string> args);
 
