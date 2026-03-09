@@ -46,13 +46,10 @@ if is_plat("macosx") then
     }})
 end
 
-
-if is_mode("debug") and is_plat("linux", "macosx") then
-    -- hook.so will use a static lib to log in debug mode
-    add_defines("DEBUG")
     add_cxxflags("-fPIC")
 end
 
+    add_defines("DEBUG")
 if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
@@ -303,7 +300,7 @@ package("eventide")
     -- version from `git rev-list --count HEAD`
     add_versions("65", "b63008c27125a5e831e64162ea2c30cf30a67841")
 
-    add_deps("libuv 1.51.0")
+    add_deps("libuv 1.52.0")
     add_deps("cpptrace v1.0.4")
 
     on_install(function (package)

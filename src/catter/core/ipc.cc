@@ -1,4 +1,5 @@
 #include <cassert>
+#include <tuple>
 #include <memory>
 #include <format>
 #include <utility>
@@ -18,15 +19,21 @@ using namespace data;
 template <Request Req, typename T>
 struct Helper {};
 
+template <typename... Args>
+auto deserialize_args(BufferReader& buf_reader) {
+    return std::tuple<std::remove_cvref_t<Args>...>{Serde<Args>::deserialize(buf_reader)...};
+}
+
 template <Request Req, typename Ret, typename... Args>
 struct Helper<Req, Ret(Args...)> {
     template <typename Writer>
     eventide::task<void> operator() (eventide::function_ref<Ret(Args...)> callback,
                                      BufferReader& buf_reader,
                                      Writer&& write_packet) {
+        auto args = deserialize_args<Args...>(buf_reader);
         if constexpr(!std::is_same_v<Ret, void>) {
-            auto ret = co_await write_packet(
-                Serde<Ret>::serialize(callback(Serde<Args>::deserialize(buf_reader)...)));
+            auto ret =
+                co_await write_packet(Serde<Ret>::serialize(std::apply(callback, std::move(args))));
 
             if(ret.has_error()) {
                 throw std::runtime_error(std::format("Failed to send response [{}] to client: {}",
@@ -34,7 +41,7 @@ struct Helper<Req, Ret(Args...)> {
                                                      ret.message()));
             }
         } else {
-            callback(Serde<Args>::deserialize(buf_reader)...);
+            std::apply(callback, std::move(args));
             co_return;
         }
     }

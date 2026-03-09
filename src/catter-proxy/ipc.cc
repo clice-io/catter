@@ -3,6 +3,7 @@
 #include <span>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <eventide/async/loop.h>
@@ -86,11 +87,20 @@ public:
     };
 
     template <Request Req, typename... Args>
+    static auto serialize_request(Args&&... args) {
+        auto payload = Serde<Request>::serialize(Req);
+        (append_range_to_vector(
+             payload,
+             Serde<std::remove_cvref_t<Args>>::serialize(std::forward<Args>(args))),
+         ...);
+        return payload;
+    }
+
+    template <Request Req, typename... Args>
     static auto request(Args&&... args) {
         using Ret = typename request_helper<RequestType<Req>>::type;
 
-        auto payload = merge_range_to_vector(Serde<Request>::serialize(Req),
-                                             Serde<std::remove_cvref_t<Args>>::serialize(args)...);
+        auto payload = serialize_request<Req>(std::forward<Args>(args)...);
         instance().write_packet(payload);
 
         if constexpr(!std::is_same_v<Ret, void>) {

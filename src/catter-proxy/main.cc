@@ -5,16 +5,16 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <vector>
 
 #include <eventide/async/process.h>
-#include "config/catter-proxy.h"
-#include "opt/proxy/option.h"
-#include "eventide/deco/runtime.h"
-#include <vector>
+#include <eventide/deco/runtime.h>
 
 #include "ipc.h"
 #include "hook.h"
 
+#include "opt/proxy/option.h"
+#include "config/catter-proxy.h"
 #include "util/log.h"
 #include "util/eventide.h"
 #include "util/crossplat.h"
