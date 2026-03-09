@@ -1,15 +1,16 @@
-#include <expected>
-#include <format>
-#include <print>
 #include <string>
-#include <ranges>
 #include <system_error>
-#include <span>
-#include <fstream>
 #include <filesystem>
 #include <vector>
+#include <cassert>
+#include <cstdint>
+#include <string>
+#include <stdexcept>
 
 #include <windows.h>
+#include <libloaderapi.h>
+#include <minwindef.h>
+#include <Psapi.h>
 #include <detours.h>
 
 #include "util/log.h"
@@ -20,6 +21,116 @@
 #include <string>
 
 namespace {
+
+HANDLE RtlCreateUserThread(HANDLE hProcess, LPVOID lpBaseAddress, LPVOID lpSpace) {
+    // undocumented.ntinternals.com
+    typedef DWORD(WINAPI * functypeRtlCreateUserThread)(HANDLE ProcessHandle,
+                                                        PSECURITY_DESCRIPTOR SecurityDescriptor,
+                                                        BOOL CreateSuspended,
+                                                        ULONG StackZeroBits,
+                                                        PULONG StackReserved,
+                                                        PULONG StackCommit,
+                                                        LPVOID StartAddress,
+                                                        LPVOID StartParameter,
+                                                        HANDLE ThreadHandle,
+                                                        LPVOID ClientID);
+    HANDLE hRemoteThread = NULL;
+    HMODULE hNtDllModule = GetModuleHandle("ntdll.dll");
+    if(hNtDllModule == NULL) {
+        return NULL;
+    }
+    functypeRtlCreateUserThread funcRtlCreateUserThread =
+        (functypeRtlCreateUserThread)GetProcAddress(hNtDllModule, "RtlCreateUserThread");
+    if(!funcRtlCreateUserThread) {
+        return NULL;
+    }
+    funcRtlCreateUserThread(hProcess,
+                            NULL,
+                            0,
+                            0,
+                            0,
+                            0,
+                            lpBaseAddress,
+                            lpSpace,
+                            &hRemoteThread,
+                            NULL);
+    DWORD lastError = GetLastError();
+    if(lastError)
+        throw std::runtime_error(std::to_string(lastError));
+    return hRemoteThread;
+}
+
+HANDLE NtCreateThreadEx(HANDLE hProcess, LPVOID lpBaseAddress, LPVOID lpSpace) {
+    // undocumented.ntinternals.com
+    typedef DWORD(WINAPI * functypeNtCreateThreadEx)(PHANDLE ThreadHandle,
+                                                     ACCESS_MASK DesiredAccess,
+                                                     LPVOID ObjectAttributes,
+                                                     HANDLE ProcessHandle,
+                                                     LPTHREAD_START_ROUTINE lpStartAddress,
+                                                     LPVOID lpParameter,
+                                                     BOOL CreateSuspended,
+                                                     DWORD dwStackSize,
+                                                     DWORD Unknown1,
+                                                     DWORD Unknown2,
+                                                     LPVOID Unknown3);
+    HANDLE hRemoteThread = NULL;
+    HMODULE hNtDllModule = NULL;
+    functypeNtCreateThreadEx funcNtCreateThreadEx = NULL;
+    hNtDllModule = GetModuleHandle("ntdll.dll");
+    if(hNtDllModule == NULL) {
+        return NULL;
+    }
+    funcNtCreateThreadEx =
+        (functypeNtCreateThreadEx)GetProcAddress(hNtDllModule, "NtCreateThreadEx");
+    if(!funcNtCreateThreadEx) {
+        return NULL;
+    }
+    funcNtCreateThreadEx(&hRemoteThread,
+                         GENERIC_ALL,
+                         NULL,
+                         hProcess,
+                         (LPTHREAD_START_ROUTINE)lpBaseAddress,
+                         lpSpace,
+                         FALSE,
+                         NULL,
+                         NULL,
+                         NULL,
+                         NULL);
+    return hRemoteThread;
+}
+
+enum class InjectMethod { CreateRemoteThread, NtCreateThread, RtlCreateUserThread };
+
+template <InjectMethod method>
+HANDLE inject(HANDLE hProcess, const std::string& dll_path) {
+    LPVOID lpSpace = (LPVOID)VirtualAllocEx(hProcess,
+                                            NULL,
+                                            dll_path.length(),
+                                            MEM_RESERVE | MEM_COMMIT,
+                                            PAGE_EXECUTE_READWRITE);
+    if(!lpSpace)
+        throw std::runtime_error("failed to allocate memory in process");
+
+    int n = WriteProcessMemory(hProcess, lpSpace, dll_path.c_str(), dll_path.length(), NULL);
+    if(n == 0)
+        throw std::runtime_error("failed to write into process");
+
+    switch(method) {
+        case InjectMethod::NtCreateThread:
+            return NtCreateThreadEx(hProcess, (void*)LoadLibraryA, lpSpace);
+        case InjectMethod::RtlCreateUserThread:
+            return RtlCreateUserThread(hProcess, (void*)LoadLibraryA, lpSpace);
+        default:
+            return CreateRemoteThread(hProcess,
+                                      NULL,
+                                      0,
+                                      (LPTHREAD_START_ROUTINE)(void*)LoadLibraryA,
+                                      lpSpace,
+                                      NULL,
+                                      NULL);
+    }
+}
+
 std::string quote_win32_arg(std::string_view arg) noexcept {
     // No quoting needed if it's empty or has no special characters.
     if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
@@ -63,7 +174,6 @@ std::string cmdline_of(const catter::data::command& cmd) noexcept {
     }
     return full_cmd;
 }
-
 }  // namespace
 
 namespace catter::proxy::hook {

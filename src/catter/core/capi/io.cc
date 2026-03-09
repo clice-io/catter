@@ -37,7 +37,7 @@ CAPI(stdout_print_blue, (const std::string content)->void) {
 // notice that we have ensure that is in single thread
 namespace {
 static int64_t file_id_cnt = 1;
-static std::unordered_map<int, std::fstream> open_files;
+static std::unordered_map<int64_t, std::fstream> open_files;
 
 CAPI(file_open, (std::string path)->int64_t) {
     std::fstream fs;

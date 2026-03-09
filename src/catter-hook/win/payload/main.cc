@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 
+#include <MinHook.h>
 #include <windows.h>
 #include <detours.h>
 
@@ -93,10 +94,12 @@ std::basic_string<char_t> get_ipc_id() {
 // Use anonymous namespace to avoid exporting symbols
 namespace {
 
-namespace detour {
+namespace minhook {
+
 struct CreateProcessA {
-    inline static char name[] = "CreateProcessA";
-    inline static decltype(::CreateProcessA)* target = ::CreateProcessA;
+    constexpr static char name[] = "CreateProcessA";
+    inline static decltype(::CreateProcessA)* target = &::CreateProcessA;
+    inline static decltype(::CreateProcessA)* original = nullptr;
 
     static BOOL WINAPI detour(LPCSTR lpApplicationName,
                               LPSTR lpCommandLine,
@@ -116,22 +119,23 @@ struct CreateProcessA {
                         catter::win::get_app_name<char>(lpApplicationName, lpCommandLine),
                         std::string_view(lpCommandLine ? lpCommandLine : ""));
 
-        return target(nullptr,
-                      converted_cmdline.data(),
-                      lpProcessAttributes,
-                      lpThreadAttributes,
-                      bInheritHandles,
-                      dwCreationFlags,
-                      lpEnvironment,
-                      lpCurrentDirectory,
-                      lpStartupInfo,
-                      lpProcessInformation);
+        return original(nullptr,
+                        converted_cmdline.data(),
+                        lpProcessAttributes,
+                        lpThreadAttributes,
+                        bInheritHandles,
+                        dwCreationFlags,
+                        lpEnvironment,
+                        lpCurrentDirectory,
+                        lpStartupInfo,
+                        lpProcessInformation);
     }
 };
 
 struct CreateProcessW {
-    inline static char name[] = "CreateProcessW";
-    inline static decltype(::CreateProcessW)* target = ::CreateProcessW;
+    constexpr static char name[] = "CreateProcessW";
+    inline static decltype(::CreateProcessW)* target = &::CreateProcessW;
+    inline static decltype(::CreateProcessW)* original = nullptr;
 
     static BOOL WINAPI detour(LPCWSTR lpApplicationName,
                               LPWSTR lpCommandLine,
@@ -151,23 +155,23 @@ struct CreateProcessW {
                         catter::win::get_app_name<wchar_t>(lpApplicationName, lpCommandLine),
                         std::wstring_view(lpCommandLine ? lpCommandLine : L""));
 
-        return target(nullptr,
-                      converted_cmdline.data(),
-                      lpProcessAttributes,
-                      lpThreadAttributes,
-                      bInheritHandles,
-                      dwCreationFlags,
-                      lpEnvironment,
-                      lpCurrentDirectory,
-                      lpStartupInfo,
-                      lpProcessInformation);
+        return original(nullptr,
+                        converted_cmdline.data(),
+                        lpProcessAttributes,
+                        lpThreadAttributes,
+                        bInheritHandles,
+                        dwCreationFlags,
+                        lpEnvironment,
+                        lpCurrentDirectory,
+                        lpStartupInfo,
+                        lpProcessInformation);
     }
 };
 
-// TODO: implement these two
 struct CreateProcessAsUserA {
-    inline static char name[] = "CreateProcessAsUserA";
-    inline static decltype(::CreateProcessAsUserA)* target = ::CreateProcessAsUserA;
+    constexpr static char name[] = "CreateProcessAsUserA";
+    inline static decltype(::CreateProcessAsUserA)* target = &::CreateProcessAsUserA;
+    inline static decltype(::CreateProcessAsUserA)* original = nullptr;
 
     static BOOL WINAPI detour(HANDLE hToken,
                               LPCSTR lpApplicationName,
@@ -181,23 +185,24 @@ struct CreateProcessAsUserA {
                               LPSTARTUPINFOA lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        return target(hToken,
-                      lpApplicationName,
-                      lpCommandLine,
-                      lpProcessAttributes,
-                      lpThreadAttributes,
-                      bInheritHandles,
-                      dwCreationFlags,
-                      lpEnvironment,
-                      lpCurrentDirectory,
-                      lpStartupInfo,
-                      lpProcessInformation);
+        return original(hToken,
+                        lpApplicationName,
+                        lpCommandLine,
+                        lpProcessAttributes,
+                        lpThreadAttributes,
+                        bInheritHandles,
+                        dwCreationFlags,
+                        lpEnvironment,
+                        lpCurrentDirectory,
+                        lpStartupInfo,
+                        lpProcessInformation);
     }
 };
 
 struct CreateProcessAsUserW {
-    inline static char name[] = "CreateProcessAsUserW";
-    inline static decltype(::CreateProcessAsUserW)* target = ::CreateProcessAsUserW;
+    constexpr static char name[] = "CreateProcessAsUserW";
+    inline static decltype(::CreateProcessAsUserW)* target = &::CreateProcessAsUserW;
+    inline static decltype(::CreateProcessAsUserW)* original = nullptr;
 
     static BOOL WINAPI detour(HANDLE hToken,
                               LPCWSTR lpApplicationName,
@@ -210,31 +215,37 @@ struct CreateProcessAsUserW {
                               LPCWSTR lpCurrentDirectory,
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
-        return target(hToken,
-                      lpApplicationName,
-                      lpCommandLine,
-                      lpProcessAttributes,
-                      lpThreadAttributes,
-                      bInheritHandles,
-                      dwCreationFlags,
-                      lpEnvironment,
-                      lpCurrentDirectory,
-                      lpStartupInfo,
-                      lpProcessInformation);
+                                  
+        return original(hToken,
+                        lpApplicationName,
+                        lpCommandLine,
+                        lpProcessAttributes,
+                        lpThreadAttributes,
+                        bInheritHandles,
+                        dwCreationFlags,
+                        lpEnvironment,
+                        lpCurrentDirectory,
+                        lpStartupInfo,
+                        lpProcessInformation);
     }
 };
 
-struct detour_meta {
+struct minhook_meta {
     std::string_view name;
-    void** target;
-    void* detour;
+    void* target;
+    void* detour_func;
+    void** original_ptr;
 };
 
 template <typename... args_t>
 auto collect_fn() noexcept {
-    return std::array<detour_meta, sizeof...(args_t)>{
-        detour_meta{args_t::name, (void**)(&args_t::target), (void*)(&args_t::detour)}
-        ...
+    return std::array<minhook_meta, sizeof...(args_t)>{
+        minhook_meta{
+            args_t::name, 
+            (void**)args_t::target,
+            (void**)args_t::detour,
+            (void**)(&args_t::original)
+        }...
     };
 }
 
@@ -245,41 +256,36 @@ auto& fn() noexcept {
 }
 
 void attach() noexcept {
-    for(auto& m: detour::fn()) {
-        DetourAttach(m.target, m.detour);
+    for(auto& m: fn()) {
+        MH_CreateHook(m.target, m.detour_func, m.original_ptr);
     }
 }
-
 void detach() noexcept {
-    for(auto& m: detour::fn()) {
-        DetourDetach(m.target, m.detour);
-    }
+    MH_DisableHook(MH_ALL_HOOKS);
+    MH_Uninitialize();
 }
-}  // namespace detour
-
+}  // namespace minhook
 }  // namespace
 
 BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
-    if(DetourIsHelperProcess()) {
-        return TRUE;
-    }
+    switch (dwReason) {
+        case DLL_PROCESS_ATTACH:
+            // avoid the DLL_THREAD_ATTACH and DLL_THREAD_DETACH notifications to reduce overhead
+            DisableThreadLibraryCalls(hinst);
 
-    if(dwReason == DLL_PROCESS_ATTACH) {
-        DetourRestoreAfterWith();
+            if (MH_Initialize() != MH_OK) {
+                return FALSE;
+            }
+            // trampoline hooking using MinHook
+            minhook::attach();
+            if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
+                return FALSE;
+            }
+            break;
 
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
-
-        detour::attach();
-
-        DetourTransactionCommit();
-    } else if(dwReason == DLL_PROCESS_DETACH) {
-        DetourTransactionBegin();
-        DetourUpdateThread(GetCurrentThread());
-
-        detour::detach();
-
-        DetourTransactionCommit();
+        case DLL_PROCESS_DETACH:
+            minhook::detach();
+            break;
     }
     return TRUE;
 }
