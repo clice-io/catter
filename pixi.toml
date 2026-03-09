@@ -52,13 +52,7 @@ unitest = "xmake test --verbose"
 
 [feature.dev.tasks.integration-test]
 args = ["build_type"]
-cmd = """
-{% if not (pixi.is_win and build_type == "debug") %}
-lit ./tests/integration -sav
-{% else %}
-python -c "pass"
-{% endif %}
-"""
+cmd = "lit ./tests/integration -sav"
 depends-on = [
   { task = "configure", args = ["{{ build_type }}"] },
   { task = "build" }

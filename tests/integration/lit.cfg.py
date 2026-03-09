@@ -4,6 +4,7 @@ import os
 import subprocess
 import json
 import platform
+import glob
 import lit.formats
 from lit.llvm import config as cfg
 
@@ -20,6 +21,66 @@ def run(cmd: str) -> str:
 
 def run_with_json(cmd: str) -> dict:
     return json.loads(run(cmd))
+
+
+def prepend_path(dir_path: str) -> None:
+    current_path = config.environment.get("PATH", os.environ.get("PATH", ""))
+    config.environment["PATH"] = os.pathsep.join(filter(None, [dir_path, current_path]))
+
+
+def find_windows_msvc_asan_dir() -> str | None:
+    asan_dll = "clang_rt.asan_dynamic-x86_64.dll"
+    host_candidates = [
+        ("Hostx64", "x64"),
+        ("Hostx86", "x64"),
+    ]
+
+    vctools_dir = os.environ.get("VCToolsInstallDir")
+    if vctools_dir:
+        for host_arch, target_arch in host_candidates:
+            candidate = os.path.join(
+                vctools_dir, "bin", host_arch, target_arch, asan_dll
+            )
+            if os.path.isfile(candidate):
+                return os.path.dirname(candidate)
+
+    program_files_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    vswhere = os.path.join(
+        program_files_x86, "Microsoft Visual Studio", "Installer", "vswhere.exe"
+    )
+    if os.path.isfile(vswhere):
+        install_path = run(
+            f'"{vswhere}" -latest -products * '
+            "-requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 "
+            "-property installationPath"
+        ).strip()
+        if install_path:
+            for host_arch, target_arch in host_candidates:
+                pattern = os.path.join(
+                    install_path,
+                    "VC",
+                    "Tools",
+                    "MSVC",
+                    "*",
+                    "bin",
+                    host_arch,
+                    target_arch,
+                    asan_dll,
+                )
+                matches = sorted(glob.glob(pattern), reverse=True)
+                if matches:
+                    return os.path.dirname(matches[0])
+
+    return None
+
+
+def find_windows_asan_dir(compiler: str) -> str | None:
+    compiler_name = os.path.basename(compiler).lower()
+
+    if "cl" in compiler_name and "clang" not in compiler_name:
+        return find_windows_msvc_asan_dir()
+
+    return None
 
 
 llvm_config = cfg.LLVMConfig(lit_config, config)
@@ -45,6 +106,11 @@ proxy_path = os.path.join(project_root, proxy_config["targetfile"])
 match platform.system():
     case "Windows":
         config.test_format = lit.formats.ShTest(False)
+        if project_mode == "debug":
+            compiler = hook_config["compilers"][0]["program"]
+            asan_dir = find_windows_asan_dir(compiler)
+            if asan_dir:
+                prepend_path(asan_dir)
     case "Linux":
         if project_mode == "debug":
             compiler = hook_config["compilers"][0]["program"]

@@ -12,16 +12,24 @@ if has_config("dev") then
     -- Don't fetch system package
     set_policy("package.install_only", true)
     set_policy("build.ccache", true)
+    add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
+
+    local toolchain = get_config("toolchain")
+
     if is_mode("debug") then
-        set_policy("build.sanitizer.address", true)
+        if is_plat("windows") then
+            if toolchain == "msvc" then
+                set_policy("build.sanitizer.address", true)
+            end
+        else
+            set_policy("build.sanitizer.address", true)
+        end
+
     end
 
-    add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 
     if is_plat("windows") then
         set_runtimes("MD")
-
-        local toolchain = get_config("toolchain")
         if toolchain == "clang" then
             add_ldflags("-fuse-ld=lld-link")
             add_shflags("-fuse-ld=lld-link")
@@ -46,10 +54,16 @@ if is_plat("macosx") then
     }})
 end
 
+
+if is_mode("debug") then
+    add_defines("DEBUG")
+end
+
+if is_mode("debug") and is_plat("linux", "macosx") then
+    -- hook.so will use a static lib to log in debug mode
     add_cxxflags("-fPIC")
 end
 
-    add_defines("DEBUG")
 if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
@@ -102,8 +116,6 @@ target("catter-hook-win64")
     add_syslinks("user32", "advapi32")
     add_packages("minhook")
     add_cxxflags("-fno-exceptions", "-fno-rtti")
-
-
 
 
 target("catter-hook-unix")
@@ -298,7 +310,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("65", "b63008c27125a5e831e64162ea2c30cf30a67841")
+    add_versions("66", "8c2ddef22667a2b6bc09045dad8f93707f839be4")
 
     add_deps("libuv 1.52.0")
     add_deps("cpptrace v1.0.4")
