@@ -41,7 +41,7 @@ private:
         size_t total_read = 0;
         while(total_read < len) {
             auto ret = wait(this->client_pipe.read_some({dst + total_read, len - total_read}));
-            if(!ret) {
+            if(!ret || ret.value() == 0) {
                 throw std::runtime_error(
                     std::format("ipc_handler read failed: {}", ret.error().message()));
             }
