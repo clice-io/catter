@@ -40,7 +40,7 @@ win::Handle RtlCreateUserThread(HANDLE hProcess,
                                                    PULONG StackCommit,
                                                    LPTHREAD_START_ROUTINE StartAddress,
                                                    LPVOID StartParameter,
-                                                   HANDLE ThreadHandle,
+                                                   PHANDLE ThreadHandle,
                                                    LPVOID ClientID);
     HANDLE hRemoteThread = NULL;
 
