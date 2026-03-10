@@ -41,10 +41,15 @@ private:
         size_t total_read = 0;
         while(total_read < len) {
             auto ret = wait(this->client_pipe.read_some({dst + total_read, len - total_read}));
-            if(!ret || ret.value() == 0) {
+            if(!ret) {
                 throw std::runtime_error(
                     std::format("ipc_handler read failed: {}", ret.error().message()));
             }
+
+            if(ret.value() == 0) {
+                throw std::runtime_error("ipc_handler read failed: EOF");
+            }
+
             total_read += ret.value();
         }
         LOG_DEBUG("Reading {} bytes: {}", len, log::to_hex(std::span<char>(dst, len)));

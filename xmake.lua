@@ -115,7 +115,11 @@ target("catter-hook-win64")
     add_files("src/catter-hook/win/payload/main.cc")
     add_syslinks("user32", "advapi32")
     add_packages("minhook")
-    add_cxxflags("-fno-exceptions", "-fno-rtti")
+    if get_config("toolchain") == "msvc" or get_config("toolchain") == "clang-cl" then
+        add_cxxflags("/EHs-c-", "/GR-")
+    else
+        add_cxxflags("-fno-exceptions", "-fno-rtti")
+    end
 
 
 target("catter-hook-unix")

@@ -6,7 +6,9 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <stdexcept>
+#include <string.h>
 
 #include <eventide/reflection/enum.h>
 
@@ -166,23 +168,54 @@ std::string cmdline_of(const catter::data::command& cmd) noexcept {
     }
     return full_cmd;
 }
+
+bool env_key_equals(std::string_view env_entry, std::string_view key) noexcept {
+    const auto separator = env_entry.find('=');
+    return separator == key.size() && _strnicmp(env_entry.data(), key.data(), key.size()) == 0;
+}
+
+void upsert_environment_variable(std::vector<std::string>& env,
+                                 std::string_view key,
+                                 std::string value) {
+    std::string entry = std::format("{}={}", key, value);
+    for(auto& existing: env) {
+        if(env_key_equals(existing, key)) {
+            existing = std::move(entry);
+            return;
+        }
+    }
+
+    env.push_back(std::move(entry));
+}
+
+std::vector<char> build_environment_block(std::vector<std::string> env) {
+    size_t env_block_size = 1;
+    for(const auto& entry: env) {
+        env_block_size += entry.size() + 1;
+    }
+
+    std::vector<char> env_block;
+    env_block.reserve(env_block_size);
+
+    for(const auto& entry: env) {
+        std::span<const char> span(entry.c_str(), entry.size() + 1);
+        env_block.append_range(span);
+    }
+
+    env_block.push_back('\0');
+    return env_block;
+}
 }  // namespace
 
 int64_t run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
 
     LOG_INFO("new command id is: {}", id);
 
-    SetEnvironmentVariableA(win::ENV_VAR_IPC_ID<char>, std::to_string(id).c_str());
-    SetEnvironmentVariableA(win::ENV_VAR_PROXY_PATH<char>, proxy_path.c_str());
+    auto env = std::move(cmd.env);
+    upsert_environment_variable(env, win::ENV_VAR_IPC_ID<char>, std::to_string(id));
+    upsert_environment_variable(env, win::ENV_VAR_PROXY_PATH<char>, proxy_path);
 
-    std::vector<char> env_block;
-
-    for(auto c: catter::util::get_environment()) {
-        std::span<const char> span(c.c_str(), c.size() + 1);
-        env_block.append_range(span);
-    }
-
-    env_block.push_back('\0');  // Double null termination
+    auto env_block = build_environment_block(std::move(env));  // Double null termination
 
     PROCESS_INFORMATION pi{};
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
@@ -191,8 +224,7 @@ int64_t run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
             DWORD dwExitCode;
             if(GetExitCodeProcess(pi.hProcess, &dwExitCode)) {
                 if(dwExitCode == STILL_ACTIVE) {
-                    LOG_ERROR("Failed to get exit code of process during cleanup: {}",
-                              std::system_error(GetLastError(), std::system_category()).what());
+                    LOG_ERROR("Process is still active during cleanup, terminating it forcefully");
                     TerminateProcess(pi.hProcess, -1);
                 }
             } else {
