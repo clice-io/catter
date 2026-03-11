@@ -59,7 +59,7 @@ eventide::task<void> handle_req(eventide::function_ref<RequestType<Req>> callbac
                                            std::forward<Writer>(write_packet));
 }
 
-eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::pipe client) {
+eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pipe client) {
 
     auto read_exact = [&](char* dst, size_t len, bool allow_eof = false) -> eventide::task<bool> {
         size_t total_read = 0;
@@ -117,7 +117,7 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
     }
 
     auto service_mode = Serde<ServiceMode>::deserialize(BufferReader(*sm_packet));
-    assert(service_mode == ServiceMode::DEFAULT && "Unsupported service mode received");
+    assert(service_mode == ServiceMode::INJECT && "Unsupported service mode received");
 
     while(true) {
         auto req_packet = co_await read_packet();
@@ -131,7 +131,7 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
         switch(req) {
             case Request::CREATE: {
                 co_await handle_req<Request::CREATE>(
-                    eventide::bind_ref<&DefaultService::create>(*service),
+                    eventide::bind_ref<&InjectService::create>(*service),
                     buf_reader,
                     write_packet);
                 break;
@@ -139,21 +139,21 @@ eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::p
 
             case Request::MAKE_DECISION: {
                 co_await handle_req<Request::MAKE_DECISION>(
-                    eventide::bind_ref<&DefaultService::make_decision>(*service),
+                    eventide::bind_ref<&InjectService::make_decision>(*service),
                     buf_reader,
                     write_packet);
                 break;
             }
             case Request::FINISH: {
                 co_await handle_req<Request::FINISH>(
-                    eventide::bind_ref<&DefaultService::finish>(*service),
+                    eventide::bind_ref<&InjectService::finish>(*service),
                     buf_reader,
                     write_packet);
                 break;
             }
             case Request::REPORT_ERROR: {
                 co_await handle_req<Request::REPORT_ERROR>(
-                    eventide::bind_ref<&DefaultService::report_error>(*service),
+                    eventide::bind_ref<&InjectService::report_error>(*service),
                     buf_reader,
                     write_packet);
                 break;

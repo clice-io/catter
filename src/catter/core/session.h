@@ -74,12 +74,12 @@ public:
         std::vector<std::string> args;
 
         using Result = ServiceFactoryResult<ServiceFactoryType>;
-        if constexpr(std::convertible_to<Result, std::unique_ptr<ipc::DefaultService>>) {
+        if constexpr(std::convertible_to<Result, std::unique_ptr<ipc::InjectService>>) {
             executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
             args = {executable, "-p", "0", "--exec", shell[0], "--"};
             append_range_to_vector(args, shell);
-            if(!this->start(data::ServiceMode::DEFAULT)) {
-                throw std::runtime_error("Failed to start session in DEFAULT mode");
+            if(!this->start(data::ServiceMode::INJECT)) {
+                throw std::runtime_error("Failed to start session in INJECT mode");
             }
         } else {
             static_assert(false, "Unsupported service factory type");

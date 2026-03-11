@@ -28,7 +28,7 @@ struct action {
 };
 
 enum class ServiceMode : uint8_t {
-    DEFAULT,
+    INJECT,
 };
 
 enum class Request : uint8_t {

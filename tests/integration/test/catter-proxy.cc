@@ -38,7 +38,7 @@
 
 using namespace catter;
 
-class ServiceImpl : public ipc::DefaultService {
+class ServiceImpl : public ipc::InjectService {
 public:
     ServiceImpl(data::ipcid_t id) : id(id) {};
     ~ServiceImpl() override = default;

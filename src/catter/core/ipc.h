@@ -18,10 +18,10 @@ public:
     virtual ~Service() = default;
 };
 
-class DefaultService : public Service {
+class InjectService : public Service {
 public:
-    DefaultService() = default;
-    virtual ~DefaultService() override = default;
+    InjectService() = default;
+    virtual ~InjectService() override = default;
 
     virtual data::ipcid_t create(data::ipcid_t parent_id) = 0;
     virtual data::action make_decision(data::command cmd) = 0;
@@ -29,6 +29,6 @@ public:
     virtual void report_error(data::ipcid_t parent_id, std::string error_msg) = 0;
 };
 
-eventide::task<void> accept(std::unique_ptr<DefaultService> service, eventide::pipe client);
+eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pipe client);
 
 }  // namespace catter::ipc

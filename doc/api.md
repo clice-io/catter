@@ -30,7 +30,7 @@ type ExecutionEvent = {
 type CatterRuntime = {
     // eslogger: only in mac
     // env: eg. CC=catter-proxy, then proxy report this cmd
-    type: 'hook' | 'eslogger' | 'env';
+    type: 'inject' | 'eslogger' | 'env';
     supportActions: ActionType[];
     supportEvents: EventType[];
     supportParentId: boolean;
@@ -61,12 +61,13 @@ type CatterErr = {
 
 /**
  * @field parent - When supportParentId is true at runtime, this field is the ID of the parent command that generated this command; otherwise, this field is undefined.
+ * @field env - the environment variables of this command, in the format of ["KEY=VALUE", ...]
  */
 type CommandData = {
     cwd: string;
     exe: string;
     argv: string[];
-    env: Map<string, string>;
+    env: string[];
     parent?: number;
     runtime: CatterRuntime;
 };
