@@ -98,7 +98,7 @@ args = [
 ]
 depends-on = [
   { task = "npm-install" },
-  { task = "cfg", args = ["{{ build_type }}"] },
+  { task = "cfg", args = ["{{ mode }}"] },
   { task = "build" },
   { task = "test" }
 ]
