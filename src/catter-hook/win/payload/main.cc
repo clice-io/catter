@@ -252,7 +252,9 @@ auto& fn() noexcept {
 
 void attach() noexcept {
     for(auto& m: fn()) {
-        MH_CreateHook(m.target, m.detour_func, m.original_ptr);
+        if(MH_CreateHook(m.target, m.detour_func, m.original_ptr) != MH_OK) {
+            // TODO: logging hook creation failed for m.name
+        }
     }
 }
 
