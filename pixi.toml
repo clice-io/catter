@@ -37,16 +37,16 @@ compiler-rt = "==20.1.8"
 libcxx = "==20.1.8"
 
 [target.win-64.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "msvc"
 PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+CATTER_DEFAULT_TOOLCHAIN = "msvc"
 
 [target.linux.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "gcc"
 PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
+CATTER_DEFAULT_TOOLCHAIN = "gcc"
 
 [target.osx.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "clang"
 PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
+CATTER_DEFAULT_TOOLCHAIN = "clang"
 
 [feature.clang.dependencies]
 clang = "==20.1.8"
