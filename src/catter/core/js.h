@@ -1,7 +1,9 @@
 #pragma once
+#include <filesystem>
+
+#include <eventide/common/meta.h>
 
 #include "qjs.h"
-#include <filesystem>
 
 namespace catter::core::js {
 
@@ -46,7 +48,7 @@ std::optional<T> prop_of_js_mod(const std::string& prop_name) {
     }
     if constexpr(std::is_same_v<T, qjs::Value>) {
         return val;
-    } else if constexpr(catter::meta::is_specialization_of_v<T, qjs::Function>) {
+    } else if constexpr(eventide::is_specialization_of<qjs::Function, T>) {
         if(!val->is_function()) {
             return std::nullopt;
         }

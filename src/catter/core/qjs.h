@@ -17,9 +17,9 @@
 #include <format>
 
 #include <eventide/reflection/name.h>
-#include <quickjs.h>
+#include <eventide/common/meta.h>
 
-#include "util/meta.h"
+#include <quickjs.h>
 
 // namespace meta
 
@@ -53,12 +53,12 @@ using type_get = typename Ts::template get<I>::type;
 
 template <typename U>
 struct value_trans {
-    static_assert("Unsupported type for value_trans");
+    static_assert(eventide::dependent_false<U>, "Unsupported type for value_trans");
 };
 
 template <typename U>
 struct object_trans {
-    static_assert("Unsupported type for object_trans");
+    static_assert(eventide::dependent_false<U>, "Unsupported type for object_trans");
 };
 
 inline std::string dump(JSContext* ctx) {
@@ -737,7 +737,7 @@ struct value_trans<Num> {
         } else if constexpr(std::is_signed_v<Num>) {
             return Value{ctx, JS_NewInt64(ctx, static_cast<int32_t>(value))};
         } else {
-            static_assert(meta::dep_true<Num>, "Unsupported integral type for value");
+            static_assert(eventide::dependent_false<Num>, "Unsupported integral type for value");
         }
     }
 
@@ -752,14 +752,14 @@ struct value_trans<Num> {
                 return std::nullopt;
             }
             result = static_cast<Num>(temp);
-        } else if(std::is_signed_v<Num>) {
+        } else if constexpr(std::is_signed_v<Num>) {
             int64_t temp;
             if(JS_ToInt64(ctx, &temp, val.value()) < 0) {
                 return std::nullopt;
             }
             result = static_cast<Num>(temp);
         } else {
-            static_assert(meta::dep_true<Num>, "Unsupported integral type for value");
+            static_assert(eventide::dependent_false<Num>, "Unsupported integral type for value");
         }
         return result;
     }

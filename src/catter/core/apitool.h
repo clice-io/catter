@@ -1,19 +1,36 @@
 #pragma once
-#include "qjs.h"
-#include "js.h"
 #include <filesystem>
+
+#include <eventide/common/function_traits.h>
+
+#include "qjs.h"
 
 namespace catter::apitool {
 using api_register = void (*)(const catter::qjs::CModule&, const catter::qjs::Context&);
 
 std::vector<api_register>& api_registers();
+
+template <typename Tuple, typename Ret>
+struct remove_first_param_signature {
+    static_assert(eventide::dependent_false<Tuple>, "Function must have at least one parameter");
+};
+
+template <typename First, typename... Args, typename Ret>
+struct remove_first_param_signature<std::tuple<First, Args...>, Ret> {
+    using type = Ret(Args...);
+};
+
+template <typename Fn>
+using without_first_param_t =
+    typename remove_first_param_signature<eventide::function_args_t<Fn>,
+                                          eventide::function_return_t<Fn>>::type;
 }  // namespace catter::apitool
 
 #define TO_JS_FN(func)                                                                             \
     catter::qjs::Function<decltype(func)>::from_raw<func>(ctx.js_context(), #func)
 
 #define TO_JS_WITHOUT_CTX_FN(func)                                                                 \
-    catter::qjs::Function<catter::meta::without_first_param_t<decltype(func)>>::from_raw<func>(    \
+    catter::qjs::Function<catter::apitool::without_first_param_t<decltype(func)>>::from_raw<func>( \
         ctx.js_context(),                                                                          \
         #func)
 
