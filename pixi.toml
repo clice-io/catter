@@ -18,10 +18,10 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 [dependencies]
 pnpm = "*"
 
-[target.win-64.dependencies]
-vs2022_win-64 = "==19.44.35207"
-vc14_runtime = "==14.44.35208"
-ucrt = "==10.0.26100.0"
+# [target.win-64.dependencies]
+# vs2022_win-64 = "==19.44.35207"
+# vc14_runtime = "==14.44.35208"
+# ucrt = "==10.0.26100.0"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
@@ -36,8 +36,8 @@ llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
 libcxx = "==20.1.8"
 
-[target.win.activation.env]
-# PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+[target.win-64.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
 CATTER_DEFAULT_TOOLCHAIN = "msvc"
 
 [target.linux.activation.env]
