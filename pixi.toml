@@ -18,6 +18,7 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 [dependencies]
 pnpm = "*"
 
+# Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
 # [target.win-64.dependencies]
 # vs2022_win-64 = "==19.44.35207"
 # vc14_runtime = "==14.44.35208"
