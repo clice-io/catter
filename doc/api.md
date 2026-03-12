@@ -74,10 +74,10 @@ type CommandData = {
     parent?: number;
 };
 
-export function onStart(cb: (config: CatterConfig) => CatterConfig) => void;
-export function onFinish(cb: () => void) => void;
-export function onCommand(cb: (id: number, data: CommandData | CatterErr) => Action) => void;
-export function onExecution(cb: (id: number, event: ExecutionEvent) => void) => void;
+export function onStart(cb: (config: CatterConfig) => CatterConfig): void;
+export function onFinish(cb: () => void): void;
+export function onCommand(cb: (id: number, data: CommandData | CatterErr) => Action): void;
+export function onExecution(cb: (id: number, event: ExecutionEvent) => void): void;
 
 
 // ------------------------------------------------------------
@@ -85,8 +85,6 @@ export function onExecution(cb: (id: number, event: ExecutionEvent) => void) => 
 // ------------------------------------------------------------
 
 import { onStart, onFinish, onCommand, onExecution } from 'catter-c';
-
-declare let serviceRegister: ServiceRegister;
 
 /**
  * @method onStart - called when catter start, can modify config
@@ -105,7 +103,7 @@ interface CatterService {
     onExecution: (id: number, event: ExecutionEvent) => void;
 }
 
-function registerService(service: CatterService) {
+export function register(service: CatterService) {
     onStart(service.onStart);
     onFinish(service.onFinish);
     onCommand(service.onCommand);
@@ -142,5 +140,5 @@ class MyCatterPlugin implements CatterService {
     }
 }
 
-registerService(new MyCatterPlugin());
+register(new MyCatterPlugin());
 ```
