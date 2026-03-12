@@ -49,9 +49,9 @@ CAPI(fs_pwd, ()->std::string) {
 
 CAPI(fs_path_join_all, (catter::qjs::Object path_parts)->std::string) {
     fs::path result;
-    auto len = path_parts["length"].to<uint32_t>().value();
+    auto len = path_parts["length"].as<uint32_t>();
     for(size_t i = 0; i < len; ++i) {
-        auto part = path_parts[std::to_string(i)].to<std::string>().value();
+        auto part = path_parts[std::to_string(i)].as<std::string>();
         if(i == 0) {
             result = fs::path(part);
         } else {

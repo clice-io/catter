@@ -132,12 +132,8 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
     const qjs::Context& ctx = rt.context();
 
     auto ret = ctx.eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
-    auto promise_ret = ret.to<qjs::Object>();
-    if(!promise_ret.has_value()) {
-        throw qjs::Exception("Inner exception!, this exception should not happen.");
-    }
 
-    auto promise_obj = promise_ret.value();
+    auto promise_obj = ret.as<qjs::Object>();
 
     if(JS_IsPromise(promise_obj.value()) && check_error) {
         promise_state = PromiseState::Pending;
