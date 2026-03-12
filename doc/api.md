@@ -11,28 +11,28 @@ const ActionKind = ['skip', 'drop', 'abort', 'modify'] as const;
 type ActionType = (typeof ActionKind)[number];
 
 type Action = {
-    type: ActionType;
     // for modify
     data?: CommandData;
+    type: ActionType;
 };
 
 const EventKind = ['finish', 'output'] as const;
 type EventType = (typeof EventKind)[number];
 
 type ExecutionEvent = {
-    type: EventType;
-    code: number;
     // for output
     stdout?: string;
     stderr?: string;
+    code: number;
+    type: EventType;
 };
 
 type CatterRuntime = {
+    supportActions: ActionType[];
+    supportEvents: EventType[];
     // eslogger: only in mac
     // env: eg. CC=catter-proxy, then proxy report this cmd
     type: 'inject' | 'eslogger' | 'env';
-    supportActions: ActionType[];
-    supportEvents: EventType[];
     supportParentId: boolean;
 };
 
@@ -45,14 +45,14 @@ type CatterRuntime = {
  * @field options - the options of catter, can be used to enable some features of catter, eg. log
  */
 type CatterConfig = {
-    scriptArgs: string[];
     scriptPath: string;
+    scriptArgs: string[];
     buildSystemCommand: string[];
     runtime: CatterRuntime;
-    isScriptSupported: boolean;
     options: {
         log: boolean;
     };
+    isScriptSupported: boolean;
 };
 
 type CatterErr = {
@@ -68,8 +68,8 @@ type CommandData = {
     exe: string;
     argv: string[];
     env: string[];
-    parent?: number;
     runtime: CatterRuntime;
+    parent?: number;
 };
 
 type ServiceRegister = {

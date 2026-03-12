@@ -25,9 +25,9 @@ TEST_SUITE(api_tests) {
             auto& ctx = runtime.context();
 
             catter::js::CatterRuntime catter_runtime{
-                .type = catter::js::CatterRuntime::Type::inject,
                 .supportActions = {catter::js::Action::skip, catter::js::Action::modify},
                 .supportEvents = {catter::js::Event::finish},
+                .type = catter::js::CatterRuntime::Type::inject,
                 .supportParentId = true
             };
 
@@ -47,18 +47,18 @@ TEST_SUITE(api_tests) {
                 .exe = "clang++",
                 .argv = {"clang++", "main.cc", "-c"},
                 .env = {"CC=clang++", "CATTER_LOG=1"},
-                .parent = 42,
-                .runtime = {
-                         .type = catter::js::CatterRuntime::Type::env,
-                         .supportActions = {catter::js::Action::skip, catter::js::Action::modify},
+                .runtime = {.supportActions = {catter::js::Action::skip,
+                                               catter::js::Action::modify},
                          .supportEvents = {catter::js::Event::finish, catter::js::Event::output},
-                         .supportParentId = true}
+                         .type = catter::js::CatterRuntime::Type::env,
+                         .supportParentId = true},
+                .parent = 42
             };
 
-            catter::js::ActionResult modify_action{.type = catter::js::Action::modify,
-                                                   .data = command_data};
-            catter::js::ActionResult skip_action{.type = catter::js::Action::skip,
-                                                 .data = std::nullopt};
+            catter::js::ActionResult modify_action{.data = command_data,
+                                                   .type = catter::js::Action::modify};
+            catter::js::ActionResult skip_action{.data = std::nullopt,
+                                                 .type = catter::js::Action::skip};
 
             EXPECT_TRUE(is_roundtrip_equal(ctx, command_data));
             EXPECT_TRUE(is_roundtrip_equal(ctx, modify_action));
@@ -73,25 +73,25 @@ TEST_SUITE(api_tests) {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
 
-            catter::js::ExecutionEvent output_event{.type = catter::js::Event::output,
+            catter::js::ExecutionEvent output_event{.stdOut = std::string{"hello"},
+                                                    .stdErr = std::string{"warn"},
                                                     .code = 0,
-                                                    .stdOut = std::string{"hello"},
-                                                    .stdErr = std::string{"warn"}};
-            catter::js::ExecutionEvent finish_event{.type = catter::js::Event::finish,
+                                                    .type = catter::js::Event::output};
+            catter::js::ExecutionEvent finish_event{.stdOut = std::nullopt,
+                                                    .stdErr = std::nullopt,
                                                     .code = 1,
-                                                    .stdOut = std::nullopt,
-                                                    .stdErr = std::nullopt};
+                                                    .type = catter::js::Event::finish};
 
             catter::js::CatterConfig config{
-                .scriptArgs = {"--input", "compile_commands.json"},
                 .scriptPath = "scripts/demo.js",
+                .scriptArgs = {"--input", "compile_commands.json"},
                 .buildSystemCommand = {"xmake", "build"},
-                .runtime = {.type = catter::js::CatterRuntime::Type::inject,
-                               .supportActions = {catter::js::Action::drop, catter::js::Action::abort},
+                .runtime = {.supportActions = {catter::js::Action::drop, catter::js::Action::abort},
                                .supportEvents = {catter::js::Event::finish},
+                               .type = catter::js::CatterRuntime::Type::inject,
                                .supportParentId = false},
-                .isScriptSupported = true,
-                .options = {.log = true}
+                .options = {.log = true},
+                .isScriptSupported = true
             };
 
             EXPECT_TRUE(is_roundtrip_equal(ctx, output_event));

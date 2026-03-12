@@ -22,10 +22,10 @@ enum class Event { finish, output };
 
 struct CatterRuntime;
 struct CatterOptions;
+struct CatterConfig;
 struct CommandData;
 struct ActionResult;
 struct ExecutionEvent;
-struct CatterConfig;
 
 namespace detail {
 template <typename E>
@@ -182,6 +182,21 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 
 }  // namespace detail
 
+struct CatterOptions {
+    static CatterOptions make(qjs::Object object) {
+        return detail::make_reflected_object<CatterOptions>(std::move(object));
+    }
+
+    qjs::Object to_object(JSContext* ctx) const {
+        return detail::to_reflected_object(ctx, *this);
+    }
+
+    bool operator== (const CatterOptions&) const = default;
+
+public:
+    bool log;
+};
+
 struct CatterRuntime {
     enum class Type { inject, eslogger, env };
 
@@ -193,26 +208,33 @@ struct CatterRuntime {
         return detail::to_reflected_object(ctx, *this);
     }
 
-    Type type;
+    bool operator== (const CatterRuntime&) const = default;
+
+public:
     std::vector<Action> supportActions;
     std::vector<Event> supportEvents;
+    Type type;
     bool supportParentId;
-
-    bool operator== (const CatterRuntime&) const = default;
 };
 
-struct CatterOptions {
-    static CatterOptions make(qjs::Object object) {
-        return detail::make_reflected_object<CatterOptions>(std::move(object));
+struct CatterConfig {
+    static CatterConfig make(qjs::Object object) {
+        return detail::make_reflected_object<CatterConfig>(std::move(object));
     }
 
     qjs::Object to_object(JSContext* ctx) const {
         return detail::to_reflected_object(ctx, *this);
     }
 
-    bool log;
+    bool operator== (const CatterConfig&) const = default;
 
-    bool operator== (const CatterOptions&) const = default;
+public:
+    std::string scriptPath;
+    std::vector<std::string> scriptArgs;
+    std::vector<std::string> buildSystemCommand;
+    CatterRuntime runtime;
+    CatterOptions options;
+    bool isScriptSupported;
 };
 
 struct CommandData {
@@ -224,14 +246,15 @@ struct CommandData {
         return detail::to_reflected_object(ctx, *this);
     }
 
+    bool operator== (const CommandData&) const = default;
+
+public:
     std::string cwd;
     std::string exe;
     std::vector<std::string> argv;
     std::vector<std::string> env;
-    std::optional<int64_t> parent;
     CatterRuntime runtime;
-
-    bool operator== (const CommandData&) const = default;
+    std::optional<int64_t> parent;
 };
 
 struct ActionResult {
@@ -243,10 +266,11 @@ struct ActionResult {
         return detail::to_reflected_object(ctx, *this);
     }
 
-    Action type;
-    std::optional<CommandData> data;
-
     bool operator== (const ActionResult&) const = default;
+
+public:
+    std::optional<CommandData> data;
+    Action type;
 };
 
 struct ExecutionEvent {
@@ -258,12 +282,13 @@ struct ExecutionEvent {
         return detail::to_reflected_object(ctx, *this);
     }
 
-    Event type;
-    int64_t code;
+    bool operator== (const ExecutionEvent&) const = default;
+
+public:
     std::optional<std::string> stdOut;
     std::optional<std::string> stdErr;
-
-    bool operator== (const ExecutionEvent&) const = default;
+    int64_t code;
+    Event type;
 };
 
 template <>
@@ -277,25 +302,6 @@ struct detail::property_name_mapper<ExecutionEvent> {
         }
         return field_name;
     }
-};
-
-struct CatterConfig {
-    static CatterConfig make(qjs::Object object) {
-        return detail::make_reflected_object<CatterConfig>(std::move(object));
-    }
-
-    qjs::Object to_object(JSContext* ctx) const {
-        return detail::to_reflected_object(ctx, *this);
-    }
-
-    std::vector<std::string> scriptArgs;
-    std::string scriptPath;
-    std::vector<std::string> buildSystemCommand;
-    CatterRuntime runtime;
-    bool isScriptSupported;
-    CatterOptions options;
-
-    bool operator== (const CatterConfig&) const = default;
 };
 
 }  // namespace catter::js
