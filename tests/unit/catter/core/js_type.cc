@@ -4,7 +4,7 @@
 #include <eventide/zest/zest.h>
 
 #include "qjs.h"
-#include "api.h"
+#include "js_type.h"
 
 using namespace catter;
 

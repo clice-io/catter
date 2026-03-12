@@ -14,20 +14,10 @@
 #include "qjs.h"
 
 namespace catter::js {
-namespace et = eventide;
-
-enum class Action { skip, drop, abort, modify };
-
-enum class Event { finish, output };
-
-struct CatterRuntime;
-struct CatterOptions;
-struct CatterConfig;
-struct CommandData;
-struct ActionResult;
-struct ExecutionEvent;
 
 namespace detail {
+namespace et = eventide;
+
 template <typename E>
 E enum_value(std::string_view name) {
     if(auto val = et::refl::enum_value<E>(name); val.has_value()) {
@@ -181,6 +171,10 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 }
 
 }  // namespace detail
+
+enum class Action { skip, drop, abort, modify };
+
+enum class Event { finish, output };
 
 struct CatterOptions {
     static CatterOptions make(qjs::Object object) {
