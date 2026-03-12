@@ -147,7 +147,7 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
 
         // promise.then(c_resolve_func, c_reject_func)
         JSValue args[2] = {c_resolve_func.value(), c_reject_func.value()};
-        auto then_func = promise_ret.value()["then"];
+        auto then_func = promise_obj["then"];
         JSValue res = JS_Call(ctx.js_context(), then_func.value(), promise_obj.value(), 2, args);
 
         JS_FreeValue(ctx.js_context(), res);

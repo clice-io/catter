@@ -13,15 +13,6 @@ using namespace catter;
 namespace {
 
 template <typename Fn>
-bool returns_true_without_throw(Fn&& fn) {
-    try {
-        return static_cast<bool>(fn());
-    } catch(...) {
-        return false;
-    }
-}
-
-template <typename Fn>
 bool throws_with_message(Fn&& fn, std::string_view needle) {
     try {
         fn();
@@ -330,10 +321,9 @@ TEST_SUITE(qjs_tests) {
 
             remember_value(21);
             EXPECT_TRUE(remembered == 21);
-            EXPECT_TRUE(returns_true_without_throw([&]() {
-                ctx.eval("rememberValue(34)", "<eval>", eval_flags);
-                return remembered == 34;
-            }));
+
+            ctx.eval("rememberValue(34)", "<eval>", eval_flags);
+            EXPECT_TRUE(remembered == 34);
 
             EXPECT_TRUE(make_object().get_property("kind").as<std::string>() == "native-object");
             EXPECT_TRUE(ctx.eval("makeObject().kind", "<eval>", eval_flags).as<std::string>() ==
@@ -360,7 +350,7 @@ TEST_SUITE(qjs_tests) {
             ctx.eval("(function () { return 7; })", "<eval>", eval_flags).as<qjs::Object>();
         EXPECT_TRUE(throws_with_message(
             [&]() { (void)zero_arg_js_function.as<qjs::Function<std::string()>>()(); },
-            "Failed to convert function return value"));
+            "Value is not a string"));
 
         auto single_arg_js_function =
             ctx.eval("(function (value) { return value; })", "<eval>", eval_flags)
@@ -396,7 +386,7 @@ TEST_SUITE(qjs_tests) {
 
         EXPECT_TRUE(
             throws_with_message([&]() { ctx.eval("expectNumber('bad')", "<eval>", eval_flags); },
-                                "Failed to convert function parameter"));
+                                "Value is not a number"));
         EXPECT_TRUE(throws_with_message([&]() { ctx.eval("expectNumber()", "<eval>", eval_flags); },
                                         "Incorrect number of arguments"));
         EXPECT_TRUE(throws_with_message([&]() { ctx.eval("qjsThrower()", "<eval>", eval_flags); },

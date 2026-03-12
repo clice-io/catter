@@ -429,6 +429,10 @@ public:
     private:
         inline static std::unordered_map<JSRuntime*, JSClassID> class_ids{};
     };
+
+    static Object empty_one(JSContext* ctx) noexcept {
+        return Object{ctx, JS_NewObject(ctx)};
+    }
 };
 
 /**
@@ -607,13 +611,7 @@ private:
         return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
             auto transformer = [&]<size_t N>(std::in_place_index_t<N>) {
                 using T = detail::type_get<Params, N>;
-                if constexpr(std::is_same_v<T, Object>) {
-                    if(JS_IsObject(argv[N])) {
-                        return Object{ctx, argv[N]};
-                    }
-                } else {
-                    return qjs::Value{ctx, argv[N]}.as<T>();
-                }
+                return qjs::Value{ctx, argv[N]}.as<T>();
             };
             try {
                 if constexpr(std::is_void_v<R>) {
@@ -1279,5 +1277,16 @@ private:
 
     std::unique_ptr<Raw> raw = nullptr;
 };
+
+namespace json {
+inline std::string stringify(const qjs::Value& val) {
+    auto ctx = val.context();
+    auto json_str_val = JS_JSONStringify(ctx, val.value(), JS_UNDEFINED, JS_UNDEFINED);
+    if(JS_IsException(json_str_val)) {
+        throw qjs::Exception(detail::dump(ctx));
+    }
+    return qjs::Value{ctx, json_str_val}.as<std::string>();
+}
+};  // namespace json
 
 }  // namespace catter::qjs
