@@ -1,4 +1,194 @@
 export {};
+
+/**
+ * Supported command actions.
+ */
+export const ActionKind: readonly ["skip", "drop", "abort", "modify"];
+
+/**
+ * Action to apply to a captured command.
+ *
+ * Possible values:
+ * - `"skip"`: Ignore the command in catter, but still execute the original command.
+ * - `"drop"`: Skip execution of the original command.
+ * - `"abort"`: Abort the whole execution and report an error.
+ * - `"modify"`: Replace the original command with a modified command.
+ */
+export type ActionType = (typeof ActionKind)[number];
+
+/**
+ * Result returned from a command handler.
+ */
+export type Action = {
+  /**
+   * Replacement command data used when the action type is `"modify"`.
+   */
+  data?: CommandData;
+
+  /**
+   * Action to apply to the captured command.
+   */
+  type: ActionType;
+};
+
+/**
+ * Supported execution event kinds.
+ */
+export const EventKind: readonly ["finish", "output"];
+
+/**
+ * Execution event kind.
+ */
+export type EventType = (typeof EventKind)[number];
+
+/**
+ * Event emitted while a command is executing.
+ */
+export type ExecutionEvent = {
+  /**
+   * Standard output content for an `"output"` event.
+   */
+  stdout?: string;
+
+  /**
+   * Standard error content for an `"output"` event.
+   */
+  stderr?: string;
+
+  /**
+   * Process exit code. For non-finished output events, this is runtime-defined.
+   */
+  code: number;
+
+  /**
+   * Event category.
+   */
+  type: EventType;
+};
+
+/**
+ * Runtime capabilities exposed to the script.
+ */
+export type CatterRuntime = {
+  /**
+   * Actions supported by the current runtime.
+   */
+  supportActions: ActionType[];
+
+  /**
+   * Execution event kinds supported by the current runtime.
+   */
+  supportEvents: EventType[];
+
+  /**
+   * Runtime implementation type.
+   *
+   * - `"inject"`: Native injection-based runtime.
+   * - `"eslogger"`: macOS event-stream logger runtime.
+   * - `"env"`: Environment-based runtime, for example when `CC=catter-proxy`.
+   */
+  type: "inject" | "eslogger" | "env";
+
+  /**
+   * Whether captured commands can report a parent command identifier.
+   */
+  supportParentId: boolean;
+};
+
+/**
+ * Configuration passed to the script before command capture begins.
+ */
+export type CatterConfig = {
+  /**
+   * Absolute path to the current script.
+   */
+  scriptPath: string;
+
+  /**
+   * Command-line arguments passed to the script.
+   */
+  scriptArgs: string[];
+
+  /**
+   * Build-system command used to launch the script, for example `['bazel', 'build', '//:target']`.
+   */
+  buildSystemCommand: string[];
+
+  /**
+   * Runtime capabilities available for the current script execution.
+   */
+  runtime: CatterRuntime;
+
+  /**
+   * Optional catter runtime features.
+   */
+  options: {
+    /**
+     * Enables runtime logging.
+     */
+    log: boolean;
+  };
+
+  /**
+   * Whether the current script is supported by the runtime.
+   *
+   * When `false`, catter aborts execution immediately.
+   */
+  isScriptSupported: boolean;
+};
+
+/**
+ * Error payload returned when command capture fails.
+ */
+export type CatterErr = {
+  //...
+};
+
+/**
+ * Captured command metadata.
+ */
+export type CommandData = {
+  /**
+   * Working directory of the command.
+   */
+  cwd: string;
+
+  /**
+   * Executable path or name.
+   */
+  exe: string;
+
+  /**
+   * Full argument vector, including the executable arguments.
+   */
+  argv: string[];
+
+  /**
+   * Environment variables in `KEY=VALUE` form.
+   */
+  env: string[];
+
+  /**
+   * Runtime that captured this command.
+   */
+  runtime: CatterRuntime;
+
+  /**
+   * Parent command identifier when the runtime supports parent tracking.
+   */
+  parent?: number;
+};
+
+export function service_on_start(
+  cb: (config: CatterConfig) => CatterConfig,
+): void;
+export function service_on_finish(cb: () => void): void;
+export function service_on_command(
+  cb: (id: number, data: CommandData | CatterErr) => Action,
+): void;
+export function service_on_execution(
+  cb: (id: number, event: ExecutionEvent) => void,
+): void;
 // io
 export function stdout_print(content: string): void;
 export function stdout_print_red(content: string): void;

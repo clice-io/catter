@@ -74,17 +74,17 @@ type CommandData = {
     parent?: number;
 };
 
-export function onStart(cb: (config: CatterConfig) => CatterConfig): void;
-export function onFinish(cb: () => void): void;
-export function onCommand(cb: (id: number, data: CommandData | CatterErr) => Action): void;
-export function onExecution(cb: (id: number, event: ExecutionEvent) => void): void;
+export function service_on_start(cb: (config: CatterConfig) => CatterConfig): void;
+export function service_on_finish(cb: () => void): void;
+export function service_on_command(cb: (id: number, data: CommandData | CatterErr) => Action): void;
+export function service_on_execution(cb: (id: number, event: ExecutionEvent) => void): void;
 
 
 // ------------------------------------------------------------
 // Plugin API, for plugin developers
 // ------------------------------------------------------------
 
-import { onStart, onFinish, onCommand, onExecution } from 'catter-c';
+import { service_on_start, service_on_finish, service_on_command, service_on_execution } from 'catter-c';
 
 /**
  * @method onStart - called when catter start, can modify config
@@ -102,6 +102,20 @@ interface CatterService {
     onCommand: (id: number, data: CommandData | CatterErr) => Action;
     onExecution: (id: number, event: ExecutionEvent) => void;
 }
+
+export function onStart(cb: (config: CatterConfig) => CatterConfig): void{
+    service_on_start(cb);
+}
+export function onFinish(cb: () => void): void {
+    service_on_finish(cb);
+}
+export function onCommand(cb: (id: number, data: CommandData | CatterErr) => Action): void {
+    service_on_command(cb);
+}
+export function onExecution(cb: (id: number, event: ExecutionEvent) => void): void {
+    service_on_execution(cb);
+}
+
 
 export function register(service: CatterService) {
     onStart(service.onStart);

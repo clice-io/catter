@@ -92,6 +92,11 @@ export function coloredPrintln(
   return coloredPrint(content + "\n", color);
 }
 
+/**
+ * Returns the path separator for the current platform.
+ *
+ * @returns `"\\"` on Windows and `"/"` on other platforms.
+ */
 export function dir_sep(): "/" | "\\" {
   return capi.os_name() === "windows" ? "\\" : "/";
 }

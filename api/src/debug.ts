@@ -3,8 +3,10 @@
 import { stdout_print } from "catter-c";
 
 /**
- * @param cond - condition to assert
- * @param otherwise - function to call when assertion fails
+ * Runs a fallback callback when a condition is false.
+ *
+ * @param cond - Condition to check.
+ * @param otherwise - Callback invoked when `cond` is `false`.
  */
 export function assertDo(cond: boolean, otherwise: () => void) {
   if (!cond) {
@@ -13,8 +15,9 @@ export function assertDo(cond: boolean, otherwise: () => void) {
 }
 
 /**
- * assert condition, print message on failure
- * @param cond - condition to assert
+ * Prints an assertion failure message when a condition is false.
+ *
+ * @param cond - Condition to assert.
  */
 export function assertPrint(cond: boolean) {
   assertDo(cond, () => {
@@ -23,8 +26,9 @@ export function assertPrint(cond: boolean) {
 }
 
 /**
- * assert condition, throw error on failure
- * @param cond - condition to assert
+ * Throws an error when a condition is false.
+ *
+ * @param cond - Condition to assert.
  */
 export function assertThrow(cond: boolean) {
   assertDo(cond, () => {
