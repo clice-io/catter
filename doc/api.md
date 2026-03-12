@@ -1,5 +1,7 @@
 ```typescript
-
+// ------------------------------------------------------------
+// Internal API, not for plugin developers
+// ------------------------------------------------------------
 const ActionKind = ['skip', 'drop', 'abort', 'modify'] as const;
 
 /**
@@ -72,12 +74,17 @@ type CommandData = {
     parent?: number;
 };
 
-type ServiceRegister = {
-    onStart: (cb: (config: CatterConfig) => CatterConfig) => void;
-    onFinish: (cb: () => void) => void;
-    onCommand: (cb: (id: number, data: CommandData | CatterErr) => Action) => void;
-    onExecution: (cb: (id: number, event: ExecutionEvent) => void) => void;
-};
+export function onStart(cb: (config: CatterConfig) => CatterConfig) => void;
+export function onFinish(cb: () => void) => void;
+export function onCommand(cb: (id: number, data: CommandData | CatterErr) => Action) => void;
+export function onExecution(cb: (id: number, event: ExecutionEvent) => void) => void;
+
+
+// ------------------------------------------------------------
+// Plugin API, for plugin developers
+// ------------------------------------------------------------
+
+import { onStart, onFinish, onCommand, onExecution } from 'catter-c';
 
 declare let serviceRegister: ServiceRegister;
 
@@ -99,10 +106,10 @@ interface CatterService {
 }
 
 function registerService(service: CatterService) {
-    serviceRegister.onStart(service.onStart);
-    serviceRegister.onFinish(service.onFinish);
-    serviceRegister.onCommand(service.onCommand);
-    serviceRegister.onExecution(service.onExecution);
+    onStart(service.onStart);
+    onFinish(service.onFinish);
+    onCommand(service.onCommand);
+    onExecution(service.onExecution);
 }
 
 // ------------------------------------------------------------
