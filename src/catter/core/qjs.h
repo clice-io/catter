@@ -9,7 +9,6 @@
 #include <ranges>
 #include <string>
 #include <string_view>
-#include <sys/stat.h>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
