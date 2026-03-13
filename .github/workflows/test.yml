@@ -59,8 +59,8 @@ jobs:
 
       - name: Build (debug)
         run: |
-          pixi run ci-build debug
+          pixi run -e dev ci-build debug
 
       - name: Build (release)
         run: |
-          pixi run ci-build release
+          pixi run -e dev ci-build release

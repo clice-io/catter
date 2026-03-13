@@ -30,7 +30,7 @@ jobs:
       - name: Run check
         id: precommit
         run: |
-          pixi run ci-check
+          pixi run -e dev ci-check
         continue-on-error: true
 
       - name: Show diff on failure
