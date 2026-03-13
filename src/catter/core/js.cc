@@ -119,7 +119,6 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
         while((err = JS_ExecutePendingJob(self.rt.js_runtime(), &ctx1)) != 0) {
             if(err < 0) {
                 throw qjs::Exception("Error while executing pending job.");
-                break;
             }
         }
 
@@ -153,7 +152,7 @@ void init_qjs(const RuntimeConfig& config) {
     self.js_mod_obj = ctx.global_this()["__catter_mod"].as<qjs::Object>();
 };
 
-void run_js_file(std::string_view content, const std::string filepath, bool check_error) {
+void run_js_file(std::string_view content, const std::string filepath) {
     sync_eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
 }
 

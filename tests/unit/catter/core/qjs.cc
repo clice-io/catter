@@ -233,12 +233,6 @@ TEST_SUITE(qjs_tests) {
         auto runtime = qjs::Runtime::create();
         auto& ctx = runtime.context();
 
-        auto mismatched_array =
-            ctx.eval("[1]", "<eval>", eval_flags).as<qjs::Object>().as<qjs::Array<bool>>();
-        EXPECT_FALSE(mismatched_array.get(0).has_value());
-        EXPECT_TRUE(
-            throws_with_message([&]() { (void)mismatched_array[0]; }, "Value is not a boolean"));
-
         auto not_an_array = ctx.eval("({ length: 1 })", "<eval>", eval_flags).as<qjs::Object>();
         EXPECT_TRUE(throws_with_message([&]() { (void)not_an_array.as<qjs::Array<int64_t>>(); },
                                         "Object is not an array"));
@@ -250,20 +244,10 @@ TEST_SUITE(qjs_tests) {
         EXPECT_TRUE(throws_with_message([&]() { frozen_array.push(1); }, "TypeError"));
     };
 
-    TEST_CASE(array_conversions_cover_bool_and_string_roundtrip) {
+    TEST_CASE(array_conversions_cover_string_roundtrip) {
         auto f = [&]() {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
-
-            auto bool_values = std::vector<bool>{true, false, true};
-            auto bool_array = qjs::Array<bool>::from(ctx.js_context(), bool_values);
-            EXPECT_TRUE(bool_array.length() == 3);
-            EXPECT_TRUE(bool_array[0]);
-            EXPECT_TRUE(!bool_array[1]);
-            EXPECT_TRUE(bool_array.as<std::vector<bool>>() == bool_values);
-
-            auto bool_array_value = qjs::Value::from(bool_array);
-            EXPECT_TRUE(bool_array_value.to<qjs::Array<bool>>().has_value());
 
             auto string_values = std::vector<std::string>{"alpha", "beta", "gamma"};
             auto string_array = qjs::Array<std::string>::from(ctx.js_context(), string_values);
@@ -274,13 +258,6 @@ TEST_SUITE(qjs_tests) {
 
             auto string_array_object = qjs::Object::from(string_array);
             EXPECT_TRUE(string_array_object.to<qjs::Array<std::string>>().has_value());
-
-            auto empty_bool_array = qjs::Array<bool>::empty_one(ctx.js_context());
-            empty_bool_array.push(true);
-            empty_bool_array.push(false);
-            EXPECT_TRUE(empty_bool_array.length() == 2);
-            EXPECT_TRUE(empty_bool_array[0]);
-            EXPECT_TRUE(!empty_bool_array[1]);
         };
 
         EXPECT_NOTHROWS(f());

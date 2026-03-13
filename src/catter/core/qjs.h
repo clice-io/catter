@@ -359,7 +359,10 @@ public:
     std::optional<Value> get_optional_property(const std::string& prop_name) const noexcept {
         auto ret = Value{this->context(),
                          JS_GetPropertyStr(this->context(), this->value(), prop_name.c_str())};
-        if(ret.is_exception() || ret.is_undefined()) {
+        if(ret.is_exception()) {
+            detail::dump(this->context());
+            return std::nullopt;
+        } else if(ret.is_undefined()) {
             return std::nullopt;
         }
         return ret;
@@ -895,7 +898,7 @@ private:
 };
 
 template <typename T>
-    requires detail::type_list<bool, int64_t, std::string>::contains_v<T>
+    requires detail::type_list<int64_t, std::string>::contains_v<T>
 class Array : protected Object {
 public:
     using Object::Object;

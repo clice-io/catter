@@ -28,7 +28,7 @@ void init_qjs(const RuntimeConfig& config);
  * @param filename The name of the file (used for error reporting).
  * @throws qjs::Exception if there is an error during execution.
  */
-void run_js_file(std::string_view content, const std::string filepath, bool check_error = true);
+void run_js_file(std::string_view content, const std::string filepath);
 
 qjs::Object& js_mod_object();
 
