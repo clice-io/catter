@@ -1,5 +1,3 @@
-#include <cstdint>
-
 #include "apitool.h"
 #include "qjs.h"
 #include "js.h"
@@ -9,19 +7,19 @@ using namespace catter;
 namespace {
 
 CAPI(service_on_start, (qjs::Object cb)->void) {
-    auto func = cb.as<qjs::Function<qjs::Object(qjs::Object config)>>();
+    catter::js::set_on_start(std::move(cb));
 }
 
 CAPI(service_on_finish, (qjs::Object cb)->void) {
-    auto func = cb.as<qjs::Function<void()>>();
+    catter::js::set_on_finish(std::move(cb));
 }
 
 CAPI(service_on_command, (qjs::Object cb)->void) {
-    auto func = cb.as<qjs::Function<qjs::Object(uint32_t id, qjs::Object data)>>();
+    catter::js::set_on_command(std::move(cb));
 }
 
 CAPI(service_on_execution, (qjs::Object cb)->void) {
-    auto func = cb.as<qjs::Function<void(uint32_t id, qjs::Object data)>>();
+    catter::js::set_on_execution(std::move(cb));
 }
 
 }  // namespace

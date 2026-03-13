@@ -1,8 +1,6 @@
 #include <cstdio>
 #include <cstring>
-#include <format>
-#include <print>
-#include <optional>
+#include <stdexcept>
 
 #include <eventide/reflection/enum.h>
 
@@ -37,19 +35,49 @@ Self self{};
 }  // namespace
 
 CatterConfig on_start(CatterConfig config) {
+    if(!self.on_start) {
+        throw std::runtime_error("service.onStart is not registered");
+    }
     return CatterConfig::make(self.on_start(config.to_object(self.on_start.context())));
 }
 
 void on_finish() {
+    if(!self.on_finish) {
+        throw std::runtime_error("service.onFinish is not registered");
+    }
     return self.on_finish();
 }
 
-Action on_command(uint32_t id, CommandData data) {
-    return Action::make(self.on_command(id, data.to_object(self.on_command.context())));
+Action on_command(uint32_t id, std::variant<CommandData, CatterErr> data) {
+    if(!self.on_command) {
+        throw std::runtime_error("service.onCommand is not registered");
+    }
+    return Action::make(self.on_command(
+        id,
+        std::visit([](const auto& v) { return v.to_object(self.on_command.context()); }, data)));
 }
 
 void on_execution(uint32_t id, ExecutionEvent event) {
+    if(!self.on_execution) {
+        throw std::runtime_error("service.onExecution is not registered");
+    }
     return self.on_execution(id, event.to_object(self.on_execution.context()));
+}
+
+void set_on_start(qjs::Object cb) {
+    self.on_start = cb.as<OnStart>();
+}
+
+void set_on_finish(qjs::Object cb) {
+    self.on_finish = cb.as<OnFinish>();
+}
+
+void set_on_command(qjs::Object cb) {
+    self.on_command = cb.as<OnCommand>();
+}
+
+void set_on_execution(qjs::Object cb) {
+    self.on_execution = cb.as<OnExecution>();
 }
 
 const RuntimeConfig& get_global_runtime_config() {

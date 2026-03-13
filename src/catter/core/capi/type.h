@@ -251,6 +251,21 @@ public:
     std::optional<int64_t> parent;
 };
 
+struct CatterErr {
+    static CatterErr make(qjs::Object object) {
+        return detail::make_reflected_object<CatterErr>(std::move(object));
+    }
+
+    qjs::Object to_object(JSContext* ctx) const {
+        return detail::to_reflected_object(ctx, *this);
+    }
+
+    bool operator== (const CatterErr&) const = default;
+
+public:
+    std::string msg;
+};
+
 struct Action {
     static Action make(qjs::Object object) {
         return detail::make_reflected_object<Action>(std::move(object));

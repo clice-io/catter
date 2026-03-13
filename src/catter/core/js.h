@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <variant>
 
 #include "qjs.h"
 
@@ -38,7 +39,7 @@ void set_on_execution(qjs::Object cb);
 
 CatterConfig on_start(CatterConfig config);
 void on_finish();
-Action on_command(uint32_t id, CommandData data);
+Action on_command(uint32_t id, std::variant<CommandData, CatterErr> data);
 void on_execution(uint32_t id, ExecutionEvent event);
 
 };  // namespace catter::js
