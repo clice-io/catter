@@ -898,7 +898,7 @@ private:
 };
 
 template <typename T>
-    requires detail::type_list<int64_t, std::string>::contains_v<T>
+    requires detail::type_list<int32_t, uint32_t, int64_t, uint64_t, std::string>::contains_v<T>
 class Array : protected Object {
 public:
     using Object::Object;
@@ -1048,18 +1048,35 @@ struct value_trans<Num> {
         if(!JS_IsNumber(val.value())) {
             throw TypeError("Value is not a number");
         }
-        if constexpr(std::is_unsigned_v<Num> && sizeof(Num) <= sizeof(uint32_t)) {
-            uint32_t temp;
-            if(JS_ToUint32(val.context(), &temp, val.value()) < 0) {
-                throw TypeError("Failed to convert value to uint32_t");
+        if constexpr(std::is_unsigned_v<Num>) {
+            if constexpr(sizeof(Num) <= sizeof(uint32_t)) {
+                uint32_t temp;
+                if(JS_ToUint32(val.context(), &temp, val.value()) < 0) {
+                    throw TypeError("Failed to convert value to uint32_t");
+                }
+                return static_cast<Num>(temp);
+            } else {
+                uint64_t temp;
+                if(JS_ToIndex(val.context(), &temp, val.value()) < 0) {
+                    throw TypeError("Failed to convert value to uint32_t");
+                }
+                return static_cast<Num>(temp);
             }
-            return static_cast<Num>(temp);
         } else if constexpr(std::is_signed_v<Num>) {
-            int64_t temp;
-            if(JS_ToInt64(val.context(), &temp, val.value()) < 0) {
-                throw TypeError("Failed to convert value to int64_t");
+            if constexpr(sizeof(Num) <= sizeof(int32_t)) {
+                int32_t temp;
+                if(JS_ToInt32(val.context(), &temp, val.value()) < 0) {
+                    throw TypeError("Failed to convert value to uint32_t");
+                }
+                return static_cast<Num>(temp);
+            } else {
+                int64_t temp;
+                if(JS_ToInt64(val.context(), &temp, val.value()) < 0) {
+                    throw TypeError("Failed to convert value to int64_t");
+                }
+                return static_cast<Num>(temp);
             }
-            return static_cast<Num>(temp);
+
         } else {
             static_assert(eventide::dependent_false<Num>, "Unsupported integral type for value");
         }
