@@ -16,10 +16,6 @@ namespace {
 qjs::Runtime rt;
 RuntimeConfig global_config;
 qjs::Object js_mod_obj;
-
-std::string error_strace{};
-enum class PromiseState { Pending, Fulfilled, Rejected };
-PromiseState promise_state = PromiseState::Pending;
 }  // namespace
 
 const RuntimeConfig& get_global_runtime_config() {
@@ -28,31 +24,32 @@ const RuntimeConfig& get_global_runtime_config() {
 
 void sync_eval(std::string_view input, const char* filename, int eval_flags) {
     auto& ctx = rt.context();
+    auto js_ctx = ctx.js_context();
 
     auto promise_obj = ctx.eval(input, filename, eval_flags).as<qjs::Object>();
 
     if(JS_IsPromise(promise_obj.value())) {
         using Then = qjs::Function<qjs::Object(qjs::Object resolve, qjs::Object reject)>;
-        using Catch = qjs::Function<void(qjs::Object error)>;
+        using Catch = qjs::Function<void(qjs::Object)>;
 
-        promise_state = PromiseState::Pending;
-        auto resolve = qjs::Function<void()>::from(ctx.js_context(), []() {
-            promise_state = PromiseState::Fulfilled;
+        using CallBack = qjs::Function<void(qjs::Parameters)>;
+
+        enum { Pending, Fulfilled, Rejected } state = Pending;
+
+        std::string error_strace;
+
+        auto resolve = CallBack::from(js_ctx, [&](qjs::Parameters args) { state = Fulfilled; });
+
+        auto reject = CallBack::from(js_ctx, [&](qjs::Parameters args) {
+            state = Rejected;
+            for(auto& arg: args) {
+                error_strace += arg.stringify() + "\n";
+            }
         });
-
-        auto reject = qjs::Function<void()>::from(ctx.js_context(),
-                                                  []() { promise_state = PromiseState::Rejected; });
-
-        auto error =
-            qjs::Function<void(qjs::Object error)>::from(ctx.js_context(), [](qjs::Object error) {
-                error_strace = qjs::json::stringify(qjs::Value::from(error));
-            });
 
         promise_obj["then"].as<Then>().invoke(promise_obj,
                                               qjs::Object::from(resolve),
                                               qjs::Object::from(reject));
-
-        promise_obj["catch"].as<Catch>().invoke(promise_obj, qjs::Object::from(error));
 
         int err;
         JSContext* ctx1;
@@ -63,11 +60,12 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
                 break;
             }
         }
-        if(promise_state == PromiseState::Pending) {
-            throw qjs::Exception("Inner error after executing js async jobs!");
-        }
-        if(promise_state == PromiseState::Rejected) {
-            throw qjs::Exception(std::format("Module loading with error:\n {}", error_strace));
+
+        switch(state) {
+            case Fulfilled: break;
+            case Rejected: throw qjs::Exception(error_strace);
+            case Pending:
+                throw qjs::Exception("Promise is still pending after executing all pending jobs.");
         }
     }
 };

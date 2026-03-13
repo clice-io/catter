@@ -131,7 +131,10 @@ export type CatterConfig = {
  * Error payload returned when command capture fails.
  */
 export type CatterErr = {
-  //...
+  /**
+   * Error message describing the failure reason.
+   */
+  msg: string;
 };
 
 /**

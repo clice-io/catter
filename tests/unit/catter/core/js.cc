@@ -42,12 +42,6 @@ TEST_SUITE(js_tests) {
                 catter::core::js::run_js_file(content, js_file.path().string());
             }
         };
-
-        try {
-            f();
-        } catch(const catter::qjs::Exception& e) {
-            EXPECT_TRUE(false);
-            std::println("{}", e.what());
-        }
+        EXPECT_NOTHROWS(f());
     };
 };

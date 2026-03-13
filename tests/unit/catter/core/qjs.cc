@@ -32,6 +32,18 @@ int64_t add_two_with_ctx(JSContext* ctx, int64_t value) {
     return ctx ? value + 2 : value;
 }
 
+int64_t sum_all_raw(qjs::Parameters args) {
+    int64_t sum = 0;
+    for(auto& arg: args) {
+        sum += arg.as<int64_t>();
+    }
+    return sum;
+}
+
+int64_t count_args_with_ctx(JSContext* ctx, qjs::Parameters args) {
+    return ctx ? static_cast<int64_t>(args.size()) : -1;
+}
+
 struct IncrementFunctor {
     int64_t delta = 0;
 
@@ -413,6 +425,95 @@ TEST_SUITE(qjs_tests) {
 
         using Register = qjs::Object::Register<CountingFunctor&>;
         EXPECT_TRUE(Register::get(runtime.js_runtime()) != JS_INVALID_CLASS_ID);
+    };
+
+    TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
+        auto f = [&]() {
+            auto runtime = qjs::Runtime::create();
+            auto& ctx = runtime.context();
+
+            auto sum_all =
+                qjs::Function<int64_t(qjs::Parameters)>::from(ctx.js_context(),
+                                                              [](qjs::Parameters args) {
+                                                                  int64_t sum = 0;
+                                                                  for(auto& arg: args) {
+                                                                      sum += arg.as<int64_t>();
+                                                                  }
+                                                                  return sum;
+                                                              });
+            auto join_all =
+                qjs::Function<std::string(qjs::Parameters)>::from(ctx.js_context(),
+                                                                  [](qjs::Parameters args) {
+                                                                      std::string out;
+                                                                      for(auto& arg: args) {
+                                                                          out +=
+                                                                              arg.as<std::string>();
+                                                                      }
+                                                                      return out;
+                                                                  });
+            auto sum_raw =
+                qjs::Function<int64_t(qjs::Parameters)>::from_raw<&sum_all_raw>(ctx.js_context(),
+                                                                                "sumRaw");
+            auto count_raw =
+                qjs::Function<int64_t(qjs::Parameters)>::from_raw<&count_args_with_ctx>(
+                    ctx.js_context(),
+                    "countRaw");
+
+            auto global = ctx.global_this();
+            global.set_property("sumAll", sum_all);
+            global.set_property("joinAll", join_all);
+            global.set_property("sumRaw", sum_raw);
+            global.set_property("countRaw", count_raw);
+
+            qjs::Parameters cpp_args{};
+            cpp_args.push_back(qjs::Value::from(ctx.js_context(), int64_t{2}));
+            cpp_args.push_back(qjs::Value::from(ctx.js_context(), int64_t{3}));
+            cpp_args.push_back(qjs::Value::from(ctx.js_context(), int64_t{4}));
+
+            EXPECT_TRUE(sum_all(cpp_args) == 9);
+            EXPECT_TRUE(sum_all.as()(cpp_args) == 9);
+            EXPECT_TRUE(sum_raw(cpp_args) == 9);
+            EXPECT_TRUE(count_raw(cpp_args) == 3);
+
+            EXPECT_TRUE(ctx.eval("sumAll()", "<eval>", eval_flags).as<int64_t>() == 0);
+            EXPECT_TRUE(ctx.eval("sumAll(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 10);
+            EXPECT_TRUE(ctx.eval("sumRaw(5, 6, 7)", "<eval>", eval_flags).as<int64_t>() == 18);
+            EXPECT_TRUE(ctx.eval("countRaw(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 4);
+            EXPECT_TRUE(ctx.eval("joinAll('cat', 'ter')", "<eval>", eval_flags).as<std::string>() ==
+                        "catter");
+
+            auto js_variadic =
+                ctx.eval("(function (...values) { return values.length; })", "<eval>", eval_flags)
+                    .as<qjs::Object>()
+                    .as<qjs::Function<int64_t(qjs::Parameters)>>();
+            EXPECT_TRUE(js_variadic({}) == 0);
+            EXPECT_TRUE(js_variadic({qjs::Value::from(ctx.js_context(), int64_t{1}),
+                                     qjs::Value::from(ctx.js_context(), int64_t{2})}) == 2);
+        };
+
+        EXPECT_NOTHROWS(f());
+
+        auto runtime = qjs::Runtime::create();
+        auto& ctx = runtime.context();
+
+        auto plain_object = ctx.eval("({ value: 1 })", "<eval>", eval_flags).as<qjs::Object>();
+        EXPECT_TRUE(throws_with_message(
+            [&]() { (void)plain_object.as<qjs::Function<int64_t(qjs::Parameters)>>(); },
+            "Object is not a function"));
+
+        auto sum_all = qjs::Function<int64_t(qjs::Parameters)>::from(ctx.js_context(),
+                                                                     [](qjs::Parameters args) {
+                                                                         int64_t sum = 0;
+                                                                         for(auto& arg: args) {
+                                                                             sum +=
+                                                                                 arg.as<int64_t>();
+                                                                         }
+                                                                         return sum;
+                                                                     });
+        ctx.global_this().set_property("sumAll", sum_all);
+
+        EXPECT_TRUE(throws_with_message([&]() { ctx.eval("sumAll(1, 'x')", "<eval>", eval_flags); },
+                                        "Value is not a number"));
     };
 
     TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {

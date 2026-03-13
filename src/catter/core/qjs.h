@@ -97,8 +97,7 @@ inline std::string dump(JSContext* ctx) {
 class Exception : public std::exception {
 public:
     Exception(const std::string& details) :
-        details(
-            std::format("{}\n{}", details, cpptrace::generate_trace().to_string())) {}
+        details(std::format("{}\n{}", details, cpptrace::generate_trace().to_string())) {}
 
     const char* what() const noexcept override {
         return details.c_str();
@@ -179,7 +178,7 @@ public:
     T as() const {
         return detail::value_trans<T>::as(*this);
     }
-    
+
     std::string stringify() const {
         auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
         if(json_str_val.is_exception()) {
@@ -187,7 +186,7 @@ public:
         }
 
         const char* json_cstr = JS_ToCString(ctx, json_str_val.value());
-        if (json_cstr) {
+        if(json_cstr) {
             std::string result{json_cstr};
             JS_FreeCString(ctx, json_cstr);
             return result;
@@ -520,7 +519,8 @@ public:
         if(auto it = Register::find(rt); it != Register::end()) {
             id = it->second;
         } else {
-            auto class_name = std::format("qjs.{}", refl::type_name<Invocable&&>());
+            auto class_name =
+                std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
             if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
                 JSClassDef def{class_name.c_str(),
                                nullptr,
@@ -650,6 +650,211 @@ private:
                 return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
             }
         }(std::make_index_sequence<sizeof...(Args)>{});
+    }
+
+    template <typename Opaque, typename Register>
+    static JSValue proxy(JSContext* ctx,
+                         JSValueConst func_obj,
+                         JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv,
+                         [[maybe_unused]] int flags) noexcept {
+
+        auto* ptr = static_cast<Opaque*>(JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))));
+
+        if(!ptr) {
+            return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
+        }
+
+        return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
+            return (*ptr)(std::forward<Ts>(args)...);
+        });
+    }
+
+    template <Sign* FnPtr>
+    static JSValue
+        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+
+        return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
+            return (*FnPtr)(std::forward<Ts>(args)...);
+        });
+    }
+
+    template <SignCtx* FnPtr>
+    static JSValue
+        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+        return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
+            return (*FnPtr)(ctx, std::forward<Ts>(args)...);
+        });
+    }
+};
+
+using Parameters = std::vector<Value>;
+
+template <typename R>
+class Function<R(Parameters)> : protected Object {
+public:
+    using AllowRetTypes =
+        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>;
+    static_assert(AllowRetTypes::contains_v<R> || std::is_void_v<R>,
+                  "Function return type must be one of the allowed types");
+
+    using Params = Parameters;
+    using Sign = R(Params);
+
+    using Object::Object;
+    using Object::is_valid;
+    using Object::value;
+    using Object::context;
+    using Object::operator bool;
+    using Object::release;
+
+    Function() = default;
+    Function(const Function&) = default;
+    Function(Function&& other) = default;
+    Function& operator= (const Function&) = default;
+    Function& operator= (Function&& other) = default;
+    ~Function() = default;
+
+    static Function from(JSContext* ctx, Sign*) {
+        static_assert(
+            eventide::dependent_false<Sign*>,
+            "Invocable type can't be function type, please use from_raw for function pointer");
+    }
+
+    template <typename Invocable>
+        requires std::is_invocable_r_v<R, Invocable, Params>
+    static Function from(JSContext* ctx, Invocable&& invocable) noexcept {
+        using Register = Object::Register<Invocable&&>;
+        using Opaque = std::remove_cvref_t<Invocable>;
+        auto rt = JS_GetRuntime(ctx);
+        JSClassID id = 0;
+        if(auto it = Register::find(rt); it != Register::end()) {
+            id = it->second;
+        } else {
+            auto class_name =
+                std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
+            if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+                JSClassDef def{class_name.c_str(),
+                               nullptr,
+                               nullptr,
+                               proxy<Opaque, Register>,
+                               nullptr};
+                id = Register::create(rt, &def);
+            } else {
+                JSClassDef def{class_name.c_str(),
+                               [](JSRuntime* rt, JSValue obj) {
+                                   auto* ptr =
+                                       static_cast<Opaque*>(JS_GetOpaque(obj, Register::get(rt)));
+                                   delete ptr;
+                               },
+                               nullptr,
+                               proxy<Opaque, Register>,
+                               nullptr};
+
+                id = Register::create(rt, &def);
+            }
+        }
+        Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
+
+        if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+            JS_SetOpaque(result.value(), static_cast<void*>(std::addressof(invocable)));
+        } else {
+            JS_SetOpaque(result.value(), new Opaque(std::forward<Invocable>(invocable)));
+        }
+        return result;
+    }
+
+    using SignCtx = R(JSContext*, Params);
+
+    /**
+     * @brief Create a Function from a C function pointer.
+     * This method wraps a C function pointer so that it can be called from JavaScript.
+     * You should ensure that FnPtr is a valid function pointer type.
+
+     *
+     * @tparam FnPtr The C function pointer to wrap, the first parameter can be JSContext*.
+     * @param ctx The QuickJS context.
+     * @return A Function object representing the wrapped C function.
+     */
+    template <SignCtx* FnPtr>
+    static Function from_raw(JSContext* ctx, const char* name) noexcept {
+        Function<Sign> result{ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, 0)};
+        return result;
+    }
+
+    template <Sign* FnPtr>
+    static Function from_raw(JSContext* ctx, const char* name) noexcept {
+        Function<Sign> result{ctx, JS_NewCFunction(ctx, proxy<FnPtr>, name, 0)};
+        return result;
+    }
+
+    auto as() noexcept {
+        return [self = *this](Params args) -> R {
+            return self(args);
+        };
+    }
+
+    R invoke(const Object& this_obj, const Params& args) const {
+        std::vector<JSValue> argv{};
+        argv.reserve(args.size());
+
+        for(const auto& arg: args) {
+            if(!arg.is_valid()) {
+                throw TypeError("Function argument contains an invalid value");
+            }
+            argv.push_back(JS_DupValue(this->context(), arg.value()));
+        }
+
+        auto value = qjs::Value{
+            this->context(),
+            JS_Call(this->context(), this->value(), this_obj.value(), argv.size(), argv.data())};
+        for(auto& v: argv) {
+            JS_FreeValue(this->context(), v);
+        }
+
+        if(value.is_exception()) {
+            throw qjs::Exception(detail::dump(this->context()));
+        }
+
+        if constexpr(std::is_void_v<R>) {
+            return;
+        } else {
+            return value.as<R>();
+        }
+    }
+
+    R operator() (Params args) const {
+        return this->invoke(Object{this->context(), JS_GetGlobalObject(this->context())}, args);
+    }
+
+private:
+    template <typename Invocable>
+    static JSValue invoke_helper(JSContext* ctx, int argc, JSValueConst* argv, Invocable&& fn) {
+        Params args{};
+        args.reserve(argc);
+        for(int i = 0; i < argc; ++i) {
+            args.emplace_back(ctx, argv[i]);
+        }
+
+        try {
+            if constexpr(std::is_void_v<R>) {
+                fn(std::move(args));
+                return JS_UNDEFINED;
+            } else {
+                auto res = fn(std::move(args));
+
+                if constexpr(std::is_same_v<R, Object>) {
+                    return res.release();
+                } else {
+                    return qjs::Value::from(ctx, res).release();
+                }
+            }
+        } catch(const qjs::Exception& e) {
+            return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
+        } catch(const std::exception& e) {
+            return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
+        }
     }
 
     template <typename Opaque, typename Register>
@@ -1021,6 +1226,36 @@ struct object_trans<Function<R(Args...)>> {
 
         if(obj.get_property("length").as<int64_t>() != sizeof...(Args)) {
             throw TypeError("Function has incorrect number of arguments");
+        }
+
+        return FuncType{obj.context(), obj.value()};
+    }
+
+    static std::optional<FuncType> to(const Object& val) noexcept {
+        try {
+            return as(val);
+        } catch(const TypeError&) {
+            return std::nullopt;
+        }
+    }
+};
+
+template <typename R>
+struct object_trans<Function<R(Parameters)>> {
+    using FuncType = Function<R(Parameters)>;
+
+    static Object from(const FuncType& value) noexcept {
+        return Object{value.context(), value.value()};
+    }
+
+    static Object from(FuncType&& value) noexcept {
+        auto ctx = value.context();
+        return Object{ctx, value.release()};
+    }
+
+    static FuncType as(const Object& obj) {
+        if(!JS_IsFunction(obj.context(), obj.value())) {
+            throw TypeError("Object is not a function");
         }
 
         return FuncType{obj.context(), obj.value()};
