@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -21,6 +22,7 @@
 #include <eventide/common/meta.h>
 #include <eventide/common/functional.h>
 
+#include <cpptrace/cpptrace.hpp>
 #include <quickjs.h>
 
 // namespace meta
@@ -94,7 +96,9 @@ inline std::string dump(JSContext* ctx) {
  */
 class Exception : public std::exception {
 public:
-    Exception(std::string&& details) : details(std::move(details)) {}
+    Exception(const std::string& details) :
+        details(
+            std::format("{}\n{}", details, cpptrace::generate_trace().to_string())) {}
 
     const char* what() const noexcept override {
         return details.c_str();
@@ -106,7 +110,7 @@ private:
 
 class TypeError : public Exception {
 public:
-    TypeError(std::string&& details) : Exception(std::format("TypeError: {}", details)) {}
+    TypeError(const std::string& details) : Exception(std::format("TypeError: {}", details)) {}
 };
 
 /**
@@ -485,6 +489,12 @@ public:
     Function& operator= (Function&& other) = default;
     ~Function() = default;
 
+    static Function from(JSContext* ctx, Sign*) {
+        static_assert(
+            eventide::dependent_false<Sign*>,
+            "Invocable type can't be function type, please use from_raw for function pointer");
+    }
+
     template <typename Invocable>
         requires std::is_invocable_r_v<R, Invocable, Args...>
     static Function from(JSContext* ctx, Invocable&& invocable) noexcept {
@@ -496,18 +506,7 @@ public:
             id = it->second;
         } else {
             auto class_name = std::format("qjs.{}", refl::type_name<Invocable&&>());
-            if constexpr(std::is_convertible_v<Invocable, Sign*>) {
-                JSClassDef def{class_name.c_str(),
-                               [](JSRuntime* rt, JSValue obj) {
-                                   auto* ptr = static_cast<eventide::function_ref<Sign>*>(
-                                       JS_GetOpaque(obj, Register::get(rt)));
-                                   delete ptr;
-                               },
-                               nullptr,
-                               proxy<eventide::function_ref<Sign>, Register>,
-                               nullptr};
-                id = Register::create(rt, &def);
-            } else if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+            if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
                 JSClassDef def{class_name.c_str(),
                                nullptr,
                                nullptr,
@@ -530,10 +529,7 @@ public:
         }
         Function<Sign> result{ctx, JS_NewObjectClass(ctx, id)};
 
-        if constexpr(std::is_convertible_v<Invocable, Sign*>) {
-            JS_SetOpaque(result.value(),
-                         new eventide::function_ref<Sign>(std::forward<Invocable>(invocable)));
-        } else if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+        if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
             JS_SetOpaque(result.value(), static_cast<void*>(std::addressof(invocable)));
         } else {
             JS_SetOpaque(result.value(), new Opaque(std::forward<Invocable>(invocable)));

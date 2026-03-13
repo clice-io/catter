@@ -1,4 +1,5 @@
 #include "js.h"
+#include "eventide/reflection/enum.h"
 #include "qjs.h"
 #include <cstdio>
 #include <cstring>
@@ -25,31 +26,6 @@ const RuntimeConfig& get_global_runtime_config() {
     return global_config;
 }
 
-void init_qjs(const RuntimeConfig& config) {
-    rt = qjs::Runtime::create();
-    global_config = config;
-
-    const qjs::Context& ctx = rt.context();
-    auto& mod = ctx.cmodule("catter-c");
-    for(auto& reg: catter::apitool::api_registers()) {
-        reg(mod, ctx);
-    }
-    auto js_lib_trim =
-        config::data::js_lib.substr(0, config::data::js_lib.find_last_not_of('\0') + 1);
-    // init js lib
-
-    ctx.eval(js_lib_trim, "catter", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
-    ctx.eval("import * as catter from 'catter'; globalThis.__catter_mod = catter;",
-             "get-mod.js",
-             JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
-    try {
-        js_mod_obj = ctx.global_this()["__catter_mod"].to<qjs::Object>().value();
-    } catch(...) {
-        throw qjs::Exception("Failed to get catter module object: " +
-                             qjs::detail::dump(ctx.js_context()));
-    }
-};
-
 static JSValue
     on_promise_resolve(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     // we do not care if successfully resolved.
@@ -60,83 +36,31 @@ static JSValue
 static JSValue
     on_promise_reject(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     promise_state = PromiseState::Rejected;
-    if(argc == 0) {
-        error_strace = "Promise rejected with no reason.";
-        return JS_UNDEFINED;
-    }
-    JSValue reason = argv[0];
-    const char* error_message = JS_ToCString(ctx, reason);
-
-    const char* filename = NULL;
-    int line = -1;
-    int column = -1;
-
-    // prefer .stack
-    if(JS_IsObject(reason)) {
-        JSValue stack_val = JS_GetPropertyStr(ctx, reason, "stack");
-        if(!JS_IsUndefined(stack_val)) {
-            const char* stack_str = JS_ToCString(ctx, stack_val);
-            if(stack_str) {
-                error_strace = std::format("Promise rejected with reason: {}\nStack: {}",
-                                           error_message ? error_message : "unknown",
-                                           stack_str);
-                JS_FreeCString(ctx, stack_str);
-                JS_FreeValue(ctx, stack_val);
-                if(error_message)
-                    JS_FreeCString(ctx, error_message);
-                return JS_UNDEFINED;
-            }
-        }
-        JS_FreeValue(ctx, stack_val);
-
-        // otherwise, use .fileName, .lineNumber, .column
-        JSValue filename_val = JS_GetPropertyStr(ctx, reason, "fileName");
-        JSValue lineno_val = JS_GetPropertyStr(ctx, reason, "lineNumber");
-        JSValue column_val = JS_GetPropertyStr(ctx, reason, "column");
-
-        if(!JS_IsUndefined(filename_val)) {
-            filename = JS_ToCString(ctx, filename_val);
-        } else {
-            filename = "unknown";
-        }
-        if(!JS_IsUndefined(lineno_val)) {
-            JS_ToInt32(ctx, &line, lineno_val);
-        }
-        if(!JS_IsUndefined(column_val)) {
-            JS_ToInt32(ctx, &column, column_val);
-        }
-
-        JS_FreeValue(ctx, filename_val);
-        JS_FreeValue(ctx, lineno_val);
-        JS_FreeValue(ctx, column_val);
-    }
-
-    if(filename) {
-        error_strace = std::format("Promise rejected with reason: {}\n at {}:{}:{}",
-                                   error_message ? error_message : "unknown",
-                                   filename,
-                                   line,
-                                   column);
-    } else {
-        error_strace = std::format("Promise rejected with reason: {}",
-                                   error_message ? error_message : "unknown");
-    }
-
-    if(error_message)
-        JS_FreeCString(ctx, error_message);
-
     return JS_UNDEFINED;
 }
 
-void run_js_file(std::string_view content, const std::string filepath, bool check_error) {
-    const qjs::Context& ctx = rt.context();
+void sync_eval(std::string_view input, const char* filename, int eval_flags) {
+    auto& ctx = rt.context();
 
-    auto ret = ctx.eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+    auto promise_obj = ctx.eval(input, filename, eval_flags).as<qjs::Object>();
 
-    auto promise_obj = ret.as<qjs::Object>();
+    if(JS_IsPromise(promise_obj.value())) {
+        using Then = qjs::Function<qjs::Object(qjs::Object resolve, qjs::Object reject)>;
+        using Catch = qjs::Function<void(qjs::Object error)>;
 
-    if(JS_IsPromise(promise_obj.value()) && check_error) {
         promise_state = PromiseState::Pending;
+        auto resolve = qjs::Function<void()>::from(ctx.js_context(), []() {
+            promise_state = PromiseState::Fulfilled;
+        });
+
+        auto reject = qjs::Function<void()>::from(ctx.js_context(),
+                                                  []() { promise_state = PromiseState::Rejected; });
+
+        auto error =
+            qjs::Function<void(qjs::Object error)>::from(ctx.js_context(), [](qjs::Object error) {
+                error_strace = qjs::json::stringify(qjs::Value::from(error));
+            });
+
         qjs::Value c_resolve_func{
             ctx.js_context(),
             JS_NewCFunction(ctx.js_context(), on_promise_resolve, "__catter_onResolve", 1)};
@@ -145,15 +69,14 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
             ctx.js_context(),
             JS_NewCFunction(ctx.js_context(), on_promise_reject, "__catter_onReject", 1)};
 
-        // promise.then(c_resolve_func, c_reject_func)
-        JSValue args[2] = {c_resolve_func.value(), c_reject_func.value()};
-        auto then_func = promise_obj["then"];
-        JSValue res = JS_Call(ctx.js_context(), then_func.value(), promise_obj.value(), 2, args);
-
-        JS_FreeValue(ctx.js_context(), res);
-
-        JSContext* ctx1;
+        promise_obj["then"].as<Then>().invoke(promise_obj,
+                                              qjs::Object::from(reject),
+                                              qjs::Object::from(resolve));
+        // promise_obj["then"].as<Then>().invoke(promise_obj,
+        //                                       c_resolve_func.as<qjs::Object>(),
+        //                                       c_reject_func.as<qjs::Object>());
         int err;
+        JSContext* ctx1;
 
         while((err = JS_ExecutePendingJob(rt.js_runtime(), &ctx1)) != 0) {
             if(err < 0) {
@@ -168,6 +91,31 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
             throw qjs::Exception(std::format("Module loading with error:\n {}", error_strace));
         }
     }
+};
+
+void init_qjs(const RuntimeConfig& config) {
+    rt = qjs::Runtime::create();
+    global_config = config;
+
+    const qjs::Context& ctx = rt.context();
+    auto& mod = ctx.cmodule("catter-c");
+    for(auto& reg: catter::apitool::api_registers()) {
+        reg(mod, ctx);
+    }
+    auto js_lib_trim =
+        config::data::js_lib.substr(0, config::data::js_lib.find_last_not_of('\0') + 1);
+    // init js lib
+
+    sync_eval(js_lib_trim, "catter", JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+    sync_eval("import * as catter from 'catter'; globalThis.__catter_mod = catter;",
+              "get-mod.js",
+              JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+
+    js_mod_obj = ctx.global_this()["__catter_mod"].as<qjs::Object>();
+};
+
+void run_js_file(std::string_view content, const std::string filepath, bool check_error) {
+    sync_eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
 }
 
 qjs::Object& js_mod_object() {

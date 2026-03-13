@@ -5,26 +5,41 @@ import {
   service_on_start,
 } from "catter-c";
 
-export {
-  ActionKind,
-  EventKind,
-  type Action,
-  type ActionType,
-  type CatterConfig,
-  type CatterErr,
-  type CatterRuntime,
-  type CommandData,
-  type EventType,
-  type ExecutionEvent,
+export type {
+  Action,
+  ActionType,
+  CatterConfig,
+  CatterErr,
+  CatterRuntime,
+  CommandData,
+  EventType,
+  ExecutionEvent,
 } from "catter-c";
 
 import type {
   Action,
+  ActionType,
   CatterConfig,
   CatterErr,
+  CatterRuntime,
   CommandData,
+  EventType,
   ExecutionEvent,
 } from "catter-c";
+
+/**
+ * Supported command actions.
+ */
+export const ActionKind = ["skip", "drop", "abort", "modify"] as const;
+
+const _ActionKindTypeCheck: (typeof ActionKind)[number] = {} as ActionType;
+
+/**
+ * Supported command actions.
+ */
+export const EventKind = ["finish", "output"] as const;
+
+const _EventKindTypeCheck: (typeof EventKind)[number] = {} as EventType;
 
 /**
  * Callback group for subscribing to catter lifecycle and command events.

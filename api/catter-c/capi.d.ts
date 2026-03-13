@@ -1,11 +1,6 @@
 export {};
 
 /**
- * Supported command actions.
- */
-export const ActionKind: readonly ["skip", "drop", "abort", "modify"];
-
-/**
  * Action to apply to a captured command.
  *
  * Possible values:
@@ -14,7 +9,7 @@ export const ActionKind: readonly ["skip", "drop", "abort", "modify"];
  * - `"abort"`: Abort the whole execution and report an error.
  * - `"modify"`: Replace the original command with a modified command.
  */
-export type ActionType = (typeof ActionKind)[number];
+export type ActionType = "skip" | "drop" | "abort" | "modify";
 
 /**
  * Result returned from a command handler.
@@ -32,14 +27,9 @@ export type Action = {
 };
 
 /**
- * Supported execution event kinds.
- */
-export const EventKind: readonly ["finish", "output"];
-
-/**
  * Execution event kind.
  */
-export type EventType = (typeof EventKind)[number];
+export type EventType = "finish" | "output";
 
 /**
  * Event emitted while a command is executing.

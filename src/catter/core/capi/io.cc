@@ -2,13 +2,13 @@
 #include <cstdint>
 #include <fstream>
 #include <print>
-#include <quickjs.h>
 #include <string>
-#include <sys/types.h>
 #include <unordered_map>
-#include "../apitool.h"
+
 #include "qjs.h"
 #include "util/output.h"
+
+#include "../apitool.h"
 
 namespace {
 CAPI(stdout_print, (const std::string content)->void) {

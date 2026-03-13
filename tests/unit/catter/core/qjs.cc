@@ -415,22 +415,6 @@ TEST_SUITE(qjs_tests) {
         EXPECT_TRUE(Register::get(runtime.js_runtime()) != JS_INVALID_CLASS_ID);
     };
 
-    TEST_CASE(function_wrappers_cover_function_pointer_functor_storage) {
-        auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
-
-        auto pointer_functor = qjs::Function<int64_t(int64_t)>::from(ctx.js_context(), add_one_raw);
-
-        auto global = ctx.global_this();
-        global.set_property("pointerFunctor", pointer_functor);
-
-        EXPECT_TRUE(pointer_functor(40) == 41);
-        EXPECT_TRUE(ctx.eval("pointerFunctor(41)", "<eval>", eval_flags).as<int64_t>() == 42);
-
-        using PointerRegister = qjs::Object::Register<int64_t (&)(int64_t)>;
-        EXPECT_TRUE(PointerRegister::get(runtime.js_runtime()) != JS_INVALID_CLASS_ID);
-    };
-
     TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
         auto runtime_a = qjs::Runtime::create();
         auto& ctx_a = runtime_a.context();
