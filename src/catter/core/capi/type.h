@@ -172,9 +172,9 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 
 }  // namespace detail
 
-enum class Action { skip, drop, abort, modify };
+enum class ActionType { skip, drop, abort, modify };
 
-enum class Event { finish, output };
+enum class EventType { finish, output };
 
 struct CatterOptions {
     static CatterOptions make(qjs::Object object) {
@@ -205,8 +205,8 @@ struct CatterRuntime {
     bool operator== (const CatterRuntime&) const = default;
 
 public:
-    std::vector<Action> supportActions;
-    std::vector<Event> supportEvents;
+    std::vector<ActionType> supportActions;
+    std::vector<EventType> supportEvents;
     Type type;
     bool supportParentId;
 };
@@ -251,20 +251,20 @@ public:
     std::optional<int64_t> parent;
 };
 
-struct ActionResult {
-    static ActionResult make(qjs::Object object) {
-        return detail::make_reflected_object<ActionResult>(std::move(object));
+struct Action {
+    static Action make(qjs::Object object) {
+        return detail::make_reflected_object<Action>(std::move(object));
     }
 
     qjs::Object to_object(JSContext* ctx) const {
         return detail::to_reflected_object(ctx, *this);
     }
 
-    bool operator== (const ActionResult&) const = default;
+    bool operator== (const Action&) const = default;
 
 public:
     std::optional<CommandData> data;
-    Action type;
+    ActionType type;
 };
 
 struct ExecutionEvent {
@@ -282,7 +282,7 @@ public:
     std::optional<std::string> stdOut;
     std::optional<std::string> stdErr;
     int64_t code;
-    Event type;
+    EventType type;
 };
 
 template <>

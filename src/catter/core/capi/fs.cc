@@ -45,7 +45,7 @@ CAPI(fs_is_dir, (std::string path)->bool) {
 
 CAPI(fs_pwd, ()->std::string) {
     std::error_code ec;
-    return catter::core::js::get_global_runtime_config().pwd.string();
+    return catter::js::get_global_runtime_config().pwd.string();
 }
 
 CAPI(fs_path_join_all, (catter::qjs::Object path_parts)->std::string) {

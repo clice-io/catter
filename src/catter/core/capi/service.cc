@@ -1,8 +1,8 @@
 #include <cstdint>
 
+#include "apitool.h"
 #include "qjs.h"
-
-#include "../apitool.h"
+#include "js.h"
 
 using namespace catter;
 

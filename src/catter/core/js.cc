@@ -1,29 +1,63 @@
-#include "js.h"
-#include "eventide/reflection/enum.h"
-#include "qjs.h"
 #include <cstdio>
 #include <cstring>
 #include <format>
 #include <print>
-#include <quickjs.h>
-#include "config/js-lib.h"
-#include "apitool.h"
 #include <optional>
 
-namespace catter::core::js {
+#include <eventide/reflection/enum.h>
+
+#include "config/js-lib.h"
+
+#include "js.h"
+#include "qjs.h"
+#include "apitool.h"
+
+namespace catter::js {
+
+using OnStart = qjs::Function<qjs::Object(qjs::Object config)>;
+
+using OnFinish = qjs::Function<void()>;
+
+using OnCommand = qjs::Function<qjs::Object(uint32_t id, qjs::Object data)>;
+
+using OnExecution = qjs::Function<void(uint32_t id, qjs::Object data)>;
+
+struct Self {
+    RuntimeConfig global_config;
+    qjs::Runtime rt;
+    qjs::Object js_mod_obj;
+    OnStart on_start;
+    OnFinish on_finish;
+    OnCommand on_command;
+    OnExecution on_execution;
+};
 
 namespace {
-qjs::Runtime rt;
-RuntimeConfig global_config;
-qjs::Object js_mod_obj;
+Self self{};
 }  // namespace
 
+CatterConfig on_start(CatterConfig config) {
+    return CatterConfig::make(self.on_start(config.to_object(self.on_start.context())));
+}
+
+void on_finish() {
+    return self.on_finish();
+}
+
+Action on_command(uint32_t id, CommandData data) {
+    return Action::make(self.on_command(id, data.to_object(self.on_command.context())));
+}
+
+void on_execution(uint32_t id, ExecutionEvent event) {
+    return self.on_execution(id, event.to_object(self.on_execution.context()));
+}
+
 const RuntimeConfig& get_global_runtime_config() {
-    return global_config;
+    return self.global_config;
 }
 
 void sync_eval(std::string_view input, const char* filename, int eval_flags) {
-    auto& ctx = rt.context();
+    auto& ctx = self.rt.context();
     auto js_ctx = ctx.js_context();
 
     auto promise_obj = ctx.eval(input, filename, eval_flags).as<qjs::Object>();
@@ -54,7 +88,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
         int err;
         JSContext* ctx1;
 
-        while((err = JS_ExecutePendingJob(rt.js_runtime(), &ctx1)) != 0) {
+        while((err = JS_ExecutePendingJob(self.rt.js_runtime(), &ctx1)) != 0) {
             if(err < 0) {
                 throw qjs::Exception("Error while executing pending job.");
                 break;
@@ -71,10 +105,10 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
 };
 
 void init_qjs(const RuntimeConfig& config) {
-    rt = qjs::Runtime::create();
-    global_config = config;
+    self.rt = qjs::Runtime::create();
+    self.global_config = config;
 
-    const qjs::Context& ctx = rt.context();
+    const qjs::Context& ctx = self.rt.context();
     auto& mod = ctx.cmodule("catter-c");
     for(auto& reg: catter::apitool::api_registers()) {
         reg(mod, ctx);
@@ -88,7 +122,7 @@ void init_qjs(const RuntimeConfig& config) {
               "get-mod.js",
               JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
 
-    js_mod_obj = ctx.global_this()["__catter_mod"].as<qjs::Object>();
+    self.js_mod_obj = ctx.global_this()["__catter_mod"].as<qjs::Object>();
 };
 
 void run_js_file(std::string_view content, const std::string filepath, bool check_error) {
@@ -96,7 +130,7 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
 }
 
 qjs::Object& js_mod_object() {
-    return js_mod_obj;
+    return self.js_mod_obj;
 }
 
-}  // namespace catter::core::js
+}  // namespace catter::js

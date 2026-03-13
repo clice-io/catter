@@ -27,7 +27,7 @@ TEST_SUITE(js_tests) {
             manager.create("c/b.txt", ec);
             EXPECT_TRUE(!ec);
 
-            catter::core::js::init_qjs({.pwd = js_path});
+            catter::js::init_qjs({.pwd = js_path});
             for(const auto& js_file: fs::directory_iterator{js_path}) {
                 if(js_file.path().extension() != ".js") {
                     continue;
@@ -39,7 +39,7 @@ TEST_SUITE(js_tests) {
 
                 content = std::string((std::istreambuf_iterator<char>(ifs)),
                                       std::istreambuf_iterator<char>());
-                catter::core::js::run_js_file(content, js_file.path().string());
+                catter::js::run_js_file(content, js_file.path().string());
             }
         };
         EXPECT_NOTHROWS(f());

@@ -4,7 +4,7 @@
 #include <eventide/zest/zest.h>
 
 #include "qjs.h"
-#include "js_type.h"
+#include "capi/type.h"
 
 using namespace catter;
 
@@ -25,8 +25,8 @@ TEST_SUITE(api_tests) {
             auto& ctx = runtime.context();
 
             catter::js::CatterRuntime catter_runtime{
-                .supportActions = {catter::js::Action::skip, catter::js::Action::modify},
-                .supportEvents = {catter::js::Event::finish},
+                .supportActions = {catter::js::ActionType::skip, catter::js::ActionType::modify},
+                .supportEvents = {catter::js::EventType::finish},
                 .type = catter::js::CatterRuntime::Type::inject,
                 .supportParentId = true
             };
@@ -47,18 +47,19 @@ TEST_SUITE(api_tests) {
                 .exe = "clang++",
                 .argv = {"clang++", "main.cc", "-c"},
                 .env = {"CC=clang++", "CATTER_LOG=1"},
-                .runtime = {.supportActions = {catter::js::Action::skip,
-                                               catter::js::Action::modify},
-                         .supportEvents = {catter::js::Event::finish, catter::js::Event::output},
+                .runtime = {.supportActions = {catter::js::ActionType::skip,
+                                               catter::js::ActionType::modify},
+                         .supportEvents = {catter::js::EventType::finish,
+                                              catter::js::EventType::output},
                          .type = catter::js::CatterRuntime::Type::env,
                          .supportParentId = true},
                 .parent = 42
             };
 
-            catter::js::ActionResult modify_action{.data = command_data,
-                                                   .type = catter::js::Action::modify};
-            catter::js::ActionResult skip_action{.data = std::nullopt,
-                                                 .type = catter::js::Action::skip};
+            catter::js::Action modify_action{.data = command_data,
+                                             .type = catter::js::ActionType::modify};
+            catter::js::Action skip_action{.data = std::nullopt,
+                                           .type = catter::js::ActionType::skip};
 
             EXPECT_TRUE(is_roundtrip_equal(ctx, command_data));
             EXPECT_TRUE(is_roundtrip_equal(ctx, modify_action));
@@ -76,18 +77,19 @@ TEST_SUITE(api_tests) {
             catter::js::ExecutionEvent output_event{.stdOut = std::string{"hello"},
                                                     .stdErr = std::string{"warn"},
                                                     .code = 0,
-                                                    .type = catter::js::Event::output};
+                                                    .type = catter::js::EventType::output};
             catter::js::ExecutionEvent finish_event{.stdOut = std::nullopt,
                                                     .stdErr = std::nullopt,
                                                     .code = 1,
-                                                    .type = catter::js::Event::finish};
+                                                    .type = catter::js::EventType::finish};
 
             catter::js::CatterConfig config{
                 .scriptPath = "scripts/demo.js",
                 .scriptArgs = {"--input", "compile_commands.json"},
                 .buildSystemCommand = {"xmake", "build"},
-                .runtime = {.supportActions = {catter::js::Action::drop, catter::js::Action::abort},
-                               .supportEvents = {catter::js::Event::finish},
+                .runtime = {.supportActions = {catter::js::ActionType::drop,
+                                               catter::js::ActionType::abort},
+                               .supportEvents = {catter::js::EventType::finish},
                                .type = catter::js::CatterRuntime::Type::inject,
                                .supportParentId = false},
                 .options = {.log = true},

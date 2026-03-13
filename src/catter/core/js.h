@@ -1,11 +1,11 @@
 #pragma once
 #include <filesystem>
 
-#include <eventide/common/meta.h>
-
 #include "qjs.h"
 
-namespace catter::core::js {
+#include "capi/type.h"
+
+namespace catter::js {
 
 struct RuntimeConfig {
     std::filesystem::path pwd;
@@ -31,4 +31,14 @@ void run_js_file(std::string_view content, const std::string filepath, bool chec
 
 qjs::Object& js_mod_object();
 
-};  // namespace catter::core::js
+void set_on_start(qjs::Object cb);
+void set_on_finish(qjs::Object cb);
+void set_on_command(qjs::Object cb);
+void set_on_execution(qjs::Object cb);
+
+CatterConfig on_start(CatterConfig config);
+void on_finish();
+Action on_command(uint32_t id, CommandData data);
+void on_execution(uint32_t id, ExecutionEvent event);
+
+};  // namespace catter::js
