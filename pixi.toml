@@ -19,10 +19,10 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 pnpm = "*"
 
 # Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
-# [target.win-64.dependencies]
-# vs2022_win-64 = "==19.44.35207"
-# vc14_runtime = "==14.44.35208"
-# ucrt = "==10.0.26100.0"
+[target.win-64.dependencies]
+vs2022_win-64 = "==19.44.35207"
+vc14_runtime = "==14.44.35208"
+ucrt = "==10.0.26100.0"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
@@ -50,11 +50,21 @@ PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 CATTER_DEFAULT_TOOLCHAIN = "clang"
 
 [feature.clang.dependencies]
+pnpm = "*"
 clang = "==20.1.8"
 clangxx = "==20.1.8"
 lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
+
+[feature.clang.activation.env]
+CATTER_DEFAULT_TOOLCHAIN = "clang"
+
+[feature.clang.target.win-64.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+
+[feature.clang.target.unix.activation.env]
+PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 
 [feature.dev.dependencies]
 python = ">=3.14.2,<3.15"
@@ -75,7 +85,7 @@ test = [{ task = "ut"},{ task = "it"}]
 
 [environments]
 dev = ["dev"]
-clang = ["dev", "clang"]
+clang = {features = ["dev", "clang"], no-default-feature = true}
 
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [

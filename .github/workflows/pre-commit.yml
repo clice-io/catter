@@ -20,15 +20,14 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: v0.65.0
-          activate-environment: true
+          activate-environment: false
           cache: true
           locked: true
-          environments: dev
 
       - name: Run check
         id: precommit
         run: |
-          pixi run ci-check
+          pixi run -e dev ci-check
         continue-on-error: true
 
       - name: Show diff on failure
