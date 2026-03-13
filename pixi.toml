@@ -50,11 +50,21 @@ PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 CATTER_DEFAULT_TOOLCHAIN = "clang"
 
 [feature.clang.dependencies]
+pnpm = "*"
 clang = "==20.1.8"
 clangxx = "==20.1.8"
 lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
+
+[feature.clang.activation.env]
+CATTER_DEFAULT_TOOLCHAIN = "clang"
+
+[feature.clang.target.win-64.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+
+[feature.clang.target.unix.activation.env]
+PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 
 [feature.dev.dependencies]
 python = ">=3.14.2,<3.15"
@@ -75,7 +85,7 @@ test = [{ task = "ut"},{ task = "it"}]
 
 [environments]
 dev = ["dev"]
-clang = ["dev", "clang"]
+clang = {features = ["dev", "clang"], no-default-feature = true}
 
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
