@@ -26,19 +26,6 @@ const RuntimeConfig& get_global_runtime_config() {
     return global_config;
 }
 
-static JSValue
-    on_promise_resolve(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    // we do not care if successfully resolved.
-    promise_state = PromiseState::Fulfilled;
-    return JS_UNDEFINED;
-}
-
-static JSValue
-    on_promise_reject(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    promise_state = PromiseState::Rejected;
-    return JS_UNDEFINED;
-}
-
 void sync_eval(std::string_view input, const char* filename, int eval_flags) {
     auto& ctx = rt.context();
 
@@ -61,20 +48,12 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
                 error_strace = qjs::json::stringify(qjs::Value::from(error));
             });
 
-        qjs::Value c_resolve_func{
-            ctx.js_context(),
-            JS_NewCFunction(ctx.js_context(), on_promise_resolve, "__catter_onResolve", 1)};
-
-        qjs::Value c_reject_func{
-            ctx.js_context(),
-            JS_NewCFunction(ctx.js_context(), on_promise_reject, "__catter_onReject", 1)};
-
         promise_obj["then"].as<Then>().invoke(promise_obj,
-                                              qjs::Object::from(reject),
-                                              qjs::Object::from(resolve));
-        // promise_obj["then"].as<Then>().invoke(promise_obj,
-        //                                       c_resolve_func.as<qjs::Object>(),
-        //                                       c_reject_func.as<qjs::Object>());
+                                              qjs::Object::from(resolve),
+                                              qjs::Object::from(reject));
+
+        promise_obj["catch"].as<Catch>().invoke(promise_obj, qjs::Object::from(error));
+
         int err;
         JSContext* ctx1;
 

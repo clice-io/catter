@@ -179,6 +179,21 @@ public:
     T as() const {
         return detail::value_trans<T>::as(*this);
     }
+    
+    std::string stringify() const {
+        auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
+        if(json_str_val.is_exception()) {
+            throw qjs::Exception(detail::dump(ctx));
+        }
+
+        const char* json_cstr = JS_ToCString(ctx, json_str_val.value());
+        if (json_cstr) {
+            std::string result{json_cstr};
+            JS_FreeCString(ctx, json_cstr);
+            return result;
+        }
+        throw qjs::Exception("Failed to stringify value");
+    }
 
     bool is_object() const noexcept {
         return JS_IsObject(this->val);
@@ -1283,12 +1298,7 @@ private:
 
 namespace json {
 inline std::string stringify(const qjs::Value& val) {
-    auto ctx = val.context();
-    auto json_str_val = JS_JSONStringify(ctx, val.value(), JS_UNDEFINED, JS_UNDEFINED);
-    if(JS_IsException(json_str_val)) {
-        throw qjs::Exception(detail::dump(ctx));
-    }
-    return qjs::Value{ctx, json_str_val}.as<std::string>();
+    return val.stringify();
 }
 };  // namespace json
 
