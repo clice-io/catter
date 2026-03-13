@@ -19,10 +19,10 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 pnpm = "*"
 
 # Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
-# [target.win-64.dependencies]
-# vs2022_win-64 = "==19.44.35207"
-# vc14_runtime = "==14.44.35208"
-# ucrt = "==10.0.26100.0"
+[target.win-64.dependencies]
+vs2022_win-64 = "==19.44.35207"
+vc14_runtime = "==14.44.35208"
+ucrt = "==10.0.26100.0"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"

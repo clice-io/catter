@@ -50,10 +50,12 @@ jobs:
         uses: prefix-dev/setup-pixi@v0.9.4
         with:
           pixi-version: v0.65.0
-          activate-environment: true
+          activate-environment: false
           cache: true
           locked: true
-          environments: dev
+
+      - name: Initialize Pixi
+        run: pixi shell -e dev
 
       - name: Build (debug)
         run: |
