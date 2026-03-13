@@ -37,7 +37,7 @@ TEST_SUITE(api_tests) {
         EXPECT_NOTHROWS(f());
     };
 
-    TEST_CASE(command_data_and_action_result_conversion) {
+    TEST_CASE(command_data_and_action_conversion) {
         auto f = [&]() {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
