@@ -24,9 +24,6 @@ jobs:
           cache: true
           locked: true
 
-      - name: Initialize Pixi
-        run: pixi shell -e dev
-
       - name: Run check
         id: precommit
         run: |
