@@ -57,10 +57,7 @@ std::string serialize_value(const T& value) {
 
 template <typename T, typename... Args>
 std::string serialize_args(const T& first, const Args&... args) {
-    std::string first_s = serialize_value(first);
-    std::string args_s = "";
-    ((args_s += ", " + serialize_value(args)), ...);
-    return std::format("[{}{}]", first_s, args_s);
+    return std::format("[{}]", (serialize_value(first) + ... + (", " + serialize_value(args))));
 }
 
 inline std::string serialize_args() {

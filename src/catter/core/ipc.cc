@@ -1,14 +1,18 @@
 #include <cassert>
 #include <cstddef>
+#include <new>
 #include <optional>
 #include <print>
 #include <tuple>
 #include <memory>
 #include <format>
+#include <type_traits>
 #include <utility>
 
 #include <eventide/reflection/enum.h>
 #include <eventide/common/functional.h>
+#include <eventide/common/meta.h>
+#include <vector>
 
 #include "ipc.h"
 
@@ -19,45 +23,90 @@
 namespace catter::ipc {
 using namespace data;
 
-template <Request Req, typename T>
-struct Helper {};
+template <typename T>
+struct Helper;
 
 template <typename... Args>
 auto deserialize_args(BufferReader& buf_reader) {
-    return std::tuple<std::remove_cvref_t<Args>...>{Serde<Args>::deserialize(buf_reader)...};
+    return std::tuple<Args...>{Serde<Args>::deserialize(buf_reader)...};
 }
 
-template <Request Req, typename Ret, typename... Args>
-struct Helper<Req, Ret(Args...)> {
-    template <typename Writer>
-    eventide::task<void> operator() (eventide::function_ref<Ret(Args...)> callback,
-                                     BufferReader& buf_reader,
-                                     Writer&& write_packet) {
-        auto args = deserialize_args<Args...>(buf_reader);
-        if constexpr(!std::is_same_v<Ret, void>) {
-            auto ret =
-                co_await write_packet(Serde<Ret>::serialize(std::apply(callback, std::move(args))));
-
-            if(ret.has_error()) {
-                throw std::runtime_error(std::format("Failed to send response [{}] to client: {}",
-                                                     eventide::refl::enum_name(Req),
-                                                     ret.message()));
-            }
-        } else {
-            std::apply(callback, std::move(args));
-            co_return;
-        }
+template <typename Ret, typename... Args>
+struct Helper<Ret(Args...)> {
+    static auto read(BufferReader& buf_reader) {
+        return deserialize_args<Args...>(buf_reader);
     }
 };
 
-template <Request Req, typename Writer>
-eventide::task<void> handle_req(eventide::function_ref<RequestType<Req>> callback,
-                                BufferReader& buf_reader,
-                                Writer&& write_packet) {
-    return Helper<Req, RequestType<Req>>{}(callback,
-                                           buf_reader,
-                                           std::forward<Writer>(write_packet));
+template <Request Req>
+eventide::task<void> handle_req(BufferReader& buf_reader) {
+    return Helper<RequestType<Req>>::handle(buf_reader);
 }
+
+template <auto... MemFns>
+struct Dispatcher {
+    using Class = std::common_type_t<typename eventide::mem_fn<MemFns>::ClassType...>;
+
+    constexpr static auto Tuple = std::make_tuple(MemFns...);
+
+    template <Request Req>
+    static consteval auto match_mem_fn() {
+        constexpr auto idx = []<size_t I>(this auto self, std::in_place_index_t<I>) {
+            if constexpr(I < sizeof...(MemFns)) {
+                using Fn = eventide::mem_fn<std::get<I>(Tuple)>::FunctionType;
+                if constexpr(std::same_as<Fn, RequestType<Req>>) {
+                    return I;
+                } else {
+                    return self(std::in_place_index<I + 1>);
+                }
+            } else {
+                return static_cast<size_t>(-1);
+            }
+        }(std::in_place_index<0>);
+        static_assert(idx != static_cast<size_t>(-1),
+                      "No matching request type found in dispatcher");
+        return std::get<idx>(Tuple);
+    }
+
+    template <typename T>
+    struct Helper;
+
+    template <typename Ret, typename... Args>
+    struct Helper<Ret(Args...)> {
+        static std::optional<std::vector<char>> call(eventide::function_ref<Ret(Args...)> callback,
+                                                     BufferReader& buf_reader) {
+            auto args_tuple = deserialize_args<Args...>(buf_reader);
+            if constexpr(std::is_void_v<Ret>) {
+                std::apply(callback, args_tuple);
+                return std::nullopt;
+            } else {
+                Ret result = std::apply(callback, args_tuple);
+                return Serde<Ret>::serialize(result);
+            }
+        }
+    };
+
+    static std::optional<std::vector<char>> dispatch(Class& obj, BufferReader& buf_reader) {
+        using ReflRequest = eventide::refl::reflection<Request>;
+        Request req = Serde<Request>::deserialize(buf_reader);
+
+        return [&]<size_t I = 0>(this const auto& self) -> std::optional<std::vector<char>> {
+            if constexpr(I < ReflRequest::member_count) {
+                constexpr auto val = ReflRequest::member_values[I];
+                if(val == req) {
+                    return Helper<RequestType<val>>::call(
+                        eventide::bind_ref<match_mem_fn<val>()>(obj),
+                        buf_reader);
+                }
+                return self.template operator()<I + 1>();
+            } else {
+                throw std::runtime_error(
+                    std::format("Unknown request type received: {}",
+                                static_cast<std::underlying_type_t<Request>>(req)));
+            }
+        }();
+    }
+};
 
 eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pipe client) {
 
@@ -128,42 +177,17 @@ eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pi
 
         BufferReader buf_reader(*req_packet);
         Request req = Serde<Request>::deserialize(buf_reader);
-        switch(req) {
-            case Request::CREATE: {
-                co_await handle_req<Request::CREATE>(
-                    eventide::bind_ref<&InjectService::create>(*service),
-                    buf_reader,
-                    write_packet);
-                break;
-            }
 
-            case Request::MAKE_DECISION: {
-                co_await handle_req<Request::MAKE_DECISION>(
-                    eventide::bind_ref<&InjectService::make_decision>(*service),
-                    buf_reader,
-                    write_packet);
-                break;
-            }
-            case Request::FINISH: {
-                co_await handle_req<Request::FINISH>(
-                    eventide::bind_ref<&InjectService::finish>(*service),
-                    buf_reader,
-                    write_packet);
-                break;
-            }
-            case Request::REPORT_ERROR: {
-                co_await handle_req<Request::REPORT_ERROR>(
-                    eventide::bind_ref<&InjectService::report_error>(*service),
-                    buf_reader,
-                    write_packet);
-                break;
-            }
-            default: {
-                assert(false && "Unknown request type received");
-            }
+        using DispatcherType = Dispatcher<&InjectService::create,
+                                          &InjectService::make_decision,
+                                          &InjectService::finish,
+                                          &InjectService::report_error>;
+
+        auto response = DispatcherType::dispatch(*service, buf_reader);
+        if(response.has_value()) {
+            co_await write_packet(*response);
         }
     }
-
     co_return;
 }
 
