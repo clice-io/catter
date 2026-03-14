@@ -22,10 +22,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include <eventide/deco/runtime.h>
+
 #include "hook.h"
 #include "util/crossplat.h"
 #include "util/log.h"
-#include "util/option.h"
 
 #ifdef CATTER_WINDOWS
 
@@ -157,7 +158,7 @@ int main(int argc, char* argv[]) {
     catter::log::mute_logger();
 
     try {
-        auto args = catter::util::save_argv(argc, argv);
+        auto args = deco::util::argvify(argc, argv, 0);
 
         if(args.size() == 3 && args[1] == "--test") {
             std::string executable = catter::util::get_executable_path().string();
