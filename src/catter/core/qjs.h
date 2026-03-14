@@ -178,21 +178,6 @@ public:
         return detail::value_trans<T>::as(*this);
     }
 
-    std::string stringify() const {
-        auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
-        if(json_str_val.is_exception()) {
-            throw qjs::Exception(detail::dump(ctx));
-        }
-
-        const char* json_cstr = JS_ToCString(ctx, json_str_val.value());
-        if(json_cstr) {
-            std::string result{json_cstr};
-            JS_FreeCString(ctx, json_cstr);
-            return result;
-        }
-        throw qjs::Exception("Failed to stringify value");
-    }
-
     bool is_object() const noexcept {
         return JS_IsObject(this->val);
     }
@@ -1551,9 +1536,38 @@ private:
 };
 
 namespace json {
-inline std::string stringify(const qjs::Value& val) {
-    return val.stringify();
-}
+
+template <typename T>
+    requires requires(T&& t) {
+        { t.value() } -> std::convertible_to<JSValue>;
+        { t.context() } -> std::convertible_to<JSContext*>;
+    }
+std::string stringify(T&& v) {
+    auto ctx = v.context();
+    auto val = v.value();
+    auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
+    if(json_str_val.is_exception()) {
+        throw qjs::Exception(detail::dump(ctx));
+    }
+
+    const char* json_cstr = JS_ToCString(ctx, json_str_val.value());
+    if(json_cstr) {
+        std::string result{json_cstr};
+        JS_FreeCString(ctx, json_cstr);
+        return result;
+    }
+    throw qjs::Exception("Failed to stringify value");
 };  // namespace json
+
+inline qjs::Value parse(const std::string& json_str, JSContext* ctx) {
+
+    auto ret = qjs::Value{ctx, JS_ParseJSON(ctx, json_str.data(), json_str.size(), "<json input>")};
+
+    if(ret.is_exception()) {
+        throw qjs::Exception(detail::dump(ctx));
+    }
+    return ret;
+}
+}  // namespace json
 
 }  // namespace catter::qjs

@@ -105,7 +105,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
         auto reject = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;
             for(auto& arg: args) {
-                error_strace += arg.stringify() + "\n";
+                error_strace += std::format("{}\n", qjs::json::stringify(arg));
             }
         });
 

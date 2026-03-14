@@ -1,6 +1,7 @@
 #pragma once
 #include <ranges>
 #include <filesystem>
+#include <iostream>
 #include "spdlog/spdlog.h"
 
 /**
@@ -42,5 +43,32 @@ inline std::string to_hex(const Range& range, size_t max_bytes = 0) {
     }
     hex_str.pop_back();  // Remove the trailing space
     return hex_str;
+}
+
+inline std::string escape(const std::string& input) {
+    std::ostringstream result;
+    for(char c: input) {
+        switch(c) {
+            case '\\': result << "\\\\"; break;
+            case '"': result << "\\\""; break;
+            case '\'': result << "\\'"; break;
+            case '\n': result << "\\n"; break;
+            case '\r': result << "\\r"; break;
+            case '\t': result << "\\t"; break;
+            case '\b': result << "\\b"; break;
+            case '\f': result << "\\f"; break;
+            case '\v': result << "\\v"; break;
+            case '\0': result << "\\0"; break;
+            default:
+                if(static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) > 0x7E) {
+                    result << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+                           << static_cast<int>(static_cast<unsigned char>(c));
+                } else {
+                    result << c;
+                }
+                break;
+        }
+    }
+    return result.str();
 }
 }  // namespace catter::log

@@ -13,6 +13,10 @@
 
 #include "qjs.h"
 
+namespace catter::capi::util {
+std::filesystem::path absolute_of(std::string js_path);
+}  // namespace catter::capi::util
+
 namespace catter::apitool {
 using api_register = void (*)(const catter::qjs::CModule&, const catter::qjs::Context&);
 
@@ -36,19 +40,13 @@ using without_first_param_t =
 template <typename T>
 std::string serialize_value(const T& value) {
     using U = std::remove_cvref_t<T>;
-    if constexpr(std::is_same_v<U, bool>) {
-        return value ? "true" : "false";
+    if constexpr(std::is_same_v<U, bool> || std::is_integral_v<U>) {
+        return std::format("{}", value);
     } else if constexpr(std::is_same_v<U, std::string>) {
-        return std::format("\"{}\"", value);
-    } else if constexpr(std::is_integral_v<U>) {
-        if constexpr(std::is_signed_v<U>) {
-            return std::to_string(static_cast<int64_t>(value));
-        } else {
-            return std::to_string(static_cast<uint64_t>(value));
-        }
+        return std::format("\"{}\"", catter::log::escape(value));
     } else if constexpr(std::is_same_v<U, catter::qjs::Object>) {
         try {
-            return catter::qjs::Value::from(value).stringify();
+            return qjs::json::stringify(value);
         } catch(const std::exception& e) {
             return std::format("<object stringify failed: {}>", e.what());
         }
@@ -57,44 +55,17 @@ std::string serialize_value(const T& value) {
     }
 }
 
-template <typename... Args>
-std::string serialize_args(const Args&... args) {
-    std::string result{"["};
-    bool first = true;
-    auto append_one = [&](const auto& arg) {
-        if(!first) {
-            result += ", ";
-        }
-        result += serialize_value(arg);
-        first = false;
-    };
-    (append_one(args), ...);
-    result += "]";
-    return result;
+template <typename T, typename... Args>
+std::string serialize_args(const T& first, const Args&... args) {
+    std::string first_s = serialize_value(first);
+    std::string args_s = "";
+    ((args_s += ", " + serialize_value(args)), ...);
+    return std::format("[{}{}]", first_s, args_s);
 }
 
-inline std::string serialize_js_value(JSContext* ctx, JSValueConst value) {
-    try {
-        return catter::qjs::Value{ctx, value}.stringify();
-    } catch(const std::exception& e) {
-        return std::format("<jsvalue stringify failed: {}>", e.what());
-    }
+inline std::string serialize_args() {
+    return "[]";
 }
-
-inline std::string serialize_bare_args(JSContext* ctx, int argc, JSValueConst* argv) {
-    std::string result{"["};
-    for(int i = 0; i < argc; ++i) {
-        if(i != 0) {
-            result += ", ";
-        }
-        result += serialize_js_value(ctx, argv[i]);
-    }
-    result += "]";
-    return result;
-}
-
-template <auto Fn>
-struct hooked;
 
 template <auto Fn>
 constexpr std::string_view capi_name() {
@@ -102,65 +73,51 @@ constexpr std::string_view capi_name() {
     return std::string_view{name.data(), name.size()};
 }
 
-template <typename R, typename... Args, R (*Fn)(Args...)>
-struct hooked<Fn> {
-    static R call(Args... args) {
-        const auto args_s = serialize_args(args...);
-        try {
-            if constexpr(std::is_void_v<R>) {
-                Fn(std::forward<Args>(args)...);
-                LOG_INFO("capi {} args={} ret=<void>", capi_name<Fn>(), args_s);
-                return;
-            } else {
-                auto ret = Fn(std::forward<Args>(args)...);
-                LOG_INFO("capi {} args={} ret={}", capi_name<Fn>(), args_s, serialize_value(ret));
-                return ret;
-            }
-        } catch(const std::exception& e) {
-            LOG_INFO("capi {} args={} throw={}", capi_name<Fn>(), args_s, e.what());
-            throw;
-        }
-    }
+template <decltype(auto) V, typename Sign = std::remove_pointer_t<decltype(V)>>
+struct hooked {
+    static_assert(eventide::dependent_false<Sign>, "Unsupported function signature for hooking");
 };
 
-template <typename R, typename... Args, R (*Fn)(JSContext*, Args...)>
-struct hooked<Fn> {
-    static R call(JSContext* ctx, Args... args) {
-        const auto args_s = serialize_args(args...);
-        try {
-            if constexpr(std::is_void_v<R>) {
-                Fn(ctx, std::forward<Args>(args)...);
-                LOG_INFO("capi {} args={} ret=<void>", capi_name<Fn>(), args_s);
-                return;
-            } else {
-                auto ret = Fn(ctx, std::forward<Args>(args)...);
-                LOG_INFO("capi {} args={} ret={}", capi_name<Fn>(), args_s, serialize_value(ret));
-                return ret;
-            }
-        } catch(const std::exception& e) {
-            LOG_INFO("capi {} args={} throw={}", capi_name<Fn>(), args_s, e.what());
-            throw;
-        }
-    }
-};
-
-template <JSValue (*Fn)(JSContext*, JSValueConst, int, JSValueConst*)>
-struct hooked<Fn> {
-    static JSValue call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        const auto args_s = serialize_bare_args(ctx, argc, argv);
-        try {
-            auto ret = Fn(ctx, this_val, argc, argv);
-            LOG_INFO("capi {} args={} ret={}",
-                     capi_name<Fn>(),
+template <auto V, typename R, typename... CallArgs>
+static R invoke_with_log(const std::string& args_s, CallArgs&&... call_args) {
+    try {
+        if constexpr(std::is_void_v<R>) {
+            V(std::forward<CallArgs>(call_args)...);
+            LOG_INFO("Invoke C API [{}]:\n    -> args = {}\n    -> ret = <void>",
+                     capi_name<V>(),
+                     args_s);
+            return;
+        } else {
+            auto ret = V(std::forward<CallArgs>(call_args)...);
+            LOG_INFO("Invoke C API [{}]:\n    -> args = {}\n    -> ret = {}",
+                     capi_name<V>(),
                      args_s,
-                     serialize_js_value(ctx, ret));
+                     serialize_value(ret));
             return ret;
-        } catch(const std::exception& e) {
-            LOG_INFO("capi {} args={} throw={}", capi_name<Fn>(), args_s, e.what());
-            throw;
         }
+    } catch(const std::exception& e) {
+        LOG_INFO("Invoke C API [{}]:\n    -> args = {}\n    -> throw = {}",
+                 capi_name<V>(),
+                 args_s,
+                 e.what());
+        throw;
+    }
+}
+
+template <auto V, typename R, typename... Args>
+struct hooked<V, R(Args...)> {
+    static R call(Args... args) {
+        return invoke_with_log<V, R>(serialize_args(args...), std::forward<Args>(args)...);
     }
 };
+
+template <auto V, typename R, typename... Args>
+struct hooked<V, R(JSContext*, Args...)> {
+    static R call(JSContext* ctx, Args... args) {
+        return invoke_with_log<V, R>(serialize_args(args...), ctx, std::forward<Args>(args)...);
+    }
+};
+
 }  // namespace catter::apitool
 
 #define TO_JS_FN(func)                                                                             \
@@ -198,20 +155,3 @@ struct hooked<Fn> {
         return 0;                                                                                  \
     }();                                                                                           \
     auto NAME OTHER
-
-// CAPI(function sign)
-#define BARE_CAPI(ARGC, NAME)                                                                      \
-    auto NAME(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) -> JSValue;     \
-    static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
-                                        const catter::qjs::Context& ctx) {                         \
-        mod.export_bare_functor(#NAME, catter::apitool::hooked<NAME>::call, ARGC);                 \
-    }                                                                                              \
-    static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
-        catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \
-        return 0;                                                                                  \
-    }();                                                                                           \
-    auto NAME(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) -> JSValue
-
-namespace catter::capi::util {
-std::filesystem::path absolute_of(std::string js_path);
-}  // namespace catter::capi::util
