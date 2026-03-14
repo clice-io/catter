@@ -113,6 +113,15 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
                                               qjs::Object::from(resolve),
                                               qjs::Object::from(reject));
 
+        auto catch_fn = CallBack::from(js_ctx, [&](qjs::Parameters args) {
+            state = Rejected;
+            for(auto& arg: args) {
+                error_strace += std::format("{}\n", qjs::json::stringify(arg));
+            }
+        });
+
+        promise_obj["catch"].as<Catch>().invoke(promise_obj, qjs::Object::from(catch_fn));
+
         int err;
         JSContext* ctx1;
 
