@@ -164,7 +164,7 @@ TEST_SUITE(qjs_tests) {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
 
-            auto object = ctx.eval("({ existing: 1 })", "<eval>", eval_flags).as<qjs::Object>();
+            auto object = qjs::json::parse(R"({"existing":1})", ctx).as<qjs::Object>();
 
             object.set_property("number", int64_t{42});
             object.set_property("flag", true);
@@ -233,7 +233,7 @@ TEST_SUITE(qjs_tests) {
         auto runtime = qjs::Runtime::create();
         auto& ctx = runtime.context();
 
-        auto not_an_array = ctx.eval("({ length: 1 })", "<eval>", eval_flags).as<qjs::Object>();
+        auto not_an_array = qjs::json::parse(R"({"length":1})", ctx).as<qjs::Object>();
         EXPECT_TRUE(throws_with_message([&]() { (void)not_an_array.as<qjs::Array<int64_t>>(); },
                                         "Object is not an array"));
 
@@ -303,7 +303,7 @@ TEST_SUITE(qjs_tests) {
             EXPECT_TRUE(add_one(9) == 10);
             EXPECT_TRUE(add_two(9) == 11);
 
-            auto object_arg = ctx.eval("({ value: 33 })", "<eval>", eval_flags).as<qjs::Object>();
+            auto object_arg = qjs::json::parse(R"({"value":33})", ctx).as<qjs::Object>();
             EXPECT_TRUE(object_arg.get_property("value").as<int64_t>() == 33);
             EXPECT_TRUE(ctx.eval("readValue({ value: 44 })", "<eval>", eval_flags).as<int64_t>() ==
                         44);
@@ -348,7 +348,7 @@ TEST_SUITE(qjs_tests) {
             [&]() { (void)single_arg_js_function.as<qjs::Function<int64_t(int64_t, int64_t)>>(); },
             "incorrect number of arguments"));
 
-        auto plain_object = ctx.eval("({ value: 1 })", "<eval>", eval_flags).as<qjs::Object>();
+        auto plain_object = qjs::json::parse(R"({"value":1})", ctx).as<qjs::Object>();
         EXPECT_TRUE(
             throws_with_message([&]() { (void)plain_object.as<qjs::Function<int64_t()>>(); },
                                 "Object is not a function"));
@@ -473,7 +473,7 @@ TEST_SUITE(qjs_tests) {
         auto runtime = qjs::Runtime::create();
         auto& ctx = runtime.context();
 
-        auto plain_object = ctx.eval("({ value: 1 })", "<eval>", eval_flags).as<qjs::Object>();
+        auto plain_object = qjs::json::parse(R"({"value":1})", ctx).as<qjs::Object>();
         EXPECT_TRUE(throws_with_message(
             [&]() { (void)plain_object.as<qjs::Function<int64_t(qjs::Parameters)>>(); },
             "Object is not a function"));

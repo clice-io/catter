@@ -1559,12 +1559,14 @@ std::string stringify(T&& v) {
     throw qjs::Exception("Failed to stringify value");
 };  // namespace json
 
-inline qjs::Value parse(const std::string& json_str, JSContext* ctx) {
+inline qjs::Value parse(const std::string& json_str, const Context& ctx) {
 
-    auto ret = qjs::Value{ctx, JS_ParseJSON(ctx, json_str.data(), json_str.size(), "<json input>")};
+    auto ret = qjs::Value{
+        ctx.js_context(),
+        JS_ParseJSON(ctx.js_context(), json_str.data(), json_str.size(), "<json input>")};
 
     if(ret.is_exception()) {
-        throw qjs::Exception(detail::dump(ctx));
+        throw qjs::Exception(detail::dump(ctx.js_context()));
     }
     return ret;
 }
