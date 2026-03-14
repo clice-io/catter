@@ -940,22 +940,20 @@ public:
                       "Unsupported array element type for array_trans");
     };
 
-    template <typename R>
-        requires std::ranges::range<R> && std::same_as<T, std::ranges::range_value_t<R>>
-    struct array_trans<R> {
-        static Array<T> from(JSContext* ctx, const R& range) noexcept {
-            using Range = std::remove_cvref_t<R>;
-            auto size = std::ranges::size(range);
+    template <>
+    struct array_trans<std::vector<T>> {
+        static Array<T> from(JSContext* ctx, const std::vector<T>& vec) noexcept {
             std::vector<JSValue> js_values;
-            js_values.reserve(size);
-            for(auto&& item: range) {
+            js_values.reserve(vec.size());
+            for(auto&& item: vec) {
                 js_values.push_back(qjs::Value::from(ctx, item).release());
             }
-            return Array<T>{ctx, JS_NewArrayFrom(ctx, static_cast<int>(size), js_values.data())};
+            return Array<T>{ctx,
+                            JS_NewArrayFrom(ctx, static_cast<int>(vec.size()), js_values.data())};
         }
 
-        static R as(const Array<T>& arr) {
-            R result;
+        static std::vector<T> as(const Array<T>& arr) {
+            std::vector<T> result;
             uint32_t len = arr.length();
             for(uint32_t i = 0; i < len; ++i) {
                 result.push_back(arr[i]);
@@ -963,9 +961,9 @@ public:
             return result;
         }
 
-        static std::optional<R> to(const Array<T>& arr) noexcept {
+        static std::optional<std::vector<T>> to(const Array<T>& arr) noexcept {
             try {
-                R result;
+                std::vector<T> result;
                 uint32_t len = arr.length();
                 for(uint32_t i = 0; i < len; ++i) {
                     result.push_back(arr[i]);
