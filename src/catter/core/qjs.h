@@ -940,8 +940,9 @@ public:
                       "Unsupported array element type for array_trans");
     };
 
-    template <>
-    struct array_trans<std::vector<T>> {
+    template <typename TT>
+        requires std::same_as<TT, T>
+    struct array_trans<std::vector<TT>> {
         static Array<T> from(JSContext* ctx, const std::vector<T>& vec) noexcept {
             std::vector<JSValue> js_values;
             js_values.reserve(vec.size());

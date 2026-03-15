@@ -109,9 +109,9 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
             }
         });
 
-        promise_obj["then"].as<Then>().invoke(promise_obj,
-                                              qjs::Object::from(resolve),
-                                              qjs::Object::from(reject));
+        auto then_promise = promise_obj["then"].as<Then>().invoke(promise_obj,
+                                                                  qjs::Object::from(resolve),
+                                                                  qjs::Object::from(reject));
 
         auto catch_fn = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;
@@ -120,7 +120,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
             }
         });
 
-        promise_obj["catch"].as<Catch>().invoke(promise_obj, qjs::Object::from(catch_fn));
+        then_promise["catch"].as<Catch>().invoke(then_promise, qjs::Object::from(catch_fn));
 
         int err;
         JSContext* ctx1;

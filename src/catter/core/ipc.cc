@@ -107,7 +107,7 @@ eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pi
 
     auto sm_packet = co_await channel.read_packet();
     if(!sm_packet) {
-        std::println("Client disconnected before sending service mode");
+        LOG_INFO("Client disconnected before sending service mode");
         co_return;
     }
 
@@ -117,7 +117,7 @@ eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pi
     while(true) {
         auto req_packet = co_await channel.read_packet();
         if(!req_packet) {
-            std::println("Client disconnected");
+            LOG_INFO("Client disconnected");
             break;
         }
 
@@ -130,7 +130,10 @@ eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pi
 
         auto response = DispatcherType::dispatch(*service, buf_reader);
         if(response.has_value()) {
-            co_await channel.write_packet(*response);
+            if(!co_await channel.write_packet(*response)) {
+                LOG_INFO("Failed to write response packet");
+                break;
+            }
         }
     }
     co_return;
