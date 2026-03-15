@@ -2,6 +2,7 @@
 
 ![C++ Standard](https://img.shields.io/badge/C++-23-blue.svg)
 [![GitHub license](https://img.shields.io/github/license/clice-io/catter)](https://github.com/clice-io/catter/blob/main/LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/clice-io/catter)
 
 > [!IMPORTANT]
 > This project is under active development. Stay tuned for future updates!
