@@ -133,7 +133,7 @@ eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pi
 
         auto response = DispatcherType::dispatch(*service, buf_reader);
         if(response.has_value()) {
-            if(!co_await channel.write_packet(*response)) {
+            if((co_await channel.write_packet(*response)).has_error()) {
                 LOG_INFO("Failed to write response packet");
                 break;
             }
