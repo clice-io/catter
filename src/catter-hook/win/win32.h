@@ -6,6 +6,8 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <chrono>
+#include <stdexcept>
 
 #include <windows.h>
 #include <libloaderapi.h>
@@ -15,51 +17,84 @@
 namespace catter::win {
 class Handle {
 public:
-    Handle(HANDLE handle) : h(handle) {}
+    Handle(HANDLE handle = nullptr) : h(handle) {}
+
+    ~Handle() {
+        close();
+    }
 
     Handle(const Handle&) = delete;
-
-    Handle(Handle&& other) noexcept : h(std::exchange(other.h, INVALID_HANDLE_VALUE)) {}
-
     Handle& operator= (const Handle&) = delete;
+
+    Handle(Handle&& other) noexcept : h(std::exchange(other.h, nullptr)) {}
 
     Handle& operator= (Handle&& other) noexcept {
         if(this != &other) {
-            this->~Handle();
-            new (this) Handle(std::move(other));
+            close();
+            h = std::exchange(other.h, nullptr);
         }
         return *this;
     }
 
-    ~Handle() {
-        if(h != INVALID_HANDLE_VALUE && h != NULL) {
-            CloseHandle(h);
-        }
+    explicit operator bool() const noexcept {
+        return this->valid();
     }
 
-    operator HANDLE() const {
-        return h;
+    bool valid() const noexcept {
+        return h != nullptr && h != INVALID_HANDLE_VALUE;
     }
 
-    HANDLE get() const {
+    HANDLE get() const noexcept {
         return h;
     }
 
 private:
+    void close() noexcept {
+        if(this->valid()) {
+            CloseHandle(h);
+        }
+    }
+
     HANDLE h;
 };
 
-template <typename Invokable>
-class Gaurd {
+class RemoteMemory {
 public:
-    explicit Gaurd(Invokable invokable) : invokable(std::move(invokable)) {}
+    RemoteMemory(HANDLE hProcess,
+                 LPVOID lpAddress,
+                 SIZE_T dwSize,
+                 DWORD flAllocationType,
+                 DWORD flProtect) : process(hProcess) {
+        space = VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
+        if(!space)
+            throw std::runtime_error("VirtualAllocEx failed");
+    }
 
-    Gaurd(const Gaurd&) = delete;
-    Gaurd(Gaurd&&) = delete;
-    Gaurd& operator= (const Gaurd&) = delete;
-    Gaurd& operator= (Gaurd&&) = delete;
+    ~RemoteMemory() {
+        if(space)
+            VirtualFreeEx(process, space, 0, MEM_RELEASE);
+    }
 
-    ~Gaurd() {
+    LPVOID get() const {
+        return space;
+    }
+
+private:
+    HANDLE process;
+    LPVOID space;
+};
+
+template <typename Invokable>
+class Guard {
+public:
+    explicit Guard(Invokable invokable) : invokable(std::move(invokable)) {}
+
+    Guard(const Guard&) = delete;
+    Guard(Guard&&) = delete;
+    Guard& operator= (const Guard&) = delete;
+    Guard& operator= (Guard&&) = delete;
+
+    ~Guard() {
         invokable();
     }
 
@@ -69,8 +104,8 @@ private:
 
 template <typename Invokable, typename R = std::remove_reference_t<Invokable>>
     requires std::is_invocable_v<Invokable> && std::is_nothrow_invocable_v<Invokable>
-Gaurd<R> make_gaurd(Invokable&& invokable) {
-    return Gaurd<R>(std::forward<Invokable>(invokable));
+Guard<R> make_guard(Invokable&& invokable) {
+    return Guard<R>(std::forward<Invokable>(invokable));
 }
 
 template <typename F>
@@ -93,15 +128,17 @@ F* get_function_from_ntdll(const char* name) {
     return fn;
 }
 
-inline void wait_for_object(HANDLE handle, std::string_view action) {
-    const auto wait_result = WaitForSingleObject(handle, INFINITE);
-    if(wait_result == WAIT_OBJECT_0) {
-        return;
+inline std::error_code wait_for_object(HANDLE handle,
+                                       std::chrono::milliseconds ms = std::chrono::milliseconds{
+                                           INFINITE}) {
+
+    switch(WaitForSingleObject(handle, static_cast<DWORD>(ms.count()))) {
+        case WAIT_OBJECT_0: return {};
+
+        case WAIT_TIMEOUT: return std::make_error_code(std::errc::timed_out);
+        case WAIT_FAILED:
+        default: return std::error_code(GetLastError(), std::system_category());
     }
-    if(wait_result == WAIT_FAILED) {
-        throw std::system_error(GetLastError(), std::system_category(), std::string(action));
-    }
-    throw std::runtime_error(std::string(action));
 }
 
 inline std::string quote_win32_arg(std::string_view arg) noexcept {
