@@ -78,7 +78,7 @@ unit-test = "xmake test --verbose"
 integration-test = "lit ./tests/integration -sav"
 ut = [{ task = "unit-test"}]
 it = [{ task = "integration-test"}]
-test = [{ task = "ut"},{ task = "it"}]
+test = [{task = "build"},{ task = "ut"},{ task = "it"}]
 
 [environments]
 dev = ["dev"]

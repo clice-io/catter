@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <print>
-#include <span>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -13,6 +12,7 @@
 #include "util/log.h"
 #include "util/data.h"
 #include "util/eventide.h"
+#include "util/packet_io.h"
 
 namespace catter::proxy::ipc {
 using namespace data;
@@ -27,7 +27,7 @@ public:
             std::println("pipe connect failed: {}", ret.error().message());
             std::terminate();
         }
-        this->client_pipe = std::move(ret.value());
+        this->channel = PacketChannel(std::move(ret.value()));
     };
 
     Impl(const Impl&) = delete;
@@ -37,36 +37,11 @@ public:
     ~Impl() = default;
 
 private:
-    void read(char* dst, size_t len) {
-        size_t total_read = 0;
-        while(total_read < len) {
-            auto ret = wait(this->client_pipe.read_some({dst + total_read, len - total_read}));
-            if(!ret) {
-                throw std::runtime_error(
-                    std::format("ipc_handler read failed: {}", ret.error().message()));
-            }
-
-            if(ret.value() == 0) {
-                throw std::runtime_error("ipc_handler read failed: EOF");
-            }
-
-            total_read += ret.value();
-        }
-        LOG_DEBUG("Reading {} bytes: {}", len, log::to_hex(std::span<char>(dst, len)));
-    }
-
-    void write(const std::vector<char>& payload) {
-        LOG_DEBUG("Writing {} bytes: {}", payload.size(), log::to_hex(payload));
-        auto err = wait(this->client_pipe.write(payload));
+    void write_packet_checked(const std::vector<char>& payload) {
+        auto err = wait(channel.write_packet(payload));
         if(err.has_error()) {
             throw std::runtime_error(std::format("ipc_handler write failed: {}", err.message()));
         }
-    }
-
-    auto reader() {
-        return [this](char* dst, size_t len) {
-            this->read(dst, len);
-        };
     }
 
 public:
@@ -76,11 +51,15 @@ public:
     }
 
     void write_packet(const std::vector<char>& payload) {
-        this->write(Serde<packet>::serialize(payload));
+        write_packet_checked(payload);
     }
 
     packet read_packet() {
-        return Serde<packet>::deserialize(reader());
+        auto result = wait(channel.read_packet());
+        if(!result) {
+            throw std::runtime_error("ipc_handler read failed: EOF");
+        }
+        return std::move(*result);
     }
 
     template <typename T>
@@ -120,7 +99,7 @@ public:
     }
 
 private:
-    eventide::pipe client_pipe{};
+    PacketChannel channel{};
 };
 
 void set_service_mode(ServiceMode mode) {
