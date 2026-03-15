@@ -31,13 +31,16 @@ template <auto... MemFns>
 struct Dispatcher {
     using Class = std::common_type_t<typename eventide::mem_fn<MemFns>::ClassType...>;
 
-    constexpr static auto Tuple = std::make_tuple(MemFns...);
+    template<size_t I>
+    static constexpr auto get() {
+        return std::get<I>(std::make_tuple(MemFns...));
+    }
 
     template <Request Req>
     static consteval auto match_mem_fn() {
         constexpr auto idx = []<size_t I>(this auto self, std::in_place_index_t<I>) {
             if constexpr(I < sizeof...(MemFns)) {
-                using Fn = eventide::mem_fn<std::get<I>(Tuple)>::FunctionType;
+                using Fn = eventide::mem_fn<get<I>()>::FunctionType;
                 if constexpr(std::same_as<Fn, RequestType<Req>>) {
                     return I;
                 } else {
@@ -50,7 +53,7 @@ struct Dispatcher {
         if constexpr(idx == static_cast<size_t>(-1)) {
             return nullptr;
         } else {
-            return std::get<idx>(Tuple);
+            return get<idx>();
         }
     }
 

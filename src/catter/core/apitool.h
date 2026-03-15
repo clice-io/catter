@@ -70,7 +70,7 @@ constexpr std::string_view capi_name() {
     return std::string_view{name.data(), name.size()};
 }
 
-template <decltype(auto) V, typename Sign = std::remove_pointer_t<decltype(V)>>
+template <auto V, typename Sign = std::remove_pointer_t<decltype(V)>>
 struct hooked {
     static_assert(eventide::dependent_false<Sign>, "Unsupported function signature for hooking");
 };
