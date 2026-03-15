@@ -15,8 +15,6 @@
 #include "util/log.h"
 #include "win/win32.h"
 
-#include "win/win32.h"
-
 using namespace std::literals;
 
 namespace catter::proxy::hook {

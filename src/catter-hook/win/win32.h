@@ -60,6 +60,8 @@ private:
 
 class RemoteMemory {
 public:
+    RemoteMemory() = default;
+
     RemoteMemory(HANDLE hProcess,
                  LPVOID lpAddress,
                  SIZE_T dwSize,
@@ -70,9 +72,27 @@ public:
             throw std::runtime_error("VirtualAllocEx failed");
     }
 
+    RemoteMemory(const RemoteMemory&) = delete;
+
+    RemoteMemory(RemoteMemory&& other) noexcept :
+        process(std::exchange(other.process, nullptr)), space(std::exchange(other.space, nullptr)) {
+    }
+
+    RemoteMemory& operator= (const RemoteMemory&) = delete;
+
+    RemoteMemory& operator= (RemoteMemory&& other) noexcept {
+        if(this != &other) {
+            this->~RemoteMemory();
+            process = std::exchange(other.process, nullptr);
+            space = std::exchange(other.space, nullptr);
+        }
+        return *this;
+    }
+
     ~RemoteMemory() {
-        if(space)
+        if(space && process) {
             VirtualFreeEx(process, space, 0, MEM_RELEASE);
+        }
     }
 
     LPVOID get() const {
@@ -80,8 +100,8 @@ public:
     }
 
 private:
-    HANDLE process;
-    LPVOID space;
+    HANDLE process = nullptr;
+    LPVOID space = nullptr;
 };
 
 template <typename Invokable>
