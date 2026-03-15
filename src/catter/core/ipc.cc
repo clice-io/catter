@@ -31,8 +31,8 @@ template <auto... MemFns>
 struct Dispatcher {
     using Class = std::common_type_t<typename eventide::mem_fn<MemFns>::ClassType...>;
 
-    template<size_t I>
-    static constexpr auto get() {
+    template <size_t I>
+    constexpr static auto get() {
         return std::get<I>(std::make_tuple(MemFns...));
     }
 
