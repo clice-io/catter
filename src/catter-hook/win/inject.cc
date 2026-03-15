@@ -125,8 +125,10 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
     for(auto method: eventide::refl::reflection<InjectMethod>::member_values) {
         try {
             auto thread = inject(hProcess, Space.get(), method);
-            if(auto error = win::wait_for_object(thread.get(), 3s);error) {
-                throw std::system_error(error.value(), std::system_category(), "Failed to wait for remote thread");
+            if(auto error = win::wait_for_object(thread.get(), 3s); error) {
+                throw std::system_error(error.value(),
+                                        std::system_category(),
+                                        "Failed to wait for remote thread");
             }
             DWORD remote_exit_code = 0;
             if(!GetExitCodeThread(thread.get(), &remote_exit_code)) {
@@ -145,4 +147,4 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
     }
     return false;
 }
-}
+}  // namespace catter::proxy::hook
