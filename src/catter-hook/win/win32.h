@@ -82,17 +82,22 @@ public:
 
     RemoteMemory& operator= (RemoteMemory&& other) noexcept {
         if(this != &other) {
-            this->~RemoteMemory();
-            process = std::exchange(other.process, nullptr);
-            space = std::exchange(other.space, nullptr);
+            this->free();
+            this->process = std::exchange(other.process, nullptr);
+            this->space = std::exchange(other.space, nullptr);
         }
         return *this;
     }
 
-    ~RemoteMemory() {
-        if(space && process) {
+    void free() {
+        if(this->space && this->process) {
             VirtualFreeEx(process, space, 0, MEM_RELEASE);
+            space = nullptr;
         }
+    }
+
+    ~RemoteMemory() {
+        this->free();
     }
 
     LPVOID get() const {
