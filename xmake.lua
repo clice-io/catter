@@ -8,17 +8,30 @@ set_languages("c++23")
 option("dev", {default = true})
 option("test", {default = false})
 
+local function add_prefix_includedirs(prefix)
+    local include_candidates = {
+        path.join(prefix, "include"),
+        path.join(prefix, "Library", "include"),
+    }
+
+    for _, includedir in ipairs(include_candidates) do
+        if os.isdir(includedir) then
+            add_includedirs(includedir)
+        end
+    end
+end
+
 local conda_prefix = os.getenv("CONDA_PREFIX")
 if conda_prefix then
-    add_includedirs(path.join(conda_prefix, "include"))
+    add_prefix_includedirs(conda_prefix)
 else
-    local pixi_dev_include = path.join(os.projectdir(), ".pixi", "envs", "dev", "include")
-    local pixi_default_include = path.join(os.projectdir(), ".pixi", "envs", "default", "include")
+    local pixi_dev_prefix = path.join(os.projectdir(), ".pixi", "envs", "dev")
+    local pixi_default_prefix = path.join(os.projectdir(), ".pixi", "envs", "default")
 
-    if os.isdir(pixi_dev_include) then
-        add_includedirs(pixi_dev_include)
-    elseif os.isdir(pixi_default_include) then
-        add_includedirs(pixi_default_include)
+    if os.isdir(pixi_dev_prefix) then
+        add_prefix_includedirs(pixi_dev_prefix)
+    elseif os.isdir(pixi_default_prefix) then
+        add_prefix_includedirs(pixi_default_prefix)
     end
 end
 
