@@ -53,6 +53,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lld-20.1.8-hef48ded_1.conda
       - conda: https://clice-io.github.io/conda-channel/linux-64/llvm-filecheck-21.1.8-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvm-openmp-22.1.0-h4922eb0_0.conda
+      - conda: https://clice-io.github.io/conda-channel/linux-64/llvm-option-inc-20.1.8-hbbc2723_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvm-tools-20-20.1.8-h3b15d91_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvm-tools-20.1.8-hb700be7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.5-h2d0b736_3.conda
@@ -111,6 +112,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lld-20.1.8-ha4b1419_1.conda
       - conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-filecheck-20.1.8-he72d45a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-openmp-22.1.0-hc7d1edf_0.conda
+      - conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-option-inc-20.1.8-h56ddf70_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20-20.1.8-h91fd4e7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20.1.8-h855ad52_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_3.conda
@@ -156,6 +158,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/lit-22.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/lld-20.1.8-hc465015_1.conda
       - conda: https://clice-io.github.io/conda-channel/win-64/llvm-filecheck-21.1.8-h778b820_0.conda
+      - conda: https://clice-io.github.io/conda-channel/win-64/llvm-option-inc-20.1.8-h778b820_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/llvm-tools-20.1.8-h752b59f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-24.4.0-he453025_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.1-hf411b9b_1.conda
@@ -208,6 +211,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/libstdcxx-devel_linux-64-14.2.0-h9c4974d_102.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libuv-1.51.0-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.1-hb9d3cd8_2.conda
+      - conda: https://clice-io.github.io/conda-channel/linux-64/llvm-option-inc-20.1.8-hbbc2723_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nodejs-22.21.1-h273caaf_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.6.1-h35e630c_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pnpm-10.29.2-h52a9d3b_0.conda
@@ -248,6 +252,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libzlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lld-20.1.8-ha4b1419_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-openmp-21.1.8-h4a912ad_0.conda
+      - conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-option-inc-20.1.8-h56ddf70_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20-20.1.8-h91fd4e7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20.1.8-h855ad52_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_3.conda
@@ -258,6 +263,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tapi-1600.0.11.8-h997e182_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       win-64:
+      - conda: https://clice-io.github.io/conda-channel/win-64/llvm-option-inc-20.1.8-h778b820_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-22.21.1-he453025_2.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pnpm-10.29.2-hd8ca5cc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/ucrt-10.0.26100.0-h57928b3_0.conda
@@ -306,6 +312,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/lit-21.1.8-pyhd8ed1ab_0.conda
       - conda: https://clice-io.github.io/conda-channel/linux-64/llvm-filecheck-21.1.8-hb0f4dca_0.conda
+      - conda: https://clice-io.github.io/conda-channel/linux-64/llvm-option-inc-20.1.8-hbbc2723_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.5-h2d0b736_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/nodejs-24.4.0-heeeca48_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openssl-3.6.1-h35e630c_1.conda
@@ -360,6 +367,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lld-20.1.8-ha4b1419_1.conda
       - conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-filecheck-20.1.8-he72d45a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-openmp-21.1.8-h4a912ad_0.conda
+      - conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-option-inc-20.1.8-h56ddf70_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20-20.1.8-h91fd4e7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/llvm-tools-20.1.8-h855ad52_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_3.conda
@@ -394,6 +402,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/libzlib-1.3.1-h2466b09_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/lit-21.1.8-pyhd8ed1ab_0.conda
       - conda: https://clice-io.github.io/conda-channel/win-64/llvm-filecheck-21.1.8-h778b820_0.conda
+      - conda: https://clice-io.github.io/conda-channel/win-64/llvm-option-inc-20.1.8-h778b820_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-24.4.0-he453025_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.1-hf411b9b_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pnpm-10.13.1-h785286a_1.conda
@@ -2011,6 +2020,34 @@ packages:
   purls: []
   size: 285558
   timestamp: 1772028716784
+- conda: https://clice-io.github.io/conda-channel/linux-64/llvm-option-inc-20.1.8-hbbc2723_0.conda
+  sha256: db9f55c67a3f37c177e80cfd6758b098a17bd4a575bf42b801a81f8540373a1d
+  md5: 57b9e7a95683db359a4cac1ae61e1ad1
+  depends:
+  - libstdcxx >=14
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  license: Apache-2.0 WITH LLVM-exception
+  size: 182479
+  timestamp: 1770993109612
+- conda: https://clice-io.github.io/conda-channel/osx-arm64/llvm-option-inc-20.1.8-h56ddf70_0.conda
+  sha256: 2182259317a3b21e351ba6ea4257f0b0bc01f84220820b9ca60e37338b2f9194
+  md5: c540eee18ea0ee69979e90dbd92e8c54
+  depends:
+  - libcxx >=20
+  license: Apache-2.0 WITH LLVM-exception
+  size: 183625
+  timestamp: 1770993109671
+- conda: https://clice-io.github.io/conda-channel/win-64/llvm-option-inc-20.1.8-h778b820_0.conda
+  sha256: b403f674742a1d4b4334dbd0d2e4e1cc78289f1c175b94e15d74cefdce0f2b4e
+  md5: 277ac1bcc5207c1de37b4fc101b04b53
+  depends:
+  - vc >=14.3
+  - vc14_runtime >=14.44.35208
+  - ucrt >=10.0.20348.0
+  license: Apache-2.0 WITH LLVM-exception
+  size: 182116
+  timestamp: 1770993164888
 - conda: https://conda.anaconda.org/conda-forge/linux-64/llvm-tools-20.1.8-hb700be7_1.conda
   sha256: 153f96ab1ee7d96214a26968c8dc107b96c65ab4d96a302fc602cd84bafc2e0c
   md5: 2339a92546214f7ac54557f674c41e99

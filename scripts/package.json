@@ -2,7 +2,12 @@
   "name": "scripts",
   "version": "1.0.0",
   "description": "",
-  "scripts": {},
+  "scripts": {
+    "generate:llvm-option": "node ./js-gen/generate_llvm_option.mjs",
+    "generate:llvm-option:clang": "pnpm run generate:llvm-option -- clang",
+    "generate:llvm-option:lld": "pnpm run generate:llvm-option -- lld-coff lld-elf lld-macho lld-mingw lld-wasm",
+    "generate:option": "pnpm run generate:llvm-option"
+  },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",

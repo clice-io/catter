@@ -17,12 +17,17 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [dependencies]
 pnpm = "*"
+llvm-option-inc = "==20.1.8"
 
 # Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
 [target.win-64.dependencies]
 vs2022_win-64 = "==19.44.35207"
 vc14_runtime = "==14.44.35208"
 ucrt = "==10.0.26100.0"
+
+[target.win-64.activation.env]
+PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
+CATTER_DEFAULT_TOOLCHAIN = "msvc"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
@@ -36,10 +41,6 @@ lld = "==20.1.8"
 llvm-tools = "==20.1.8"
 compiler-rt = "==20.1.8"
 libcxx = "==20.1.8"
-
-[target.win-64.activation.env]
-PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
-CATTER_DEFAULT_TOOLCHAIN = "msvc"
 
 [target.linux.activation.env]
 PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
@@ -58,8 +59,8 @@ compiler-rt = "==20.1.8"
 
 [feature.clang.tasks.cfg]
 args = [
-  {arg = "mode", choices = ["debug", "release"] },
-  {arg = "toolchain", choices = ["msvc", "clang", "gcc"], default = "clang"},
+  { arg = "mode", choices = ["debug", "release"] },
+  { arg = "toolchain", choices = ["msvc", "clang", "gcc"], default = "clang" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ toolchain }}"""
 
@@ -76,13 +77,13 @@ pre-commit = "*"
 format = "pre-commit run --all-files"
 unit-test = "xmake test --verbose"
 integration-test = "lit ./tests/integration -sav"
-ut = [{ task = "unit-test"}]
-it = [{ task = "integration-test"}]
-test = [{task = "build"},{ task = "ut"},{ task = "it"}]
+ut = [{ task = "unit-test" }]
+it = [{ task = "integration-test" }]
+test = [{ task = "build" }, { task = "ut" }, { task = "it" }]
 
 [environments]
 dev = ["dev"]
-clang = {features = ["dev", "clang"]}
+clang = { features = ["dev", "clang"] }
 
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
@@ -93,8 +94,8 @@ build = "xmake --verbose --diagnosis"
 
 [tasks.cfg]
 args = [
-  {arg = "mode", choices = ["debug", "release"] },
-  {arg = "toolchain", choices = ["msvc", "clang", "gcc", "default"], default = "default"},
+  { arg = "mode", choices = ["debug", "release"] },
+  { arg = "toolchain", choices = ["msvc", "clang", "gcc", "default"], default = "default" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""

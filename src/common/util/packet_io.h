@@ -6,8 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include <eventide/async/stream.h>
-#include <eventide/async/task.h>
+#include <eventide/async/async.h>
 
 #include "util/data.h"
 #include "util/log.h"

@@ -1,3 +1,5 @@
+#include "util/crossplat.h"
+#include "util/log.h"
 #include <string>
 #include <string_view>
 
@@ -17,6 +19,8 @@ int main(int argc, char** argv) {
             continue;
         }
     }
+
+    catter::log::init_logger("ut", catter::util::get_catter_data_path() / "test.log", false);
 
     return eventide::zest::Runner::instance().run_tests(filter);
 }

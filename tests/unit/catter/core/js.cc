@@ -1,10 +1,13 @@
 #include "js.h"
 #include "config/js-test.h"
 #include "temp_file_manager.h"
+#include "util/output.h"
 
+#include <cstdio>
 #include <eventide/zest/macro.h>
 #include <eventide/zest/zest.h>
 
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -34,36 +37,41 @@ void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
 }
 
 void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false) {
-    auto js_path = fs::path(catter::config::data::js_test_path.data());
-    ensure_qjs_initialized(js_path);
+    try {
+        auto js_path = fs::path(catter::config::data::js_test_path.data());
+        ensure_qjs_initialized(js_path);
 
-    if(with_fs_test_env) {
-        auto js_path_res = fs::path(catter::config::data::js_test_res_path.data());
-        catter::TempFileManager manager(js_path_res / "fs-test-env");
+        if(with_fs_test_env) {
+            auto js_path_res = fs::path(catter::config::data::js_test_res_path.data());
+            catter::TempFileManager manager(js_path_res / "fs-test-env");
 
-        std::error_code ec;
-        manager.create("a/tmp.txt", ec, "Alpha!\nBeta!\nKid A;\nend;");
-        if(ec) {
-            throw std::runtime_error("failed to prepare fs test file: a/tmp.txt");
-        }
-        manager.create("b/tmp2.txt", ec, "Ok computer!\n");
-        if(ec) {
-            throw std::runtime_error("failed to prepare fs test file: b/tmp2.txt");
-        }
-        manager.create("c/a.txt", ec);
-        if(ec) {
-            throw std::runtime_error("failed to prepare fs test file: c/a.txt");
-        }
-        manager.create("c/b.txt", ec);
-        if(ec) {
-            throw std::runtime_error("failed to prepare fs test file: c/b.txt");
+            std::error_code ec;
+            manager.create("a/tmp.txt", ec, "Alpha!\nBeta!\nKid A;\nend;");
+            if(ec) {
+                throw std::runtime_error("failed to prepare fs test file: a/tmp.txt");
+            }
+            manager.create("b/tmp2.txt", ec, "Ok computer!\n");
+            if(ec) {
+                throw std::runtime_error("failed to prepare fs test file: b/tmp2.txt");
+            }
+            manager.create("c/a.txt", ec);
+            if(ec) {
+                throw std::runtime_error("failed to prepare fs test file: c/a.txt");
+            }
+            manager.create("c/b.txt", ec);
+            if(ec) {
+                throw std::runtime_error("failed to prepare fs test file: c/b.txt");
+            }
+
+            run_js_file_by_name(js_path, file_name);
+            return;
         }
 
         run_js_file_by_name(js_path, file_name);
-        return;
+    } catch(catter::qjs::Exception& ex) {
+        catter::output::redLn("{}", ex.what());
+        throw ex;
     }
-
-    run_js_file_by_name(js_path, file_name);
 }
 
 }  // namespace
@@ -164,6 +172,37 @@ TEST_SUITE(js_tests) {
             catter::js::on_execution(7, finish_event);
 
             catter::js::on_finish();
+        };
+
+        EXPECT_NOTHROWS(f());
+    };
+
+    TEST_CASE(run_option_parse_capi) {
+        auto f = [&]() {
+            run_basic_js_case("option.js");
+        };
+
+        EXPECT_NOTHROWS(f());
+    };
+
+    TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
+        auto f = [&]() {
+            auto js_path = fs::path(catter::config::data::js_test_path.data());
+            ensure_qjs_initialized(js_path);
+
+            bool caught = false;
+            try {
+                catter::js::run_js_file("await Promise.reject(new Error('async boom'));\n",
+                                        "reject.js");
+            } catch(const catter::qjs::Exception& ex) {
+                caught = true;
+                std::string message = ex.what();
+                EXPECT_TRUE(message.find("Error Message: async boom") != std::string::npos);
+                EXPECT_TRUE(message.find("Stack Trace:") != std::string::npos);
+                EXPECT_TRUE(message.find("reject.js") != std::string::npos);
+            }
+
+            EXPECT_TRUE(caught);
         };
 
         EXPECT_NOTHROWS(f());

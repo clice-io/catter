@@ -5,8 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include <eventide/async/loop.h>
-#include <eventide/async/stream.h>
+#include <eventide/async/async.h>
 
 #include "config/ipc.h"
 #include "util/log.h"

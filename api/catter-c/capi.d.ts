@@ -242,3 +242,65 @@ export function file_write_n(
   buf_size: number,
   buf: ArrayBuffer,
 ): void;
+
+// option
+export type OptionItem = {
+  values: string[];
+  key: string;
+  id: number;
+  unalias?: number;
+  index: number;
+};
+
+export type OptionTable =
+  | "clang"
+  | "lld-coff"
+  | "lld-elf"
+  | "lld-macho"
+  | "lld-mingw"
+  | "lld-wasm"
+  | "nvcc"
+  | "llvm-dlltool"
+  | "llvm-lib";
+
+export enum OptionKindClass {
+  GroupClass = 0,
+  InputClass,
+  UnknownClass,
+  FlagClass,
+  JoinedClass,
+  ValuesClass,
+  SeparateClass,
+  RemainingArgsClass,
+  RemainingArgsJoinedClass,
+  CommaJoinedClass,
+  MultiArgClass,
+  JoinedOrSeparateClass,
+  JoinedAndSeparateClass,
+}
+
+export type OptionInfo = {
+  id: number;
+  prefixedKey: string;
+  kind: OptionKindClass;
+  group: number;
+  alias: number;
+  aliasArgs: string[];
+  flags: number;
+  visibility: number;
+  param: number;
+  help: string;
+  meta_var: string;
+};
+
+export function option_get_info(table: OptionTable, id: number): OptionInfo;
+
+/**
+ *
+ * @param args from argv[1]
+ */
+export function option_parse(
+  table: OptionTable,
+  args: string[],
+  cb: (parseRes: string | OptionItem) => boolean,
+): void;

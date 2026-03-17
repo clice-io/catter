@@ -2,10 +2,7 @@
 #include <stdexcept>
 #include <format>
 
-#include <eventide/async/loop.h>
-#include <eventide/async/stream.h>
-#include <eventide/async/task.h>
-#include <eventide/async/process.h>
+#include <eventide/async/async.h>
 
 #include "config/ipc.h"
 #include "data.h"

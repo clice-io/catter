@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-#include <eventide/async/stream.h>
+#include <eventide/async/async.h>
 
 #include "util/data.h"
 

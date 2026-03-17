@@ -21,9 +21,7 @@
 #include <format>
 #include <print>
 
-#include <eventide/async/process.h>
-#include <eventide/async/stream.h>
-#include <eventide/async/loop.h>
+#include <eventide/async/async.h>
 #include <eventide/reflection/name.h>
 
 #include "session.h"

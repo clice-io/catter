@@ -8,6 +8,21 @@ set_languages("c++23")
 option("dev", {default = true})
 option("test", {default = false})
 
+local conda_prefix = os.getenv("CONDA_PREFIX")
+if conda_prefix then
+    add_includedirs(path.join(conda_prefix, "include"))
+else
+    local pixi_dev_include = path.join(os.projectdir(), ".pixi", "envs", "dev", "include")
+    local pixi_default_include = path.join(os.projectdir(), ".pixi", "envs", "default", "include")
+
+    if os.isdir(pixi_dev_include) then
+        add_includedirs(pixi_dev_include)
+    elseif os.isdir(pixi_default_include) then
+        add_includedirs(pixi_default_include)
+    end
+end
+
+
 if has_config("dev") then
     -- Don't fetch system package
     set_policy("package.install_only", true)
@@ -97,7 +112,7 @@ target("catter-core")
 
     add_files("src/catter/core/**.cc")
 
-    add_files("api/src/*.ts", {always_added = true})
+    add_files("api/src/**.ts", {always_added = true})
     add_rules("build.js", {js_target = "build-js-lib", js_file = "api/output/lib/lib.js"})
 
 target("catter")
@@ -207,7 +222,7 @@ target("ut-catter")
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
     add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
     add_rules("build.js", {js_target = "build-js-test"})
-    add_files("api/src/*.ts", "api/test/*.ts")
+    add_files("api/src/**.ts", "api/test/*.ts")
 
     add_tests("default")
 
@@ -314,7 +329,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("66", "8c2ddef22667a2b6bc09045dad8f93707f839be4")
+    add_versions("73", "a89634c911b440d52beb59f5f7f5890d7f5612a0")
 
     add_deps("libuv 1.52.0")
     add_deps("cpptrace v1.0.4")

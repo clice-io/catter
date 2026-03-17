@@ -7,7 +7,7 @@
 #include <system_error>
 #include <vector>
 
-#include <eventide/async/process.h>
+#include <eventide/async/async.h>
 #include <eventide/deco/runtime.h>
 
 #include "ipc.h"

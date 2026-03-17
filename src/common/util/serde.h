@@ -6,7 +6,7 @@
 #include <vector>
 #include <type_traits>
 
-#include <eventide/async/task.h>
+#include <eventide/async/async.h>
 #include <eventide/reflection/struct.h>
 
 namespace catter {

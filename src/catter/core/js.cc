@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstring>
+#include <print>
 #include <stdexcept>
 
 #include <eventide/reflection/enum.h>
@@ -32,6 +33,65 @@ struct Self {
 
 namespace {
 Self self{};
+
+std::optional<std::string> property_to_string(JSContext* ctx, JSValueConst value, const char* key) {
+    JSValue prop = JS_GetPropertyStr(ctx, value, key);
+    if(JS_IsException(prop)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+        return std::nullopt;
+    }
+
+    std::optional<std::string> result = std::nullopt;
+    if(!JS_IsUndefined(prop) && !JS_IsNull(prop)) {
+        if(const char* str = JS_ToCString(ctx, prop)) {
+            result = str;
+            JS_FreeCString(ctx, str);
+        } else if(JS_HasException(ctx)) {
+            JS_FreeValue(ctx, JS_GetException(ctx));
+        }
+    }
+
+    JS_FreeValue(ctx, prop);
+    return result;
+}
+
+std::string stringify_value(JSContext* ctx, JSValueConst value) {
+    if(const char* str = JS_ToCString(ctx, value)) {
+        std::string result = str;
+        JS_FreeCString(ctx, str);
+        return result;
+    }
+
+    if(JS_HasException(ctx)) {
+        JS_FreeValue(ctx, JS_GetException(ctx));
+    }
+    return "<unprintable value>";
+}
+
+std::string format_rejection_reason(const qjs::Value& value) {
+    auto* ctx = value.context();
+    auto message = property_to_string(ctx, value.value(), "message");
+    auto stack = property_to_string(ctx, value.value(), "stack");
+
+    if(message.has_value() || stack.has_value()) {
+        std::string result;
+        if(message.has_value()) {
+            result += std::format("Error Message: {}\n", *message);
+        }
+        if(stack.has_value()) {
+            result += std::format("Stack Trace:\n{}\n", *stack);
+        }
+        return result;
+    }
+
+    return std::format("{}\n", stringify_value(ctx, value.value()));
+}
+
+void append_rejection_trace(std::string& error_trace, const qjs::Parameters& args) {
+    for(const auto& arg: args) {
+        error_trace += format_rejection_reason(arg);
+    }
+}
 }  // namespace
 
 CatterConfig on_start(CatterConfig config) {
@@ -104,9 +164,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
 
         auto reject = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;
-            for(auto& arg: args) {
-                error_strace += std::format("{}\n", qjs::json::stringify(arg));
-            }
+            append_rejection_trace(error_strace, args);
         });
 
         auto then_promise = promise_obj["then"].as<Then>().invoke(promise_obj,
@@ -115,9 +173,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
 
         auto catch_fn = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;
-            for(auto& arg: args) {
-                error_strace += std::format("{}\n", qjs::json::stringify(arg));
-            }
+            append_rejection_trace(error_strace, args);
         });
 
         then_promise["catch"].as<Catch>().invoke(then_promise, qjs::Object::from(catch_fn));

@@ -11,9 +11,7 @@
 #include <vector>
 
 #include <eventide/common/functional.h>
-#include <eventide/async/process.h>
-#include <eventide/async/stream.h>
-#include <eventide/async/loop.h>
+#include <eventide/async/async.h>
 
 #include "ipc.h"
 #include "util/data.h"
