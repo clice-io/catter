@@ -96,6 +96,11 @@ export function coloredPrintln(
  * Returns the path separator for the current platform.
  *
  * @returns `"\\"` on Windows and `"/"` on other platforms.
+ *
+ * @example
+ * ```typescript
+ * const cachePath = "tmp" + dir_sep() + "cache.txt";
+ * ```
  */
 export function dir_sep(): "/" | "\\" {
   return capi.os_name() === "windows" ? "\\" : "/";
@@ -107,6 +112,12 @@ export function dir_sep(): "/" | "\\" {
  * - `SET` (0): Seek from the beginning of the file.
  * - `CUR` (1): Seek from the current position.
  * - `END` (2): Seek from the end of the file.
+ *
+ * @example
+ * ```typescript
+ * stream.seekRead(0, SeekWhence.SET);
+ * stream.seekWrite(0, SeekWhence.END);
+ * ```
  */
 export enum SeekWhence {
   SET = 0,
@@ -415,6 +426,11 @@ export class FileStream {
  * Type alias for supported text file encodings.
  *
  * Currently only `"ascii"` is supported.
+ *
+ * @example
+ * ```typescript
+ * const encoding: SupportedTextEncodings = "ascii";
+ * ```
  */
 export type SupportedTextEncodings =
   (typeof TextFileStream.supportedEncodings)[number];
@@ -429,26 +445,44 @@ export type SupportedTextEncodings =
 export interface EnDecStreamImpl {
   /**
    * Reads and decodes a fixed number of characters.
+   *
+   * @param raw - The underlying binary stream to read from.
+   * @param chars - The maximum number of decoded characters to read.
+   * @returns The decoded string built from the consumed bytes.
    */
   read(raw: FileStream, chars: number): string;
 
   /**
    * Encodes and writes a string.
+   *
+   * @param raw - The underlying binary stream to write into.
+   * @param data - The decoded text that should be encoded before writing.
    */
   write(raw: FileStream, data: string): void;
 
   /**
    * Reads until a delimiter or EOF is reached.
+   *
+   * @param raw - The underlying binary stream to read from.
+   * @param delimiter - The delimiter character to stop at, or `null` to read until EOF.
+   * @param bufSize - The temporary byte-buffer size used for chunked reads.
+   * @returns The decoded string read before the delimiter or EOF.
    */
   readUntil(raw: FileStream, delimiter: string | null, bufSize: number): string;
 
   /**
    * Decodes raw bytes to a string.
+   *
+   * @param raw - The raw bytes that should be decoded into text.
+   * @returns The decoded string value.
    */
   decode(raw: Uint8Array): string;
 
   /**
    * Encodes a string to raw bytes.
+   *
+   * @param data - The text that should be converted into encoded bytes.
+   * @returns The encoded byte sequence.
    */
   encode(data: string): Uint8Array;
 }

@@ -29,13 +29,27 @@ import type {
 
 /**
  * Supported command actions.
+ *
+ * These string literals are the valid `type` values for {@link Action}.
+ *
+ * @example
+ * ```typescript
+ * const kind = ActionKind[0]; // "skip"
+ * ```
  */
 export const ActionKind = ["skip", "drop", "abort", "modify"] as const;
 
 const _ActionKindTypeCheck: (typeof ActionKind)[number] = {} as ActionType;
 
 /**
- * Supported command actions.
+ * Supported execution event kinds.
+ *
+ * These string literals match the `type` field emitted in {@link ExecutionEvent}.
+ *
+ * @example
+ * ```typescript
+ * const isOutputEvent = EventKind.includes("output");
+ * ```
  */
 export const EventKind = ["finish", "output"] as const;
 
@@ -43,12 +57,29 @@ const _EventKindTypeCheck: (typeof EventKind)[number] = {} as EventType;
 
 /**
  * Callback group for subscribing to catter lifecycle and command events.
+ *
+ * @example
+ * ```typescript
+ * register({
+ *   onStart(config) {
+ *     return config;
+ *   },
+ *   onFinish() {},
+ *   onCommand() {
+ *     return { type: "skip" };
+ *   },
+ *   onExecution() {},
+ * });
+ * ```
  */
 export interface CatterService {
   /**
    * Called before catter starts processing commands.
    *
    * Return the config to be used for the current run.
+   *
+   * @param config - The runtime configuration prepared by catter for this script invocation.
+   * @returns The configuration object that catter should use for the rest of the run.
    */
   onStart: (config: CatterConfig) => CatterConfig;
 
@@ -77,7 +108,18 @@ export interface CatterService {
 /**
  * Registers a callback that can inspect and modify the runtime config before catter starts.
  *
- * @param cb - Callback invoked with the current config.
+ * @param cb - Callback that receives the current {@link CatterConfig} and returns the config to keep using.
+ *
+ * @example
+ * ```typescript
+ * onStart((config) => ({
+ *   ...config,
+ *   options: {
+ *     ...config.options,
+ *     log: false,
+ *   },
+ * }));
+ * ```
  */
 export function onStart(cb: (config: CatterConfig) => CatterConfig): void {
   service_on_start(cb);
@@ -86,7 +128,14 @@ export function onStart(cb: (config: CatterConfig) => CatterConfig): void {
 /**
  * Registers a callback that runs after catter finishes.
  *
- * @param cb - Callback invoked once at shutdown.
+ * @param cb - Callback invoked once when the current catter run is shutting down.
+ *
+ * @example
+ * ```typescript
+ * onFinish(() => {
+ *   println("build interception finished");
+ * });
+ * ```
  */
 export function onFinish(cb: () => void): void {
   service_on_finish(cb);
@@ -95,7 +144,17 @@ export function onFinish(cb: () => void): void {
 /**
  * Registers a callback that handles each captured command.
  *
- * @param cb - Callback invoked for each captured command.
+ * @param cb - Callback invoked for each command. The first argument is the stable command ID, and the second is either the captured command payload or a capture error.
+ *
+ * @example
+ * ```typescript
+ * onCommand((id, data) => {
+ *   if ("msg" in data) {
+ *     return { type: "skip" };
+ *   }
+ *   return { type: "modify", data: { ...data, argv: [...data.argv, "--verbose"] } };
+ * });
+ * ```
  */
 export function onCommand(
   cb: (id: number, data: CommandData | CatterErr) => Action,
@@ -106,7 +165,16 @@ export function onCommand(
 /**
  * Registers a callback that receives execution events for captured commands.
  *
- * @param cb - Callback invoked for command output and completion events.
+ * @param cb - Callback invoked with the command ID and each emitted execution event, such as process output or exit.
+ *
+ * @example
+ * ```typescript
+ * onExecution((id, event) => {
+ *   if (event.type === "finish") {
+ *     println("command " + id + " exited with " + event.code);
+ *   }
+ * });
+ * ```
  */
 export function onExecution(
   cb: (id: number, event: ExecutionEvent) => void,
@@ -117,11 +185,25 @@ export function onExecution(
 /**
  * Registers a full set of catter service callbacks in one call.
  *
- * @param service - Service callbacks for startup, shutdown, command capture, and command execution.
+ * @param service - The callback collection that catter should subscribe to for this run.
  *
  * @remarks
  * This is equivalent to calling {@link onStart}, {@link onFinish}, {@link onCommand},
  * and {@link onExecution} with the corresponding callbacks from `service`.
+ *
+ * @example
+ * ```typescript
+ * register({
+ *   onStart(config) {
+ *     return config;
+ *   },
+ *   onFinish() {},
+ *   onCommand(id, data) {
+ *     return { type: "skip" };
+ *   },
+ *   onExecution() {},
+ * });
+ * ```
  */
 export function register(service: CatterService): void {
   onStart(service.onStart);

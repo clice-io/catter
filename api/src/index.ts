@@ -1,6 +1,16 @@
 /**
- * This is the standard library for catter script.
- * It provides basic APIs for catching commands and system I/O.
+ * Entry point for the catter script runtime API.
+ *
+ * Import this module to access the namespace-style helpers exposed by catter,
+ * including filesystem utilities, option parsing helpers, I/O streams, and
+ * service lifecycle hooks.
+ *
+ * @example
+ * ```typescript
+ * import { fs, io, option, service } from "catter";
+ *
+ * io.println(fs.pwd());
+ * ```
  */
 import * as debug from "./debug.js";
 import * as io from "./io.js";

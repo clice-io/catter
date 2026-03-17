@@ -233,6 +233,11 @@ export function rename(oldPath: string, newPath: string): boolean {
  *
  * All path operations work with both relative and absolute paths.
  * Relative paths are resolved against the current working directory.
+ *
+ * @example
+ * ```typescript
+ * const cacheFile = path.joinAll(pwd(), ".cache", "result.json");
+ * ```
  */
 export const path = {
   /**
@@ -368,6 +373,12 @@ export const path = {
    *
    * @param path - The input path string.
    * @returns The lexically normalized path string.
+   *
+   * @example
+   * ```typescript
+   * const normalized = path.lexicalNormal("src/./generated/../main.cc");
+   * // "src/main.cc"
+   * ```
    */
   lexicalNormal(path: string): string {
     return fs_path_lexical_normal(path);
