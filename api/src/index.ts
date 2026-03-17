@@ -21,4 +21,9 @@ import * as service from "./service.js";
 
 export { debug, io, os, fs, option, service };
 export * from "./service.js";
-export type { OptionItem, OptionTable } from "catter-c";
+export type {
+  OptionInfo,
+  OptionItem,
+  OptionKindClass,
+  OptionTable,
+} from "catter-c";
