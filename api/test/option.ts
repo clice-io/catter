@@ -1,6 +1,4 @@
-import { debug, io, option } from "catter";
-import type { OptionItem, OptionTable } from "catter-c";
-import { option_get_info, option_parse } from "catter-c";
+import { debug, option } from "catter";
 
 const OptionKindClass: {
   GroupClass: number;
@@ -38,20 +36,29 @@ function expectEq<T>(actual: T, expected: T, label: string) {
   }
 }
 
-function cloneItem(item: OptionItem): OptionItem {
+function cloneItem(item: option.OptionItem): option.OptionItem {
   return {
     ...item,
     values: [...item.values],
   };
 }
 
+function infoById(table: option.OptionTable, id: number): option.OptionInfo {
+  return option.info(table, {
+    id,
+    key: "",
+    values: [],
+    index: -1,
+  });
+}
+
 function parseItemsFor(
-  table: OptionTable,
+  table: option.OptionTable,
   args: string[],
   label: string,
-): OptionItem[] {
-  const parsed: OptionItem[] = [];
-  option_parse(table, args, (parseRes) => {
+): option.OptionItem[] {
+  const parsed: option.OptionItem[] = [];
+  option.parse(table, args, (parseRes) => {
     if (typeof parseRes === "string") {
       throw new Error(`${label}: unexpected parse error: ${parseRes}`);
     }
@@ -61,17 +68,17 @@ function parseItemsFor(
   return parsed;
 }
 
-function parseItems(args: string[], label: string): OptionItem[] {
+function parseItems(args: string[], label: string): option.OptionItem[] {
   return parseItemsFor("clang", args, label);
 }
 
 function parseErrorsFor(
-  table: OptionTable,
+  table: option.OptionTable,
   args: string[],
   label: string,
 ): string[] {
   const errors: string[] = [];
-  option_parse(table, args, (parseRes) => {
+  option.parse(table, args, (parseRes) => {
     if (typeof parseRes === "string") {
       errors.push(parseRes);
       return true;
@@ -195,7 +202,7 @@ expectEq(
 expectEq(nvccFlagCopy.key, "--no-align-double", "nvcc flag unalias key");
 expectEq(nvccFlagCopy.values.length, 0, "nvcc flag unalias values length");
 
-const nvccOutputInfo = option_get_info("nvcc", option.NvccID.ID_output_file);
+const nvccOutputInfo = infoById("nvcc", option.NvccID.ID_output_file);
 expectEq(
   nvccOutputInfo.kind,
   OptionKindClass.SeparateClass,
@@ -204,7 +211,7 @@ expectEq(
 expectEq(nvccOutputInfo.prefixedKey, "--output-file", "nvcc output info key");
 expectEq(nvccOutputInfo.meta_var, "<file>", "nvcc output meta var");
 
-const nvccHelpInfo = option_get_info("nvcc", option.NvccID.ID_help);
+const nvccHelpInfo = infoById("nvcc", option.NvccID.ID_help);
 expectEq(nvccHelpInfo.kind, OptionKindClass.FlagClass, "nvcc help info kind");
 expectEq(nvccHelpInfo.prefixedKey, "--help", "nvcc help key");
 
@@ -224,7 +231,7 @@ expectEq(
   "nvcc unknown stringify",
 );
 
-const includeInfo = option_get_info("clang", parsed[1].id);
+const includeInfo = option.info("clang", parsed[1]);
 debug.assertThrow(
   includeInfo.id === parsed[1].id &&
     includeInfo.prefixedKey === "-I" &&
@@ -236,7 +243,7 @@ expectEq(
   "include info kind",
 );
 
-const inputInfo = option_get_info("clang", parsed[3].id);
+const inputInfo = option.info("clang", parsed[3]);
 expectEq(inputInfo.prefixedKey, "<input>", "input prefixed key");
 expectEq(inputInfo.kind, OptionKindClass.InputClass, "input info kind");
 
@@ -283,7 +290,7 @@ debug.assertThrow(parsed[0].values.length === 0);
 
 let invalidFailed = false;
 try {
-  option_get_info("clang", 0);
+  infoById("clang", 0);
 } catch {
   invalidFailed = true;
 }
@@ -300,7 +307,7 @@ expectEq(
   "--definitely-not-a-real-clang-flag",
   "stringify unknown",
 );
-const unknownInfo = option_get_info("clang", unknownParsed[0].id);
+const unknownInfo = option.info("clang", unknownParsed[0]);
 expectEq(unknownInfo.kind, OptionKindClass.UnknownClass, "unknown info kind");
 
 const livenessParsed = parseItems(
@@ -309,7 +316,7 @@ const livenessParsed = parseItems(
 );
 expectEq(livenessParsed.length, 1, "liveness parsed length");
 debug.assertThrow(typeof livenessParsed[0].unalias === "number");
-const livenessInfo = option_get_info("clang", livenessParsed[0].id);
+const livenessInfo = option.info("clang", livenessParsed[0]);
 debug.assertThrow(
   livenessInfo.aliasArgs.length === 1 && livenessInfo.aliasArgs[0] === "all",
 );
@@ -354,7 +361,7 @@ const sanitizeParsed = parseItems(
   "comma joined parse",
 );
 expectEq(sanitizeParsed.length, 1, "sanitize parsed length");
-const sanitizeInfo = option_get_info("clang", sanitizeParsed[0].id);
+const sanitizeInfo = option.info("clang", sanitizeParsed[0]);
 expectEq(
   sanitizeInfo.kind,
   OptionKindClass.CommaJoinedClass,
@@ -374,7 +381,7 @@ const xopenmpParsed = parseItems(
   "joined and separate parse",
 );
 expectEq(xopenmpParsed.length, 1, "xopenmp parsed length");
-const xopenmpInfo = option_get_info("clang", xopenmpParsed[0].id);
+const xopenmpInfo = option.info("clang", xopenmpParsed[0]);
 expectEq(
   xopenmpInfo.kind,
   OptionKindClass.JoinedAndSeparateClass,
@@ -395,7 +402,7 @@ expectEq(
 
 const linkParsed = parseItems(["-ldl"], "render joined parse");
 expectEq(linkParsed.length, 1, "link parsed length");
-const linkInfo = option_get_info("clang", linkParsed[0].id);
+const linkInfo = option.info("clang", linkParsed[0]);
 expectEq(
   linkInfo.kind,
   OptionKindClass.JoinedOrSeparateClass,
@@ -410,7 +417,7 @@ const segaddrParsed = parseItems(
   "multi arg parse",
 );
 expectEq(segaddrParsed.length, 1, "segaddr parsed length");
-const segaddrInfo = option_get_info("clang", segaddrParsed[0].id);
+const segaddrInfo = option.info("clang", segaddrParsed[0]);
 expectEq(segaddrInfo.kind, OptionKindClass.MultiArgClass, "segaddr info kind");
 expectEq(segaddrParsed[0].values.length, 2, "segaddr values length");
 expectEq(segaddrParsed[0].values[0], "__TEXT", "segaddr first value");
@@ -430,7 +437,7 @@ debug.assertThrow(
 );
 
 const stoppedKeys: string[] = [];
-option_parse("clang", ["-fsyntax-only", "-Winvalid-stop-check"], (parseRes) => {
+option.parse("clang", ["-fsyntax-only", "-Winvalid-stop-check"], (parseRes) => {
   if (typeof parseRes === "string") {
     throw new Error(`stop parse: unexpected parse error: ${parseRes}`);
   }
@@ -445,8 +452,8 @@ const command =
   "-o build/linux/x86_64/debug/catter build/.objs/catter/linux/x86_64/debug/src/catter/main.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/ipc.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/session.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/capi/os.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/capi/option.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/capi/io.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/capi/service.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/capi/fs.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/apitool.cc.o build/.objs/catter-core/linux/x86_64/debug/src/catter/core/js.cc.o build/.objs/catter-core/linux/x86_64/debug/api/output/lib/lib.js.o -m64 -L/home/kacent/.xmake/packages/q/quickjs-ng/v0.11.0/3b0b0541a046418183a839d92c0ee676/lib -Lbuild/linux/x86_64/debug -L/home/kacent/.xmake/packages/s/spdlog/v1.15.3/30816fde81524216904b4fedec0afba9/lib -L/home/kacent/.xmake/packages/e/eventide/66/633f0ffaa3c04216a51733d87ad6e471/lib -L/home/kacent/.xmake/packages/l/libuv/v1.52.0/36f98318201548a8ba03dcfff7683ae4/lib -L/home/kacent/.xmake/packages/c/cpptrace/v1.0.4/9e29ee9be85b4fd08157d98d4b9e2c49/lib -L/home/kacent/.xmake/packages/l/libdwarf/2.3.0/a4d27336f566462e80a33b85f1aec162/lib -L/home/kacent/.xmake/packages/z/zlib/v1.3.1/db68dfed70ca4c0b92a3b0b946951d79/lib -L/home/kacent/.xmake/packages/z/zstd/v1.5.7/bbc2fa368000410da812e97c13ccbbe3/lib -lqjs -lcommon -lspdlogd -lztest -loption -lasync -luv -lcpptrace -ldwarf -lz -lzstd -lm -lpthread -ldl -fsanitize=address".split(
     " ",
   );
-const demoParsed: OptionItem[] = [];
-option_parse("clang", command, (parseRes) => {
+const demoParsed: option.OptionItem[] = [];
+option.parse("clang", command, (parseRes) => {
   debug.assertThrow(typeof parseRes !== "string");
   if (typeof parseRes !== "string") {
     demoParsed.push(parseRes);
@@ -474,7 +481,7 @@ const newCmd = option.replace(
   (parseRes) => {
     debug.assertThrow(typeof parseRes !== "string");
     switch (
-      option.convertToUnalias("clang", parseRes as OptionItem)
+      option.convertToUnalias("clang", parseRes as option.OptionItem)
         .id as option.ClangID
     ) {
       case option.ClangID.ID_o:

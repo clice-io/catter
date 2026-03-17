@@ -1,5 +1,6 @@
 import { option_get_info, option_parse } from "catter-c";
-import type { OptionInfo, OptionItem, OptionTable } from "catter-c";
+import { OptionKindClass } from "./types.js";
+import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
 
 /**
  * Helpers for working with generated compiler option tables.
@@ -44,38 +45,11 @@ export { LlvmLibVisibility } from "./llvm-lib.js";
 export { NvccID } from "./nvcc.js";
 export { NvccFlag } from "./nvcc.js";
 export { NvccVisibility } from "./nvcc.js";
+export { OptionKindClass } from "./types.js";
+export type { OptionInfo, OptionItem, OptionTable } from "./types.js";
 
 const RENDER_JOINED = 1 << 2;
 const RENDER_SEPARATE = 1 << 3;
-const OptionKindClass: {
-  GroupClass: number;
-  InputClass: number;
-  UnknownClass: number;
-  FlagClass: number;
-  JoinedClass: number;
-  ValuesClass: number;
-  SeparateClass: number;
-  RemainingArgsClass: number;
-  RemainingArgsJoinedClass: number;
-  CommaJoinedClass: number;
-  MultiArgClass: number;
-  JoinedOrSeparateClass: number;
-  JoinedAndSeparateClass: number;
-} = {
-  GroupClass: 0,
-  InputClass: 1,
-  UnknownClass: 2,
-  FlagClass: 3,
-  JoinedClass: 4,
-  ValuesClass: 5,
-  SeparateClass: 6,
-  RemainingArgsClass: 7,
-  RemainingArgsJoinedClass: 8,
-  CommaJoinedClass: 9,
-  MultiArgClass: 10,
-  JoinedOrSeparateClass: 11,
-  JoinedAndSeparateClass: 12,
-};
 
 function cloneOptionItem(item: OptionItem): OptionItem {
   return {
@@ -153,8 +127,8 @@ export function convertToUnalias(
     return item;
   }
 
-  const aliasInfo = option_get_info(table, item.id);
-  const unaliasInfo = option_get_info(table, item.unalias);
+  const aliasInfo = option_get_info(table, item.id) as OptionInfo;
+  const unaliasInfo = option_get_info(table, item.unalias) as OptionInfo;
 
   item.id = item.unalias;
   item.unalias = undefined;
@@ -201,7 +175,7 @@ export function stringify(table: OptionTable, item: OptionItem): string {
     item.unalias === undefined
       ? item
       : convertToUnalias(table, cloneOptionItem(item));
-  const info = option_get_info(table, renderItem.id);
+  const info = option_get_info(table, renderItem.id) as OptionInfo;
   return renderTokens(info, renderItem).join(" ");
 }
 
@@ -357,5 +331,5 @@ export function parse(
  * ```
  */
 export function info(table: OptionTable, item: OptionItem) {
-  return option_get_info(table, item.id);
+  return option_get_info(table, item.id) as OptionInfo;
 }
