@@ -1,4 +1,4 @@
-import { debug, option } from "catter";
+import { debug, io, nvcc2clang, option } from "catter";
 
 const OptionKindClass: {
   GroupClass: number;
@@ -502,3 +502,18 @@ expectEq(
   "-o 233 <input> <input> <input> <input> <input> <input> <input> <input> <input> <input> <input> -m64 -L<...> -L<...> -L<...> -L<...> -L<...> -L<...> -L<...> -L<...> -L<...> -lqjs -lcommon -lspdlogd -lztest -loption -lasync -luv -lcpptrace -ldwarf -lz -lzstd -lm -lpthread -ldl san!",
   "replace",
 );
+
+const nvccArgs = [
+  "-c",
+  "-Xcompiler",
+  "-fPIE",
+  "-Ihelper",
+  "-I/usr/local/cuda/include",
+  "-m64",
+  "-ccbin=/home/.pixi/envs/default/bin/x86_64-conda-linux-gnu-c++",
+  "-o",
+  "build/.objs/sgemm/linux/x86_64/release/sgemm/main.cu.o",
+  "sgemm/main.cu",
+];
+
+debug.assertThrow(JSON.stringify(nvcc2clang(nvccArgs)).includes("-ccbin="));

@@ -22,3 +22,4 @@ export * as option from "./option/index.js";
 export { debug, io, os, fs, service };
 export * from "./service.js";
 export * from "./option/types.js";
+export * from "./util/index.js";

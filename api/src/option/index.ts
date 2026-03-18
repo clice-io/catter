@@ -1,6 +1,7 @@
 import { option_get_info, option_parse } from "catter-c";
 import { OptionKindClass } from "./types.js";
 import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
+import { io } from "../index.js";
 
 /**
  * Helpers for working with generated compiler option tables.
@@ -332,4 +333,55 @@ export function parse(
  */
 export function info(table: OptionTable, item: OptionItem) {
   return option_get_info(table, item.id) as OptionInfo;
+}
+
+/**
+ * Re-parses argument spans collected from one option table and keeps only the
+ * spans that pass a second-stage filter.
+ *
+ * The input is first collected with `from`, then split back into the original
+ * argument slices that produced each parsed item. Each slice is parsed again
+ * with the current second-stage parser, and only slices whose parsed items are
+ * not listed in `excludeID` and are not `UnknownClass` in `to` are preserved.
+ *
+ * @param from - The option table used to collect and split the original
+ * argument array into per-option spans.
+ * @param to - The option table used to inspect second-stage parsed items with
+ * `info()`, for example to reject `UnknownClass` results.
+ * @param args - Raw command-line arguments to inspect, without the
+ * executable name.
+ * @param excludeID - Option IDs that should cause a second-stage parsed span
+ * to be discarded. Defaults to `[0]`, which is INVALID in LLVM option table.
+ * @returns A flattened array containing only spans that pass the second-stage
+ * filter, or the parser error string returned while collecting `from`.
+ */
+export function table2table(
+  from: OptionTable,
+  to: OptionTable,
+  args: string[],
+  excludeID: number[] = [/*invliad default*/ 0],
+): string | string[] {
+  const fromRes = collect(from, args);
+  if (typeof fromRes === "string") {
+    return fromRes;
+  }
+  const optArgs = fromRes.map((val, idx) => {
+    if (idx == fromRes.length - 1) {
+      return args.slice(val.index);
+    }
+    return args.slice(val.index, fromRes[idx + 1].index);
+  });
+  return optArgs
+    .filter((optArg) => {
+      const toCheck = collect(to, optArg);
+      return (
+        Array.isArray(toCheck) &&
+        toCheck.every(
+          (val) =>
+            !excludeID.includes(val.id) &&
+            info(to, val).kind != OptionKindClass.UnknownClass,
+        )
+      );
+    })
+    .flat();
 }
