@@ -1,91 +1,12 @@
 #include <array>
-#include <cstddef>
 #include <format>
-#include <span>
 #include <string>
 #include <string_view>
-#include <print>
-#include <variant>
-#include <vector>
 
 #include <MinHook.h>
 #include <windows.h>
 
-#include "win/env.h"
-
-namespace catter::win {
-namespace {
-template <CharT char_t>
-std::basic_string<char_t> get_app_name(const char_t* application_name, const char_t* command_line) {
-    if(application_name == nullptr) {
-        if(command_line == nullptr) {
-            return {};
-        }
-        auto view = std::basic_string_view<char_t>(command_line);
-        auto first_space = view.find_first_of(char_t(' '));
-        return std::basic_string<char_t>(view.substr(0, first_space));
-    } else {
-        return std::basic_string<char_t>(application_name);
-    }
-}
-
-template <CharT char_t>
-DWORD FixGetEnvironmentVariable(const char_t* name, char_t* buffer, DWORD size) {
-    if constexpr(std::is_same_v<char_t, char>) {
-        return GetEnvironmentVariableA(name, buffer, size);
-    } else {
-        return GetEnvironmentVariableW(name, buffer, size);
-    }
-}
-
-template <CharT char_t>
-std::basic_string<char_t> get_proxy_path() {
-    constexpr size_t buffer_size = 256;
-    char_t buffer[buffer_size];
-
-    auto len = FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_PROXY_PATH<char_t>,
-                                                 buffer,
-                                                 buffer_size);
-    if(len == 0) {
-        return {};
-    }
-
-    if(len < buffer_size) {
-        return std::basic_string<char_t>(buffer, len);
-    }
-
-    std::basic_string<char_t> path;
-    path.resize(len);
-    FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_PROXY_PATH<char_t>, path.data(), len);
-    path.pop_back();
-    return path;
-}
-
-template <CharT char_t>
-std::basic_string<char_t> get_ipc_id() {
-    constexpr size_t buffer_size = 64;
-    char_t buffer[buffer_size];
-
-    auto len =
-        FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_IPC_ID<char_t>, buffer, buffer_size);
-    if(len == 0) {
-        return {};
-    }
-
-    if(len < buffer_size) {
-        return std::basic_string<char_t>(buffer, len);
-    }
-
-    std::basic_string<char_t> id;
-    id.resize(len);
-    FixGetEnvironmentVariable<char_t>(catter::win::ENV_VAR_IPC_ID<char_t>, id.data(), len);
-    id.pop_back();
-    return id;
-}
-
-}  // namespace
-
-}  // namespace catter::win
+#include "win/payload/util.h"
 
 // Use anonymous namespace to avoid exporting symbols
 namespace {
@@ -110,9 +31,9 @@ struct CreateProcessA {
 
         auto converted_cmdline =
             std::format("{} -p {} --exec {} -- {}",
-                        catter::win::get_proxy_path<char>(),
-                        catter::win::get_ipc_id<char>(),
-                        catter::win::get_app_name<char>(lpApplicationName, lpCommandLine),
+                        catter::win::payload::get_proxy_path<char>(),
+                        catter::win::payload::get_ipc_id<char>(),
+                        catter::win::payload::resolve_abspath(lpApplicationName, lpCommandLine),
                         std::string_view(lpCommandLine ? lpCommandLine : ""));
 
         return original(nullptr,
@@ -146,9 +67,9 @@ struct CreateProcessW {
 
         auto converted_cmdline =
             std::format(L"{} -p {} --exec {} -- {}",
-                        catter::win::get_proxy_path<wchar_t>(),
-                        catter::win::get_ipc_id<wchar_t>(),
-                        catter::win::get_app_name<wchar_t>(lpApplicationName, lpCommandLine),
+                        catter::win::payload::get_proxy_path<wchar_t>(),
+                        catter::win::payload::get_ipc_id<wchar_t>(),
+                        catter::win::payload::resolve_abspath(lpApplicationName, lpCommandLine),
                         std::wstring_view(lpCommandLine ? lpCommandLine : L""));
 
         return original(nullptr,

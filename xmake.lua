@@ -140,13 +140,16 @@ target("catter-hook-win64")
     set_default(is_plat("windows"))
     set_kind("shared")
     add_includedirs("src/catter-hook/")
-    add_files("src/catter-hook/win/payload/main.cc")
+    add_files("src/catter-hook/win/payload/*.cc")
     add_syslinks("user32", "advapi32")
     add_packages("minhook")
-    if get_config("toolchain") == "msvc" or get_config("toolchain") == "clang-cl" then
+    local toolchain = get_config("toolchain")
+    if toolchain == "msvc" or toolchain == "clang-cl" then
         add_cxxflags("/EHs-c-", "/GR-")
+        add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
+        add_shflags("-Wl,/DEF:src/catter-hook/win/payload/exports.def")
     end
 
 
@@ -265,6 +268,9 @@ target("ut-catter-hook-win64")
     set_kind("binary")
     add_rules("ut-base")
 
+    add_includedirs("src/catter-hook/")
+    add_files("src/catter-hook/win/payload/resolver.cc")
+    add_files("src/catter-hook/win/payload/util.cc")
     add_files("tests/unit/catter-hook/win/**.cc")
 
     add_deps("common")
