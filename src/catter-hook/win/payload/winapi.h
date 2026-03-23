@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <type_traits>
 
 #include <limits>
@@ -107,6 +108,20 @@ DWORD FixGetModuleFileName(HMODULE module, char_t* buffer, DWORD size) {
 }
 
 template <CharT char_t>
+DWORD FixSearchPath(const char_t* path,
+                    const char_t* file_name,
+                    const char_t* extension,
+                    DWORD buffer_size,
+                    char_t* buffer,
+                    char_t** file_part) {
+    if constexpr(std::is_same_v<char_t, char>) {
+        return SearchPathA(path, file_name, extension, buffer_size, buffer, file_part);
+    } else {
+        return SearchPathW(path, file_name, extension, buffer_size, buffer, file_part);
+    }
+}
+
+template <CharT char_t>
 UINT FixGetSystemDirectory(char_t* buffer, UINT size) {
     if constexpr(std::is_same_v<char_t, char>) {
         return GetSystemDirectoryA(buffer, size);
@@ -177,15 +192,11 @@ std::basic_string<char_t> GetModuleDirectory(HMODULE module, size_t initial_size
     if(module_path.empty()) {
         return {};
     }
-
-    auto pos = module_path.find_last_of(char_t('\\'));
-    if(pos == std::basic_string<char_t>::npos) {
-        pos = module_path.find_last_of(char_t('/'));
+    if constexpr(std::is_same_v<char_t, char>) {
+        return std::filesystem::path(module_path).parent_path().string();
+    } else {
+        return std::filesystem::path(module_path).parent_path().wstring();
     }
-    if(pos == std::basic_string<char_t>::npos) {
-        return {};
-    }
-    return module_path.substr(0, pos);
 }
 
 template <CharT char_t>
@@ -224,6 +235,26 @@ std::basic_string<char_t> GetFullPathNameDynamic(std::basic_string_view<char_t> 
         initial_size,
         [&](char_t* buffer, DWORD size) {
             return FixGetFullPathName<char_t>(input.c_str(), size, buffer, nullptr);
+        },
+        [](DWORD result, size_t buffer_size) -> WinApiBufferDecision {
+            if(static_cast<size_t>(result) < buffer_size) {
+                return WinApiBufferDecision{.done = true,
+                                            .output_size = static_cast<size_t>(result)};
+            }
+            return WinApiBufferDecision{.next_size = static_cast<size_t>(result) + 1};
+        });
+}
+
+template <CharT char_t>
+std::basic_string<char_t> SearchPathDynamic(const char_t* path,
+                                            std::basic_string_view<char_t> file_name,
+                                            const char_t* extension = nullptr,
+                                            size_t initial_size = MAX_PATH) {
+    auto input = std::basic_string<char_t>(file_name);
+    return CallWinApiWithGrowingBuffer<char_t, DWORD>(
+        initial_size,
+        [&](char_t* buffer, DWORD size) {
+            return FixSearchPath<char_t>(path, input.c_str(), extension, size, buffer, nullptr);
         },
         [](DWORD result, size_t buffer_size) -> WinApiBufferDecision {
             if(static_cast<size_t>(result) < buffer_size) {
