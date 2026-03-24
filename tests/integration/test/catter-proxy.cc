@@ -77,7 +77,7 @@ public:
     }
 
     struct Factory {
-        std::unique_ptr<ServiceImpl> operator() (data::ipcid_t id) {
+        std::unique_ptr<ServiceImpl> operator() (data::ipcid_t id) const {
             return std::make_unique<ServiceImpl>(id);
         }
     };
@@ -94,8 +94,22 @@ int main(int argc, char* argv[]) {
     // catter::log::mute_logger();
     try {
         Session session;
+        Session::ProcessLaunchPlan launch_plan;
+        launch_plan.executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
+        launch_plan.args = {
+            launch_plan.executable,
+            "-p",
+            "0",
+            "--exec",
+            "echo",
+            "--",
+            "echo",
+            "Hello, World!",
+        };
+
         std::println("Session started.");
-        auto ret = session.run({"echo", "Hello, World!"}, ServiceImpl::Factory{});
+        auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
+        auto ret = session.run(std::move(session_plan));
         std::println("Session finished with code: {}", ret);
         return 0;
     } catch(const std::exception& ex) {

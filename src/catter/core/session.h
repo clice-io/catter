@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <eventide/common/functional.h>
@@ -15,10 +16,6 @@
 
 #include "ipc.h"
 #include "util/data.h"
-#include "util/crossplat.h"
-#include "util/eventide.h"
-#include "config/ipc.h"
-#include "config/catter-proxy.h"
 
 namespace catter {
 
@@ -39,67 +36,52 @@ concept ServiceFactoryLike =
 
 class Session {
 public:
-    using Acceptor = eventide::acceptor<eventide::pipe>;
+    using PipeAcceptor = eventide::acceptor<eventide::pipe>;
+    using ClientAcceptor =
+        eventide::function<eventide::task<void>(data::ipcid_t, eventide::pipe&&)>;
 
-    /**
-     * Run a session with the given shell and service factory.
-     * @param factory The factory should be a callable that takes an ipcid_t and returns a
-     * unique_ptr to a Service instance.
-     */
-    template <typename ServiceFactoryType>
-        requires ServiceFactoryLike<ServiceFactoryType>
-    int64_t run(const std::vector<std::string>& shell, ServiceFactoryType&& factory) {
-#ifndef _WIN32
-        if(std::filesystem::exists(config::ipc::pipe_name())) {
-            std::filesystem::remove(config::ipc::pipe_name());
-        }
-#endif
-        auto acc_ret = eventide::pipe::listen(config::ipc::pipe_name(),
-                                              eventide::pipe::options(),
-                                              default_loop());
-
-        if(!acc_ret) {
-            throw std::runtime_error(
-                std::format("Failed to create acceptor: {}", acc_ret.error().message()));
-        }
-
-        this->acc = std::make_unique<Acceptor>(std::move(*acc_ret));
-
+    struct ProcessLaunchPlan {
         std::string executable;
         std::vector<std::string> args;
+    };
 
-        using Result = ServiceFactoryResult<ServiceFactoryType>;
-        if constexpr(std::convertible_to<Result, std::unique_ptr<ipc::InjectService>>) {
-            executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-            args = {executable, "-p", "0", "--exec", shell[0], "--"};
-            append_range_to_vector(args, shell);
-        } else {
-            static_assert(false, "Unsupported service factory type");
-        }
+    struct RunPlan {
+        ProcessLaunchPlan launch_plan;
+        ClientAcceptor callback;
+    };
 
-        auto acceptor = [&](data::ipcid_t id, eventide::pipe&& client) -> eventide::task<void> {
-            return ipc::accept(factory(id), std::move(client));
+    /**
+     * Create a run plan with the given launch plan and client accepted callback.
+     * @param launch_plan The plan for launching the process.
+     * @param factory The factory for creating service instances when a client is accepted.
+     * @return A run plan containing the launch plan and client accepted callback.
+     */
+    template <typename ServiceFactoryType>
+        requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
+    static auto make_run_plan(ProcessLaunchPlan launch_plan, ServiceFactoryType&& factory) {
+        return RunPlan{
+            .launch_plan = std::move(launch_plan),
+            .callback =
+                [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
+                                                                      eventide::pipe&& client) {
+                    return ipc::accept(factory(id), std::move(client));
+                },
         };
-
-        auto loop_task = this->loop(acceptor);
-        auto spawn_task = this->spawn(executable, args);
-
-        default_loop().schedule(loop_task);
-        default_loop().schedule(spawn_task);
-
-        default_loop().run();
-
-        loop_task.result();  // Propagate exceptions from loop task
-        return spawn_task.result();
     }
 
+    /**
+     * Run the session with the given run plan.
+     * @param run_plan The run plan containing the launch plan and service factory.
+     * @return The exit code of the spawned process.
+     */
+    int64_t run(RunPlan run_plan);
+
 private:
-    eventide::task<void> loop(
-        eventide::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor);
+    eventide::task<void> loop(ClientAcceptor acceptor);
 
     eventide::task<int64_t> spawn(std::string executable, std::vector<std::string> args);
 
-    std::unique_ptr<Acceptor> acc = nullptr;
+    std::unique_ptr<PipeAcceptor> acc = nullptr;
 };
 
 }  // namespace catter
