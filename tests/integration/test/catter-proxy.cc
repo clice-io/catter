@@ -77,7 +77,7 @@ public:
     }
 
     struct Factory {
-        std::unique_ptr<ServiceImpl> operator() (data::ipcid_t id) {
+        std::unique_ptr<ServiceImpl> operator() (data::ipcid_t id) const {
             return std::make_unique<ServiceImpl>(id);
         }
     };

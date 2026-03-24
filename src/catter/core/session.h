@@ -16,8 +16,6 @@
 
 #include "ipc.h"
 #include "util/data.h"
-#include "util/eventide.h"
-#include "config/ipc.h"
 
 namespace catter {
 
@@ -38,76 +36,52 @@ concept ServiceFactoryLike =
 
 class Session {
 public:
-    using Acceptor = eventide::acceptor<eventide::pipe>;
+    using PipeAcceptor = eventide::acceptor<eventide::pipe>;
+    using ClientAcceptor =
+        eventide::function<eventide::task<void>(data::ipcid_t, eventide::pipe&&)>;
 
     struct ProcessLaunchPlan {
         std::string executable;
         std::vector<std::string> args;
     };
 
-    template <typename ServiceFactoryType>
     struct RunPlan {
         ProcessLaunchPlan launch_plan;
-        ServiceFactoryType factory;
+        ClientAcceptor callback;
     };
 
+    /**
+     * Create a run plan with the given launch plan and client accepted callback.
+     * @param launch_plan The plan for launching the process.
+     * @param factory The factory for creating service instances when a client is accepted.
+     * @return A run plan containing the launch plan and client accepted callback.
+     */
     template <typename ServiceFactoryType>
         requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
     static auto make_run_plan(ProcessLaunchPlan launch_plan, ServiceFactoryType&& factory) {
-        return RunPlan<std::decay_t<ServiceFactoryType>>{
+        return RunPlan{
             .launch_plan = std::move(launch_plan),
-            .factory = std::forward<ServiceFactoryType>(factory),
+            .callback =
+                [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
+                                                                      eventide::pipe&& client) {
+                    return ipc::accept(factory(id), std::move(client));
+                },
         };
     }
 
     /**
-     * Run a session with the given launch plan and service factory.
-     * @param factory The factory should be a callable that takes an ipcid_t and returns a
-     * unique_ptr to a Service instance.
+     * Run the session with the given run plan.
+     * @param run_plan The run plan containing the launch plan and service factory.
+     * @return The exit code of the spawned process.
      */
-    template <typename ServiceFactoryType>
-        requires ServiceFactoryLike<ServiceFactoryType>
-    int64_t run(RunPlan<ServiceFactoryType> run_plan) {
-#ifndef _WIN32
-        if(std::filesystem::exists(config::ipc::pipe_name())) {
-            std::filesystem::remove(config::ipc::pipe_name());
-        }
-#endif
-        auto acc_ret = eventide::pipe::listen(config::ipc::pipe_name(),
-                                              eventide::pipe::options(),
-                                              default_loop());
-
-        if(!acc_ret) {
-            throw std::runtime_error(
-                std::format("Failed to create acceptor: {}", acc_ret.error().message()));
-        }
-
-        this->acc = std::make_unique<Acceptor>(std::move(*acc_ret));
-
-        auto acceptor = [&](data::ipcid_t id, eventide::pipe&& client) -> eventide::task<void> {
-            return ipc::accept(run_plan.factory(id), std::move(client));
-        };
-
-        auto loop_task = this->loop(acceptor);
-        auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
-                                      std::move(run_plan.launch_plan.args));
-
-        default_loop().schedule(loop_task);
-        default_loop().schedule(spawn_task);
-
-        default_loop().run();
-
-        loop_task.result();  // Propagate exceptions from loop task
-        return spawn_task.result();
-    }
+    int64_t run(RunPlan run_plan);
 
 private:
-    eventide::task<void> loop(
-        eventide::function_ref<eventide::task<void>(data::ipcid_t, eventide::pipe&&)> acceptor);
+    eventide::task<void> loop(ClientAcceptor acceptor);
 
     eventide::task<int64_t> spawn(std::string executable, std::vector<std::string> args);
 
-    std::unique_ptr<Acceptor> acc = nullptr;
+    std::unique_ptr<PipeAcceptor> acc = nullptr;
 };
 
 }  // namespace catter
