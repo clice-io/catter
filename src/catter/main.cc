@@ -30,7 +30,7 @@ using namespace catter;
 
 class ServiceImpl : public ipc::InjectService {
 public:
-    ServiceImpl(data::ipcid_t id) : id(id) {};
+    ServiceImpl(data::ipcid_t id, const js::CatterRuntime* runtime) : id(id), runtime(runtime) {};
     ~ServiceImpl() override = default;
 
     data::ipcid_t create(data::ipcid_t parent_id) override {
@@ -45,18 +45,20 @@ public:
                                       .exe = cmd.executable,
                                       .argv = cmd.args,
                                       .env = cmd.env,
-                                      //   .runtime =
+                                      .runtime = *runtime,
                                       .parent = this->parent_id,
                                   });
 
         switch(act.type()) {
-            case js::ActionType::drop:
+            case js::ActionType::drop: {
+                return data::action{.type = data::action::DROP, .cmd = {}};
+            }
             case js::ActionType::skip: {
                 return data::action{.type = data::action::INJECT, .cmd = cmd};
             }
 
             case js::ActionType::modify: {
-                auto tag = act.get<js::ActionType::modify>();
+                auto& tag = act.get<js::ActionType::modify>();
 
                 return data::action{
                     .type = data::action::INJECT,
@@ -81,14 +83,17 @@ public:
     }
 
     struct Factory {
+        const js::CatterRuntime* runtime;
+
         std::unique_ptr<ServiceImpl> operator() (data::ipcid_t id) {
-            return std::make_unique<ServiceImpl>(id);
+            return std::make_unique<ServiceImpl>(id, runtime);
         }
     };
 
 private:
     data::ipcid_t id = 0;
     data::ipcid_t parent_id = 0;
+    const js::CatterRuntime* runtime = nullptr;
 };
 
 struct Config {
@@ -98,7 +103,7 @@ struct Config {
     std::vector<std::string> script_args;
     std::vector<std::string> build_system_command;
     std::filesystem::path working_dir;
-    js::CatterRuntime runtime;
+    const js::CatterRuntime* runtime;
 };
 
 Config extract_config(const core::Option::CatterOption& opt) {
@@ -131,7 +136,7 @@ Config extract_config(const core::Option::CatterOption& opt) {
 
     if(auto it = mode_map.find(*opt.mode); it != mode_map.end()) {
         config.mode = it->second.mode;
-        config.runtime = it->second.runtime;
+        config.runtime = &it->second.runtime;
     } else {
         throw std::runtime_error(std::format("Unsupported mode: {}", *opt.mode));
     }
@@ -161,7 +166,7 @@ void inject(const Config& config) {
         .scriptPath = config.script_path,
         .scriptArgs = config.script_args,
         .buildSystemCommand = config.build_system_command,
-        .runtime = config.runtime,
+        .runtime = *config.runtime,
         .options =
             {
                       .log = config.log,
@@ -171,7 +176,8 @@ void inject(const Config& config) {
 
     Session session;
 
-    auto ret = session.run(new_config.buildSystemCommand, ServiceImpl::Factory{});
+    auto ret =
+        session.run(new_config.buildSystemCommand, ServiceImpl::Factory{.runtime = config.runtime});
 
     js::on_finish(js::Tag<js::EventType::finish>{
         .code = ret,
