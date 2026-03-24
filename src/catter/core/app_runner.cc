@@ -1,5 +1,6 @@
 #include "app_runner.h"
 
+#include <cstdint>
 #include <format>
 #include <memory>
 #include <stdexcept>
@@ -7,6 +8,7 @@
 #include <utility>
 
 #include "app_config.h"
+#include "capi/type.h"
 #include "ipc.h"
 #include "js.h"
 #include "qjs.h"
@@ -85,11 +87,51 @@ private:
     const js::CatterRuntime* runtime = nullptr;
 };
 
-void inject(const RuntimePlan& plan) {
+int64_t inject(const js::CatterConfig& config) {
+
+    auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
+    Session::ProcessLaunchPlan launch_plan{
+        .executable = proxy_path.string(),
+        .args =
+            {
+                   proxy_path.string(),
+                   "-p", "0",
+                   "--exec", config.buildSystemCommand.front(),
+                   "--", },
+    };
+    append_range_to_vector(launch_plan.args, config.buildSystemCommand);
+
+    Session session;
+    auto session_plan = Session::make_run_plan(std::move(launch_plan),
+                                               ServiceImpl::Factory{.runtime = &config.runtime});
+
+    return session.run(std::move(session_plan));
+}
+
+int64_t execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
+    switch(mode) {
+        case ipc::ServiceMode::INJECT: {
+            return inject(config);
+        }
+        default: {
+            throw std::runtime_error(
+                std::format("UnExpected mode: {:0x}", static_cast<uint8_t>(mode)));
+        }
+    }
+    throw std::runtime_error("Not implemented");
+}
+
+}  // namespace
+
+void run(const core::Option::CatterOption& opt) {
+    auto startup = to_startup_config(opt);
+    auto plan = build_runtime_plan(startup);
     auto script_content = load_script_content(plan.script_path);
+
+    js::init_qjs({.pwd = plan.working_dir});
     js::run_js_file(script_content, plan.script_path);
 
-    auto new_config = js::on_start({
+    auto config = js::on_start({
         .scriptPath = plan.script_path,
         .scriptArgs = plan.script_args,
         .buildSystemCommand = plan.build_system_command,
@@ -98,46 +140,9 @@ void inject(const RuntimePlan& plan) {
         .isScriptSupported = true,
     });
 
-    Session::ProcessLaunchPlan launch_plan;
-    launch_plan.executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-    launch_plan.args = {
-        launch_plan.executable,
-        "-p",
-        "0",
-        "--exec",
-        new_config.buildSystemCommand.front(),
-        "--",
-    };
-    append_range_to_vector(launch_plan.args, new_config.buildSystemCommand);
-
-    Session session;
-    auto session_plan = Session::make_run_plan(std::move(launch_plan),
-                                               ServiceImpl::Factory{.runtime = plan.runtime});
-    auto ret = session.run(std::move(session_plan));
-
     js::on_finish(js::Tag<js::EventType::finish>{
-        .code = ret,
+        .code = execute_service(plan.mode, config),
     });
-}
-
-}  // namespace
-
-void run(const core::Option::CatterOption& opt) {
-    auto startup = to_startup_config(opt);
-    auto plan = build_runtime_plan(startup);
-
-    js::init_qjs({.pwd = plan.working_dir});
-
-    switch(plan.mode) {
-        case ipc::ServiceMode::INJECT: {
-            inject(plan);
-            break;
-        }
-        default: {
-            throw std::runtime_error(
-                std::format("UnExpected mode: {:0x}", static_cast<uint8_t>(plan.mode)));
-        }
-    }
 }
 
 }  // namespace catter::app
