@@ -11,6 +11,8 @@
 #include "js.h"
 #include "qjs.h"
 #include "session.h"
+#include "config/catter-proxy.h"
+#include "util/crossplat.h"
 #include "util/data.h"
 
 namespace catter::app {
@@ -19,6 +21,7 @@ namespace {
 class ServiceImpl : public ipc::InjectService {
 public:
     ServiceImpl(data::ipcid_t id, const js::CatterRuntime* runtime) : id(id), runtime(runtime) {}
+
     ~ServiceImpl() override = default;
 
     data::ipcid_t create(data::ipcid_t parent_id) override {
@@ -49,11 +52,12 @@ public:
                 return data::action{
                     .type = data::action::INJECT,
                     .cmd = {
-                        .cwd = std::move(tag.data.cwd),
-                        .executable = std::move(tag.data.exe),
-                        .args = std::move(tag.data.argv),
-                        .env = std::move(tag.data.env),
-                    }};
+                            .cwd = std::move(tag.data.cwd),
+                            .executable = std::move(tag.data.exe),
+                            .args = std::move(tag.data.argv),
+                            .env = std::move(tag.data.env),
+                            }
+                };
             }
             default: throw std::runtime_error("Unhandled action type");
         }
@@ -94,8 +98,22 @@ void inject(const RuntimePlan& plan) {
         .isScriptSupported = true,
     });
 
+    Session::ProcessLaunchPlan launch_plan;
+    launch_plan.executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
+    launch_plan.args = {
+        launch_plan.executable,
+        "-p",
+        "0",
+        "--exec",
+        new_config.buildSystemCommand.front(),
+        "--",
+    };
+    append_range_to_vector(launch_plan.args, new_config.buildSystemCommand);
+
     Session session;
-    auto ret = session.run(new_config.buildSystemCommand, ServiceImpl::Factory{.runtime = plan.runtime});
+    auto session_plan = Session::make_run_plan(std::move(launch_plan),
+                                               ServiceImpl::Factory{.runtime = plan.runtime});
+    auto ret = session.run(std::move(session_plan));
 
     js::on_finish(js::Tag<js::EventType::finish>{
         .code = ret,
@@ -116,7 +134,8 @@ void run(const core::Option::CatterOption& opt) {
             break;
         }
         default: {
-            throw std::runtime_error(std::format("UnExpected mode: {:0x}", static_cast<uint8_t>(plan.mode)));
+            throw std::runtime_error(
+                std::format("UnExpected mode: {:0x}", static_cast<uint8_t>(plan.mode)));
         }
     }
 }

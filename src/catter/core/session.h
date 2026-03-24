@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <eventide/common/functional.h>
@@ -15,10 +16,8 @@
 
 #include "ipc.h"
 #include "util/data.h"
-#include "util/crossplat.h"
 #include "util/eventide.h"
 #include "config/ipc.h"
-#include "config/catter-proxy.h"
 
 namespace catter {
 
@@ -41,14 +40,34 @@ class Session {
 public:
     using Acceptor = eventide::acceptor<eventide::pipe>;
 
+    struct ProcessLaunchPlan {
+        std::string executable;
+        std::vector<std::string> args;
+    };
+
+    template <typename ServiceFactoryType>
+    struct RunPlan {
+        ProcessLaunchPlan launch_plan;
+        ServiceFactoryType factory;
+    };
+
+    template <typename ServiceFactoryType>
+        requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
+    static auto make_run_plan(ProcessLaunchPlan launch_plan, ServiceFactoryType&& factory) {
+        return RunPlan<std::decay_t<ServiceFactoryType>>{
+            .launch_plan = std::move(launch_plan),
+            .factory = std::forward<ServiceFactoryType>(factory),
+        };
+    }
+
     /**
-     * Run a session with the given shell and service factory.
+     * Run a session with the given launch plan and service factory.
      * @param factory The factory should be a callable that takes an ipcid_t and returns a
      * unique_ptr to a Service instance.
      */
     template <typename ServiceFactoryType>
         requires ServiceFactoryLike<ServiceFactoryType>
-    int64_t run(const std::vector<std::string>& shell, ServiceFactoryType&& factory) {
+    int64_t run(RunPlan<ServiceFactoryType> run_plan) {
 #ifndef _WIN32
         if(std::filesystem::exists(config::ipc::pipe_name())) {
             std::filesystem::remove(config::ipc::pipe_name());
@@ -65,24 +84,13 @@ public:
 
         this->acc = std::make_unique<Acceptor>(std::move(*acc_ret));
 
-        std::string executable;
-        std::vector<std::string> args;
-
-        using Result = ServiceFactoryResult<ServiceFactoryType>;
-        if constexpr(std::convertible_to<Result, std::unique_ptr<ipc::InjectService>>) {
-            executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-            args = {executable, "-p", "0", "--exec", shell[0], "--"};
-            append_range_to_vector(args, shell);
-        } else {
-            static_assert(false, "Unsupported service factory type");
-        }
-
         auto acceptor = [&](data::ipcid_t id, eventide::pipe&& client) -> eventide::task<void> {
-            return ipc::accept(factory(id), std::move(client));
+            return ipc::accept(run_plan.factory(id), std::move(client));
         };
 
         auto loop_task = this->loop(acceptor);
-        auto spawn_task = this->spawn(executable, args);
+        auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
+                                      std::move(run_plan.launch_plan.args));
 
         default_loop().schedule(loop_task);
         default_loop().schedule(spawn_task);

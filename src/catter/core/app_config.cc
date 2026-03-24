@@ -26,7 +26,7 @@ RuntimePlan build_runtime_plan(const StartupConfig& config) {
         js::CatterRuntime runtime;
     };
 
-    static const std::unordered_map<std::string_view, ModeMeta> mode_map = {
+    const static std::unordered_map<std::string_view, ModeMeta> mode_map = {
         {"inject",
          {.mode = ipc::ServiceMode::INJECT,
           .runtime = {
@@ -56,11 +56,16 @@ RuntimePlan build_runtime_plan(const StartupConfig& config) {
 }
 
 std::string load_script_content(const std::string& script_path) {
-    if(script_path == "script::cdb") {
-        return R"(
+    const static std::unordered_map<std::string_view, std::string_view> internal_scripts = {
+        {"script::cdb",
+         R"(
     import { scripts, service } from "catter";
     service.register(new scripts.CDB());
-    )";
+    )"}
+    };
+
+    if(auto it = internal_scripts.find(script_path); it != internal_scripts.end()) {
+        return std::string(it->second);
     }
 
     std::ifstream ifs{script_path};
