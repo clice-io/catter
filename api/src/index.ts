@@ -20,7 +20,8 @@ import * as service from "./service.js";
 import * as option from "./option/index.js";
 import * as scripts from "./scripts/index.js";
 import * as cmd from "./cmd/index.js";
+import * as data from "./data/index.js";
 
-export { debug, io, os, fs, option, service, scripts, cmd };
+export { debug, io, os, fs, option, service, scripts, cmd, data };
 export * from "./service.js";
 export * from "./option/types.js";

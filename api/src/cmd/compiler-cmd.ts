@@ -3,6 +3,7 @@ import { identify_compiler } from "catter-c";
 
 import * as debug from "../debug.js";
 import * as fs from "../fs.js";
+import * as os from "../os.js";
 import * as option from "../option/index.js";
 import { ClangID, ClangVisibility } from "../option/clang.js";
 import type { OptionInfo, OptionItem, OptionTable } from "../option/types.js";
@@ -180,8 +181,9 @@ function normalizeOptionItem(table: OptionTable, item: OptionItem): OptionItem {
 function collectParsedOptions(
   table: OptionTable,
   args: string[],
+  visibility?: number,
 ): ParsedOption[] {
-  const collected = option.collect(table, args);
+  const collected = option.collect(table, args, visibility);
   if (!Array.isArray(collected)) {
     throw new Error(`fatal error in parsing: ${collected}`);
   }
@@ -195,6 +197,18 @@ function collectParsedOptions(
       info: option.info(table, item),
     };
   });
+}
+
+function clangLikeDriverVisibility(): number {
+  if (os.platform() === "windows") {
+    return ClangVisibility.DefaultVis | ClangVisibility.CLOption;
+  }
+
+  return ClangVisibility.DefaultVis;
+}
+
+function supportsClStyleAnalysis(): boolean {
+  return os.platform() === "windows";
 }
 
 function endsWithPathSep(value: string): boolean {
@@ -418,19 +432,25 @@ function analyzeCompilerFamily(
 
 const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
   const model = createDefaultModel(compiler);
-  const parsed = collectParsedOptions("clang", cmd.slice(1));
+  const parsed = collectParsedOptions(
+    "clang",
+    cmd.slice(1),
+    clangLikeDriverVisibility(),
+  );
+  const allowClStyle = supportsClStyleAnalysis();
 
   for (const parsedItem of parsed) {
     if (
-      parsedItem.raw.key.startsWith("/") ||
-      (parsedItem.rawInfo.visibility & ClangVisibility.CLOption) !== 0
+      (allowClStyle && parsedItem.raw.key.startsWith("/")) ||
+      (allowClStyle &&
+        (parsedItem.rawInfo.visibility & ClangVisibility.CLOption) !== 0)
     ) {
       model.style = "cl";
     }
 
     switch (parsedItem.item.id as ClangID) {
       case ClangID.ID_driver_mode:
-        if (parsedItem.item.values[0]?.toLowerCase() === "cl") {
+        if (allowClStyle && parsedItem.item.values[0]?.toLowerCase() === "cl") {
           model.style = "cl";
         }
         break;

@@ -22,22 +22,23 @@ function itemsFromCommand(command: service.CommandData): CDBItem[] {
     });
 }
 
-export class CDB implements service.CatterService {
+export class CDB extends service.IgnorableService {
   save_path: string;
-  commandArray: service.CommandData[] = [];
+  private readonly generatedItems: CDBItem[] = [];
 
   constructor(save_path?: string) {
-    this.save_path = save_path ?? "compile_commands.json";
+    super();
+    this.save_path = save_path ?? "build/compile_commands.json";
   }
 
-  onStart(config: service.CatterConfig): service.CatterConfig {
+  override onStart(config: service.CatterConfig): service.CatterConfig {
     if (config.scriptArgs.length > 0) {
       this.save_path = config.scriptArgs[0];
     }
     return config;
   }
 
-  onFinish(event: service.ExecutionEvent) {
+  override onFinish(event: service.ExecutionEvent) {
     if (event.code !== 0) {
       io.println(
         `Build failed with exit code ${event.code}. CDB will not be saved.`,
@@ -46,9 +47,7 @@ export class CDB implements service.CatterService {
     }
 
     const manager = new CDBManager(this.save_path);
-    for (const command of this.commandArray) {
-      manager.merge(itemsFromCommand(command));
-    }
+    manager.merge(this.generatedItems);
 
     const savedPath = manager.save();
     io.println(
@@ -56,19 +55,26 @@ export class CDB implements service.CatterService {
     );
   }
 
-  onCommand(id: number, data: service.CommandCaptureResult): service.Action {
+  override onCommand(
+    id: number,
+    data: service.CommandCaptureResult,
+  ): service.IgnorableAction {
     if (!data.success) {
       io.println(`CDB received error: ${data.error.msg}`);
-    } else if (CompilerCmdAnalysis.isSupport(data.data.argv)) {
-      this.commandArray.push(data.data);
+      return {
+        type: "skip",
+      };
+    }
+
+    if (CompilerCmdAnalysis.isSupport(data.data.argv)) {
+      this.generatedItems.push(...itemsFromCommand(data.data));
+      return {
+        type: "ignore",
+      };
     }
 
     return {
       type: "skip",
     };
-  }
-
-  onExecution(id: number, event: service.ExecutionEvent) {
-    // No action needed for execution events in this service.
   }
 }

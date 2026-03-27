@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <expected>
 #include <format>
+#include <limits>
 #include <quickjs.h>
 #include <string>
 #include <string_view>
@@ -27,6 +28,7 @@ namespace {
 namespace eo = eventide::option;
 
 using OptionParseCallback = catter::qjs::Function<bool(catter::qjs::Parameters)>;
+constexpr uint32_t kAllOptionVisibility = std::numeric_limits<uint32_t>::max();
 
 #define CAPI_OPTION_TABLES(X)                                                                      \
     X("clang", clang)                                                                              \
@@ -93,6 +95,22 @@ bool emit_callback_value(OptionParseCallback& callback, catter::qjs::Value value
     return callback(std::move(args));
 }
 
+bool matches_visibility(const eo::OptTable& table,
+                        const eo::ParsedArgument& arg,
+                        uint32_t visibility) {
+    if(visibility == kAllOptionVisibility) {
+        return true;
+    }
+
+    auto option = table.option(arg.option_id);
+    if(!option.valid()) {
+        return true;
+    }
+
+    const auto& info = table.options()[option.id() - 1];
+    return (static_cast<uint32_t>(info.visibility) & visibility) != 0;
+}
+
 CTX_CAPI(option_get_info,
          (JSContext * ctx, std::string table_name, unsigned int id)->catter::qjs::Object) {
     using namespace catter;
@@ -119,18 +137,29 @@ CTX_CAPI(option_get_info,
     return res;
 };
 
-CTX_CAPI(option_parse,
-         (JSContext * ctx,
-          std::string table_name,
-          catter::qjs::Object args_object,
-          catter::qjs::Object callback_object)
-             ->void) {
+CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) {
+    if(params.size() != 3 && params.size() != 4) {
+        throw catter::qjs::Exception(
+            std::format("option_parse expects 3 or 4 arguments, got {}", params.size()));
+    }
+
+    auto table_name = params[0].as<std::string>();
+    auto args_object = params[1].as<catter::qjs::Object>();
+    auto callback_object = params[2].as<catter::qjs::Object>();
+    uint32_t visibility = kAllOptionVisibility;
+    if(params.size() == 4 && !params[3].is_nothing()) {
+        visibility = params[3].as<uint32_t>();
+    }
+
     auto args = args_object.as<catter::qjs::Array<std::string>>().as<std::vector<std::string>>();
     auto callback = callback_object.as<OptionParseCallback>();
     const auto& table = resolve_table(table_name);
 
     table.parse_args(args, [&](std::expected<eo::ParsedArgument, std::string> parsed) -> bool {
         if(parsed.has_value()) {
+            if(!matches_visibility(table, *parsed, visibility)) {
+                return true;
+            }
             return emit_callback_value(
                 callback,
                 catter::qjs::Value::from(make_option_item(ctx, table, *parsed)));

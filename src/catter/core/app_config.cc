@@ -14,6 +14,11 @@ std::string load_script_content(const std::string& script_path) {
          R"(
     import { scripts, service } from "catter";
     service.register(new scripts.CDB());
+    )"},
+        {"script::target-tree",
+         R"(
+    import { scripts, service } from "catter";
+    service.register(new scripts.TargetTree());
     )"}
     };
 

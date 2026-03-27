@@ -1,4 +1,4 @@
-import { cmd, debug, fs } from "catter";
+import { cmd, debug, fs, os } from "catter";
 
 type ExpectedAnalysis = {
   label: string;
@@ -105,30 +105,6 @@ const cases: ExpectedAnalysis[] = [
     inputs: ["src/t.c"],
     outputs: ["-"],
     cdbEntries: [],
-  },
-  {
-    label: "clang cl-style compile no suffix into object dir",
-    cmd: [
-      "clang",
-      "--driver-mode=cl",
-      "/c",
-      "/Tp",
-      "src/noext",
-      "/Fo",
-      "build/",
-    ],
-    compiler: "clang",
-    phase: cmd.CompilerPhase.Compile,
-    artifact: cmd.CompilerArtifact.Object,
-    type: cmd.CompilerCommandType.SourceToObject,
-    inputs: ["src/noext"],
-    outputs: [normalizedJoin("build", "noext.obj")],
-    cdbEntries: [
-      {
-        file: "src/noext",
-        output: normalizedJoin("build", "noext.obj"),
-      },
-    ],
   },
   {
     label: "gcc preprocess explicit language without suffix",
@@ -244,6 +220,44 @@ const cases: ExpectedAnalysis[] = [
     ],
   },
 ];
+
+if (os.platform() === "windows") {
+  cases.splice(1, 0, {
+    label: "clang cl-style compile no suffix into object dir",
+    cmd: [
+      "clang",
+      "--driver-mode=cl",
+      "/c",
+      "/Tp",
+      "src/noext",
+      "/Fo",
+      "build/",
+    ],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Compile,
+    artifact: cmd.CompilerArtifact.Object,
+    type: cmd.CompilerCommandType.SourceToObject,
+    inputs: ["src/noext"],
+    outputs: [normalizedJoin("build", "noext.obj")],
+    cdbEntries: [
+      {
+        file: "src/noext",
+        output: normalizedJoin("build", "noext.obj"),
+      },
+    ],
+  });
+} else {
+  const clStyleSuppressed = new cmd.CompilerCmdAnalysis([
+    "clang",
+    "--driver-mode=cl",
+    "main.c",
+  ]);
+  expectEq(
+    clStyleSuppressed.style,
+    "gnu",
+    "clang cl-style visibility suppressed style",
+  );
+}
 
 for (const testCase of cases) {
   expectAnalysis(testCase);

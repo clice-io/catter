@@ -56,20 +56,30 @@ function parseItemsFor(
   table: option.OptionTable,
   args: string[],
   label: string,
+  visibility?: number,
 ): option.OptionItem[] {
   const parsed: option.OptionItem[] = [];
-  option.parse(table, args, (parseRes) => {
-    if (typeof parseRes === "string") {
-      throw new Error(`${label}: unexpected parse error: ${parseRes}`);
-    }
-    parsed.push(parseRes);
-    return true;
-  });
+  option.parse(
+    table,
+    args,
+    (parseRes) => {
+      if (typeof parseRes === "string") {
+        throw new Error(`${label}: unexpected parse error: ${parseRes}`);
+      }
+      parsed.push(parseRes);
+      return true;
+    },
+    visibility,
+  );
   return parsed;
 }
 
-function parseItems(args: string[], label: string): option.OptionItem[] {
-  return parseItemsFor("clang", args, label);
+function parseItems(
+  args: string[],
+  label: string,
+  visibility?: number,
+): option.OptionItem[] {
+  return parseItemsFor("clang", args, label, visibility);
 }
 
 function parseErrorsFor(
@@ -145,6 +155,37 @@ expectEq(
 expectEq(collected[1].key, "-I", "collect include key");
 expectEq(collected[1].values[0], "include", "collect include value");
 expectEq(collected[2].key, "main.cc", "collect input key");
+
+const clangClDefaultVisible = parseItems(
+  ["/c", "main.cc"],
+  "clang cl visibility default",
+);
+expectEq(clangClDefaultVisible.length, 2, "clang cl default visibility length");
+expectEq(clangClDefaultVisible[0].key, "/c", "clang cl default visibility key");
+
+const clangClDriverOnlyVisible = parseItems(
+  ["/c", "main.cc"],
+  "clang cl visibility filtered",
+  option.ClangVisibility.DefaultVis,
+);
+expectEq(
+  clangClDriverOnlyVisible.length,
+  1,
+  "clang cl filtered visibility length",
+);
+expectEq(
+  clangClDriverOnlyVisible[0].key,
+  "main.cc",
+  "clang cl filtered visibility input",
+);
+
+const clangClAllVisible = parseItems(
+  ["/c", "main.cc"],
+  "clang cl visibility all",
+  0xffff_ffff,
+);
+expectEq(clangClAllVisible.length, 2, "clang cl all visibility length");
+expectEq(clangClAllVisible[0].key, "/c", "clang cl all visibility key");
 
 const collectError = option.collect("clang", ["-o"]);
 debug.assertThrow(typeof collectError === "string");

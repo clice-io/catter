@@ -355,6 +355,7 @@ export function option_parse(
   table: OptionTable,
   args: string[],
   cb: (parseRes: string | OptionItem) => boolean,
+  visibility?: number,
 ): void;
 
 export type Compiler =
