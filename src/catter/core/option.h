@@ -1,0 +1,122 @@
+#pragma once
+#include <cstdio>
+#include <exception>
+#include <filesystem>
+#include <format>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <eventide/deco/deco.h>
+
+#include "capi/type.h"
+#include "ipc.h"
+
+namespace catter::core {
+namespace detail {
+
+inline auto make_inject_runtime() -> js::CatterRuntime {
+    return js::CatterRuntime{
+        .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
+        .supportEvents = {js::EventType::finish},
+        .type = js::CatterRuntime::Type::inject,
+        .supportParentId = true,
+    };
+}
+
+}  // namespace detail
+
+namespace config {
+
+struct RunMode {
+    ipc::ServiceMode mode;
+    js::CatterRuntime runtime;
+    auto into(std::string_view text, const deco::decl::IntoContext& context)
+        -> std::optional<std::string>;
+};
+
+const inline static std::unordered_map<std::string_view, RunMode> mode_map = {
+    {"inject",
+     {.mode = ipc::ServiceMode::INJECT,
+      .runtime = {
+          .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
+          .supportEvents = {js::EventType::finish},
+          .type = js::CatterRuntime::Type::inject,
+          .supportParentId = true,
+      }}}
+};
+
+inline auto RunMode::into(std::string_view text, const deco::decl::IntoContext& context)
+    -> std::optional<std::string> {
+
+    auto it = mode_map.find(text);
+    if(it == mode_map.end()) {
+        return context.format_error(std::format("Unsupported mode: {}", text));
+    }
+
+    *this = it->second;
+    return std::nullopt;
+}
+
+struct WorkingDirectory {
+    std::filesystem::path path = std::filesystem::current_path();
+
+    auto into(std::string_view text, const deco::decl::IntoContext& context)
+        -> std::optional<std::string> {
+        try {
+            path = std::filesystem::absolute(text);
+        } catch(const std::exception& ex) {
+            return context.format_error(std::format("Wrong Path:{}", ex.what()));
+        }
+        return std::nullopt;
+    }
+};
+}  // namespace config
+
+struct CatterConfig {
+
+    constexpr inline static deco::decl::Category catter_category = {
+        .exclusive = true,
+        .required = true,
+        .name = "OPTIONS",
+        .description = "options of catter",
+    };
+
+    DECO_CFG_START(category = catter_category)
+
+    DecoInput(meta_var = "<Script>",
+              help = "path to the custom js; or internal script, eg. script::cdb",
+              required = true)
+    <std::string> script_path;
+
+    DecoKV(names = {"-m", "--mode"},
+           meta_var = "<Mode>",
+           help = "mode of operation, e.g. 'inject'",
+           required = true)
+    <config::RunMode> mode;
+
+    DecoKV(names = {"-d", "--dir"},
+           meta_var = "<Working Directory>",
+           help = "working directory for the target program, default to current directory",
+           required = false)
+    <config::WorkingDirectory> working_dir = config::WorkingDirectory{};
+
+    DecoPack(
+        meta_var = "<Args>",
+        help =
+            "the command you want catter to use, must be after a '--'; you can also pass it in your script",
+        required = false)
+    <std::vector<std::string>> command = std::vector<std::string>{};
+
+    std::vector<std::string> script_args;
+
+    DecoFlag(names = {"-h", "--help"}, help = "show this help message", required = false)
+    help = false;
+
+    DECO_CFG_END()
+
+    bool log = true;
+};
+
+}  // namespace catter::core

@@ -356,9 +356,9 @@ package("eventide")
     set_homepage("https://clice.io")
     set_license("Apache-2.0")
 
-    set_urls("https://github.com/clice-io/eventide.git")
+    set_urls("/home/kacent/project/eventide/.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("81", "5dbeee8296b524e13a689465b377df2ac8341ba8")
+    add_versions("97", "6bb5adfeaa91bae21a87c08030d89aad16ca3836")
 
     add_deps("libuv 1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -371,7 +371,7 @@ package("eventide")
         local configs = {}
         configs.dev = has_config("dev")
         configs.test = false
-        import("package.tools.xmake").install(package, configs)
+        import("package.tools.xmake").install(package, configs, {target = "eventide"})
     end)
 
 

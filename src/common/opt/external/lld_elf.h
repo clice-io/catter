@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eventide/option/opt_table.h>
+#include <eventide/option/option.h>
 
 namespace catter::opt::lld_elf {
 

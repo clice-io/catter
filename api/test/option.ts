@@ -1,4 +1,4 @@
-import { debug, io, nvcc2clang, option } from "catter";
+import { cmd, debug, io, option } from "catter";
 
 const OptionKindClass: {
   GroupClass: number;
@@ -516,4 +516,4 @@ const nvccArgs = [
   "sgemm/main.cu",
 ];
 
-debug.assertThrow(JSON.stringify(nvcc2clang(nvccArgs)).includes("-ccbin="));
+debug.assertThrow(JSON.stringify(cmd.nvcc2clang(nvccArgs)).includes("-ccbin="));

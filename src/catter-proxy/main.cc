@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
+#include <eventide/deco/detail/runtime.h>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -8,7 +9,7 @@
 #include <vector>
 
 #include <eventide/async/async.h>
-#include <eventide/deco/runtime.h>
+#include <eventide/deco/deco.h>
 
 #include "ipc.h"
 #include "hook.h"
@@ -103,19 +104,19 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
         log::mute_logger();
     }
 
-    deco::cli::Dispatcher<catter::proxy::Option> cli(
+    deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");
 
     int ret = 0;
     auto args = deco::util::argvify(argc, argv, 1);
-    cli.dispatch(catter::proxy::Option::Cate::help,
-                 [&]([[maybe_unused]] const catter::proxy::Option& opt) { cli.usage(std::cerr); })
-        .dispatch(catter::proxy::Option::Cate::proxy,
-                  [&](const auto& opt) { ret = proxy_main(opt.proxy_opt); })
-        .when_err([&](const deco::cli::ParseError& err) {
+    cli.match(catter::proxy::Option::Cate::help,
+              [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
+        .match(catter::proxy::Option::Cate::proxy,
+               [&](const auto& opt) { ret = proxy_main(opt.proxy_opt); })
+        .on_error([&](const deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
             ret = -1;
         })
-        .parse(args);
+        .execute(args);
     return ret;
 }

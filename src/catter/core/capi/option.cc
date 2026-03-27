@@ -8,8 +8,6 @@
 #include <vector>
 
 #include <eventide/option/option.h>
-#include <eventide/option/opt_table.h>
-#include <eventide/option/parsed_arg.h>
 
 #include "opt/external/clang.h"
 #include "opt/external/lld_coff.h"

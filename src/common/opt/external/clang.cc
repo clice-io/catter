@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include <eventide/option/option.h>
-#include <eventide/option/util.h>
 
 namespace catter::opt::clang {
 

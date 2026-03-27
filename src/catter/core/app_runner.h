@@ -1,9 +1,9 @@
 #pragma once
 
-#include "opt/main/option.h"
+#include "./option.h"
 
 namespace catter::app {
 
-void run(const core::Option::CatterOption& opt);
+void run(const core::CatterConfig& config);
 
 }  // namespace catter::app
