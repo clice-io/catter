@@ -356,7 +356,7 @@ public:
     std::vector<std::string> buildSystemCommand;
     CatterRuntime runtime;
     CatterOptions options;
-    bool isScriptSupported;
+    bool execute;
 };
 
 struct CommandData {

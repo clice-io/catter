@@ -2,30 +2,41 @@ import * as service from "../service.js";
 
 import * as io from "../io.js";
 import * as fs from "../fs.js";
-import { CDBManager, type CDBItem, CompilerCmdAnalysis } from "../cmd/index.js";
+import {
+  CDBManager,
+  type CDBItem,
+  CompilerAnalysis,
+  analyze as analyzeCmd,
+  cdbItemsOf,
+} from "../cmd/index.js";
 
-function itemsFromCommand(command: service.CommandData): CDBItem[] {
-  return new CompilerCmdAnalysis(command.argv)
-    .compilationDatabaseEntries()
-    .map((entry) => {
-      const item: CDBItem = {
-        directory: command.cwd,
-        file: entry.file,
-        arguments: [...command.argv],
-      };
-
-      if (entry.output !== undefined) {
-        item.output = entry.output;
-      }
-
-      return item;
-    });
-}
-
+/**
+ * Service script that captures compiler leaf commands and writes a
+ * `compile_commands.json` file.
+ *
+ * Only compiler commands that represent source-to-object compilation contribute
+ * entries. Other commands are ignored.
+ *
+ * @example
+ * ```ts
+ * import { scripts, service } from "catter";
+ *
+ * service.register(new scripts.CDB("build/compile_commands.json"));
+ * ```
+ */
 export class CDB extends service.IgnorableService {
+  /** Destination path used when saving the compilation database. */
   save_path: string;
   private readonly generatedItems: CDBItem[] = [];
 
+  /**
+   * Creates a CDB script service.
+   *
+   * @example
+   * ```ts
+   * const cdb = new scripts.CDB("build/compile_commands.json");
+   * ```
+   */
   constructor(save_path?: string) {
     super();
     this.save_path = save_path ?? "build/compile_commands.json";
@@ -56,7 +67,7 @@ export class CDB extends service.IgnorableService {
   }
 
   override onCommand(
-    id: number,
+    _id: number,
     data: service.CommandCaptureResult,
   ): service.IgnorableAction {
     if (!data.success) {
@@ -66,15 +77,17 @@ export class CDB extends service.IgnorableService {
       };
     }
 
-    if (CompilerCmdAnalysis.isSupport(data.data.argv)) {
-      this.generatedItems.push(...itemsFromCommand(data.data));
+    const result = analyzeCmd(data.data.argv);
+    const analysis = CompilerAnalysis.from(result);
+    if (analysis === undefined) {
       return {
-        type: "ignore",
+        type: "skip",
       };
     }
 
+    this.generatedItems.push(...cdbItemsOf(data.data, analysis));
     return {
-      type: "skip",
+      type: "ignore",
     };
   }
 }

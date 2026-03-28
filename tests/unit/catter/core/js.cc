@@ -125,7 +125,7 @@ TEST_CASE(run_service_js_file_and_callbacks) {
             .buildSystemCommand = {"xmake", "build"},
             .runtime = runtime,
             .options = {.log = true},
-            .isScriptSupported = true,
+            .execute = true,
         };
 
         auto updated_config = js::on_start(config);
@@ -133,7 +133,7 @@ TEST_CASE(run_service_js_file_and_callbacks) {
         EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
         EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
         EXPECT_TRUE(updated_config.options.log == false);
-        EXPECT_TRUE(updated_config.isScriptSupported == false);
+        EXPECT_TRUE(updated_config.execute == false);
 
         js::CommandData data{
             .cwd = "/tmp",
@@ -181,6 +181,22 @@ TEST_CASE(run_service_js_file_and_callbacks) {
 TEST_CASE(run_option_parse_capi) {
     auto f = [&]() {
         run_basic_js_case("option.js");
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
+TEST_CASE(run_cli_js_file) {
+    auto f = [&]() {
+        run_basic_js_case("cli.js");
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
+TEST_CASE(run_cmd_js_file) {
+    auto f = [&]() {
+        run_basic_js_case("cmd.js");
     };
 
     EXPECT_NOTHROWS(f());

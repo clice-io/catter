@@ -19,7 +19,7 @@ service.register({
         ...config.options,
         log: false,
       },
-      isScriptSupported: false,
+      execute: false,
     };
   },
 

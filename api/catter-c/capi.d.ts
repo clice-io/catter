@@ -145,11 +145,11 @@ export type CatterConfig = {
   };
 
   /**
-   * Whether the current script is supported by the runtime.
+   * Whether catter should execute the build-system command after `onStart`.
    *
-   * When `false`, catter aborts execution immediately.
+   * When `false`, catter stops before launching the build.
    */
-  isScriptSupported: boolean;
+  execute: boolean;
 };
 
 /**

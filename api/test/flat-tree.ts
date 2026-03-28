@@ -53,6 +53,7 @@ expectEq(basic.node(1)?.content, "root", "node lookup");
 expectEq(basic.node(99), undefined, "missing node lookup");
 expectEq(basic.parent(1), undefined, "root parent");
 expectEq(basic.father(4)?.id, 2, "father alias");
+expectArrayEq(basic.node(4)?.parentIds ?? [], [2], "single parent ids");
 expectArrayEq(
   basic.children(1).map((node) => node.id),
   [2, 3],
@@ -190,6 +191,17 @@ expectEq(
 );
 incremental.set({ id: 3, parentId: 1, content: "leaf" });
 expectArrayEq(
+  incremental.parents(3).map((node) => node.id),
+  [2, 1],
+  "dag appended parents",
+);
+expectEq(
+  incremental.render(),
+  "root\n├── child\n│   └── leaf\n└── leaf\n",
+  "dag appended render",
+);
+incremental.set({ id: 3, parentIds: [1], content: "leaf" });
+expectArrayEq(
   incremental.children(1).map((node) => node.id),
   [2, 3],
   "reparented child order",
@@ -198,4 +210,37 @@ expectEq(
   incremental.render(),
   "root\n├── child\n└── leaf\n",
   "reparented render",
+);
+
+const dag = new data.FlatTree<string, string>();
+dag.set({ id: "app", content: "app" });
+dag.set({ id: "tool", content: "tool" });
+dag.set({ id: "main.o", parentId: "app", content: "main.o" });
+dag.set({ id: "main.o", parentId: "tool", content: "main.o" });
+expectArrayEq(
+  dag.parents("main.o").map((node) => node.id),
+  ["app", "tool"],
+  "multi parent lookup",
+);
+expectEq(
+  dag.relation("app", "main.o"),
+  data.FlatTreeRelation.Ancestor,
+  "first dag ancestor relation",
+);
+expectEq(
+  dag.relation("tool", "main.o"),
+  data.FlatTreeRelation.Ancestor,
+  "second dag ancestor relation",
+);
+expectEq(
+  dag.render(),
+  ".\n├── app\n│   └── main.o\n└── tool\n    └── main.o\n",
+  "dag render",
+);
+
+dag.set({ id: "main.o", content: "main object" });
+expectArrayEq(
+  dag.parents("main.o").map((node) => node.id),
+  ["app", "tool"],
+  "content-only update keeps parents",
 );

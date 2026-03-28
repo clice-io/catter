@@ -2,17 +2,8 @@ import * as data from "../data/index.js";
 import * as fs from "../fs.js";
 import * as io from "../io.js";
 import * as service from "../service.js";
-import {
-  CompilerCmdAnalysis,
-  CompilerCommandType,
-  type CompilerCommandType as CompilerCommandTypeValue,
-} from "../cmd/index.js";
-
-type TargetEntry = {
-  output: string;
-  inputs: string[];
-  type: CompilerCommandTypeValue;
-};
+import * as cli from "../cli/index.js";
+import { analyze as analyzeCmd } from "../cmd/index.js";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -26,7 +17,7 @@ function looksAbsolutePath(path: string): boolean {
   );
 }
 
-function normalizeCommandPath(cwd: string, path: string): string | undefined {
+function normalizePath(cwd: string, path: string): string | undefined {
   if (path === "-") {
     return undefined;
   }
@@ -36,151 +27,45 @@ function normalizeCommandPath(cwd: string, path: string): string | undefined {
   return fs.path.lexicalNormal(joined);
 }
 
-function isTargetType(
-  type: CompilerCommandTypeValue | undefined,
-): type is CompilerCommandTypeValue {
-  switch (type) {
-    case CompilerCommandType.SourceToObject:
-    case CompilerCommandType.SourceToExe:
-    case CompilerCommandType.ObjectToExe:
-    case CompilerCommandType.ObjectToShare:
-    case CompilerCommandType.ObjectToLib:
-    case CompilerCommandType.RelocatableLink:
-      return true;
-    default:
-      return false;
-  }
-}
+const targetTreeCLI = cli.command({
+  name: "target-tree",
+  description: "Render captured build targets as a flat target forest.",
+  options: [
+    cli.number("depth", {
+      short: "d",
+      valueName: "n",
+      description: "Limit render depth.",
+      integer: true,
+      min: 0,
+    }),
+  ] as const,
+});
 
-function targetEntriesFromCommand(command: service.CommandData): TargetEntry[] {
-  const analysis = new CompilerCmdAnalysis(command.argv);
-  const type = analysis.type;
-  if (!isTargetType(type)) {
-    return [];
-  }
-
-  const inputs = analysis
-    .inputs()
-    .map((input) => normalizeCommandPath(command.cwd, input))
-    .filter(isDefined);
-  const outputs = analysis
-    .outputs()
-    .map((output) => normalizeCommandPath(command.cwd, output))
-    .filter(isDefined);
-
-  if (outputs.length === 0) {
-    return [];
-  }
-
-  if (type === CompilerCommandType.SourceToObject) {
-    if (outputs.length === inputs.length) {
-      return outputs.map((output, index) => ({
-        output,
-        inputs: [inputs[index]],
-        type,
-      }));
-    }
-
-    if (outputs.length === 1 && inputs.length === 1) {
-      return [
-        {
-          output: outputs[0],
-          inputs: [inputs[0]],
-          type,
-        },
-      ];
-    }
-
-    return [];
-  }
-
-  return outputs.map((output) => ({
-    output,
-    inputs: [...inputs],
-    type,
-  }));
-}
-
-function ensureTargetNode(
-  tree: data.FlatTree<string, string>,
-  id: string,
-): void {
-  const parentId = tree.node(id)?.parentId ?? null;
-  tree.set({
-    id,
-    parentId,
-    content: id,
-  });
-}
-
-function attachTargetNode(
-  tree: data.FlatTree<string, string>,
-  childId: string,
-  parentId: string,
-): void {
-  const currentNode = tree.node(childId);
-  const nextParentId =
-    currentNode === undefined || currentNode.parentId === null
-      ? parentId
-      : currentNode.parentId;
-
-  tree.set({
-    id: childId,
-    parentId: nextParentId,
-    content: childId,
-  });
-}
-
-function recordTargetEntries(
-  tree: data.FlatTree<string, string>,
-  entries: TargetEntry[],
-): void {
-  for (const entry of entries) {
-    ensureTargetNode(tree, entry.output);
-    for (const input of entry.inputs) {
-      attachTargetNode(tree, input, entry.output);
-    }
-  }
-}
-
-function parseDepth(args: string[]): number | undefined {
-  let depth: number | undefined;
-
-  for (let index = 0; index < args.length; ++index) {
-    const arg = args[index];
-    switch (arg) {
-      case "-d":
-      case "--depth": {
-        const value = args[index + 1];
-        if (value === undefined) {
-          throw new Error(`target-tree: missing value for ${arg}`);
-        }
-
-        const parsed = Number(value);
-        if (!Number.isInteger(parsed) || parsed < 0) {
-          throw new Error(
-            `target-tree: depth must be a non-negative integer, got ${value}`,
-          );
-        }
-
-        depth = parsed;
-        ++index;
-        break;
-      }
-      default:
-        throw new Error(`target-tree: unsupported script arg: ${arg}`);
-    }
-  }
-
-  return depth;
-}
-
-export class TargetTree extends service.CompilerCmdService {
+/**
+ * Service script that renders the captured command products as a dependency
+ * forest.
+ *
+ * Each recognized command contributes dependency edges through
+ * `analysis.edges()`, and the final output is rendered with `FlatTree`.
+ *
+ * @example
+ * ```ts
+ * import { scripts, service } from "catter";
+ *
+ * service.register(new scripts.TargetTree());
+ * ```
+ */
+export class TargetTree extends service.IgnorableService {
   private readonly targetTree = new data.FlatTree<string, string>();
   private maxDepth: number | undefined;
 
   override onStart(config: service.CatterConfig): service.CatterConfig {
-    this.maxDepth = parseDepth(config.scriptArgs);
+    const res = cli.run(targetTreeCLI, config.scriptArgs);
+    if (res) {
+      this.maxDepth = res.depth;
+      return config;
+    }
+    config.execute = false;
     return config;
   }
 
@@ -192,7 +77,7 @@ export class TargetTree extends service.CompilerCmdService {
     }
 
     if (this.targetTree.size === 0) {
-      io.println("No binary targets found.");
+      io.println("No targets found.");
       return;
     }
 
@@ -208,10 +93,49 @@ export class TargetTree extends service.CompilerCmdService {
     _id: number,
     data: service.CommandCaptureResult,
   ): service.IgnorableAction {
-    recordTargetEntries(
-      this.targetTree,
-      targetEntriesFromCommand(this.compilerCommandData(data).data),
-    );
+    if (!data.success) {
+      return {
+        type: "skip",
+      };
+    }
+
+    const analysis = analyzeCmd(data.data.argv);
+    const targetEntries = analysis?.edges() ?? [];
+    const entries = targetEntries
+      .map((entry) => {
+        const output = normalizePath(data.data.cwd, entry.output);
+        if (output === undefined) {
+          return undefined;
+        }
+
+        return {
+          output,
+          inputs: entry.inputs
+            .map((input) => normalizePath(data.data.cwd, input))
+            .filter(isDefined),
+        };
+      })
+      .filter(isDefined);
+
+    for (const entry of entries) {
+      this.targetTree.set({
+        id: entry.output,
+        content: entry.output,
+      });
+      for (const input of entry.inputs) {
+        this.targetTree.set({
+          id: input,
+          parentId: entry.output,
+          content: input,
+        });
+      }
+    }
+
+    if (analysis !== undefined) {
+      return {
+        type: "ignore",
+      };
+    }
 
     return {
       type: "skip",

@@ -136,8 +136,12 @@ void run(const core::CatterConfig& config) {
         .buildSystemCommand = config.command.value(),
         .runtime = config.mode->runtime,
         .options = {.log = config.log},
-        .isScriptSupported = true,
+        .execute = true,
     });
+
+    if(!js_config.execute) {
+        return;
+    }
 
     js::on_finish(js::Tag<js::EventType::finish>{
         .code = execute_service(config.mode->mode, js_config),

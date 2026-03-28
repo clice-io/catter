@@ -1,14 +1,31 @@
 import type { Compiler } from "catter-c";
 import { identify_compiler } from "catter-c";
 
-import * as debug from "../debug.js";
 import * as fs from "../fs.js";
 import * as os from "../os.js";
 import * as option from "../option/index.js";
 import { ClangID, ClangVisibility } from "../option/clang.js";
-import type { OptionInfo, OptionItem, OptionTable } from "../option/types.js";
+import {
+  OptionKindClass,
+  type OptionInfo,
+  type OptionItem,
+  type OptionTable,
+} from "../option/types.js";
+import { Analysis } from "./model.js";
+import type { Analysis as AnyAnalysis, Analyzer, Edge } from "./model.js";
 
-export const CompilerCommandType = {
+/**
+ * Legacy compiler command categories preserved for compatibility.
+ *
+ * Prefer the newer `phase` + `artifact` model on `CompilerAnalysis` for
+ * new code.
+ *
+ * @example
+ * ```ts
+ * const kind = cmd.CompilerType.SourceToObject;
+ * ```
+ */
+export const CompilerType = {
   SourceToObject: 0,
   ObjectToExe: 1,
   ObjectToShare: 2,
@@ -23,9 +40,25 @@ export const CompilerCommandType = {
   SourceSyntaxOnly: 11,
   RelocatableLink: 12,
 } as const;
-export type CompilerCommandType =
-  (typeof CompilerCommandType)[keyof typeof CompilerCommandType];
 
+/**
+ * Union type of `CompilerType` values.
+ *
+ * @example
+ * ```ts
+ * const kind: cmd.CompilerType = cmd.CompilerType.SourceToExe;
+ * ```
+ */
+export type CompilerType = (typeof CompilerType)[keyof typeof CompilerType];
+
+/**
+ * High-level compiler pipeline phase.
+ *
+ * @example
+ * ```ts
+ * const phase = cmd.CompilerPhase.Compile;
+ * ```
+ */
 export const CompilerPhase = {
   Preprocess: "preprocess",
   SyntaxOnly: "syntax-only",
@@ -35,8 +68,25 @@ export const CompilerPhase = {
   RelocatableLink: "relocatable-link",
   DeviceLink: "device-link",
 } as const;
+
+/**
+ * Union type of `CompilerPhase` values.
+ *
+ * @example
+ * ```ts
+ * const phase: cmd.CompilerPhase = cmd.CompilerPhase.Link;
+ * ```
+ */
 export type CompilerPhase = (typeof CompilerPhase)[keyof typeof CompilerPhase];
 
+/**
+ * Main artifact kind produced by a compiler command.
+ *
+ * @example
+ * ```ts
+ * const artifact = cmd.CompilerArtifact.Object;
+ * ```
+ */
 export const CompilerArtifact = {
   None: "none",
   Stdout: "stdout",
@@ -54,14 +104,57 @@ export const CompilerArtifact = {
   Fatbin: "fatbin",
   Unknown: "unknown",
 } as const;
+
+/**
+ * Union type of `CompilerArtifact` values.
+ *
+ * @example
+ * ```ts
+ * const artifact: cmd.CompilerArtifact = cmd.CompilerArtifact.SharedLibrary;
+ * ```
+ */
 export type CompilerArtifact =
   (typeof CompilerArtifact)[keyof typeof CompilerArtifact];
 
-type SupportedCompiler = Extract<Compiler, "clang" | "gcc">;
-type CompilerStyleValue = "gnu" | "cl";
+/**
+ * Supported compiler executable identifiers.
+ *
+ * @example
+ * ```ts
+ * const exe: cmd.CompilerExe = "clang";
+ * ```
+ */
+export type CompilerExe = Extract<Compiler, "clang" | "gcc">;
+
+/**
+ * Driver option syntax style observed during parsing.
+ *
+ * @example
+ * ```ts
+ * const style: cmd.CompilerStyle = "gnu";
+ * ```
+ */
+export type CompilerStyle = "gnu" | "cl";
+
+/**
+ * One parsed compiler input, including its inferred role.
+ *
+ * @example
+ * ```ts
+ * const input: cmd.CompilerInput = {
+ *   path: "main.c",
+ *   kind: "source",
+ *   index: 1,
+ * };
+ * ```
+ */
+export interface CompilerInput {
+  path: string;
+  kind: "source" | "link";
+  index: number;
+}
 
 type CompilerFamily = "clang-like" | "msvc-like" | "nvcc-like";
-type CommandInputKind = "source" | "link";
 type OutputChannel = "primary" | "object" | "executable" | "linker";
 
 type ParsedOption = {
@@ -71,12 +164,6 @@ type ParsedOption = {
   info: OptionInfo;
 };
 
-type CommandInput = {
-  path: string;
-  kind: CommandInputKind;
-  index: number;
-};
-
 type OutputOption = {
   value: string;
   index: number;
@@ -84,19 +171,23 @@ type OutputOption = {
 };
 
 type CommandModel = {
-  compiler: SupportedCompiler;
-  style: CompilerStyleValue;
-  phase: CompilerPhaseValue;
-  artifact: CompilerArtifactValue;
+  compiler: CompilerExe;
+  style: CompilerStyle;
+  phase: CompilerPhase;
+  artifact: CompilerArtifact;
   explicitLanguage?: string;
-  inputs: CommandInput[];
+  inputs: CompilerInput[];
   outputs: Partial<Record<OutputChannel, OutputOption>>;
 };
 
 type CompilerFamilyAnalyzer = (
-  cmd: string[],
-  compiler: SupportedCompiler,
+  cmd: readonly string[],
+  compiler: CompilerExe,
 ) => CommandModel;
+
+const CompilerPhaseValue = CompilerPhase;
+const CompilerArtifactValue = CompilerArtifact;
+const LegacyTypeValue = CompilerType;
 
 const SOURCE_SUFFIXES = new Set([
   ".c",
@@ -145,7 +236,7 @@ const LINK_INPUT_SUFFIXES = new Set([
 ]);
 
 const STYLE_DEFAULT_EXTENSIONS: Record<
-  CompilerStyleValue,
+  CompilerStyle,
   {
     object: string;
     executable: string;
@@ -180,10 +271,10 @@ function normalizeOptionItem(table: OptionTable, item: OptionItem): OptionItem {
 
 function collectParsedOptions(
   table: OptionTable,
-  args: string[],
+  args: readonly string[],
   visibility?: number,
 ): ParsedOption[] {
-  const collected = option.collect(table, args, visibility);
+  const collected = option.collect(table, [...args], visibility);
   if (!Array.isArray(collected)) {
     throw new Error(`fatal error in parsing: ${collected}`);
   }
@@ -228,7 +319,7 @@ function pathStem(value: string): string {
   return filename.slice(0, filename.length - ext.length);
 }
 
-function classifyPathBySuffix(value: string): CommandInputKind {
+function classifyPathBySuffix(value: string): "source" | "link" {
   if (value === "-") {
     return "source";
   }
@@ -266,7 +357,7 @@ function languageIsSource(language: string | undefined): boolean | undefined {
 function classifyInputKind(
   value: string,
   explicitLanguage: string | undefined,
-): CommandInputKind {
+): "source" | "link" {
   const explicit = languageIsSource(explicitLanguage);
   if (explicit !== undefined) {
     return explicit ? "source" : "link";
@@ -277,7 +368,7 @@ function classifyInputKind(
 function recordInput(
   model: CommandModel,
   path: string | undefined,
-  kind: CommandInputKind,
+  kind: "source" | "link",
   index: number,
 ): void {
   if (path === undefined) {
@@ -368,7 +459,7 @@ function scanClLinkerRemainder(values: string[]) {
   };
 }
 
-function createDefaultModel(compiler: SupportedCompiler): CommandModel {
+function createDefaultModel(compiler: CompilerExe): CommandModel {
   return {
     compiler,
     style: "gnu",
@@ -381,7 +472,7 @@ function createDefaultModel(compiler: SupportedCompiler): CommandModel {
 
 function setCompileResult(
   model: CommandModel,
-  artifact: CompilerArtifactValue,
+  artifact: CompilerArtifact,
 ): void {
   model.phase = CompilerPhaseValue.Compile;
   model.artifact = artifact;
@@ -407,7 +498,183 @@ function setRelocatableLinkResult(model: CommandModel): void {
   model.artifact = CompilerArtifactValue.Object;
 }
 
-function resolveCompilerFamily(compiler: SupportedCompiler): CompilerFamily {
+function consumedArgCount(
+  args: readonly string[],
+  item: OptionItem,
+  info: OptionInfo,
+): number {
+  switch (info.kind) {
+    case OptionKindClass.GroupClass:
+    case OptionKindClass.InputClass:
+    case OptionKindClass.UnknownClass:
+    case OptionKindClass.FlagClass:
+    case OptionKindClass.JoinedClass:
+    case OptionKindClass.RemainingArgsJoinedClass:
+    case OptionKindClass.CommaJoinedClass:
+      return 1;
+    case OptionKindClass.ValuesClass:
+    case OptionKindClass.SeparateClass:
+    case OptionKindClass.RemainingArgsClass:
+    case OptionKindClass.MultiArgClass:
+      return 1 + item.values.length;
+    case OptionKindClass.JoinedOrSeparateClass:
+      return args[item.index] === item.key ? 1 + item.values.length : 1;
+    case OptionKindClass.JoinedAndSeparateClass:
+      return item.values.length === 0 ? 1 : item.values.length;
+    default:
+      return 1;
+  }
+}
+
+function collectConsumedArgIndexes(
+  args: readonly string[],
+  parsed: ParsedOption[],
+): Set<number> {
+  const indexes = new Set<number>();
+
+  for (const parsedItem of parsed) {
+    const count = consumedArgCount(args, parsedItem.raw, parsedItem.rawInfo);
+    for (let offset = 0; offset < count; ++offset) {
+      indexes.add(parsedItem.raw.index + offset);
+    }
+  }
+
+  return indexes;
+}
+
+function hasRecordedInput(
+  model: CommandModel,
+  index: number,
+  path: string,
+): boolean {
+  return model.inputs.some(
+    (input) => input.index === index && input.path === path,
+  );
+}
+
+function isFallbackInputToken(token: string): boolean {
+  if (token === "-") {
+    return true;
+  }
+  if (token.startsWith("@")) {
+    return false;
+  }
+  if (!token.startsWith("-")) {
+    return true;
+  }
+  return os.platform() !== "windows" && token.startsWith("/");
+}
+
+function applyClangLikeDriverFallbacks(
+  model: CommandModel,
+  args: readonly string[],
+  parsed: ParsedOption[],
+): void {
+  const consumedIndexes = collectConsumedArgIndexes(args, parsed);
+  let positionalOnly = false;
+
+  for (let index = 0; index < args.length; ++index) {
+    if (consumedIndexes.has(index)) {
+      continue;
+    }
+
+    const token = args[index];
+    if (positionalOnly) {
+      if (!hasRecordedInput(model, index, token)) {
+        recordInput(
+          model,
+          token,
+          classifyInputKind(token, model.explicitLanguage),
+          index,
+        );
+      }
+      continue;
+    }
+
+    switch (token) {
+      case "--":
+        positionalOnly = true;
+        continue;
+      case "-c":
+        setCompileResult(model, CompilerArtifactValue.Object);
+        continue;
+      case "-S":
+        setCompileResult(
+          model,
+          model.artifact === CompilerArtifactValue.LlvmBitcode
+            ? CompilerArtifactValue.LlvmIR
+            : CompilerArtifactValue.Assembly,
+        );
+        continue;
+      case "-E":
+        model.phase = CompilerPhaseValue.Preprocess;
+        model.artifact = CompilerArtifactValue.Stdout;
+        continue;
+      case "-fsyntax-only":
+        model.phase = CompilerPhaseValue.SyntaxOnly;
+        model.artifact = CompilerArtifactValue.None;
+        continue;
+      case "-emit-llvm":
+      case "-emit-llvm-bc":
+        setCompileResult(
+          model,
+          model.artifact === CompilerArtifactValue.Assembly
+            ? CompilerArtifactValue.LlvmIR
+            : CompilerArtifactValue.LlvmBitcode,
+        );
+        continue;
+      case "-emit-pch":
+        setCompileResult(model, CompilerArtifactValue.Pch);
+        continue;
+      case "-emit-module":
+      case "-emit-module-interface":
+      case "-emit-reduced-module-interface":
+        setCompileResult(model, CompilerArtifactValue.Pcm);
+        continue;
+      case "-shared":
+        setLinkResult(model, CompilerArtifactValue.SharedLibrary);
+        continue;
+      case "-r":
+        setRelocatableLinkResult(model);
+        continue;
+      case "-x":
+        if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
+          model.explicitLanguage = args[index + 1];
+          consumedIndexes.add(index + 1);
+          ++index;
+        }
+        continue;
+      case "-o":
+        if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
+          recordOutput(model, "primary", args[index + 1], index);
+          consumedIndexes.add(index + 1);
+          ++index;
+        }
+        continue;
+    }
+
+    if (token.startsWith("-x") && token.length > 2) {
+      model.explicitLanguage = token.slice(2);
+      continue;
+    }
+
+    if (token.startsWith("-o") && token.length > 2) {
+      recordOutput(model, "primary", token.slice(2), index);
+      continue;
+    }
+
+    if (isFallbackInputToken(token) && !hasRecordedInput(model, index, token)) {
+      recordInput(
+        model,
+        token,
+        classifyInputKind(token, model.explicitLanguage),
+        index,
+      );
+    }
+  }
+}
+
+function resolveCompilerFamily(compiler: CompilerExe): CompilerFamily {
   switch (compiler) {
     case "clang":
     case "gcc":
@@ -416,8 +683,8 @@ function resolveCompilerFamily(compiler: SupportedCompiler): CompilerFamily {
 }
 
 function analyzeCompilerFamily(
-  cmd: string[],
-  compiler: SupportedCompiler,
+  cmd: readonly string[],
+  compiler: CompilerExe,
 ): CommandModel {
   const family = resolveCompilerFamily(compiler);
 
@@ -432,9 +699,10 @@ function analyzeCompilerFamily(
 
 const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
   const model = createDefaultModel(compiler);
+  const args = cmd.slice(1);
   const parsed = collectParsedOptions(
     "clang",
-    cmd.slice(1),
+    args,
     clangLikeDriverVisibility(),
   );
   const allowClStyle = supportsClStyleAnalysis();
@@ -576,12 +844,13 @@ const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
     }
   }
 
+  applyClangLikeDriverFallbacks(model, args, parsed);
   return model;
 };
 
 function defaultExtensionForArtifact(
-  style: CompilerStyleValue,
-  artifact: CompilerArtifactValue,
+  style: CompilerStyle,
+  artifact: CompilerArtifact,
 ): string | undefined {
   switch (artifact) {
     case CompilerArtifactValue.Object:
@@ -614,8 +883,8 @@ function defaultExtensionForArtifact(
 }
 
 function usesPerInputOutputs(
-  phase: CompilerPhaseValue,
-  artifact: CompilerArtifactValue,
+  phase: CompilerPhase,
+  artifact: CompilerArtifact,
 ): boolean {
   if (phase !== CompilerPhaseValue.Compile) {
     return false;
@@ -637,11 +906,11 @@ function usesPerInputOutputs(
   }
 }
 
-function sourceInputsOf(model: CommandModel): CommandInput[] {
+function sourceInputsOf(model: CommandModel): CompilerInput[] {
   return model.inputs.filter((input) => input.kind === "source");
 }
 
-function resolveDefaultCompileInputs(model: CommandModel): CommandInput[] {
+function resolveDefaultCompileInputs(model: CommandModel): CompilerInput[] {
   const sourceInputs = sourceInputsOf(model);
   return sourceInputs.length > 0 ? sourceInputs : model.inputs;
 }
@@ -719,149 +988,325 @@ function resolveOutputs(model: CommandModel): string[] {
   );
 }
 
-function resolveLegacyCmdType(
-  model: CommandModel,
-): LegacyCmdTypeValue | undefined {
+function resolveLegacyCmdType(model: CommandModel): CompilerType | undefined {
   const hasSourceInput = sourceInputsOf(model).length > 0;
 
   switch (model.phase) {
     case CompilerPhaseValue.Preprocess:
-      return LegacyCmdTypeValue.SourcePreprocess;
+      return LegacyTypeValue.SourcePreprocess;
     case CompilerPhaseValue.SyntaxOnly:
-      return LegacyCmdTypeValue.SourceSyntaxOnly;
+      return LegacyTypeValue.SourceSyntaxOnly;
     case CompilerPhaseValue.Compile:
       switch (model.artifact) {
         case CompilerArtifactValue.Object:
-          return LegacyCmdTypeValue.SourceToObject;
+          return LegacyTypeValue.SourceToObject;
         case CompilerArtifactValue.Assembly:
-          return LegacyCmdTypeValue.SourceToAsm;
+          return LegacyTypeValue.SourceToAsm;
         case CompilerArtifactValue.LlvmIR:
-          return LegacyCmdTypeValue.SourceToLlvmIR;
+          return LegacyTypeValue.SourceToLlvmIR;
         case CompilerArtifactValue.LlvmBitcode:
-          return LegacyCmdTypeValue.SourceToLlvmBC;
+          return LegacyTypeValue.SourceToLlvmBC;
         case CompilerArtifactValue.Pch:
-          return LegacyCmdTypeValue.SourceToPch;
+          return LegacyTypeValue.SourceToPch;
         case CompilerArtifactValue.Pcm:
-          return LegacyCmdTypeValue.SourceToPcm;
+          return LegacyTypeValue.SourceToPcm;
         default:
           return undefined;
       }
     case CompilerPhaseValue.Link:
       switch (model.artifact) {
         case CompilerArtifactValue.SharedLibrary:
-          return LegacyCmdTypeValue.ObjectToShare;
+          return LegacyTypeValue.ObjectToShare;
         case CompilerArtifactValue.Executable:
           return hasSourceInput
-            ? LegacyCmdTypeValue.SourceToExe
-            : LegacyCmdTypeValue.ObjectToExe;
+            ? LegacyTypeValue.SourceToExe
+            : LegacyTypeValue.ObjectToExe;
         default:
           return undefined;
       }
     case CompilerPhaseValue.Archive:
-      return LegacyCmdTypeValue.ObjectToLib;
+      return LegacyTypeValue.ObjectToLib;
     case CompilerPhaseValue.RelocatableLink:
-      return LegacyCmdTypeValue.RelocatableLink;
+      return LegacyTypeValue.RelocatableLink;
     case CompilerPhaseValue.DeviceLink:
       return undefined;
   }
 }
 
-function isCompilationDatabaseCommand(model: CommandModel): boolean {
-  return (
-    model.phase === CompilerPhaseValue.Compile &&
-    model.artifact === CompilerArtifactValue.Object &&
-    sourceInputsOf(model).length > 0
-  );
-}
-
-function resolveCompilationDatabaseEntries(
-  model: CommandModel,
-): Array<{ file: string; output?: string }> {
-  if (!isCompilationDatabaseCommand(model)) {
+function resolveCompilerEdges(model: CommandModel, outputs: string[]): Edge[] {
+  if (outputs.length === 0) {
     return [];
   }
 
-  const sourceInputs = sourceInputsOf(model);
-  const outputs = resolveOutputs(model);
-  return sourceInputs.map((input, index) => {
-    const entry: { file: string; output?: string } = {
-      file: input.path,
-    };
-
-    if (outputs.length === sourceInputs.length) {
-      entry.output = outputs[index];
-    } else if (outputs.length === 1 && sourceInputs.length === 1) {
-      entry.output = outputs[0];
+  if (usesPerInputOutputs(model.phase, model.artifact)) {
+    const compileInputs = resolveDefaultCompileInputs(model);
+    if (outputs.length === compileInputs.length) {
+      return outputs.map((output, index) => ({
+        output,
+        inputs: [compileInputs[index].path],
+      }));
     }
 
-    return entry;
-  });
-}
-
-export class CompilerCmdAnalysis {
-  static isSupport(cmd: string[]): boolean {
-    if (cmd.length === 0) {
-      return false;
+    if (outputs.length === 1 && compileInputs.length === 1) {
+      return [
+        {
+          output: outputs[0],
+          inputs: [compileInputs[0].path],
+        },
+      ];
     }
 
-    const compilerId = identify_compiler(cmd[0]);
-    switch (compilerId) {
-      case "clang":
-      case "gcc":
-        return true;
-      default:
-        return false;
-    }
+    return [];
   }
 
-  readonly compiler: "clang" | "gcc";
+  const consume = model.inputs.map((input) => input.path);
+  return outputs.map((output) => ({
+    output,
+    inputs: [...consume],
+  }));
+}
+
+function isCompilerCommand(cmd: readonly string[]): boolean {
+  if (cmd.length === 0) {
+    return false;
+  }
+
+  const compilerId = identify_compiler(cmd[0]);
+  switch (compilerId) {
+    case "clang":
+    case "gcc":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function analyzeCompilerModel(
+  cmd: readonly string[],
+): CommandModel | undefined {
+  if (!isCompilerCommand(cmd)) {
+    return undefined;
+  }
+
+  const compiler = identify_compiler(cmd[0]) as CompilerExe;
+  return analyzeCompilerFamily(cmd, compiler);
+}
+
+export class CompilerAnalysis extends Analysis<CompilerExe> {
+  /**
+   * Stable registry key for the compiler analyzer.
+   *
+   * @example
+   * ```ts
+   * cmd.defaultRegistry.unregister(cmd.CompilerAnalysis.key);
+   * ```
+   */
+  static readonly key = "compiler";
+
+  /**
+   * Checks whether a command looks like a supported compiler driver command.
+   *
+   * @example
+   * ```ts
+   * const ok = cmd.CompilerAnalysis.supports(["gcc", "-c", "main.c"]);
+   * ```
+   */
+  static supports(cmd: readonly string[]): boolean {
+    return isCompilerCommand(cmd);
+  }
+
+  /**
+   * Analyzes a compiler command.
+   *
+   * @example
+   * ```ts
+   * const analysis = cmd.CompilerAnalysis.analyze(["clang", "-c", "main.c"]);
+   * ```
+   */
+  static analyze(cmd: readonly string[]): CompilerAnalysis | undefined {
+    return CompilerAnalysis.supports(cmd)
+      ? new CompilerAnalysis(cmd)
+      : undefined;
+  }
+
+  /**
+   * Narrows a generic analysis back to a compiler analysis.
+   *
+   * @example
+   * ```ts
+   * const analysis = cmd.CompilerAnalysis.from(cmd.analyze(["clang", "-c", "main.c"]));
+   * ```
+   */
+  static from(analysis: AnyAnalysis | undefined): CompilerAnalysis | undefined {
+    return analysis instanceof CompilerAnalysis ? analysis : undefined;
+  }
+
+  /** Normalized compiler executable identifier. */
+  readonly compiler: CompilerExe;
+  /** High-level phase selected by the command. */
   readonly phase: CompilerPhase;
+  /** Primary artifact kind implied by the command. */
   readonly artifact: CompilerArtifact;
-  readonly type: CompilerCommandType | undefined;
-  readonly style: "gnu" | "cl";
+  /** Legacy compatibility classification derived from `phase` and `artifact`. */
+  readonly type: CompilerType | undefined;
+  /** Driver syntax style used while parsing the command. */
+  readonly style: CompilerStyle;
+  /** Parsed inputs with source/link classification and argv position. */
+  readonly inputItems: CompilerInput[];
 
-  private readonly inputList: string[];
-  private readonly compilationDatabaseEntryList: Array<{
-    file: string;
-    output?: string;
-  }>;
-  private readonly outputList: string[];
+  private readonly edgeList: Edge[];
 
-  constructor(cmd: string[]) {
-    debug.assertThrow(CompilerCmdAnalysis.isSupport(cmd));
+  /**
+   * Creates a compiler analysis from raw argv.
+   *
+   * @example
+   * ```ts
+   * const analysis = new cmd.CompilerAnalysis(["gcc", "-c", "main.c"]);
+   * ```
+   */
+  constructor(cmd: readonly string[]) {
+    const model = analyzeCompilerModel(cmd);
+    if (model === undefined) {
+      throw new Error("compiler command analysis required");
+    }
 
-    this.compiler = identify_compiler(cmd[0]) as SupportedCompiler;
+    const produce = resolveOutputs(model);
+    super(
+      model.compiler,
+      model.inputs.map((input) => input.path),
+      produce,
+    );
 
-    const model = analyzeCompilerFamily(cmd, this.compiler);
-
+    this.compiler = model.compiler;
     this.phase = model.phase;
     this.artifact = model.artifact;
     this.type = resolveLegacyCmdType(model);
-    this.inputList = model.inputs.map((input) => input.path);
-    this.compilationDatabaseEntryList =
-      resolveCompilationDatabaseEntries(model);
-    this.outputList = resolveOutputs(model);
     this.style = model.style;
+    this.inputItems = model.inputs.map((input) => ({ ...input }));
+    this.edgeList = resolveCompilerEdges(model, produce).map((entry) => ({
+      output: entry.output,
+      inputs: [...entry.inputs],
+    }));
   }
 
+  /**
+   * Returns parsed input records including their inferred role.
+   *
+   * @example
+   * ```ts
+   * const inputs = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).inputEntries();
+   * ```
+   */
+  inputEntries(): CompilerInput[] {
+    return this.inputItems.map((input) => ({ ...input }));
+  }
+
+  /**
+   * Returns only the input paths consumed by this command.
+   *
+   * @example
+   * ```ts
+   * const inputs = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).inputs();
+   * ```
+   */
   inputs(): string[] {
-    return [...this.inputList];
+    return [...this.consume];
   }
 
+  /**
+   * Returns only the inputs classified as source files.
+   *
+   * @example
+   * ```ts
+   * const sources = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).sourceInputs();
+   * ```
+   */
+  sourceInputs(): string[] {
+    return this.inputItems
+      .filter((input) => input.kind === "source")
+      .map((input) => input.path);
+  }
+
+  /**
+   * Returns produced output paths.
+   *
+   * @example
+   * ```ts
+   * const outputs = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).outputs();
+   * ```
+   */
   outputs(): string[] {
-    return [...this.outputList];
+    return [...this.produce];
   }
 
-  compilationDatabaseEntries(): Array<{ file: string; output?: string }> {
-    return this.compilationDatabaseEntryList.map((entry) => ({ ...entry }));
+  /**
+   * Returns precise dependency edges derived from compiler semantics.
+   *
+   * For compile commands this can pair each object file with its own source
+   * file instead of falling back to the whole `consume` set.
+   *
+   * @example
+   * ```ts
+   * const edges = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).edges();
+   * ```
+   */
+  override edges(): Edge[] {
+    return this.edgeList.map((entry) => ({
+      output: entry.output,
+      inputs: [...entry.inputs],
+    }));
+  }
+
+  /**
+   * Checks whether this command should appear in a compilation database.
+   *
+   * @example
+   * ```ts
+   * const ok = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).isCDB();
+   * ```
+   */
+  isCDB(): boolean {
+    return (
+      this.phase === CompilerPhaseValue.Compile &&
+      this.artifact === CompilerArtifactValue.Object &&
+      this.inputItems.some((input) => input.kind === "source")
+    );
+  }
+
+  /**
+   * Returns compilation-database entries for this command.
+   *
+   * Non source-to-object commands return an empty list.
+   *
+   * @example
+   * ```ts
+   * const entries = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).cdbEntries();
+   * ```
+   */
+  cdbEntries(): Array<{ file: string; output?: string }> {
+    if (!this.isCDB()) {
+      return [];
+    }
+
+    const sourceInputs = this.inputItems.filter(
+      (input) => input.kind === "source",
+    );
+    const outputs = this.edges().map((entry) => entry.output);
+
+    return sourceInputs.map((input, index) => {
+      const entry: { file: string; output?: string } = {
+        file: input.path,
+      };
+
+      if (outputs.length === sourceInputs.length) {
+        entry.output = outputs[index];
+      } else if (outputs.length === 1 && sourceInputs.length === 1) {
+        entry.output = outputs[0];
+      }
+
+      return entry;
+    });
   }
 }
 
-const LegacyCmdTypeValue = CompilerCommandType;
-type LegacyCmdTypeValue = CompilerCommandType;
-
-const CompilerPhaseValue = CompilerPhase;
-type CompilerPhaseValue = CompilerPhase;
-
-const CompilerArtifactValue = CompilerArtifact;
-type CompilerArtifactValue = CompilerArtifact;
+const _compilerAnalyzerCheck: Analyzer<CompilerAnalysis> = CompilerAnalysis;

@@ -10,7 +10,20 @@ export type FlatTreeId = PropertyKey;
  */
 export interface FlatTreeItem<Id extends FlatTreeId, Content> {
   id: Id;
+  /**
+   * Single-parent shorthand.
+   *
+   * For existing nodes, `set()` treats a concrete value as an appended parent
+   * edge, and `null` as an explicit request to clear all parents.
+   */
   parentId?: Id | null;
+  /**
+   * Explicit full parent set.
+   *
+   * When provided to `set()`, these parent ids replace the node's current
+   * parents.
+   */
+  parentIds?: readonly Id[];
   content: Content;
 }
 
@@ -19,7 +32,14 @@ export interface FlatTreeItem<Id extends FlatTreeId, Content> {
  */
 export interface FlatTreeNode<Id extends FlatTreeId, Content> {
   readonly id: Id;
+  /**
+   * First parent id for compatibility with tree-style callers.
+   */
   readonly parentId: Id | null;
+  /**
+   * Full parent id list for DAG-style callers.
+   */
+  readonly parentIds: readonly Id[];
   readonly content: Content;
   readonly children: readonly FlatTreeNode<Id, Content>[];
 }
@@ -69,6 +89,7 @@ export interface FlatTreeRenderOptions<Id extends FlatTreeId, Content> {
 type MutableFlatTreeNode<Id extends FlatTreeId, Content> = {
   id: Id;
   parentId: Id | null;
+  parentIds: Id[];
   content: Content;
   children: MutableFlatTreeNode<Id, Content>[];
 };
@@ -78,18 +99,39 @@ const TREE_TEE = "├── ";
 const TREE_ELBOW = "└── ";
 const TREE_SPACE = "    ";
 
-function normalizeParentId<Id extends FlatTreeId>(
+function uniqueIds<Id extends FlatTreeId>(values: readonly Id[]): Id[] {
+  const result: Id[] = [];
+  for (const value of values) {
+    if (!result.includes(value)) {
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+function normalizeParentIds<Id extends FlatTreeId>(
   parentId: Id | null | undefined,
-): Id | null {
-  return parentId ?? null;
+  parentIds: readonly Id[] | undefined,
+): Id[] {
+  const normalized = parentIds === undefined ? [] : uniqueIds(parentIds);
+  if (
+    parentId !== undefined &&
+    parentId !== null &&
+    !normalized.includes(parentId)
+  ) {
+    normalized.push(parentId);
+  }
+  return normalized;
 }
 
 function cloneItem<Id extends FlatTreeId, Content>(
   item: FlatTreeItem<Id, Content>,
 ): FlatTreeItem<Id, Content> {
+  const parentIds = normalizeParentIds(item.parentId, item.parentIds);
   return {
     id: item.id,
-    parentId: normalizeParentId(item.parentId),
+    parentId: parentIds[0] ?? null,
+    parentIds,
     content: item.content,
   };
 }
@@ -169,8 +211,9 @@ function removeChildById<Id extends FlatTreeId, Content>(
 /**
  * A mutable tree view built from flat `(id, parentId, content)` items.
  *
- * Missing parents are treated as roots. Nodes may be added incrementally, and
- * parents may appear after children.
+ * Missing parents are treated as roots. Nodes may be added incrementally,
+ * parents may appear after children, and a node may be referenced by multiple
+ * parents, forming a DAG.
  */
 export class FlatTree<Id extends FlatTreeId, Content> {
   private readonly itemList: FlatTreeItem<Id, Content>[] = [];
@@ -199,7 +242,10 @@ export class FlatTree<Id extends FlatTreeId, Content> {
   }
 
   private isRootNode(node: MutableFlatTreeNode<Id, Content>): boolean {
-    return node.parentId === null || !this.nodeById.has(node.parentId);
+    return (
+      node.parentIds.length === 0 ||
+      node.parentIds.every((parentId) => !this.nodeById.has(parentId))
+    );
   }
 
   private addPendingChild(
@@ -228,30 +274,24 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     this.pendingChildrenByParentId.set(parentId, next);
   }
 
-  private detachFromCurrentParent(
+  private detachFromParent(
     node: MutableFlatTreeNode<Id, Content>,
+    parentId: Id,
   ): void {
-    if (node.parentId === null) {
-      return;
-    }
-
-    const parent = this.nodeById.get(node.parentId);
+    const parent = this.nodeById.get(parentId);
     if (parent !== undefined) {
       removeChildById(parent.children, node.id);
       return;
     }
 
-    this.removePendingChild(node.parentId, node.id);
+    this.removePendingChild(parentId, node.id);
   }
 
   private attachToParentOrPending(
     node: MutableFlatTreeNode<Id, Content>,
+    parentId: Id,
   ): void {
-    if (node.parentId === null) {
-      return;
-    }
-
-    const parent = this.nodeById.get(node.parentId);
+    const parent = this.nodeById.get(parentId);
     if (parent !== undefined) {
       if (!parent.children.some((child) => child.id === node.id)) {
         parent.children.push(node);
@@ -259,7 +299,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
       return;
     }
 
-    this.addPendingChild(node.parentId, node);
+    this.addPendingChild(parentId, node);
   }
 
   private attachPendingChildren(node: MutableFlatTreeNode<Id, Content>): void {
@@ -270,7 +310,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
     for (const child of pending) {
       if (
-        child.parentId === node.id &&
+        child.parentIds.includes(node.id) &&
         !node.children.some((candidate) => candidate.id === child.id)
       ) {
         node.children.push(child);
@@ -280,20 +320,29 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     this.pendingChildrenByParentId.delete(node.id);
   }
 
-  private assertNoCycle(id: Id, parentId: Id | null): void {
-    let currentParentId = parentId;
-    while (currentParentId !== null) {
+  private assertNoCycle(id: Id, parentIds: readonly Id[]): void {
+    const pending = [...parentIds];
+    const visited = new Set<Id>();
+
+    while (pending.length > 0) {
+      const currentParentId = pending.pop() as Id;
       if (currentParentId === id) {
         throw new Error(
-          `flat tree contains a parent cycle: ${String(id)} -> ${String(parentId)}`,
+          `flat tree contains a parent cycle touching id: ${String(id)}`,
         );
       }
 
+      if (visited.has(currentParentId)) {
+        continue;
+      }
+      visited.add(currentParentId);
+
       const parent = this.nodeById.get(currentParentId);
       if (parent === undefined) {
-        return;
+        continue;
       }
-      currentParentId = parent.parentId;
+
+      pending.push(...parent.parentIds);
     }
   }
 
@@ -333,14 +382,15 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
   set(item: FlatTreeItem<Id, Content>): this {
     const nextItem = cloneItem(item);
-    const nextParentId = normalizeParentId(nextItem.parentId);
-    this.assertNoCycle(nextItem.id, nextParentId);
-
     const existingNode = this.nodeById.get(nextItem.id);
     if (existingNode === undefined) {
+      const nextParentIds = nextItem.parentIds ?? [];
+      this.assertNoCycle(nextItem.id, nextParentIds);
+
       const node: MutableFlatTreeNode<Id, Content> = {
         id: nextItem.id,
-        parentId: nextParentId,
+        parentId: nextParentIds[0] ?? null,
+        parentIds: [...nextParentIds],
         content: nextItem.content,
         children: [],
       };
@@ -350,7 +400,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
       this.nodeList.push(node);
       this.nodeById.set(node.id, node);
 
-      this.attachToParentOrPending(node);
+      for (const parentId of node.parentIds) {
+        this.attachToParentOrPending(node, parentId);
+      }
       this.attachPendingChildren(node);
       return this;
     }
@@ -362,17 +414,35 @@ export class FlatTree<Id extends FlatTreeId, Content> {
       );
     }
 
-    existingItem.parentId = nextParentId;
+    let nextParentIds = [...existingNode.parentIds];
+    if (item.parentIds !== undefined) {
+      nextParentIds = [...(nextItem.parentIds ?? [])];
+    } else if (item.parentId === null) {
+      nextParentIds = [];
+    } else if (item.parentId !== undefined) {
+      nextParentIds = uniqueIds([...nextParentIds, item.parentId]);
+    }
+    this.assertNoCycle(nextItem.id, nextParentIds);
+
+    existingItem.parentId = nextParentIds[0] ?? null;
+    existingItem.parentIds = [...nextParentIds];
     existingItem.content = nextItem.content;
 
-    const previousParentId = existingNode.parentId;
+    const previousParentIds = [...existingNode.parentIds];
     existingNode.content = nextItem.content;
 
-    if (previousParentId !== nextParentId) {
-      this.detachFromCurrentParent(existingNode);
-      existingNode.parentId = nextParentId;
-      this.attachToParentOrPending(existingNode);
+    for (const parentId of previousParentIds) {
+      if (!nextParentIds.includes(parentId)) {
+        this.detachFromParent(existingNode, parentId);
+      }
     }
+    for (const parentId of nextParentIds) {
+      if (!previousParentIds.includes(parentId)) {
+        this.attachToParentOrPending(existingNode, parentId);
+      }
+    }
+    existingNode.parentIds = [...nextParentIds];
+    existingNode.parentId = nextParentIds[0] ?? null;
 
     this.attachPendingChildren(existingNode);
     return this;
@@ -387,14 +457,32 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
   parent(id: Id): FlatTreeNode<Id, Content> | undefined {
     const node = this.requireNode(id);
-    if (node.parentId === null) {
-      return undefined;
+    for (const parentId of node.parentIds) {
+      const parent = this.nodeById.get(parentId);
+      if (parent !== undefined) {
+        return parent;
+      }
     }
-    return this.nodeById.get(node.parentId);
+    return undefined;
   }
 
   father(id: Id): FlatTreeNode<Id, Content> | undefined {
     return this.parent(id);
+  }
+
+  /**
+   * Returns all existing parents of a node.
+   */
+  parents(id: Id): readonly FlatTreeNode<Id, Content>[] {
+    const node = this.requireNode(id);
+    const parents: FlatTreeNode<Id, Content>[] = [];
+    for (const parentId of node.parentIds) {
+      const parent = this.nodeById.get(parentId);
+      if (parent !== undefined) {
+        parents.push(parent);
+      }
+    }
+    return parents;
   }
 
   children(id: Id): readonly FlatTreeNode<Id, Content>[] {
@@ -407,18 +495,26 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
   isAncestor(ancestorId: Id, descendantId: Id): boolean {
     this.requireNode(ancestorId);
-    let current = this.requireNode(descendantId);
+    const pending = [this.requireNode(descendantId)];
+    const visited = new Set<Id>();
 
-    while (current.parentId !== null) {
-      if (current.parentId === ancestorId) {
-        return true;
-      }
+    while (pending.length > 0) {
+      const current = pending.pop() as MutableFlatTreeNode<Id, Content>;
+      for (const parentId of current.parentIds) {
+        if (parentId === ancestorId) {
+          return true;
+        }
 
-      const parent = this.nodeById.get(current.parentId);
-      if (parent === undefined) {
-        return false;
+        if (visited.has(parentId)) {
+          continue;
+        }
+        visited.add(parentId);
+
+        const parent = this.nodeById.get(parentId);
+        if (parent !== undefined) {
+          pending.push(parent);
+        }
       }
-      current = parent;
     }
 
     return false;

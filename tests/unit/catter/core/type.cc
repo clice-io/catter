@@ -92,7 +92,7 @@ TEST_CASE(execution_event_and_config_conversion) {
                            .type = js::CatterRuntime::Type::inject,
                            .supportParentId = false},
             .options = {.log = true},
-            .isScriptSupported = true
+            .execute = true
         };
 
         EXPECT_TRUE(is_roundtrip_equal(ctx, output_event));

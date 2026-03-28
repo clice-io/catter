@@ -6,9 +6,7 @@ type ExpectedAnalysis = {
   compiler: "clang" | "gcc";
   phase: (typeof cmd.CompilerPhase)[keyof typeof cmd.CompilerPhase];
   artifact: (typeof cmd.CompilerArtifact)[keyof typeof cmd.CompilerArtifact];
-  type:
-    | (typeof cmd.CompilerCommandType)[keyof typeof cmd.CompilerCommandType]
-    | undefined;
+  type: (typeof cmd.CompilerType)[keyof typeof cmd.CompilerType] | undefined;
   inputs: string[];
   outputs: string[];
   cdbEntries: Array<{
@@ -67,7 +65,7 @@ function normalizedJoin(...parts: string[]) {
 }
 
 function expectAnalysis(expected: ExpectedAnalysis) {
-  const analysis = new cmd.CompilerCmdAnalysis(expected.cmd);
+  const analysis = new cmd.CompilerAnalysis(expected.cmd);
 
   expectEq(analysis.compiler, expected.compiler, `${expected.label} compiler`);
   expectEq(analysis.phase, expected.phase, `${expected.label} phase`);
@@ -80,19 +78,15 @@ function expectAnalysis(expected: ExpectedAnalysis) {
     `${expected.label} outputs`,
   );
   expectCDBEntriesEq(
-    analysis.compilationDatabaseEntries(),
+    analysis.cdbEntries(),
     expected.cdbEntries,
     `${expected.label} cdb entries`,
   );
 }
 
-debug.assertThrow(
-  cmd.CompilerCmdAnalysis.isSupport(["clang", "-c", "main.cc"]),
-);
-debug.assertThrow(cmd.CompilerCmdAnalysis.isSupport(["gcc", "-c", "main.cc"]));
-debug.assertThrow(
-  !cmd.CompilerCmdAnalysis.isSupport(["nvcc", "-c", "kernel.cu"]),
-);
+debug.assertThrow(cmd.CompilerAnalysis.supports(["clang", "-c", "main.cc"]));
+debug.assertThrow(cmd.CompilerAnalysis.supports(["gcc", "-c", "main.cc"]));
+debug.assertThrow(!cmd.CompilerAnalysis.supports(["nvcc", "-c", "kernel.cu"]));
 
 const cases: ExpectedAnalysis[] = [
   {
@@ -101,7 +95,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "clang",
     phase: cmd.CompilerPhase.Compile,
     artifact: cmd.CompilerArtifact.LlvmIR,
-    type: cmd.CompilerCommandType.SourceToLlvmIR,
+    type: cmd.CompilerType.SourceToLlvmIR,
     inputs: ["src/t.c"],
     outputs: ["-"],
     cdbEntries: [],
@@ -112,7 +106,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "gcc",
     phase: cmd.CompilerPhase.Preprocess,
     artifact: cmd.CompilerArtifact.Stdout,
-    type: cmd.CompilerCommandType.SourcePreprocess,
+    type: cmd.CompilerType.SourcePreprocess,
     inputs: ["generated_input"],
     outputs: [],
     cdbEntries: [],
@@ -123,7 +117,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "gcc",
     phase: cmd.CompilerPhase.SyntaxOnly,
     artifact: cmd.CompilerArtifact.None,
-    type: cmd.CompilerCommandType.SourceSyntaxOnly,
+    type: cmd.CompilerType.SourceSyntaxOnly,
     inputs: ["generated"],
     outputs: [],
     cdbEntries: [],
@@ -144,7 +138,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "gcc",
     phase: cmd.CompilerPhase.Link,
     artifact: cmd.CompilerArtifact.Executable,
-    type: cmd.CompilerCommandType.SourceToExe,
+    type: cmd.CompilerType.SourceToExe,
     inputs: ["generated_input", "obj/plain.o"],
     outputs: ["bin/app"],
     cdbEntries: [],
@@ -164,7 +158,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "gcc",
     phase: cmd.CompilerPhase.RelocatableLink,
     artifact: cmd.CompilerArtifact.Object,
-    type: cmd.CompilerCommandType.RelocatableLink,
+    type: cmd.CompilerType.RelocatableLink,
     inputs: ["a.o", "b.o"],
     outputs: ["partial.o"],
     cdbEntries: [],
@@ -175,7 +169,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "clang",
     phase: cmd.CompilerPhase.Archive,
     artifact: cmd.CompilerArtifact.StaticLibrary,
-    type: cmd.CompilerCommandType.ObjectToLib,
+    type: cmd.CompilerType.ObjectToLib,
     inputs: ["a.o", "b.o"],
     outputs: ["libstuff.a"],
     cdbEntries: [],
@@ -194,7 +188,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "clang",
     phase: cmd.CompilerPhase.Link,
     artifact: cmd.CompilerArtifact.SharedLibrary,
-    type: cmd.CompilerCommandType.ObjectToShare,
+    type: cmd.CompilerType.ObjectToShare,
     inputs: ["foo.obj", "bar.res"],
     outputs: ["bin/tool.dll"],
     cdbEntries: [],
@@ -205,7 +199,7 @@ const cases: ExpectedAnalysis[] = [
     compiler: "clang",
     phase: cmd.CompilerPhase.Compile,
     artifact: cmd.CompilerArtifact.Object,
-    type: cmd.CompilerCommandType.SourceToObject,
+    type: cmd.CompilerType.SourceToObject,
     inputs: ["src/a.c", "src/b.cc"],
     outputs: ["a.o", "b.o"],
     cdbEntries: [
@@ -236,7 +230,7 @@ if (os.platform() === "windows") {
     compiler: "clang",
     phase: cmd.CompilerPhase.Compile,
     artifact: cmd.CompilerArtifact.Object,
-    type: cmd.CompilerCommandType.SourceToObject,
+    type: cmd.CompilerType.SourceToObject,
     inputs: ["src/noext"],
     outputs: [normalizedJoin("build", "noext.obj")],
     cdbEntries: [
@@ -247,7 +241,7 @@ if (os.platform() === "windows") {
     ],
   });
 } else {
-  const clStyleSuppressed = new cmd.CompilerCmdAnalysis([
+  const clStyleSuppressed = new cmd.CompilerAnalysis([
     "clang",
     "--driver-mode=cl",
     "main.c",

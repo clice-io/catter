@@ -28,7 +28,7 @@ function command(exe: string, parent?: number): CommandCaptureResult {
   };
 }
 
-class TestCompilerCmdService extends service.CompilerCmdService {
+class TestCompilerService extends service.CompilerService {
   readonly seenCommandIds: number[] = [];
   readonly seenExecutionIds: number[] = [];
 
@@ -62,7 +62,7 @@ class TestCompilerCmdService extends service.CompilerCmdService {
   }
 }
 
-const compilerService = new TestCompilerCmdService();
+const compilerService = new TestCompilerService();
 const serviceView = compilerService.asService();
 
 expectSkip(serviceView.onCommand(1, command("make")));

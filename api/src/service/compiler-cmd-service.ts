@@ -5,7 +5,7 @@ import type {
   ExecutionEvent,
 } from "catter-c";
 
-import { CompilerCmdAnalysis } from "../cmd/index.js";
+import { CompilerAnalysis } from "../cmd/index.js";
 import { IgnorableService, type IgnorableAction } from "./ignorable.js";
 
 /**
@@ -16,7 +16,7 @@ import { IgnorableService, type IgnorableAction } from "./ignorable.js";
  * or `collect2` are suppressed automatically once their parent compiler driver
  * command has been seen.
  */
-export abstract class CompilerCmdService extends IgnorableService {
+export abstract class CompilerService extends IgnorableService {
   private readonly compilerCommandIds = new Set<number>();
   private readonly compilerServiceAdapter = {
     onStart: (config: CatterConfig): CatterConfig => this.onStart(config),
@@ -34,7 +34,7 @@ export abstract class CompilerCmdService extends IgnorableService {
         return { type: "skip" };
       }
 
-      if (!data.success || !CompilerCmdAnalysis.isSupport(data.data.argv)) {
+      if (!data.success || !CompilerAnalysis.supports(data.data.argv)) {
         return { type: "skip" };
       }
 
@@ -91,7 +91,7 @@ export abstract class CompilerCmdService extends IgnorableService {
   protected compilerCommandData(
     data: CommandCaptureResult,
   ): CommandCaptureResult & { success: true } {
-    if (!data.success || !CompilerCmdAnalysis.isSupport(data.data.argv)) {
+    if (!data.success || !CompilerAnalysis.supports(data.data.argv)) {
       throw new Error("compiler command data required");
     }
 
