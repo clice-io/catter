@@ -16,10 +16,16 @@ jobs:
       matrix:
         include:
           - os: windows-2025
+            platform: windows
             arch: x64
           - os: ubuntu-24.04
+            platform: linux
             arch: x64
+          - os: ubuntu-24.
+            platform: linux
+            arch: arm64
           - os: macos-15
+            platform: macos
             arch: arm64
 
     concurrency:
