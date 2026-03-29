@@ -77,7 +77,6 @@ struct Dispatcher {
     };
 
     static std::optional<std::vector<char>> dispatch(Class& obj, BufferReader& buf_reader) {
-        using ReflRequest = eventide::refl::reflection<Request>;
         Request req = Serde<Request>::deserialize(buf_reader);
         LOG_INFO("Handling request of type: {}", eventide::refl::enum_name(req));
 

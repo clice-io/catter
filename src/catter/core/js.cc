@@ -107,7 +107,9 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
 
         std::string error_strace;
 
-        auto resolve = CallBack::from(js_ctx, [&](qjs::Parameters args) { state = Fulfilled; });
+        auto resolve = CallBack::from(js_ctx, [&]([[maybe_unused]] qjs::Parameters args) {
+            state = Fulfilled;
+        });
 
         auto reject = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;

@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
         log::init_logger("catter", util::get_catter_data_path() / config::core::LOG_PATH_REL);
         deco::cli::Dispatcher<core::Option> cli("catter [options] -- [build system command]");
         cli.dispatch(core::Option::HelpOpt::category_info,
-                     [&](const core::Option& opt) { cli.usage(std::cout); })
+                     [&]([[maybe_unused]] const core::Option& opt) { cli.usage(std::cout); })
             .dispatch(core::Option::CatterOption::category_info,
                       [&](const auto& opt) { app::run(opt.main_opt); })
             .dispatch([&](const auto&) { cli.usage(std::cout); })

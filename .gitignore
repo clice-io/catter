@@ -64,3 +64,8 @@ vsxmake*/
 
 # Agent
 Agent.md
+.claude
+CLAUDE.md
+
+# Release assets
+release-assets/
