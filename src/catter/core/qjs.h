@@ -609,7 +609,7 @@ public:
     }
 
     R invoke(const Object& this_obj, Args... args) const {
-        auto transformer = [&]<typename T>(T& value) -> JSValue {
+        auto tans = [&]<typename T>(T& value) -> JSValue {
             if constexpr(std::is_same_v<T, Object>) {
                 return JS_DupValue(this->context(), value.value());
             } else {
@@ -617,8 +617,7 @@ public:
             }
         };
 
-        auto argv =
-            std::array<JSValue, sizeof...(Args)>{transformer.template operator()<Args>(args)...};
+        auto argv = std::array<JSValue, sizeof...(Args)>{tans.template operator()<Args>(args)...};
 
         auto value = qjs::Value{this->context(),
                                 JS_Call(this->context(),

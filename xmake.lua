@@ -103,14 +103,14 @@ elseif is_plat("windows") then
     add_requires("minhook", {version = "v1.3.4"})
 end
 
-do
-    local toolchain = get_config("toolchain")
-    if toolchain == "msvc" or toolchain == "clang-cl" then
-        add_cxxflags("/W3", "/WX", {force = true})
-    else
-        add_cxxflags("-Wall", "-Werror", {force = true})
-    end
-end
+-- do
+--     local toolchain = get_config("toolchain")
+--     if toolchain == "msvc" or toolchain == "clang-cl" then
+--         add_cxxflags("/W3", "/WX", {force = true})
+--     else
+--         add_cxxflags("-Wall", "-Werror", {force = true})
+--     end
+-- end
 
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})

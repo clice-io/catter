@@ -26,7 +26,7 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept {
 }
 
 const char* get_env_entry(const char** envp, std::string_view key) noexcept {
-    const size_t key_size = key.size();
+
     INFO("getting env entry for key: {}", key);
 
     for(const char** it = envp; *it != nullptr; ++it) {

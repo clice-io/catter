@@ -54,7 +54,7 @@ jobs:
 
       - name: Build (release)
         run: pixi run -e dev ci-build release
-      
+
       - name: Package
         run: pixi run -e dev package
 
@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.platform }}-${{ matrix.arch }}
-          path: 
+          path:
           if-no-files-found: error
 
   publish-draft-release:

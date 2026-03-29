@@ -10,13 +10,13 @@
 #include <sys/syscall.h>
 #include <pthread.h>
 
-static pid_t get_thread_id(void) {
+inline pid_t get_thread_id(void) {
     return (pid_t)syscall(SYS_gettid);
 }
 #elif defined(CATTER_MAC)
 #include <pthread.h>
 
-static uint64_t get_thread_id(void) {
+inline uint64_t get_thread_id(void) {
     uint64_t tid;
     pthread_threadid_np(NULL, &tid);
     return tid;
@@ -32,7 +32,7 @@ extern char** environ;
 #include <crt_externs.h>
 #endif
 
-static const char** environment() noexcept {
+inline const char** environment() noexcept {
 #if defined(CATTER_MAC)
     return const_cast<const char**>(*_NSGetEnviron());
 #elif defined(CATTER_LINUX)
