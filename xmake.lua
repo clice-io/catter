@@ -155,8 +155,7 @@ target("catter-hook-win64")
     add_packages("minhook")
     local toolchain = get_config("toolchain")
     if toolchain == "msvc" or toolchain == "clang-cl" then
-        add_cxxflags("/EHs-c-", "/GR-")
-        add_cxxflags("/wd4530")  -- STL headers use exceptions internally even with /EHs-c-
+        add_cxxflags("/GR-")
         add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
