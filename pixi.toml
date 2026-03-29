@@ -130,4 +130,4 @@ depends-on = "build-js-lib"
 args = [
   { arg = "outputdir", default = "release-assets" }
 ]
-cmd = "xmake pack --verbose --outputdir={{ outputdir }}"
+cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"
