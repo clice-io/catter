@@ -64,7 +64,7 @@ jobs:
         run: pixi run -e dev package
 
       - name: Upload release package artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
