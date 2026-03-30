@@ -125,3 +125,9 @@ cwd = "api"
 cmd = "tsc --project tsconfig.test.json"
 cwd = "api"
 depends-on = "build-js-lib"
+
+[tasks.package]
+args = [
+  { arg = "outputdir", default = "release-assets" }
+]
+cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"

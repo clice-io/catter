@@ -110,7 +110,8 @@ std::filesystem::path get_executable_path() {
     std::vector<char> data;
     data.resize(MAX_PATH);
     while(true) {
-        if(GetModuleFileNameA(nullptr, data.data(), data.size()) == data.size() &&
+        if(GetModuleFileNameA(nullptr, data.data(), static_cast<DWORD>(data.size())) ==
+               data.size() &&
            GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
             data.resize(data.size() * 2);
         } else {

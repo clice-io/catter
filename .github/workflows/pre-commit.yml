@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: [main]
 
+  workflow_dispatch:
 
 jobs:
   check:
@@ -14,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.9.4

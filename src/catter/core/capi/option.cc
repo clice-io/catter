@@ -74,7 +74,7 @@ std::vector<std::string> split_alias_args(const char* alias_args) {
 }
 
 catter::qjs::Object make_option_item(JSContext* ctx,
-                                     const eo::OptTable& table,
+                                     [[maybe_unused]] const eo::OptTable& table,
                                      const eo::ParsedArgument& arg) {
     auto item = catter::qjs::Object::empty_one(ctx);
 

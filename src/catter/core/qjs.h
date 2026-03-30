@@ -609,7 +609,7 @@ public:
     }
 
     R invoke(const Object& this_obj, Args... args) const {
-        auto transformer = [&]<typename T>(T& value) -> JSValue {
+        auto tans = [&]<typename T>(T& value) -> JSValue {
             if constexpr(std::is_same_v<T, Object>) {
                 return JS_DupValue(this->context(), value.value());
             } else {
@@ -617,8 +617,7 @@ public:
             }
         };
 
-        auto argv =
-            std::array<JSValue, sizeof...(Args)>{transformer.template operator()<Args>(args)...};
+        auto argv = std::array<JSValue, sizeof...(Args)>{tans.template operator()<Args>(args)...};
 
         auto value = qjs::Value{this->context(),
                                 JS_Call(this->context(),
@@ -681,7 +680,7 @@ private:
     template <typename Opaque, typename Register>
     static JSValue proxy(JSContext* ctx,
                          JSValueConst func_obj,
-                         JSValueConst this_val,
+                         [[maybe_unused]] JSValueConst this_val,
                          int argc,
                          JSValueConst* argv,
                          [[maybe_unused]] int flags) noexcept {
@@ -698,8 +697,10 @@ private:
     }
 
     template <Sign* FnPtr>
-    static JSValue
-        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+    static JSValue proxy(JSContext* ctx,
+                         [[maybe_unused]] JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv) noexcept {
 
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(std::forward<Ts>(args)...);
@@ -707,8 +708,10 @@ private:
     }
 
     template <SignCtx* FnPtr>
-    static JSValue
-        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+    static JSValue proxy(JSContext* ctx,
+                         [[maybe_unused]] JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv) noexcept {
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(ctx, std::forward<Ts>(args)...);
         });
@@ -832,9 +835,12 @@ public:
             argv.push_back(JS_DupValue(this->context(), arg.value()));
         }
 
-        auto value = qjs::Value{
-            this->context(),
-            JS_Call(this->context(), this->value(), this_obj.value(), argv.size(), argv.data())};
+        auto value = qjs::Value{this->context(),
+                                JS_Call(this->context(),
+                                        this->value(),
+                                        this_obj.value(),
+                                        static_cast<int>(argv.size()),
+                                        argv.data())};
         for(auto& v: argv) {
             JS_FreeValue(this->context(), v);
         }
@@ -886,7 +892,7 @@ private:
     template <typename Opaque, typename Register>
     static JSValue proxy(JSContext* ctx,
                          JSValueConst func_obj,
-                         JSValueConst this_val,
+                         [[maybe_unused]] JSValueConst this_val,
                          int argc,
                          JSValueConst* argv,
                          [[maybe_unused]] int flags) noexcept {
@@ -903,8 +909,10 @@ private:
     }
 
     template <Sign* FnPtr>
-    static JSValue
-        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+    static JSValue proxy(JSContext* ctx,
+                         [[maybe_unused]] JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv) noexcept {
 
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(std::forward<Ts>(args)...);
@@ -912,8 +920,10 @@ private:
     }
 
     template <SignCtx* FnPtr>
-    static JSValue
-        proxy(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) noexcept {
+    static JSValue proxy(JSContext* ctx,
+                         [[maybe_unused]] JSValueConst this_val,
+                         int argc,
+                         JSValueConst* argv) noexcept {
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
             return (*FnPtr)(ctx, std::forward<Ts>(args)...);
         });
@@ -947,12 +957,12 @@ public:
     }
 
     T operator[] (uint32_t index) const {
-        auto val = catter::qjs::Value{this->context(),
-                                      JS_GetPropertyUint32(this->context(), this->value(), index)};
-        if(val.is_exception()) {
+        auto elem = catter::qjs::Value{this->context(),
+                                       JS_GetPropertyUint32(this->context(), this->value(), index)};
+        if(elem.is_exception()) {
             throw qjs::JSException::dump(this->context());
         }
-        return val.as<T>();
+        return elem.as<T>();
     }
 
     std::optional<T> get(uint32_t index) const noexcept {
@@ -1382,24 +1392,31 @@ public:
     ~CModule() = default;
 
     template <typename Sign>
-    const CModule& export_functor(const std::string& name, const Function<Sign>& func) const {
+    const CModule& export_functor(const std::string& export_name,
+                                  const Function<Sign>& func) const {
         this->exports_list().push_back(kv{
-            name,
+            export_name,
             Value{this->ctx, func.value()}
         });
-        if(JS_AddModuleExport(this->ctx, m, name.c_str()) < 0) {
-            throw qjs::Exception("Failed to add export '{}' to module '{}'", name, this->name);
+        if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
+            throw qjs::Exception("Failed to add export '{}' to module '{}'",
+                                 export_name,
+                                 this->name);
         }
         return *this;
     }
 
-    const CModule& export_bare_functor(const std::string& name, JSCFunction func, int argc) const {
+    const CModule& export_bare_functor(const std::string& export_name,
+                                       JSCFunction func,
+                                       int argc) const {
         this->exports_list().push_back(kv{
-            name,
-            Value{this->ctx, JS_NewCFunction(this->ctx, func, name.c_str(), argc)}
+            export_name,
+            Value{this->ctx, JS_NewCFunction(this->ctx, func, export_name.c_str(), argc)}
         });
-        if(JS_AddModuleExport(this->ctx, m, name.c_str()) < 0) {
-            throw qjs::Exception("Failed to add export '{}' to module '{}'", name, this->name);
+        if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
+            throw qjs::Exception("Failed to add export '{}' to module '{}'",
+                                 export_name,
+                                 this->name);
         }
         return *this;
     }

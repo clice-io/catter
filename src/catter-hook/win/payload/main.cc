@@ -186,7 +186,7 @@ void detach() noexcept {
 }  // namespace minhook
 }  // namespace
 
-BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, LPVOID reserved) {
+BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, [[maybe_unused]] LPVOID reserved) {
     switch(dwReason) {
         case DLL_PROCESS_ATTACH:
             // avoid the DLL_THREAD_ATTACH and DLL_THREAD_DETACH notifications to reduce overhead

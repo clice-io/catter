@@ -67,7 +67,7 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 
         auto received_act = proxy::ipc::make_decision(cmd);
 
-        int ret = run(received_act, id);
+        int ret = static_cast<int>(run(received_act, id));
 
         proxy::ipc::finish(ret);
 
@@ -94,12 +94,12 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 // we do not output in proxy, it must be invoked by main program.
 // usage: catter-proxy.exe -p <parent ipc id> --exec <exe path> -- <args...>
 // TODO: act as a fake compiler
-int main(int argc, char* argv[], char* envp[]) {
+int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
     try {
         log::init_logger("catter-proxy.log",
                          util::get_catter_data_path() / config::proxy::LOG_PATH_REL,
                          false);
-    } catch(const std::exception& e) {
+    } catch(const std::exception&) {
         log::mute_logger();
     }
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[], char* envp[]) {
     int ret = 0;
     auto args = deco::util::argvify(argc, argv, 1);
     cli.dispatch(catter::proxy::Option::Cate::help,
-                 [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
+                 [&]([[maybe_unused]] const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .dispatch(catter::proxy::Option::Cate::proxy,
                   [&](const auto& opt) { ret = proxy_main(opt.proxy_opt); })
         .when_err([&](const deco::cli::ParseError& err) {

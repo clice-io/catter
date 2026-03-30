@@ -1,0 +1,97 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            platform: windows
+            arch: x64
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - os: macos-15
+            platform: macos
+            arch: arm64
+
+    concurrency:
+      group: release-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: branch@master
+          actions-cache-folder: ".xmake-cache"
+          actions-cache-key: ${{ matrix.os }}
+          package-cache: true
+          package-cache-key: ${{ matrix.os }}-pixi
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.65.0
+          activate-environment: false
+          cache: true
+          locked: true
+
+      - name: Build (release)
+        run: pixi run -e dev ci-build release
+
+      - name: Package
+        run: pixi run -e dev package
+
+      - name: Upload release package artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            release-assets/**
+          if-no-files-found: error
+
+  publish-draft-release:
+    needs: build-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Verify release assets
+        run: |
+          test -d release-artifacts
+          test "$(find release-artifacts -type f | wc -l)" -gt 0
+
+      - name: Publish draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          draft: true
+          files: release-artifacts/**
+          fail_on_unmatched_files: true

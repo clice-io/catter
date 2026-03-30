@@ -92,7 +92,7 @@ int64_t run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
             if(GetExitCodeProcess(pi.hProcess, &dwExitCode)) {
                 if(dwExitCode == STILL_ACTIVE) {
                     LOG_ERROR("Process is still active during cleanup, terminating it forcefully");
-                    TerminateProcess(pi.hProcess, -1);
+                    TerminateProcess(pi.hProcess, static_cast<UINT>(-1));
                 }
             } else {
                 LOG_ERROR("Failed to get exit code of process during cleanup: {}",

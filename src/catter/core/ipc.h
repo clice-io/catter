@@ -19,9 +19,6 @@ public:
     ServiceBase& operator= (ServiceBase&&) = default;
 
     virtual ~ServiceBase() = default;
-
-private:
-    ServiceMode m_mode;
 };
 
 class InjectService : public ServiceBase {

@@ -1,3 +1,4 @@
+set_version("0.1.0")
 set_project("catter")
 
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
@@ -87,6 +88,7 @@ if is_mode("debug") then
     add_defines("DEBUG")
 end
 
+
 if is_mode("debug") and is_plat("linux", "macosx") then
     -- hook.so will use a static lib to log in debug mode
     add_cxxflags("-fPIC")
@@ -101,6 +103,14 @@ elseif is_plat("windows") then
     add_requires("minhook", {version = "v1.3.4"})
 end
 
+-- do
+--     local toolchain = get_config("toolchain")
+--     if toolchain == "msvc" or toolchain == "clang-cl" then
+--         add_cxxflags("/W3", "/WX", {force = true})
+--     else
+--         add_cxxflags("-Wall", "-Werror", {force = true})
+--     end
+-- end
 
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
@@ -145,7 +155,7 @@ target("catter-hook-win64")
     add_packages("minhook")
     local toolchain = get_config("toolchain")
     if toolchain == "msvc" or toolchain == "clang-cl" then
-        add_cxxflags("/EHs-c-", "/GR-")
+        add_cxxflags("/GR-")
         add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
@@ -363,3 +373,24 @@ package("eventide")
         configs.test = false
         import("package.tools.xmake").install(package, configs)
     end)
+
+
+includes("@builtin/xpack")
+
+xpack("catter")
+    set_basename("catter-$(version)-$(plat)-$(arch)")
+    set_title("Catter")
+    set_description("A tool for intercepting and analyzing build processes")
+    set_licensefile("LICENSE")
+    set_homepage("https://clice.io")
+    -- set_iconfile()
+    set_formats("nsis", "zip", "targz")
+
+    add_targets("catter", "catter-proxy")
+    if is_plat("windows") then
+        add_targets("catter-hook-win64")
+    elseif is_plat("linux", "macosx") then
+        add_targets("catter-hook-unix")
+    end
+
+    set_libdir("bin") -- put hook dlls in bin for easier loading
