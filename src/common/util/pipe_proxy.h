@@ -35,6 +35,10 @@ public:
         pipe.stop();
     }
 
+    bool active() const noexcept {
+        return pipe.handle() != nullptr;
+    }
+
     const std::string& output() const noexcept {
         return output_buffer;
     }

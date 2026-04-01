@@ -20,6 +20,7 @@
 #include "util/log.h"
 #include "util/data.h"
 #include "util/crossplat.h"
+#include "util/eventide.h"
 
 #include "win/env.h"
 #include "win/win32.h"
@@ -153,6 +154,16 @@ data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_
                                 std::system_category(),
                                 "Failed to get exit code of process");
     }
-    return data::process_result{.code = static_cast<int64_t>(exit_code)};
+    return capture_process_result(
+        [exit_code]() -> eventide::task<eventide::process::wait_result> {
+            co_return eventide::process::wait_result(eventide::process::exit_status{
+                .status = static_cast<int64_t>(exit_code),
+                .term_signal = 0,
+            });
+        }(),
+        {},
+        {},
+        nullptr,
+        nullptr);
 };
 };  // namespace catter::proxy::hook

@@ -36,38 +36,36 @@ inline eventide::task<int64_t> spawn(const eventide::process::options& opts) {
     co_return ret->status;
 }
 
-inline eventide::task<eventide::process::wait_result> wait_and_stop(eventide::process& proc,
-                                                                    util::PipeProxy& stdout_proxy,
-                                                                    util::PipeProxy& stderr_proxy) {
-    auto ret = co_await proc.wait();
-    stdout_proxy.stop();
-    stderr_proxy.stop();
-    co_return ret;
-}
-
-inline data::process_result spawn_capture(const eventide::process::options& opts,
-                                          FILE* stdout_sink = stdout,
-                                          FILE* stderr_sink = stderr) {
-    auto spawn_ret = eventide::process::spawn(opts, default_loop());
-    if(!spawn_ret) {
-        throw std::runtime_error(
-            std::format("process spawn failed: {}", spawn_ret.error().message()));
-    }
-
-    util::PipeProxy stdout_proxy(std::move(spawn_ret->stdout_pipe), stdout_sink, "stdout");
-    util::PipeProxy stderr_proxy(std::move(spawn_ret->stderr_pipe), stderr_sink, "stderr");
-
+inline data::process_result
+    capture_process_result(eventide::task<eventide::process::wait_result> wait_task,
+                           eventide::pipe stdout_pipe = {},
+                           eventide::pipe stderr_pipe = {},
+                           FILE* stdout_sink = stdout,
+                           FILE* stderr_sink = stderr) {
+    util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
+    util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
     auto stdout_task = stdout_proxy.monitor();
     auto stderr_task = stderr_proxy.monitor();
-    auto wait_task = wait_and_stop(spawn_ret->proc, stdout_proxy, stderr_proxy);
 
-    default_loop().schedule(stdout_task);
-    default_loop().schedule(stderr_task);
+    if(stdout_proxy.active()) {
+        default_loop().schedule(stdout_task);
+    }
+    if(stderr_proxy.active()) {
+        default_loop().schedule(stderr_task);
+    }
+
     default_loop().schedule(wait_task);
     default_loop().run();
 
-    stdout_task.result();
-    stderr_task.result();
+    stdout_proxy.stop();
+    stderr_proxy.stop();
+
+    if(stdout_proxy.active()) {
+        stdout_task.result();
+    }
+    if(stderr_proxy.active()) {
+        stderr_task.result();
+    }
 
     auto wait_ret = wait_task.result();
     if(!wait_ret) {
