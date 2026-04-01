@@ -7,6 +7,22 @@ import type {
 
 import { FlatTree } from "../data/index.js";
 
+type TreeState<Id extends PropertyKey, Content> = {
+  dataPool: Map<Id, { parent: Id[]; children: Id[]; content: Content }>;
+  mergeNode: (node: {
+    id: Id;
+    content: Content;
+    parent?: Id[];
+    children?: Id[];
+  }) => void;
+};
+
+function treeState<Id extends PropertyKey, Content>(
+  tree: FlatTree<Id, Content>,
+): TreeState<Id, Content> {
+  return tree as unknown as TreeState<Id, Content>;
+}
+
 /**
  * Extended command action that suppresses forwarding of all descendant
  * commands to the subclass while still letting the current command execute.
@@ -40,11 +56,18 @@ export abstract class IgnorableService {
       this.onFinish(event);
     },
     onCommand: (id: number, data: CommandCaptureResult): Action => {
-      this.commandTreeState.add({
-        id,
-        parentId: data.success ? (data.data.parent ?? null) : null,
-        content: data,
-      });
+      this.treeMerge(
+        data.success
+          ? {
+              id,
+              parent: data.data.parent === undefined ? [] : [data.data.parent],
+              content: data,
+            }
+          : {
+              id,
+              content: data,
+            },
+      );
 
       if (this.hasIgnoredAncestor(id)) {
         return { type: "skip" };
@@ -59,7 +82,7 @@ export abstract class IgnorableService {
       return action;
     },
     onExecution: (id: number, event: ExecutionEvent): void => {
-      if (this.commandTreeState.has(id) && this.hasIgnoredAncestor(id)) {
+      if (this.treeHas(id) && this.hasIgnoredAncestor(id)) {
         return;
       }
 
@@ -92,21 +115,58 @@ export abstract class IgnorableService {
     return this.commandTreeState;
   }
 
+  protected treeSize(): number {
+    return treeState(this.commandTreeState).dataPool.size;
+  }
+
+  protected treeContent(id: number): CommandCaptureResult | undefined {
+    return treeState(this.commandTreeState).dataPool.get(id)?.content;
+  }
+
+  protected treeHas(id: number): boolean {
+    return treeState(this.commandTreeState).dataPool.has(id);
+  }
+
+  protected treeParentId(id: number): number | undefined {
+    const state = treeState(this.commandTreeState);
+    const node = state.dataPool.get(id);
+    if (node === undefined) {
+      return undefined;
+    }
+
+    for (const parentId of node.parent) {
+      if (state.dataPool.has(parentId)) {
+        return parentId;
+      }
+    }
+
+    return undefined;
+  }
+
+  protected treeMerge(node: {
+    id: number;
+    content: CommandCaptureResult;
+    parent?: number[];
+    children?: number[];
+  }): void {
+    treeState(this.commandTreeState).mergeNode(node);
+  }
+
   protected isIgnored(id: number): boolean {
     return this.ignoredCommandIds.has(id);
   }
 
   protected hasIgnoredAncestor(id: number): boolean {
-    if (!this.commandTreeState.has(id)) {
+    if (!this.treeHas(id)) {
       return false;
     }
 
-    let parent = this.commandTreeState.parent(id);
-    while (parent !== undefined) {
-      if (this.ignoredCommandIds.has(parent.id)) {
+    let parentId = this.treeParentId(id);
+    while (parentId !== undefined) {
+      if (this.ignoredCommandIds.has(parentId)) {
         return true;
       }
-      parent = this.commandTreeState.parent(parent.id);
+      parentId = this.treeParentId(parentId);
     }
 
     return false;

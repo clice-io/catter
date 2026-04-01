@@ -24,9 +24,12 @@ export abstract class CompilerService extends IgnorableService {
       this.onFinish(event);
     },
     onCommand: (id: number, data: CommandCaptureResult): Action => {
-      this.commandTree().add({
+      this.treeMerge({
         id,
-        parentId: data.success ? (data.data.parent ?? null) : null,
+        parent:
+          !data.success || data.data.parent === undefined
+            ? []
+            : [data.data.parent],
         content: data,
       });
 
@@ -73,16 +76,16 @@ export abstract class CompilerService extends IgnorableService {
   }
 
   protected override hasIgnoredAncestor(id: number): boolean {
-    if (!this.commandTree().has(id)) {
+    if (!this.treeHas(id)) {
       return false;
     }
 
-    let parent = this.commandTree().parent(id);
-    while (parent !== undefined) {
-      if (this.isIgnored(parent.id)) {
+    let parentId = this.treeParentId(id);
+    while (parentId !== undefined) {
+      if (this.isIgnored(parentId)) {
         return true;
       }
-      parent = this.commandTree().parent(parent.id);
+      parentId = this.treeParentId(parentId);
     }
 
     return false;

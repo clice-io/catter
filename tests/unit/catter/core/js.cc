@@ -202,6 +202,14 @@ TEST_CASE(run_cmd_js_file) {
     EXPECT_NOTHROWS(f());
 };
 
+TEST_CASE(run_cmd_tree_js_file) {
+    auto f = [&]() {
+        run_basic_js_case("cmd-tree.js");
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
 TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
     auto f = [&]() {
         auto js_path = fs::path(config::data::js_test_path.data());

@@ -1,4 +1,38 @@
-import { data, debug } from "catter";
+import { data } from "catter";
+
+type TreeState<Id extends PropertyKey, Content> = {
+  dataPool: Map<Id, data.FlatTreeNodeStore<Id, Content>>;
+  mergeNode: (node: {
+    id: Id;
+    content: Content;
+    parent?: Id[];
+    children?: Id[];
+  }) => void;
+};
+
+function treeState<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+): TreeState<Id, Content> {
+  return tree as unknown as TreeState<Id, Content>;
+}
+
+function mergeNode<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+  node: {
+    id: Id;
+    content: Content;
+    parent?: Id[];
+    children?: Id[];
+  },
+): void {
+  treeState(tree).mergeNode(node);
+}
+
+function size<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+): number {
+  return treeState(tree).dataPool.size;
+}
 
 function expectEq<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -26,59 +60,28 @@ function expectArrayEq<T>(
   }
 }
 
-function expectThrows(cb: () => void, label: string) {
-  let thrown = false;
-  try {
-    cb();
-  } catch {
-    thrown = true;
-  }
-  if (!thrown) {
-    throw new Error(`${label}: expected exception`);
-  }
-}
+const basic = new data.FlatTree<number, string>();
+mergeNode(basic, { id: 1, content: "root" });
+mergeNode(basic, { id: 2, parent: [1], content: "left" });
+mergeNode(basic, { id: 3, parent: [1], content: "right" });
+mergeNode(basic, { id: 4, parent: [2], content: "leaf" });
+mergeNode(basic, { id: 5, parent: [42], content: "orphan" });
 
-const basic = new data.FlatTree<number, string>([
-  { id: 1, content: "root" },
-  { id: 2, parentId: 1, content: "left" },
-  { id: 3, parentId: 1, content: "right" },
-  { id: 4, parentId: 2, content: "leaf" },
-  { id: 5, parentId: 42, content: "orphan" },
-]);
+expectEq(size(basic), 5, "basic size");
+expectEq(basic.assemble(), true, "basic assemble");
+expectArrayEq(basic.roots(), [1], "basic roots");
 
-expectEq(basic.size, 5, "basic size");
-debug.assertThrow(basic.has(1));
-debug.assertThrow(!basic.has(99));
-expectEq(basic.node(1)?.content, "root", "node lookup");
-expectEq(basic.node(99), undefined, "missing node lookup");
-expectEq(basic.parent(1), undefined, "root parent");
-expectEq(basic.father(4)?.id, 2, "father alias");
-expectArrayEq(basic.node(4)?.parentIds ?? [], [2], "single parent ids");
+const basicWalk = basic.walk();
+expectEq(basicWalk.first, 1, "basic walk first");
 expectArrayEq(
-  basic.children(1).map((node) => node.id),
-  [2, 3],
-  "child order",
+  basicWalk.children(undefined),
+  [1],
+  "basic virtual root children",
 );
-expectArrayEq(
-  basic.child(1).map((node) => node.id),
-  [2, 3],
-  "child alias",
-);
-expectArrayEq(
-  basic.roots().map((node) => node.id),
-  [1, 5],
-  "roots",
-);
-expectArrayEq(
-  basic.nodes().map((node) => node.id),
-  [1, 2, 3, 4, 5],
-  "node order",
-);
-expectArrayEq(
-  basic.items().map((item) => item.id),
-  [1, 2, 3, 4, 5],
-  "item order",
-);
+expectArrayEq(basicWalk.children(1), [2, 3], "basic root children");
+expectArrayEq(basicWalk.children(2), [4], "basic branch children");
+expectArrayEq(basicWalk.children(5), [], "basic orphan children");
+
 expectEq(
   basic.relation(1, 4),
   data.FlatTreeRelation.Ancestor,
@@ -91,137 +94,76 @@ expectEq(
 );
 expectEq(basic.relation(2, 2), data.FlatTreeRelation.Self, "self relation");
 expectEq(basic.relation(3, 5), data.FlatTreeRelation.None, "none relation");
-debug.assertThrow(basic.isAncestor(1, 4));
-debug.assertThrow(!basic.isAncestor(4, 1));
-debug.assertThrow(basic.isDescendant(4, 1));
-debug.assertThrow(!basic.isDescendant(1, 4));
-expectEq(
-  basic.render(),
-  ".\n├── root\n│   ├── left\n│   │   └── leaf\n│   └── right\n└── orphan\n",
-  "basic render",
-);
-expectEq(
-  basic.toString(),
-  ".\n├── root\n│   ├── left\n│   │   └── leaf\n│   └── right\n└── orphan\n",
-  "toString alias",
-);
-expectEq(
-  basic.render({ maxDepth: 0 }),
-  ".\n├── root\n└── orphan\n",
-  "max depth root only",
-);
-expectEq(
-  basic.render({ maxDepth: 1 }),
-  ".\n├── root\n│   ├── left\n│   └── right\n└── orphan\n",
-  "max depth one",
-);
-
-const repeated = new data.FlatTree<number, string>([
-  { id: 1, content: "root" },
-  { id: 2, parentId: 1, content: "dup" },
-  { id: 3, parentId: 1, content: "dup" },
-  { id: 4, parentId: 2, content: "leaf" },
-  { id: 5, parentId: 3, content: "leaf" },
-]);
-
-expectEq(
-  repeated.render(),
-  "root\n├── dup\n│   └── leaf\n└── dup\n    └── leaf\n",
-  "repeated subtree render",
-);
-expectEq(
-  repeated.render({ collapseRepeated: false }),
-  "root\n├── dup\n│   └── leaf\n└── dup\n    └── leaf\n",
-  "expanded repeated subtree render",
-);
-
-const objectContent = new data.FlatTree<number, { name: string }>([
-  { id: 1, content: { name: "root" } },
-]);
-expectEq(
-  objectContent.render(),
-  '{"name":"root"}\n',
-  "default object stringify",
-);
-expectEq(
-  objectContent.render({
-    stringify: (content) => content.name.toUpperCase(),
-  }),
-  "ROOT\n",
-  "custom stringify",
-);
-
-expectThrows(
-  () =>
-    new data.FlatTree<number, string>([
-      { id: 1, content: "a" },
-      { id: 1, content: "b" },
-    ]),
-  "duplicate id check",
-);
-expectThrows(
-  () =>
-    new data.FlatTree<number, string>([
-      { id: 1, parentId: 2, content: "a" },
-      { id: 2, parentId: 1, content: "b" },
-    ]),
-  "cycle check",
-);
-expectThrows(() => basic.children(99), "missing child lookup");
-expectThrows(() => basic.parent(99), "missing parent lookup");
 
 const incremental = new data.FlatTree<number, string>();
-incremental.add({ id: 2, parentId: 1, content: "child" });
-incremental.add({ id: 3, parentId: 2, content: "leaf" });
+mergeNode(incremental, { id: 2, parent: [1], content: "child" });
+mergeNode(incremental, { id: 3, parent: [2], content: "leaf" });
+
+expectEq(incremental.assemble(), true, "incremental assemble before parent");
+expectArrayEq(incremental.roots(), [], "incremental roots before parent");
+
+const incrementalBeforeParent = incremental.walk();
+expectEq(
+  incrementalBeforeParent.first,
+  undefined,
+  "incremental walk first before parent",
+);
 expectArrayEq(
-  incremental.roots().map((node) => node.id),
+  incrementalBeforeParent.children(undefined),
+  [],
+  "incremental virtual root before parent",
+);
+
+mergeNode(incremental, { id: 1, content: "root" });
+
+expectArrayEq(incremental.roots(), [1], "incremental roots after parent");
+
+const incrementalAfterParent = incremental.walk();
+expectEq(
+  incrementalAfterParent.first,
+  1,
+  "incremental walk first after parent",
+);
+expectArrayEq(
+  incrementalAfterParent.children(1),
   [2],
-  "incremental roots before parent",
+  "incremental root children after parent",
 );
-incremental.add({ id: 1, content: "root" });
 expectArrayEq(
-  incremental.roots().map((node) => node.id),
-  [1],
-  "incremental roots after parent",
+  incrementalAfterParent.children(2),
+  [3],
+  "incremental child children after parent",
+);
+
+mergeNode(incremental, { id: 3, parent: [1], content: "leaf" });
+
+const incrementalDag = incremental.walk();
+expectArrayEq(incrementalDag.children(1), [2, 3], "incremental dag children");
+expectEq(
+  incremental.relation(1, 3),
+  data.FlatTreeRelation.Ancestor,
+  "incremental dag ancestor relation",
 );
 expectEq(
-  incremental.render(),
-  "root\n└── child\n    └── leaf\n",
-  "incremental render",
-);
-incremental.set({ id: 3, parentId: 1, content: "leaf" });
-expectArrayEq(
-  incremental.parents(3).map((node) => node.id),
-  [2, 1],
-  "dag appended parents",
-);
-expectEq(
-  incremental.render(),
-  "root\n├── child\n│   └── leaf\n└── leaf\n",
-  "dag appended render",
-);
-incremental.set({ id: 3, parentIds: [1], content: "leaf" });
-expectArrayEq(
-  incremental.children(1).map((node) => node.id),
-  [2, 3],
-  "reparented child order",
-);
-expectEq(
-  incremental.render(),
-  "root\n├── child\n└── leaf\n",
-  "reparented render",
+  incremental.relation(2, 3),
+  data.FlatTreeRelation.Ancestor,
+  "incremental original ancestor relation",
 );
 
 const dag = new data.FlatTree<string, string>();
-dag.set({ id: "app", content: "app" });
-dag.set({ id: "tool", content: "tool" });
-dag.set({ id: "main.o", parentId: "app", content: "main.o" });
-dag.set({ id: "main.o", parentId: "tool", content: "main.o" });
-expectArrayEq(
-  dag.parents("main.o").map((node) => node.id),
-  ["app", "tool"],
-  "multi parent lookup",
-);
+mergeNode(dag, { id: "app", content: "app" });
+mergeNode(dag, { id: "tool", content: "tool" });
+mergeNode(dag, { id: "main.o", parent: ["app"], content: "main.o" });
+mergeNode(dag, { id: "main.o", parent: ["tool"], content: "main.o" });
+
+expectEq(dag.assemble(), true, "dag assemble");
+expectArrayEq(dag.roots(), ["app", "tool"], "dag roots");
+
+const dagWalk = dag.walk();
+expectEq(dagWalk.first, undefined, "dag walk first");
+expectArrayEq(dagWalk.children(undefined), ["app", "tool"], "dag top-level");
+expectArrayEq(dagWalk.children("app"), ["main.o"], "dag app children");
+expectArrayEq(dagWalk.children("tool"), ["main.o"], "dag tool children");
 expectEq(
   dag.relation("app", "main.o"),
   data.FlatTreeRelation.Ancestor,
@@ -232,15 +174,8 @@ expectEq(
   data.FlatTreeRelation.Ancestor,
   "second dag ancestor relation",
 );
-expectEq(
-  dag.render(),
-  ".\n├── app\n│   └── main.o\n└── tool\n    └── main.o\n",
-  "dag render",
-);
 
-dag.set({ id: "main.o", content: "main object" });
-expectArrayEq(
-  dag.parents("main.o").map((node) => node.id),
-  ["app", "tool"],
-  "content-only update keeps parents",
-);
+const cyclic = new data.FlatTree<number, string>();
+mergeNode(cyclic, { id: 1, children: [2], content: "one" });
+mergeNode(cyclic, { id: 2, children: [1], content: "two" });
+expectEq(cyclic.assemble(), false, "cycle detection");

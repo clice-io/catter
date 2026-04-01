@@ -54,7 +54,7 @@ class TestIgnorableService extends service.IgnorableService {
   }
 
   treeSize(): number {
-    return this.commandTree().size;
+    return super.treeSize();
   }
 
   ignored(id: number): boolean {

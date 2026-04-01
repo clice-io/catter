@@ -50,7 +50,7 @@ class TestCompilerService extends service.CompilerService {
   }
 
   treeSize(): number {
-    return this.commandTree().size;
+    return super.treeSize();
   }
 
   ignored(id: number): boolean {

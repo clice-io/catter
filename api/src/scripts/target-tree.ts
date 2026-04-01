@@ -3,7 +3,49 @@ import * as fs from "../fs.js";
 import * as io from "../io.js";
 import * as service from "../service.js";
 import * as cli from "../cli/index.js";
+import * as view from "../view/index.js";
 import { analyze as analyzeCmd } from "../cmd/index.js";
+
+type TreeState<Id extends PropertyKey, Content> = {
+  dataPool: Map<Id, data.FlatTreeNodeStore<Id, Content>>;
+  mergeNode: (node: {
+    id: Id;
+    content: Content;
+    parent?: Id[];
+    children?: Id[];
+  }) => void;
+};
+
+function treeState<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+): TreeState<Id, Content> {
+  return tree as unknown as TreeState<Id, Content>;
+}
+
+function treeContent<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+  id: Id,
+): Content | undefined {
+  return treeState(tree).dataPool.get(id)?.content;
+}
+
+function treeSize<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+): number {
+  return treeState(tree).dataPool.size;
+}
+
+function mergeTreeNode<Id extends PropertyKey, Content>(
+  tree: data.FlatTree<Id, Content>,
+  node: {
+    id: Id;
+    content: Content;
+    parent?: Id[];
+    children?: Id[];
+  },
+): void {
+  treeState(tree).mergeNode(node);
+}
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -76,15 +118,23 @@ export class TargetTree extends service.IgnorableService {
       );
     }
 
-    if (this.targetTree.size === 0) {
+    if (treeSize(this.targetTree) === 0) {
       io.println("No targets found.");
       return;
     }
 
+    const walker = this.targetTree.walk();
+    const renderer = new view.TreeRenderer<string, string>({
+      first: walker.first,
+      children: walker.children,
+      content: (id) => treeContent(this.targetTree, id),
+    });
+
     io.print(
-      this.targetTree.render({
-        stringify: (_content, node) => fs.path.filename(node.id) || node.id,
+      renderer.output({
+        type: "cli",
         maxDepth: this.maxDepth,
+        text: (_content, id) => fs.path.filename(id) || id,
       }),
     );
   }
@@ -118,14 +168,14 @@ export class TargetTree extends service.IgnorableService {
       .filter(isDefined);
 
     for (const entry of entries) {
-      this.targetTree.set({
+      mergeTreeNode(this.targetTree, {
         id: entry.output,
         content: entry.output,
       });
       for (const input of entry.inputs) {
-        this.targetTree.set({
+        mergeTreeNode(this.targetTree, {
           id: input,
-          parentId: entry.output,
+          parent: [entry.output],
           content: input,
         });
       }
