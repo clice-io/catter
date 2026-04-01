@@ -25,7 +25,7 @@ using namespace catter;
 namespace {
 using catter::data::action;
 
-int64_t run(data::action act, data::ipcid_t id) {
+data::process_result run(data::action act, data::ipcid_t id) {
     using catter::data::action;
     switch(act.type) {
         case action::WRAP: {
@@ -34,18 +34,21 @@ int64_t run(data::action act, data::ipcid_t id) {
                 .args = act.cmd.args,
                 .env = act.cmd.env,
                 .cwd = act.cmd.cwd,
-                .creation = {.windows_hide = true, .windows_verbatim_arguments = true}
+                .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
+                .streams = {eventide::process::stdio::inherit(),
+                             eventide::process::stdio::pipe(false, true),
+                             eventide::process::stdio::pipe(false, true)}
             };
-            return catter::wait(spawn(opts));
+            return catter::spawn_capture(opts, stdout, stderr);
         }
         case action::INJECT: {
             return proxy::hook::run(act.cmd, id);
         }
         case action::DROP: {
-            return 0;
+            return data::process_result{.code = 0};
         }
         default: {
-            return -1;
+            return data::process_result{.code = -1};
         }
     }
 }
@@ -67,11 +70,11 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 
         auto received_act = proxy::ipc::make_decision(cmd);
 
-        int ret = static_cast<int>(run(received_act, id));
+        auto result = run(received_act, id);
 
-        proxy::ipc::finish(ret);
+        proxy::ipc::finish(std::move(result));
 
-        return ret;
+        return static_cast<int>(result.code);
     } catch(const std::exception& e) {
         std::string args;
         args.reserve(opt.args->size() * 5);

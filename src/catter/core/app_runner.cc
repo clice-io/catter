@@ -65,8 +65,17 @@ public:
         }
     }
 
-    void finish(int64_t code) override {
-        js::on_execution(this->id, js::Tag<js::EventType::finish>{.code = code});
+    void finish(data::process_result result) override {
+        if(!result.std_out.empty() || !result.std_err.empty()) {
+            js::on_execution(this->id,
+                             js::Tag<js::EventType::output>{
+                                 .stdOut = std::move(result.std_out),
+                                 .stdErr = std::move(result.std_err),
+                                 .code = result.code,
+                             });
+        }
+
+        js::on_execution(this->id, js::Tag<js::EventType::finish>{.code = result.code});
     }
 
     void report_error(data::ipcid_t parent_id, std::string error_msg) override {

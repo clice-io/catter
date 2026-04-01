@@ -17,6 +17,12 @@ struct command {
     std::vector<std::string> env{};
 };
 
+struct process_result {
+    int64_t code = -1;
+    std::string std_out{};
+    std::string std_err{};
+};
+
 struct action {
     enum : uint8_t {
         DROP,    // Do not execute the command
@@ -60,7 +66,7 @@ struct RequestHelper<Request::REPORT_ERROR> {
 
 template <>
 struct RequestHelper<Request::FINISH> {
-    using RequestType = void(int64_t ret_code);
+    using RequestType = void(process_result result);
 };
 
 template <Request Req>

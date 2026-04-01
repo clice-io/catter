@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
                 .env = catter::util::get_environment(),
             };
 
-            return static_cast<int>(catter::proxy::hook::run(cmd, 0));
+            return static_cast<int>(catter::proxy::hook::run(cmd, 0).code);
         } else if(args.size() == 2) {
             if(auto it = test::funcs.find(args[1]); it != test::funcs.end()) {
                 std::invoke(it->second);

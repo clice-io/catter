@@ -74,7 +74,7 @@ std::vector<char> build_environment_block(std::vector<std::string> env) {
 }
 }  // namespace
 
-int64_t run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
+data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
 
     LOG_INFO("new command id is: {}", id);
 
@@ -153,6 +153,6 @@ int64_t run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
                                 std::system_category(),
                                 "Failed to get exit code of process");
     }
-    return static_cast<int64_t>(exit_code);
+    return data::process_result{.code = static_cast<int64_t>(exit_code)};
 };
 };  // namespace catter::proxy::hook

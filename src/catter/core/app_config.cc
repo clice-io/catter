@@ -33,7 +33,7 @@ RuntimePlan build_runtime_plan(const StartupConfig& config) {
               .supportActions = {js::ActionType::drop,
                                  js::ActionType::skip,
                                  js::ActionType::modify},
-              .supportEvents = {js::EventType::finish},
+              .supportEvents = {js::EventType::finish, js::EventType::output},
               .type = js::CatterRuntime::Type::inject,
               .supportParentId = true,
           }}}
