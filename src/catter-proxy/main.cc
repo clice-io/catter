@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
+#include <eventide/async/io/loop.h>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -29,6 +30,7 @@ data::process_result run(data::action act, data::ipcid_t id) {
     using catter::data::action;
     switch(act.type) {
         case action::WRAP: {
+
             eventide::process::options opts{
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
@@ -39,23 +41,8 @@ data::process_result run(data::action act, data::ipcid_t id) {
                              eventide::process::stdio::pipe(false, true),
                              eventide::process::stdio::pipe(false, true)}
             };
-            auto spawn_ret = eventide::process::spawn(opts, catter::default_loop());
-            if(!spawn_ret) {
-                throw std::runtime_error(
-                    std::format("process spawn failed: {}", spawn_ret.error().message()));
-            }
-            return catter::capture_process_result(
-                [](eventide::process proc) -> eventide::task<int64_t, eventide::error> {
-                    auto wait_ret = co_await proc.wait();
-                    if(!wait_ret) {
-                        co_return eventide::outcome_error(wait_ret.error());
-                    }
-                    co_return wait_ret->status;
-                }(std::move(spawn_ret->proc)),
-                std::move(spawn_ret->stdout_pipe),
-                std::move(spawn_ret->stderr_pipe),
-                stdout,
-                stderr);
+
+            return catter::capture_process_result(make_process_event(opts), stdout, stderr);
         }
         case action::INJECT: {
             return proxy::hook::run(act.cmd, id);

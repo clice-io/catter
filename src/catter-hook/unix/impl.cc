@@ -72,18 +72,11 @@ data::process_result run(data::command command, data::ipcid_t id, std::string pr
         throw std::runtime_error(
             std::format("process spawn failed: {}", spawn_ret.error().message()));
     }
-    return catter::capture_process_result(
-        [](eventide::process proc) -> eventide::task<int64_t, eventide::error> {
-            auto wait_ret = co_await proc.wait();
-            if(!wait_ret) {
-                co_return eventide::outcome_error(wait_ret.error());
-            }
-            co_return wait_ret->status;
-        }(std::move(spawn_ret->proc)),
-        std::move(spawn_ret->stdout_pipe),
-        std::move(spawn_ret->stderr_pipe),
-        stdout,
-        stderr);
+    return catter::capture_process_result(make_process_event(opts),
+                                          std::move(spawn_ret->stdout_pipe),
+                                          std::move(spawn_ret->stderr_pipe),
+                                          stdout,
+                                          stderr);
 };
 
 };  // namespace catter::proxy::hook
