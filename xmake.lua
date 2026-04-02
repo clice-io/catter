@@ -386,21 +386,50 @@ package("eventide")
             package:add("cxxflags", "/Zc:__cplusplus", "/Zc:preprocessor")
         end
 
-        local libuv = package:dep("libuv")
-        local libuv_fetchinfo = libuv and libuv:fetch({external = false})
-        -- The pixi clang wrapper injects `.pixi/envs/dev/include` via its
-        -- default cfg, which also contains Node's transitive libuv 1.51 headers.
-        -- Force eventide's package build to prefer the required xmake-managed
-        -- libuv 1.52 include dir first, instead of patching eventide sources.
-        for _, includedir in ipairs(table.wrap(libuv_fetchinfo and (libuv_fetchinfo.includedirs or libuv_fetchinfo.sysincludedirs))) do
-            package:add("cxflags", "-I" .. includedir)
-        end
-
         local configs = {}
         -- Build the dependency with a plain consumer config so we do not pull
         -- in eventide's repo-local dev toolchain tweaks during package install.
         configs.dev = false
         configs.test = false
+        if package:is_plat("macosx") then
+            local conda_prefix = os.getenv("CONDA_PREFIX")
+            if conda_prefix then
+                local bindir = path.join(conda_prefix, "bin")
+                local libdir = path.join(conda_prefix, "lib")
+                local mode = package:is_debug() and "debug" or "release"
+                local builddir = package:builddir()
+                -- Pixi's clang cfg injects `.pixi/.../include`; disable that default
+                -- config just for eventide's package install and keep the rest explicit.
+                local argv = {
+                    "f", "-y", "-c",
+                    "--plat=" .. package:plat(),
+                    "--arch=" .. package:arch(),
+                    "--mode=" .. mode,
+                    "--kind=" .. (package:config("shared") and "shared" or "static"),
+                    "--builddir=" .. builddir,
+                    "--cc=" .. path.join(bindir, "clang"),
+                    "--cxx=" .. path.join(bindir, "clang++"),
+                    "--ld=" .. path.join(bindir, "clang++"),
+                    "--sh=" .. path.join(bindir, "clang++"),
+                    "--ar=" .. path.join(bindir, "llvm-ar"),
+                    "--ranlib=" .. path.join(bindir, "llvm-ranlib"),
+                    "--cflags=--no-default-config",
+                    "--cxflags=--no-default-config -D_LIBCPP_DISABLE_AVAILABILITY=1",
+                    "--ldflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
+                    "--shflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
+                    "--dev=false",
+                    "--test=false"
+                }
+                if package:config("asan") then
+                    table.insert(argv, "--policies=build.sanitizer.address")
+                end
+                os.vrunv("xmake", argv, {curdir = package:sourcedir()})
+                os.mkdir(path.join(builddir, ".deps", "eventide", package:plat(), package:arch(), mode))
+                os.vrunv("xmake", {"build", "eventide"}, {curdir = package:sourcedir()})
+                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "eventide"}, {curdir = package:sourcedir()})
+                return
+            end
+        end
         import("package.tools.xmake").install(package, configs, {target = "eventide"})
     end)
 
