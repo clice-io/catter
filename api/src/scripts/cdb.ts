@@ -35,11 +35,31 @@ function pathOf(cwd: string, path: string): string | undefined {
  * Compiler commands contribute artifact links, and source leafs are turned into
  * compilation database entries at the end of the run.
  *
+ * When one command feeds another, the saved `output` field points to the
+ * current producing command output rather than the final top-level target.
+ *
  * @example
  * ```ts
  * import { scripts, service } from "catter";
  *
  * service.register(new scripts.CDB("build/compile_commands.json"));
+ * ```
+ *
+ * Example saved entry:
+ * ```json
+ * [
+ *   {
+ *     "directory": "/tmp/demo",
+ *     "file": "src/main.cc",
+ *     "arguments": ["clang++", "-c", "src/main.cc", "-o", "obj/main.o"],
+ *     "output": "/tmp/demo/obj/main.o"
+ *   }
+ * ]
+ * ```
+ *
+ * Output:
+ * ```txt
+ * CDB saved to /tmp/demo/build/compile_commands.json with 1 entries.
  * ```
  */
 export class CDB extends service.IgnorableService {
@@ -55,6 +75,11 @@ export class CDB extends service.IgnorableService {
    * @example
    * ```ts
    * const cdb = new scripts.CDB("build/compile_commands.json");
+   * ```
+   *
+   * Output path used when omitted:
+   * ```txt
+   * build/compile_commands.json
    * ```
    */
   constructor(save_path?: string) {

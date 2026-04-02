@@ -34,6 +34,33 @@ export const FlatTreeRelation = {
 export type FlatTreeRelation =
   (typeof FlatTreeRelation)[keyof typeof FlatTreeRelation];
 
+/**
+ * Lightweight traversal view returned by `FlatTree.walk()`.
+ *
+ * `first` is populated only when the graph has exactly one start node. When
+ * multiple starts exist, callers should begin from `children(undefined)`.
+ *
+ * @example
+ * ```ts
+ * import { data } from "catter";
+ *
+ * const tree = new data.FlatTree<number, string>();
+ * tree.justMergeNode({ id: 1, content: "root" });
+ * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+ *
+ * const walker = tree.walk();
+ * console.log(walker.first);
+ * console.log(walker.children(undefined));
+ * console.log(walker.children(1));
+ * ```
+ *
+ * Output:
+ * ```txt
+ * 1
+ * [1]
+ * [2]
+ * ```
+ */
 export interface FlatTreeWalker<Id extends FlatTreeId> {
   first: Id | undefined;
   children(id: Id | undefined): readonly Id[];
@@ -45,6 +72,27 @@ export interface FlatTreeWalker<Id extends FlatTreeId> {
  * Missing parents are treated as roots. Nodes may be added incrementally,
  * parents may appear after children, and a node may be referenced by multiple
  * parents, forming a DAG.
+ *
+ * @example
+ * ```ts
+ * import { data } from "catter";
+ *
+ * const tree = new data.FlatTree<string, string>();
+ * tree.justMergeNode({ id: "app", content: "app" });
+ * tree.justMergeNode({ id: "main.o", parent: ["app"], content: "main.o" });
+ * tree.justMergeNode({ id: "util.o", parent: ["app"], content: "util.o" });
+ *
+ * console.log(tree.assemble());
+ * console.log(tree.roots());
+ * console.log(tree.walk().children("app"));
+ * ```
+ *
+ * Output:
+ * ```txt
+ * true
+ * ["app"]
+ * ["main.o", "util.o"]
+ * ```
  */
 
 export class FlatTree<Id extends FlatTreeId, Content> {
@@ -52,6 +100,28 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
   constructor() {}
 
+  /**
+   * Merges one node into the current graph without validating cycles.
+   *
+   * Existing parent and child links are unioned, while `content` is replaced
+   * by the new value.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+   * tree.justMergeNode({ id: 2, parent: [3], content: "leaf" });
+   *
+   * console.log(tree.node(2)?.parent);
+   * ```
+   *
+   * Output:
+   * ```txt
+   * [1, 3]
+   * ```
+   */
   justMergeNode(node: FlatTreeNodeInput<Id, Content>) {
     if (this.dataPool.has(node.id)) {
       const pre = this.dataPool.get(node.id)!;
@@ -172,6 +242,29 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     return noCycle;
   }
 
+  /**
+   * Returns ids whose parent list is empty.
+   *
+   * Unlike `starts()`, this does not treat missing parents as entry points.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [99], content: "detached" });
+   *
+   * console.log(tree.roots());
+   * console.log(tree.starts());
+   * ```
+   *
+   * Output:
+   * ```txt
+   * [1]
+   * [1, 2]
+   * ```
+   */
   roots(): Id[] {
     this.stitchEdges();
     return Array.from(this.dataPool.keys()).filter((id) => this.isRoot(id));
@@ -182,6 +275,32 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     return Array.from(this.dataPool.keys()).filter((id) => this.isStart(id));
   }
 
+  /**
+   * Builds a traversal helper over the stitched graph.
+   *
+   * The virtual root `children(undefined)` returns every start node. This is
+   * especially useful when the graph is a forest or when some nodes reference
+   * parents that were never inserted.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
+   * tree.justMergeNode({ id: 3, content: "orphan" });
+   *
+   * const walker = tree.walk();
+   * console.log(walker.first);
+   * console.log(walker.children(undefined));
+   * ```
+   *
+   * Output:
+   * ```txt
+   * undefined
+   * [2, 3]
+   * ```
+   */
   walk(): FlatTreeWalker<Id> {
     const starts = this.starts();
 
@@ -196,6 +315,29 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     };
   }
 
+  /**
+   * Reports the relative reachability between two ids.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
+   *
+   * console.log(tree.relation(1, 2));
+   * console.log(tree.relation(2, 1));
+   * console.log(tree.relation(2, 2));
+   * ```
+   *
+   * Output:
+   * ```txt
+   * ancestor
+   * descendant
+   * self
+   * ```
+   */
   relation(leftId: Id, rightId: Id): FlatTreeRelation {
     this.stitchEdges();
 
@@ -239,6 +381,25 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     return FlatTreeRelation.None;
   }
 
+  /**
+   * Returns the number of stored nodes.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+   *
+   * console.log(tree.size());
+   * ```
+   *
+   * Output:
+   * ```txt
+   * 2
+   * ```
+   */
   size() {
     return this.dataPool.size;
   }

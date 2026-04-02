@@ -47,6 +47,14 @@ const targetTreeCLI = cli.command({
  *
  * service.register(new scripts.TargetTree());
  * ```
+ *
+ * Output:
+ * ```txt
+ * .
+ * └── app
+ *     ├── main.o
+ *     └── util.o
+ * ```
  */
 export class TargetTree extends service.IgnorableService {
   private readonly targetTree = new data.FlatTree<string, string>();

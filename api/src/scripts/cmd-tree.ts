@@ -99,6 +99,13 @@ function formatCommand(
  *
  * service.register(new scripts.CmdTree());
  * ```
+ *
+ * Output:
+ * ```txt
+ * .
+ * └── clang++ main.cc -c
+ *     └── ld main.o -o app
+ * ```
  */
 export class CmdTree extends service.IgnorableService {
   private readonly commandTree = new data.FlatTree<
