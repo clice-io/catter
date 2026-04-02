@@ -80,6 +80,7 @@ end
 if is_plat("macosx") then
     -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
     set_toolchains("clang")
+    set_config("ranlib", "/usr/bin/ranlib")
     add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
@@ -383,6 +384,16 @@ package("eventide")
     on_install(function (package)
         if package:has_tool("cxx", "cl", "clang_cl") then
             package:add("cxxflags", "/Zc:__cplusplus", "/Zc:preprocessor")
+        end
+
+        local libuv = package:dep("libuv")
+        local libuv_fetchinfo = libuv and libuv:fetch({external = false})
+        -- The pixi clang wrapper injects `.pixi/envs/dev/include` via its
+        -- default cfg, which also contains Node's transitive libuv 1.51 headers.
+        -- Force eventide's package build to prefer the required xmake-managed
+        -- libuv 1.52 include dir first, instead of patching eventide sources.
+        for _, includedir in ipairs(table.wrap(libuv_fetchinfo and (libuv_fetchinfo.includedirs or libuv_fetchinfo.sysincludedirs))) do
+            package:add("cxflags", "-I" .. includedir)
         end
 
         local configs = {}
