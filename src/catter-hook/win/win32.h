@@ -9,6 +9,10 @@
 #include <chrono>
 #include <stdexcept>
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <windows.h>
 #include <libloaderapi.h>
 #include <minwindef.h>
@@ -46,6 +50,10 @@ public:
 
     HANDLE get() const noexcept {
         return h;
+    }
+
+    HANDLE release() noexcept {
+        return std::exchange(h, nullptr);
     }
 
 private:

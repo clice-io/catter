@@ -4,14 +4,21 @@
 #include <filesystem>
 #include <vector>
 #include <cassert>
+#include <cstdio>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <stdexcept>
 #include <string.h>
+#include <io.h>
 
 #include <eventide/reflection/enum.h>
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <uv.h>
 #include <windows.h>
 #include <libloaderapi.h>
 #include <minwindef.h>
@@ -73,6 +80,55 @@ std::vector<char> build_environment_block(std::vector<std::string> env) {
     env_block.push_back('\0');
     return env_block;
 }
+
+struct AnonymousPipe {
+    win::Handle read{};
+    win::Handle write{};
+};
+
+AnonymousPipe create_capture_pipe(std::string_view name) {
+    SECURITY_ATTRIBUTES sa{
+        .nLength = sizeof(SECURITY_ATTRIBUTES),
+        .lpSecurityDescriptor = nullptr,
+        .bInheritHandle = TRUE,
+    };
+
+    HANDLE read = nullptr;
+    HANDLE write = nullptr;
+    if(!CreatePipe(&read, &write, &sa, 0)) {
+        throw std::system_error(GetLastError(),
+                                std::system_category(),
+                                std::format("Failed to create {} capture pipe", name));
+    }
+
+    if(!SetHandleInformation(read, HANDLE_FLAG_INHERIT, 0)) {
+        auto err = GetLastError();
+        CloseHandle(read);
+        CloseHandle(write);
+        throw std::system_error(
+            err,
+            std::system_category(),
+            std::format("Failed to disable inheritance for {} capture pipe", name));
+    }
+
+    return AnonymousPipe{.read = win::Handle(read), .write = win::Handle(write)};
+}
+
+eventide::pipe open_capture_pipe(win::Handle pipe, std::string_view name) {
+    auto fd = uv_open_osfhandle(pipe.get());
+    if(fd < 0) {
+        throw std::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
+    }
+
+    auto opened = eventide::pipe::open(fd, eventide::pipe::options{}, catter::default_loop());
+    if(!opened) {
+        throw std::runtime_error(
+            std::format("{} pipe open failed: {}", name, opened.error().message()));
+    }
+    pipe.release();  // Ownership transferred to eventide
+
+    return std::move(*opened);
+}
 }  // namespace
 
 data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
@@ -85,8 +141,17 @@ data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_
 
     auto env_block = build_environment_block(std::move(env));  // Double null termination
 
+    auto stdout_pipe = create_capture_pipe("stdout");
+    auto stderr_pipe = create_capture_pipe("stderr");
+
     PROCESS_INFORMATION pi{};
-    STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
+    STARTUPINFOA si{
+        .cb = sizeof(STARTUPINFOA),
+        .dwFlags = STARTF_USESTDHANDLES,
+        .hStdInput = GetStdHandle(STD_INPUT_HANDLE),
+        .hStdOutput = stdout_pipe.write.get(),
+        .hStdError = stderr_pipe.write.get(),
+    };
     auto pi_guard = win::make_guard([&] noexcept -> void {
         if(pi.hProcess) {
             DWORD dwExitCode;
@@ -116,7 +181,7 @@ data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_
                               cmdline.data(),
                               nullptr,
                               nullptr,
-                              FALSE,
+                              TRUE,
                               CREATE_SUSPENDED,
                               env_block.data(),
                               cmd.cwd.empty() ? nullptr : cmd.cwd.c_str(),
@@ -141,29 +206,16 @@ data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_
                                 "Failed to resume target process");
     }
 
-    if(auto error = win::wait_for_object(pi.hProcess); error) {
-        throw std::system_error(error.value(),
-                                std::system_category(),
-                                "Failed to wait for target process");
-    }
+    stdout_pipe.write = {};
+    stderr_pipe.write = {};
 
-    DWORD exit_code = 0;
-
-    if(GetExitCodeProcess(pi.hProcess, &exit_code) == FALSE) {
-        throw std::system_error(GetLastError(),
-                                std::system_category(),
-                                "Failed to get exit code of process");
-    }
     return capture_process_result(
-        [exit_code]() -> eventide::task<eventide::process::wait_result> {
-            co_return eventide::process::wait_result(eventide::process::exit_status{
-                .status = static_cast<int64_t>(exit_code),
-                .term_signal = 0,
-            });
-        }(),
-        {},
-        {},
-        nullptr,
-        nullptr);
+        [](HANDLE process_handle) -> eventide::task<int64_t, eventide::error> {
+
+        }(pi.hProcess),
+        open_capture_pipe(std::move(stdout_pipe.read), "stdout"),
+        open_capture_pipe(std::move(stderr_pipe.read), "stderr"),
+        stdout,
+        stderr);
 };
 };  // namespace catter::proxy::hook

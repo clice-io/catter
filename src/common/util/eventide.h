@@ -37,7 +37,7 @@ inline eventide::task<int64_t> spawn(const eventide::process::options& opts) {
 }
 
 inline data::process_result
-    capture_process_result(eventide::task<eventide::process::wait_result> wait_task,
+    capture_process_result(eventide::task<int64_t, eventide::error> wait_task,
                            eventide::pipe stdout_pipe = {},
                            eventide::pipe stderr_pipe = {},
                            FILE* stdout_sink = stdout,
@@ -47,34 +47,30 @@ inline data::process_result
     auto stdout_task = stdout_proxy.monitor();
     auto stderr_task = stderr_proxy.monitor();
 
-    if(stdout_proxy.active()) {
-        default_loop().schedule(stdout_task);
-    }
-    if(stderr_proxy.active()) {
-        default_loop().schedule(stderr_task);
-    }
+    auto event = [&]() -> eventide::task<int64_t> {
+        auto wait_ret = co_await std::move(wait_task);
+        stdout_proxy.stop();
+        stderr_proxy.stop();
 
-    default_loop().schedule(wait_task);
+        stdout_task.result();
+        stderr_task.result();
+
+        if(!wait_ret) {
+            throw std::runtime_error(
+                std::format("process wait failed: {}", wait_ret.error().message()));
+        }
+        co_return *wait_ret;
+    };
+
+    auto task = event();
+
+    default_loop().schedule(stdout_task);
+    default_loop().schedule(stderr_task);
+    default_loop().schedule(task);
     default_loop().run();
 
-    stdout_proxy.stop();
-    stderr_proxy.stop();
-
-    if(stdout_proxy.active()) {
-        stdout_task.result();
-    }
-    if(stderr_proxy.active()) {
-        stderr_task.result();
-    }
-
-    auto wait_ret = wait_task.result();
-    if(!wait_ret) {
-        throw std::runtime_error(
-            std::format("process wait failed: {}", wait_ret.error().message()));
-    }
-
     return data::process_result{
-        .code = wait_ret->status,
+        .code = task.result(),
         .std_out = stdout_proxy.output(),
         .std_err = stderr_proxy.output(),
     };
