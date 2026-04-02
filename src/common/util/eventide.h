@@ -71,14 +71,17 @@ inline data::process_result capture_process_result(process_event proc_event,
                                                    FILE* stdout_sink = stdout,
                                                    FILE* stderr_sink = stderr) {
 
-    auto [wait_task, stdout_pipe, stderr_pipe] = proc_event(default_loop());
+    auto event = [&]() -> eventide::task<data::process_result> {
+        auto& current_loop = eventide::event_loop::current();
 
-    util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
-    util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
-    auto stdout_task = stdout_proxy.monitor();
-    auto stderr_task = stderr_proxy.monitor();
+        auto [wait_task, stdout_pipe, stderr_pipe] = proc_event(current_loop);
+        util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
+        util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
+        auto stdout_task = stdout_proxy.monitor();
+        auto stderr_task = stderr_proxy.monitor();
+        current_loop.schedule(stdout_task);
+        current_loop.schedule(stderr_task);
 
-    auto event = [&]() -> eventide::task<int64_t> {
         auto wait_ret = co_await std::move(wait_task);
         stdout_proxy.stop();
         stderr_proxy.stop();
@@ -90,21 +93,15 @@ inline data::process_result capture_process_result(process_event proc_event,
             throw std::runtime_error(
                 std::format("process wait failed: {}", wait_ret.error().message()));
         }
-        co_return *wait_ret;
+
+        co_return data::process_result{
+            .code = *wait_ret,
+            .std_out = stdout_proxy.output(),
+            .std_err = stderr_proxy.output(),
+        };
     };
 
-    auto task = event();
-
-    default_loop().schedule(stdout_task);
-    default_loop().schedule(stderr_task);
-    default_loop().schedule(task);
-    default_loop().run();
-
-    return data::process_result{
-        .code = task.result(),
-        .std_out = stdout_proxy.output(),
-        .std_err = stderr_proxy.output(),
-    };
+    return wait(event());
 }
 
 }  // namespace catter

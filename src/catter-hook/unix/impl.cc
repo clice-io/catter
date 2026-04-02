@@ -67,16 +67,7 @@ data::process_result run(data::command command, data::ipcid_t id, std::string pr
                     eventide::process::stdio::pipe(false, true),
                     eventide::process::stdio::pipe(false, true)}
     };
-    auto spawn_ret = eventide::process::spawn(opts, catter::default_loop());
-    if(!spawn_ret) {
-        throw std::runtime_error(
-            std::format("process spawn failed: {}", spawn_ret.error().message()));
-    }
-    return catter::capture_process_result(make_process_event(opts),
-                                          std::move(spawn_ret->stdout_pipe),
-                                          std::move(spawn_ret->stderr_pipe),
-                                          stdout,
-                                          stderr);
+    return catter::capture_process_result(make_process_event(opts), stdout, stderr);
 };
 
 };  // namespace catter::proxy::hook
