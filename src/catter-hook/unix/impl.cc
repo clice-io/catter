@@ -73,10 +73,9 @@ data::process_result run(data::command command, data::ipcid_t id, std::string pr
             std::format("process spawn failed: {}", spawn_ret.error().message()));
     }
     return catter::capture_process_result(
-        [proc = std::move(
-             spawn_ret->proc)]() mutable -> eventide::task<eventide::process::wait_result> {
+        [](eventide::process proc) mutable -> eventide::task<eventide::process::wait_result> {
             co_return co_await proc.wait();
-        }(),
+        }(std::move(spawn_ret->proc)),
         std::move(spawn_ret->stdout_pipe),
         std::move(spawn_ret->stderr_pipe),
         stdout,
