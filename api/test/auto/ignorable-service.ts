@@ -1,5 +1,4 @@
 import {
-  data,
   debug,
   service,
   type CatterRuntime,
@@ -49,12 +48,12 @@ class TestIgnorableService extends service.IgnorableService {
     this.seenExecutionIds.push(id);
   }
 
-  relation(left: number, right: number): data.FlatTreeRelation {
-    return this.commandTree().relation(left, right);
+  hasCommand(id: number): boolean {
+    return super.hasCommand(id);
   }
 
-  treeSize(): number {
-    return super.treeSize();
+  parentId(id: number): number | undefined {
+    return super.commandParentId(id);
   }
 
   ignored(id: number): boolean {
@@ -74,11 +73,12 @@ expectSkip(serviceView.onCommand(2, command("gcc", 1)));
 expectSkip(serviceView.onCommand(3, command("cc1", 2)));
 expectSkip(serviceView.onCommand(4, command("as", 3)));
 
-debug.assertThrow(ignorable.treeSize() === 4);
+debug.assertThrow(ignorable.hasCommand(1));
+debug.assertThrow(ignorable.hasCommand(4));
+debug.assertThrow(ignorable.parentId(4) === 3);
 debug.assertThrow(ignorable.ignored(2));
 debug.assertThrow(ignorable.ignoredByAncestor(3));
 debug.assertThrow(ignorable.ignoredByAncestor(4));
-debug.assertThrow(ignorable.relation(2, 4) === data.FlatTreeRelation.Ancestor);
 debug.assertThrow(ignorable.seenCommandIds.length === 2);
 debug.assertThrow(ignorable.seenCommandIds[0] === 1);
 debug.assertThrow(ignorable.seenCommandIds[1] === 2);

@@ -8,9 +8,11 @@
 #include <eventide/zest/zest.h>
 
 #include <exception>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <vector>
 
 namespace fs = std::filesystem;
 using namespace catter;
@@ -76,33 +78,73 @@ void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false
     }
 }
 
+bool auto_js_case_uses_fs_test_env(const fs::path& relative_path) {
+    return relative_path.filename() == "fs.js";
+}
+
+std::vector<fs::path> collect_auto_js_case_paths(const fs::path& js_path) {
+    std::vector<fs::path> paths;
+    const auto auto_path = js_path / "auto";
+    if(!fs::exists(auto_path)) {
+        return paths;
+    }
+
+    for(const auto& entry: fs::recursive_directory_iterator(auto_path)) {
+        if(!entry.is_regular_file() || entry.path().extension() != ".js") {
+            continue;
+        }
+        paths.push_back(entry.path().lexically_relative(js_path));
+    }
+
+    std::sort(paths.begin(), paths.end());
+    return paths;
+}
+
+std::string auto_js_case_name(const fs::path& relative_path) {
+    auto name = relative_path.lexically_relative("auto");
+    name.replace_extension();
+    return name.generic_string();
+}
+
+void run_auto_js_case(const fs::path& relative_path) {
+    run_basic_js_case(relative_path.generic_string(), auto_js_case_uses_fs_test_env(relative_path));
+}
+
+eventide::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
+    try {
+        run_auto_js_case(relative_path);
+        return eventide::zest::TestState::Passed;
+    } catch(const std::exception& ex) {
+        output::redLn("auto js test failed: {}: {}", relative_path.string(), ex.what());
+        return eventide::zest::TestState::Failed;
+    } catch(...) {
+        output::redLn("auto js test failed: {}: unknown exception", relative_path.string());
+        return eventide::zest::TestState::Fatal;
+    }
+}
+
+std::vector<eventide::zest::TestCase> auto_js_test_cases() {
+    std::vector<eventide::zest::TestCase> cases;
+    const auto js_path = fs::path(config::data::js_test_path.data());
+
+    for(const auto& relative_path: collect_auto_js_case_paths(js_path)) {
+        const auto full_path = (js_path / relative_path).string();
+        const auto case_name = auto_js_case_name(relative_path);
+        cases.emplace_back(eventide::zest::TestCase{
+            .name = case_name,
+            .path = full_path,
+            .line = 1,
+            .attrs = {},
+            .test = [relative_path] { return run_auto_js_test_case(relative_path); },
+        });
+    }
+
+    return cases;
+}
+
 }  // namespace
 
 TEST_SUITE(js_tests) {
-TEST_CASE(run_fs_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("fs.js", true);
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_io_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("io.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_os_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("os.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
 TEST_CASE(run_service_js_file_and_callbacks) {
     auto f = [&]() {
         auto js_path = fs::path(config::data::js_test_path.data());
@@ -178,33 +220,11 @@ TEST_CASE(run_service_js_file_and_callbacks) {
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(run_option_parse_capi) {
+TEST_CASE(run_cdb_js_file) {
     auto f = [&]() {
-        run_basic_js_case("option.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_cli_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("cli.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_cmd_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("cmd.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_cmd_tree_js_file) {
-    auto f = [&]() {
-        run_basic_js_case("cmd-tree.js");
+        const auto js_path = fs::path(config::data::js_test_path.data());
+        TempFileManager manager(js_path / "cdb-script-test-env");
+        run_basic_js_case("cdb.js");
     };
 
     EXPECT_NOTHROWS(f());
@@ -232,3 +252,12 @@ TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
     EXPECT_NOTHROWS(f());
 };
 };  // TEST_SUITE(js_tests)
+
+namespace {
+
+const bool auto_js_tests_registered = [] {
+    eventide::zest::Runner::instance().add_suite("js_auto_tests", &auto_js_test_cases);
+    return true;
+}();
+
+}  // namespace

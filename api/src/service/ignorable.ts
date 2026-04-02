@@ -5,24 +5,6 @@ import type {
   ExecutionEvent,
 } from "catter-c";
 
-import { FlatTree } from "../data/index.js";
-
-type TreeState<Id extends PropertyKey, Content> = {
-  dataPool: Map<Id, { parent: Id[]; children: Id[]; content: Content }>;
-  mergeNode: (node: {
-    id: Id;
-    content: Content;
-    parent?: Id[];
-    children?: Id[];
-  }) => void;
-};
-
-function treeState<Id extends PropertyKey, Content>(
-  tree: FlatTree<Id, Content>,
-): TreeState<Id, Content> {
-  return tree as unknown as TreeState<Id, Content>;
-}
-
 /**
  * Extended command action that suppresses forwarding of all descendant
  * commands to the subclass while still letting the current command execute.
@@ -38,17 +20,14 @@ export type IgnorableAction = Action | IgnoreAction;
 
 /**
  * Base service that can ignore a command subtree while still tracking the
- * full command hierarchy in a single mutable `FlatTree`.
+ * captured parent chain needed to detect ignored descendants.
  *
  * Subclasses still override the usual `onStart` / `onFinish` / `onCommand` /
  * `onExecution` lifecycle methods. The only semantic extension is that
  * `onCommand` may additionally return `{ type: "ignore" }`.
  */
 export abstract class IgnorableService {
-  private readonly commandTreeState = new FlatTree<
-    number,
-    CommandCaptureResult
-  >();
+  private readonly commandParentIds = new Map<number, number | undefined>();
   private readonly ignoredCommandIds = new Set<number>();
   private readonly serviceAdapter = {
     onStart: (config: CatterConfig): CatterConfig => this.onStart(config),
@@ -56,18 +35,7 @@ export abstract class IgnorableService {
       this.onFinish(event);
     },
     onCommand: (id: number, data: CommandCaptureResult): Action => {
-      this.treeMerge(
-        data.success
-          ? {
-              id,
-              parent: data.data.parent === undefined ? [] : [data.data.parent],
-              content: data,
-            }
-          : {
-              id,
-              content: data,
-            },
-      );
+      this.rememberCommand(id, data.success ? data.data.parent : undefined);
 
       if (this.hasIgnoredAncestor(id)) {
         return { type: "skip" };
@@ -82,7 +50,7 @@ export abstract class IgnorableService {
       return action;
     },
     onExecution: (id: number, event: ExecutionEvent): void => {
-      if (this.treeHas(id) && this.hasIgnoredAncestor(id)) {
+      if (this.hasCommand(id) && this.hasIgnoredAncestor(id)) {
         return;
       }
 
@@ -111,45 +79,16 @@ export abstract class IgnorableService {
     return this.serviceAdapter;
   }
 
-  protected commandTree(): FlatTree<number, CommandCaptureResult> {
-    return this.commandTreeState;
+  protected rememberCommand(id: number, parentId?: number): void {
+    this.commandParentIds.set(id, parentId);
   }
 
-  protected treeSize(): number {
-    return treeState(this.commandTreeState).dataPool.size;
+  protected hasCommand(id: number): boolean {
+    return this.commandParentIds.has(id);
   }
 
-  protected treeContent(id: number): CommandCaptureResult | undefined {
-    return treeState(this.commandTreeState).dataPool.get(id)?.content;
-  }
-
-  protected treeHas(id: number): boolean {
-    return treeState(this.commandTreeState).dataPool.has(id);
-  }
-
-  protected treeParentId(id: number): number | undefined {
-    const state = treeState(this.commandTreeState);
-    const node = state.dataPool.get(id);
-    if (node === undefined) {
-      return undefined;
-    }
-
-    for (const parentId of node.parent) {
-      if (state.dataPool.has(parentId)) {
-        return parentId;
-      }
-    }
-
-    return undefined;
-  }
-
-  protected treeMerge(node: {
-    id: number;
-    content: CommandCaptureResult;
-    parent?: number[];
-    children?: number[];
-  }): void {
-    treeState(this.commandTreeState).mergeNode(node);
+  protected commandParentId(id: number): number | undefined {
+    return this.commandParentIds.get(id);
   }
 
   protected isIgnored(id: number): boolean {
@@ -157,16 +96,16 @@ export abstract class IgnorableService {
   }
 
   protected hasIgnoredAncestor(id: number): boolean {
-    if (!this.treeHas(id)) {
+    if (!this.hasCommand(id)) {
       return false;
     }
 
-    let parentId = this.treeParentId(id);
+    let parentId = this.commandParentId(id);
     while (parentId !== undefined) {
       if (this.ignoredCommandIds.has(parentId)) {
         return true;
       }
-      parentId = this.treeParentId(parentId);
+      parentId = this.commandParentId(parentId);
     }
 
     return false;

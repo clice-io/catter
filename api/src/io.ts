@@ -522,7 +522,12 @@ const asciiEnDecStreamImpl: EnDecStreamImpl = {
     return this.decode(bytes);
   },
   decode: function (raw: Uint8Array): string {
-    return String.fromCharCode(...raw);
+    const chunkSize = 0x8000;
+    let result = "";
+    for (let i = 0; i < raw.length; i += chunkSize) {
+      result += String.fromCharCode(...raw.slice(i, i + chunkSize));
+    }
+    return result;
   },
   encode: function (data: string): Uint8Array {
     return new Uint8Array([...data].map((c) => c.charCodeAt(0)));

@@ -77,8 +77,39 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     });
   }
 
-  private isRoot(id: Id): boolean {
+  justRemoveNode(id: Id) {
+    this.dataPool.delete(id);
+  }
+
+  merge(node: FlatTreeNodeInput<Id, Content>) {
+    this.justMergeNode(node);
+    return this.assemble();
+  }
+
+  update(node: FlatTreeNodeInput<Id, Content>) {
+    this.justUpdateNode(node);
+    return this.assemble();
+  }
+
+  remove(id: Id) {
+    this.justRemoveNode(id);
+    return this.assemble();
+  }
+
+  isRoot(id: Id): boolean {
     return (this.dataPool.get(id)?.parent?.length ?? 0) === 0;
+  }
+
+  isStart(id: Id): boolean {
+    const node = this.dataPool.get(id);
+    if (!node) {
+      return false;
+    }
+
+    return (
+      node.parent.length === 0 ||
+      node.parent.every((parentId) => !this.dataPool.has(parentId))
+    );
   }
 
   private stitchEdges() {
@@ -143,25 +174,22 @@ export class FlatTree<Id extends FlatTreeId, Content> {
 
   roots(): Id[] {
     this.stitchEdges();
-    const res: Id[] = [];
+    return Array.from(this.dataPool.keys()).filter((id) => this.isRoot(id));
+  }
 
-    for (const id of this.dataPool.keys()) {
-      if (this.isRoot(id)) {
-        res.push(id);
-      }
-    }
-
-    return res;
+  starts(): Id[] {
+    this.stitchEdges();
+    return Array.from(this.dataPool.keys()).filter((id) => this.isStart(id));
   }
 
   walk(): FlatTreeWalker<Id> {
-    const roots = this.roots();
+    const starts = this.starts();
 
     return {
-      first: roots.length === 1 ? roots[0] : undefined,
+      first: starts.length === 1 ? starts[0] : undefined,
       children: (id: Id | undefined): readonly Id[] => {
         if (id === undefined) {
-          return roots;
+          return starts;
         }
         return this.dataPool.get(id)?.children ?? [];
       },
@@ -209,5 +237,21 @@ export class FlatTree<Id extends FlatTreeId, Content> {
       return FlatTreeRelation.Descendant;
     }
     return FlatTreeRelation.None;
+  }
+
+  size() {
+    return this.dataPool.size;
+  }
+
+  node(id: Id) {
+    return this.dataPool.get(id);
+  }
+
+  nodes() {
+    return this.dataPool.values();
+  }
+
+  reset() {
+    this.dataPool.clear();
   }
 }

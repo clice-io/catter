@@ -170,6 +170,12 @@ type OutputOption = {
   channel: OutputChannel;
 };
 
+type OutputArg = {
+  value: string;
+  optionIndex: number;
+  valueIndex: number;
+};
+
 type CommandModel = {
   compiler: CompilerExe;
   style: CompilerStyle;
@@ -526,6 +532,42 @@ function consumedArgCount(
   }
 }
 
+function lastPrimaryOutputArg(args: readonly string[]): OutputArg | undefined {
+  let found: OutputArg | undefined;
+
+  for (let index = 0; index < args.length; ++index) {
+    const token = args[index];
+    if (token === "-o") {
+      if (index + 1 >= args.length) {
+        continue;
+      }
+      found = {
+        value: args[index + 1],
+        optionIndex: index,
+        valueIndex: index + 1,
+      };
+      ++index;
+      continue;
+    }
+
+    if (token.startsWith("-o") && token.length > 2) {
+      found = {
+        value: token.slice(2),
+        optionIndex: index,
+        valueIndex: index,
+      };
+    }
+  }
+
+  return found;
+}
+
+function removeInputAt(model: CommandModel, index: number, path: string): void {
+  model.inputs = model.inputs.filter(
+    (input) => !(input.index === index && input.path === path),
+  );
+}
+
 function collectConsumedArgIndexes(
   args: readonly string[],
   parsed: ParsedOption[],
@@ -672,6 +714,23 @@ function applyClangLikeDriverFallbacks(
       );
     }
   }
+}
+
+function repairPrimaryOutput(
+  model: CommandModel,
+  args: readonly string[],
+): void {
+  if (model.outputs.primary !== undefined) {
+    return;
+  }
+
+  const output = lastPrimaryOutputArg(args);
+  if (output === undefined) {
+    return;
+  }
+
+  recordOutput(model, "primary", output.value, output.optionIndex);
+  removeInputAt(model, output.valueIndex, output.value);
 }
 
 function resolveCompilerFamily(compiler: CompilerExe): CompilerFamily {
@@ -845,6 +904,7 @@ const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
   }
 
   applyClangLikeDriverFallbacks(model, args, parsed);
+  repairPrimaryOutput(model, args);
   return model;
 };
 
@@ -1255,57 +1315,6 @@ export class CompilerAnalysis extends Analysis<CompilerExe> {
       output: entry.output,
       inputs: [...entry.inputs],
     }));
-  }
-
-  /**
-   * Checks whether this command should appear in a compilation database.
-   *
-   * @example
-   * ```ts
-   * const ok = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).isCDB();
-   * ```
-   */
-  isCDB(): boolean {
-    return (
-      this.phase === CompilerPhaseValue.Compile &&
-      this.artifact === CompilerArtifactValue.Object &&
-      this.inputItems.some((input) => input.kind === "source")
-    );
-  }
-
-  /**
-   * Returns compilation-database entries for this command.
-   *
-   * Non source-to-object commands return an empty list.
-   *
-   * @example
-   * ```ts
-   * const entries = new cmd.CompilerAnalysis(["clang", "-c", "main.c"]).cdbEntries();
-   * ```
-   */
-  cdbEntries(): Array<{ file: string; output?: string }> {
-    if (!this.isCDB()) {
-      return [];
-    }
-
-    const sourceInputs = this.inputItems.filter(
-      (input) => input.kind === "source",
-    );
-    const outputs = this.edges().map((entry) => entry.output);
-
-    return sourceInputs.map((input, index) => {
-      const entry: { file: string; output?: string } = {
-        file: input.path,
-      };
-
-      if (outputs.length === sourceInputs.length) {
-        entry.output = outputs[index];
-      } else if (outputs.length === 1 && sourceInputs.length === 1) {
-        entry.output = outputs[0];
-      }
-
-      return entry;
-    });
   }
 }
 

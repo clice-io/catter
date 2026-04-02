@@ -42,6 +42,16 @@ io.TextFileStream.with(
   },
 );
 
+const largeTextPath = fs.path.joinAll(testEnvPath, "b", "large.txt");
+const largeText = "A".repeat(70_000);
+debug.assertThrow(fs.createFile(largeTextPath));
+io.TextFileStream.with(largeTextPath, "ascii", (stream) => {
+  stream.write(largeText);
+});
+io.TextFileStream.with(largeTextPath, "ascii", (stream) => {
+  debug.assertThrow(stream.readEntireFile() === largeText);
+});
+
 const c_path = fs.path.joinAll(testEnvPath, "c");
 debug.assertThrow(fs.exists(c_path));
 debug.assertThrow(

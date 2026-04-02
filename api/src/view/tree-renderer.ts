@@ -134,7 +134,7 @@ export class TreeRenderer<Id extends TreeId, Content> {
       try {
         const color = DEPTH_COLOR_CODES[depth % DEPTH_COLOR_CODES.length];
         const branch = withBranch ? (isLast ? TREE_ELBOW : TREE_TEE) : "";
-        let out = `${color}${prefix}${branch}${textOf(content, id)}${ANSI_RESET}\n`;
+        let out = `${prefix}${branch}${color}${textOf(content, id)}${ANSI_RESET}\n`;
 
         if (options.maxDepth !== undefined && depth >= options.maxDepth) {
           return out;

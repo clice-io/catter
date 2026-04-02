@@ -1,21 +1,5 @@
 import { data } from "catter";
 
-type TreeState<Id extends PropertyKey, Content> = {
-  dataPool: Map<Id, data.FlatTreeNodeStore<Id, Content>>;
-  mergeNode: (node: {
-    id: Id;
-    content: Content;
-    parent?: Id[];
-    children?: Id[];
-  }) => void;
-};
-
-function treeState<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
-): TreeState<Id, Content> {
-  return tree as unknown as TreeState<Id, Content>;
-}
-
 function mergeNode<Id extends PropertyKey, Content>(
   tree: data.FlatTree<Id, Content>,
   node: {
@@ -25,13 +9,13 @@ function mergeNode<Id extends PropertyKey, Content>(
     children?: Id[];
   },
 ): void {
-  treeState(tree).mergeNode(node);
+  tree.justMergeNode(node);
 }
 
 function size<Id extends PropertyKey, Content>(
   tree: data.FlatTree<Id, Content>,
 ): number {
-  return treeState(tree).dataPool.size;
+  return tree.size();
 }
 
 function expectEq<T>(actual: T, expected: T, label: string) {
@@ -72,10 +56,10 @@ expectEq(basic.assemble(), true, "basic assemble");
 expectArrayEq(basic.roots(), [1], "basic roots");
 
 const basicWalk = basic.walk();
-expectEq(basicWalk.first, 1, "basic walk first");
+expectEq(basicWalk.first, undefined, "basic walk first");
 expectArrayEq(
   basicWalk.children(undefined),
-  [1],
+  [1, 5],
   "basic virtual root children",
 );
 expectArrayEq(basicWalk.children(1), [2, 3], "basic root children");
@@ -105,12 +89,12 @@ expectArrayEq(incremental.roots(), [], "incremental roots before parent");
 const incrementalBeforeParent = incremental.walk();
 expectEq(
   incrementalBeforeParent.first,
-  undefined,
+  2,
   "incremental walk first before parent",
 );
 expectArrayEq(
   incrementalBeforeParent.children(undefined),
-  [],
+  [2],
   "incremental virtual root before parent",
 );
 

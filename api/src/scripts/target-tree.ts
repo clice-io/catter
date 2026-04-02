@@ -6,57 +6,8 @@ import * as cli from "../cli/index.js";
 import * as view from "../view/index.js";
 import { analyze as analyzeCmd } from "../cmd/index.js";
 
-type TreeState<Id extends PropertyKey, Content> = {
-  dataPool: Map<Id, data.FlatTreeNodeStore<Id, Content>>;
-  mergeNode: (node: {
-    id: Id;
-    content: Content;
-    parent?: Id[];
-    children?: Id[];
-  }) => void;
-};
-
-function treeState<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
-): TreeState<Id, Content> {
-  return tree as unknown as TreeState<Id, Content>;
-}
-
-function treeContent<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
-  id: Id,
-): Content | undefined {
-  return treeState(tree).dataPool.get(id)?.content;
-}
-
-function treeSize<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
-): number {
-  return treeState(tree).dataPool.size;
-}
-
-function mergeTreeNode<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
-  node: {
-    id: Id;
-    content: Content;
-    parent?: Id[];
-    children?: Id[];
-  },
-): void {
-  treeState(tree).mergeNode(node);
-}
-
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
-}
-
-function looksAbsolutePath(path: string): boolean {
-  return (
-    path.startsWith("/") ||
-    path.startsWith("\\\\") ||
-    /^[A-Za-z]:[\\/]/.test(path)
-  );
 }
 
 function normalizePath(cwd: string, path: string): string | undefined {
@@ -65,7 +16,7 @@ function normalizePath(cwd: string, path: string): string | undefined {
   }
 
   const base = fs.path.absolute(cwd);
-  const joined = looksAbsolutePath(path) ? path : fs.path.joinAll(base, path);
+  const joined = fs.path.isAbsolute(path) ? path : fs.path.joinAll(base, path);
   return fs.path.lexicalNormal(joined);
 }
 
@@ -99,7 +50,7 @@ const targetTreeCLI = cli.command({
  */
 export class TargetTree extends service.IgnorableService {
   private readonly targetTree = new data.FlatTree<string, string>();
-  private maxDepth: number | undefined;
+  private maxDepth?: number;
 
   override onStart(config: service.CatterConfig): service.CatterConfig {
     const res = cli.run(targetTreeCLI, config.scriptArgs);
@@ -118,16 +69,17 @@ export class TargetTree extends service.IgnorableService {
       );
     }
 
-    if (treeSize(this.targetTree) === 0) {
+    if (this.targetTree.size() === 0) {
       io.println("No targets found.");
       return;
     }
 
+    this.targetTree.assemble();
     const walker = this.targetTree.walk();
-    const renderer = new view.TreeRenderer<string, string>({
+    const renderer = new view.TreeRenderer({
       first: walker.first,
       children: walker.children,
-      content: (id) => treeContent(this.targetTree, id),
+      content: (id) => this.targetTree.node(id)?.content,
     });
 
     io.print(
@@ -168,12 +120,12 @@ export class TargetTree extends service.IgnorableService {
       .filter(isDefined);
 
     for (const entry of entries) {
-      mergeTreeNode(this.targetTree, {
+      this.targetTree.justMergeNode({
         id: entry.output,
         content: entry.output,
       });
       for (const input of entry.inputs) {
-        mergeTreeNode(this.targetTree, {
+        this.targetTree.justMergeNode({
           id: input,
           parent: [entry.output],
           content: input,

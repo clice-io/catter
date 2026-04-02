@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <cstdlib>
-#include <eventide/deco/detail/runtime.h>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>

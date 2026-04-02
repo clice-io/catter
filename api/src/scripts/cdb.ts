@@ -1,21 +1,39 @@
+import * as data from "../data/index.js";
 import * as service from "../service.js";
 
 import * as io from "../io.js";
 import * as fs from "../fs.js";
 import {
   CDBManager,
-  type CDBItem,
+  type CDBCommand,
+  type CDBEntry,
   CompilerAnalysis,
   analyze as analyzeCmd,
   cdbItemsOf,
 } from "../cmd/index.js";
 
+type Producer = CDBCommand;
+
+function isSet<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
+function pathOf(cwd: string, path: string): string | undefined {
+  if (path === "-") {
+    return undefined;
+  }
+
+  const base = fs.path.absolute(cwd);
+  const joined = fs.path.isAbsolute(path) ? path : fs.path.joinAll(base, path);
+  return fs.path.lexicalNormal(joined);
+}
+
 /**
  * Service script that captures compiler leaf commands and writes a
  * `compile_commands.json` file.
  *
- * Only compiler commands that represent source-to-object compilation contribute
- * entries. Other commands are ignored.
+ * Compiler commands contribute artifact links, and source leafs are turned into
+ * compilation database entries at the end of the run.
  *
  * @example
  * ```ts
@@ -27,7 +45,9 @@ import {
 export class CDB extends service.IgnorableService {
   /** Destination path used when saving the compilation database. */
   save_path: string;
-  private readonly generatedItems: CDBItem[] = [];
+  private readonly commandTree = new data.FlatTree<string, string>();
+  private readonly producers = new Map<string, Producer[]>();
+  private readonly srcFiles = new Map<string, string>();
 
   /**
    * Creates a CDB script service.
@@ -57,8 +77,40 @@ export class CDB extends service.IgnorableService {
       return;
     }
 
+    this.commandTree.assemble();
+
+    const generatedItems = [];
+    for (const node of this.commandTree.nodes()) {
+      if (node.children.length !== 0) {
+        continue;
+      }
+
+      const file = this.srcFiles.get(node.id);
+      if (file === undefined) {
+        continue;
+      }
+
+      for (const parent of node.parent) {
+        const parents = this.producers.get(parent);
+        if (parents === undefined) {
+          continue;
+        }
+
+        const entries: CDBEntry[] = [
+          {
+            file,
+            output: parent,
+          },
+        ];
+
+        for (const producer of parents) {
+          generatedItems.push(...cdbItemsOf(producer, entries));
+        }
+      }
+    }
+
     const manager = new CDBManager(this.save_path);
-    manager.merge(this.generatedItems);
+    manager.merge(generatedItems);
 
     const savedPath = manager.save();
     io.println(
@@ -72,22 +124,55 @@ export class CDB extends service.IgnorableService {
   ): service.IgnorableAction {
     if (!data.success) {
       io.println(`CDB received error: ${data.error.msg}`);
-      return {
-        type: "skip",
-      };
+      return { type: "skip" };
     }
 
-    const result = analyzeCmd(data.data.argv);
-    const analysis = CompilerAnalysis.from(result);
+    const command = data.data;
+    const analysis = CompilerAnalysis.from(analyzeCmd(command.argv));
     if (analysis === undefined) {
-      return {
-        type: "skip",
-      };
+      return { type: "skip" };
     }
 
-    this.generatedItems.push(...cdbItemsOf(data.data, analysis));
-    return {
-      type: "ignore",
-    };
+    for (const input of analysis.inputEntries()) {
+      if (input.kind === "source") {
+        const full = pathOf(command.cwd, input.path);
+        if (full !== undefined) {
+          this.srcFiles.set(full, input.path);
+        }
+      }
+    }
+
+    for (const edge of analysis.edges()) {
+      const output = pathOf(command.cwd, edge.output);
+      if (output === undefined) {
+        continue;
+      }
+
+      const inputs = edge.inputs
+        .map((input) => pathOf(command.cwd, input))
+        .filter(isSet);
+
+      this.commandTree.justMergeNode({
+        id: output,
+        content: output,
+      });
+
+      for (const input of inputs) {
+        this.commandTree.justMergeNode({
+          id: input,
+          parent: [output],
+          content: input,
+        });
+      }
+
+      const parents = this.producers.get(output) ?? [];
+      parents.push({
+        cwd: command.cwd,
+        argv: [...command.argv],
+      });
+      this.producers.set(output, parents);
+    }
+
+    return { type: "ignore" };
   }
 }

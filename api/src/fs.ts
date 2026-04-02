@@ -241,6 +241,29 @@ export function rename(oldPath: string, newPath: string): boolean {
  */
 export const path = {
   /**
+   * Checks whether a path string is absolute.
+   *
+   * Supports POSIX roots (`/foo`), Windows drive roots (`C:\\foo`), and UNC
+   * paths (`\\\\server\\share`).
+   *
+   * @param pathStr - The path to inspect.
+   * @returns `true` if the path is absolute.
+   *
+   * @example
+   * ```typescript
+   * if (path.isAbsolute('/tmp/file.txt')) {
+   *   println('absolute');
+   * }
+   * ```
+   */
+  isAbsolute(pathStr: string): boolean {
+    return (
+      pathStr.startsWith("/") ||
+      pathStr.startsWith("\\\\") ||
+      /^[A-Za-z]:[\\/]/.test(pathStr)
+    );
+  },
+  /**
    * Joins multiple path segments into a single path string.
    *
    * Handles path separators correctly across platforms. The first segment

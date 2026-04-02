@@ -86,7 +86,16 @@ const cdbItems = cmd.cdbItemsOf(
     cwd: "/tmp/build",
     argv: [...compileCommand],
   },
-  compileAnalysis,
+  [
+    {
+      file: "src/a.c",
+      output: "a.o",
+    },
+    {
+      file: "src/b.c",
+      output: "b.o",
+    },
+  ],
 );
 expectEq(cdbItems.length, 2, "cdb item count");
 expectEq(cdbItems[0].directory, "/tmp/build", "cdb directory");
@@ -112,7 +121,6 @@ expectEq(
 );
 expectArrayEq(preprocessAnalysis.consume, ["src/a.c"], "preprocess consume");
 expectArrayEq(preprocessAnalysis.produce, ["a.i"], "preprocess produce");
-expectEq(preprocessAnalysis.isCDB(), false, "preprocess cdb");
 expectEq(preprocessAnalysis.edges().length, 1, "preprocess edge count");
 
 const archiverAnalysis = cmd.ArchiverAnalysis.from(

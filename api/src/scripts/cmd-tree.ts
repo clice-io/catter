@@ -1,4 +1,5 @@
 import * as cli from "../cli/index.js";
+import * as data from "../data/index.js";
 import * as io from "../io.js";
 import * as service from "../service.js";
 import * as view from "../view/index.js";
@@ -100,9 +101,30 @@ function formatCommand(
  * ```
  */
 export class CmdTree extends service.IgnorableService {
-  private maxDepth: number | undefined;
+  private readonly commandTree = new data.FlatTree<
+    number,
+    service.CommandCaptureResult
+  >();
+  private maxDepth?: number;
   private visibleArgCount = -1;
   private maxArgWidth = 10;
+
+  override onCommand(
+    id: number,
+    capture: service.CommandCaptureResult,
+  ): service.Action {
+    this.commandTree.justMergeNode({
+      id,
+      parent:
+        capture.success && capture.data.parent !== undefined
+          ? [capture.data.parent]
+          : [],
+      content: capture,
+    });
+    return {
+      type: "skip",
+    };
+  }
 
   override onStart(config: service.CatterConfig): service.CatterConfig {
     const res = cli.run(cmdTreeCLI, config.scriptArgs);
@@ -124,19 +146,17 @@ export class CmdTree extends service.IgnorableService {
       );
     }
 
-    if (this.treeSize() === 0) {
+    if (this.commandTree.size() === 0) {
       io.println("No commands found.");
       return;
     }
+    this.commandTree.assemble();
 
-    const walker = this.commandTree().walk();
-    const renderer = new view.TreeRenderer<
-      number,
-      service.CommandCaptureResult
-    >({
+    const walker = this.commandTree.walk();
+    const renderer = new view.TreeRenderer({
       first: walker.first,
       children: walker.children,
-      content: (id) => this.treeContent(id),
+      content: (id) => this.commandTree.node(id)?.content,
     });
 
     io.print(

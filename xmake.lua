@@ -9,7 +9,9 @@ set_languages("c++23")
 option("dev", {default = true})
 option("test", {default = false})
 
-local function add_prefix_includedirs(prefix)
+local prefix_includedirs = {}
+
+local function collect_prefix_includedirs(prefix)
     local include_candidates = {
         path.join(prefix, "include"),
         path.join(prefix, "Library", "include"),
@@ -17,22 +19,28 @@ local function add_prefix_includedirs(prefix)
 
     for _, includedir in ipairs(include_candidates) do
         if os.isdir(includedir) then
-            add_includedirs(includedir)
+            table.insert(prefix_includedirs, includedir)
         end
+    end
+end
+
+local function add_local_prefix_includedirs()
+    for _, includedir in ipairs(prefix_includedirs) do
+        add_includedirs(includedir)
     end
 end
 
 local conda_prefix = os.getenv("CONDA_PREFIX")
 if conda_prefix then
-    add_prefix_includedirs(conda_prefix)
+    collect_prefix_includedirs(conda_prefix)
 else
     local pixi_dev_prefix = path.join(os.projectdir(), ".pixi", "envs", "dev")
     local pixi_default_prefix = path.join(os.projectdir(), ".pixi", "envs", "default")
 
     if os.isdir(pixi_dev_prefix) then
-        add_prefix_includedirs(pixi_dev_prefix)
+        collect_prefix_includedirs(pixi_dev_prefix)
     elseif os.isdir(pixi_default_prefix) then
-        add_prefix_includedirs(pixi_default_prefix)
+        collect_prefix_includedirs(pixi_default_prefix)
     end
 end
 
@@ -119,6 +127,7 @@ add_requires("eventide")
 
 target("common")
     set_kind("static")
+    add_local_prefix_includedirs()
     add_includedirs("src/common", {public = true})
     add_files("src/common/**.cc")
 
@@ -128,6 +137,7 @@ target("common")
 target("catter-core")
     -- use object, avoid register invalid
     set_kind("object")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
 
@@ -140,6 +150,7 @@ target("catter-core")
 
 target("catter")
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
@@ -149,6 +160,7 @@ target("catter")
 target("catter-hook-win64")
     set_default(is_plat("windows"))
     set_kind("shared")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
     add_syslinks("user32", "advapi32")
@@ -166,6 +178,7 @@ target("catter-hook-win64")
 target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
+    add_local_prefix_includedirs()
 
     if is_mode("debug") then
         add_deps("common")
@@ -205,6 +218,7 @@ target("catter-hook-unix")
 
 target("catter-hook")
     set_kind("object")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/", {public = true})
     add_deps("common")
     if is_plat("windows") then
@@ -215,6 +229,7 @@ target("catter-hook")
 
 target("catter-proxy")
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
@@ -230,6 +245,7 @@ rule("ut-base")
 target("ut-common")
     set_default(has_config("test"))
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_rules("ut-base")
 
     add_files("tests/unit/common/**.cc")
@@ -240,6 +256,7 @@ target("ut-common")
 target("ut-catter")
     set_default(has_config("test"))
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_rules("ut-base")
 
     add_files("tests/unit/catter/**.cc")
@@ -248,7 +265,7 @@ target("ut-catter")
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
     add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
     add_rules("build.js", {js_target = "build-js-test"})
-    add_files("api/src/**.ts", "api/test/*.ts")
+    add_files("api/src/**.ts", "api/test/**.ts")
 
     add_tests("default")
 
@@ -356,11 +373,11 @@ package("eventide")
     set_homepage("https://clice.io")
     set_license("Apache-2.0")
 
-    set_urls("/home/kacent/project/eventide/.git")
+    set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
     add_versions("97", "6bb5adfeaa91bae21a87c08030d89aad16ca3836")
 
-    add_deps("libuv 1.52.0")
+    add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
 
     on_install(function (package)
@@ -369,7 +386,9 @@ package("eventide")
         end
 
         local configs = {}
-        configs.dev = has_config("dev")
+        -- Build the dependency with a plain consumer config so we do not pull
+        -- in eventide's repo-local dev toolchain tweaks during package install.
+        configs.dev = false
         configs.test = false
         import("package.tools.xmake").install(package, configs, {target = "eventide"})
     end)

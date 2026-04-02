@@ -21,6 +21,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isStringList(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((part) => typeof part === "string")
+  );
+}
+
 function cloneItem(item: CDBItem): CDBItem {
   return {
     ...item,
@@ -36,7 +42,7 @@ function readEntireText(path: string): string {
   return content;
 }
 
-function validateItem(value: unknown, context: string): CDBItem {
+function asItem(value: unknown, context: string): CDBItem {
   if (!isRecord(value)) {
     throw new Error(`${context}: expected object item`);
   }
@@ -57,13 +63,8 @@ function validateItem(value: unknown, context: string): CDBItem {
   }
 
   const argumentsValue = value.arguments;
-  if (argumentsValue !== undefined) {
-    if (
-      !Array.isArray(argumentsValue) ||
-      !argumentsValue.every((arg) => typeof arg === "string")
-    ) {
-      throw new Error(`${context}: "arguments" must be a string array`);
-    }
+  if (argumentsValue !== undefined && !isStringList(argumentsValue)) {
+    throw new Error(`${context}: "arguments" must be a string array`);
   }
 
   if (command === undefined && argumentsValue === undefined) {
@@ -92,16 +93,28 @@ function validateItem(value: unknown, context: string): CDBItem {
   return item;
 }
 
-function itemKey(item: CDBItem): string {
+function fileKey(item: CDBItem): string {
   return fs.path.lexicalNormal(
     fs.path.absolute(fs.path.joinAll(item.directory, item.file)),
   );
 }
 
-function setItem(store: Map<string, CDBItem>, item: CDBItem): void {
-  const key = itemKey(item);
-  store.delete(key);
-  store.set(key, cloneItem(item));
+function itemKey(item: CDBItem): string {
+  return JSON.stringify([
+    item.output ?? "",
+    item.command ?? "",
+    item.arguments ?? [],
+  ]);
+}
+
+function addTo(store: Map<string, Map<string, CDBItem>>, item: CDBItem): void {
+  const file = fileKey(item);
+  let items = store.get(file);
+  if (items === undefined) {
+    items = new Map();
+    store.set(file, items);
+  }
+  items.set(itemKey(item), cloneItem(item));
 }
 
 function readItemsFromPath(path: string): CDBItem[] {
@@ -122,7 +135,7 @@ function readItemsFromPath(path: string): CDBItem[] {
     throw new Error(`CDB file must contain a JSON array: ${path}`);
   }
 
-  return parsed.map((item, index) => validateItem(item, `${path}[${index}]`));
+  return parsed.map((item, index) => asItem(item, `${path}[${index}]`));
 }
 
 function writeItemsToPath(path: string, items: CDBItem[]): void {
@@ -146,28 +159,32 @@ function writeItemsToPath(path: string, items: CDBItem[]): void {
 export class CDBManager {
   readonly savePath: string;
 
-  private readonly inheritedItems = new Map<string, CDBItem>();
-  private readonly pendingItems = new Map<string, CDBItem>();
+  private readonly inheritedItems = new Map<string, Map<string, CDBItem>>();
+  private readonly pendingItems = new Map<string, Map<string, CDBItem>>();
 
   constructor(savePath: string = "compile_commands.json") {
     this.savePath = savePath;
 
     for (const item of readItemsFromPath(savePath)) {
-      setItem(this.inheritedItems, item);
+      addTo(this.inheritedItems, item);
     }
   }
 
   private mergedItems(): CDBItem[] {
     const items: CDBItem[] = [];
 
-    for (const [key, item] of this.inheritedItems) {
-      if (!this.pendingItems.has(key)) {
-        items.push(cloneItem(item));
+    for (const [file, group] of this.inheritedItems) {
+      if (!this.pendingItems.has(file)) {
+        for (const item of group.values()) {
+          items.push(cloneItem(item));
+        }
       }
     }
 
-    for (const item of this.pendingItems.values()) {
-      items.push(cloneItem(item));
+    for (const group of this.pendingItems.values()) {
+      for (const item of group.values()) {
+        items.push(cloneItem(item));
+      }
     }
 
     return items;
@@ -176,11 +193,12 @@ export class CDBManager {
   /**
    * Adds or replaces a single compilation database item.
    *
-   * Items are keyed by the normalized absolute source-file path derived from
-   * `directory` and `file`.
+   * Items are grouped by the normalized absolute source-file path derived from
+   * `directory` and `file`. Adding any new item for a source file replaces all
+   * inherited items for that source file when saved.
    */
   addItem(item: CDBItem): this {
-    setItem(this.pendingItems, validateItem(item, "CDBManager.addItem"));
+    addTo(this.pendingItems, asItem(item, "CDBManager.addItem"));
     return this;
   }
 

@@ -1,5 +1,4 @@
 import {
-  data,
   debug,
   service,
   type CatterRuntime,
@@ -45,12 +44,12 @@ class TestCompilerService extends service.CompilerService {
     this.seenExecutionIds.push(id);
   }
 
-  relation(left: number, right: number): data.FlatTreeRelation {
-    return this.commandTree().relation(left, right);
+  hasCommand(id: number): boolean {
+    return super.hasCommand(id);
   }
 
-  treeSize(): number {
-    return super.treeSize();
+  parentId(id: number): number | undefined {
+    return super.commandParentId(id);
   }
 
   ignored(id: number): boolean {
@@ -73,19 +72,15 @@ expectSkip(serviceView.onCommand(5, command("python", 1)));
 expectSkip(serviceView.onCommand(6, command("clang", 1)));
 expectSkip(serviceView.onCommand(7, command("collect2", 6)));
 
-debug.assertThrow(compilerService.treeSize() === 7);
+debug.assertThrow(compilerService.hasCommand(1));
+debug.assertThrow(compilerService.hasCommand(7));
+debug.assertThrow(compilerService.parentId(7) === 6);
 debug.assertThrow(compilerService.ignored(2));
 debug.assertThrow(compilerService.ignored(6));
 debug.assertThrow(compilerService.ignoredByAncestor(3));
 debug.assertThrow(compilerService.ignoredByAncestor(4));
 debug.assertThrow(!compilerService.ignoredByAncestor(5));
 debug.assertThrow(compilerService.ignoredByAncestor(7));
-debug.assertThrow(
-  compilerService.relation(2, 4) === data.FlatTreeRelation.Ancestor,
-);
-debug.assertThrow(
-  compilerService.relation(6, 7) === data.FlatTreeRelation.Ancestor,
-);
 debug.assertThrow(compilerService.seenCommandIds.length === 2);
 debug.assertThrow(compilerService.seenCommandIds[0] === 2);
 debug.assertThrow(compilerService.seenCommandIds[1] === 6);

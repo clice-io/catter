@@ -9,10 +9,6 @@ type ExpectedAnalysis = {
   type: (typeof cmd.CompilerType)[keyof typeof cmd.CompilerType] | undefined;
   inputs: string[];
   outputs: string[];
-  cdbEntries: Array<{
-    file: string;
-    output?: string;
-  }>;
 };
 
 function expectEq<T>(actual: T, expected: T, label: string) {
@@ -37,29 +33,6 @@ function expectArrayEq(actual: string[], expected: string[], label: string) {
   }
 }
 
-function expectCDBEntriesEq(
-  actual: Array<{ file: string; output?: string }>,
-  expected: Array<{ file: string; output?: string }>,
-  label: string,
-) {
-  if (actual.length !== expected.length) {
-    throw new Error(
-      `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
-    );
-  }
-
-  for (let idx = 0; idx < actual.length; ++idx) {
-    if (
-      actual[idx].file !== expected[idx].file ||
-      actual[idx].output !== expected[idx].output
-    ) {
-      throw new Error(
-        `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
-      );
-    }
-  }
-}
-
 function normalizedJoin(...parts: string[]) {
   return fs.path.lexicalNormal(fs.path.joinAll(...parts));
 }
@@ -77,11 +50,6 @@ function expectAnalysis(expected: ExpectedAnalysis) {
     expected.outputs,
     `${expected.label} outputs`,
   );
-  expectCDBEntriesEq(
-    analysis.cdbEntries(),
-    expected.cdbEntries,
-    `${expected.label} cdb entries`,
-  );
 }
 
 debug.assertThrow(cmd.CompilerAnalysis.supports(["clang", "-c", "main.cc"]));
@@ -98,7 +66,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.SourceToLlvmIR,
     inputs: ["src/t.c"],
     outputs: ["-"],
-    cdbEntries: [],
   },
   {
     label: "gcc preprocess explicit language without suffix",
@@ -109,7 +76,16 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.SourcePreprocess,
     inputs: ["generated_input"],
     outputs: [],
-    cdbEntries: [],
+  },
+  {
+    label: "gcc preprocess to file",
+    cmd: ["gcc", "-E", "src/a.c", "-o", "a.i"],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.Preprocess,
+    artifact: cmd.CompilerArtifact.Stdout,
+    type: cmd.CompilerType.SourcePreprocess,
+    inputs: ["src/a.c"],
+    outputs: ["a.i"],
   },
   {
     label: "gcc syntax-only explicit language",
@@ -120,7 +96,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.SourceSyntaxOnly,
     inputs: ["generated"],
     outputs: [],
-    cdbEntries: [],
   },
   {
     label: "gcc x-none resets classification for later object inputs",
@@ -141,7 +116,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.SourceToExe,
     inputs: ["generated_input", "obj/plain.o"],
     outputs: ["bin/app"],
-    cdbEntries: [],
   },
   {
     label: "gcc relocatable link with extra linker flags",
@@ -161,7 +135,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.RelocatableLink,
     inputs: ["a.o", "b.o"],
     outputs: ["partial.o"],
-    cdbEntries: [],
   },
   {
     label: "clang archive static lib from object inputs",
@@ -172,26 +145,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.ObjectToLib,
     inputs: ["a.o", "b.o"],
     outputs: ["libstuff.a"],
-    cdbEntries: [],
-  },
-  {
-    label: "clang cl-style shared link via linker remainder",
-    cmd: [
-      "clang",
-      "--driver-mode=cl",
-      "/link",
-      "/dll",
-      "/out:bin/tool.dll",
-      "foo.obj",
-      "bar.res",
-    ],
-    compiler: "clang",
-    phase: cmd.CompilerPhase.Link,
-    artifact: cmd.CompilerArtifact.SharedLibrary,
-    type: cmd.CompilerType.ObjectToShare,
-    inputs: ["foo.obj", "bar.res"],
-    outputs: ["bin/tool.dll"],
-    cdbEntries: [],
   },
   {
     label: "clang compile multiple translation units with default outputs",
@@ -202,16 +155,6 @@ const cases: ExpectedAnalysis[] = [
     type: cmd.CompilerType.SourceToObject,
     inputs: ["src/a.c", "src/b.cc"],
     outputs: ["a.o", "b.o"],
-    cdbEntries: [
-      {
-        file: "src/a.c",
-        output: "a.o",
-      },
-      {
-        file: "src/b.cc",
-        output: "b.o",
-      },
-    ],
   },
 ];
 
@@ -233,12 +176,24 @@ if (os.platform() === "windows") {
     type: cmd.CompilerType.SourceToObject,
     inputs: ["src/noext"],
     outputs: [normalizedJoin("build", "noext.obj")],
-    cdbEntries: [
-      {
-        file: "src/noext",
-        output: normalizedJoin("build", "noext.obj"),
-      },
+  });
+  cases.push({
+    label: "clang cl-style shared link via linker remainder",
+    cmd: [
+      "clang",
+      "--driver-mode=cl",
+      "/link",
+      "/dll",
+      "/out:bin/tool.dll",
+      "foo.obj",
+      "bar.res",
     ],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Link,
+    artifact: cmd.CompilerArtifact.SharedLibrary,
+    type: cmd.CompilerType.ObjectToShare,
+    inputs: ["foo.obj", "bar.res"],
+    outputs: ["bin/tool.dll"],
   });
 } else {
   const clStyleSuppressed = new cmd.CompilerAnalysis([
