@@ -67,7 +67,7 @@ data::process_result run(data::command command, data::ipcid_t id, std::string pr
                     eventide::process::stdio::pipe(false, true),
                     eventide::process::stdio::pipe(false, true)}
     };
-    return catter::capture_process_result(make_process_event(opts), stdout, stderr);
+    return catter::capture_process_result(make_process_event(opts));
 };
 
 };  // namespace catter::proxy::hook

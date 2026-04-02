@@ -42,7 +42,7 @@ data::process_result run(data::action act, data::ipcid_t id) {
                              eventide::process::stdio::pipe(false, true)}
             };
 
-            return catter::capture_process_result(make_process_event(opts), stdout, stderr);
+            return catter::capture_process_result(make_process_event(opts));
         }
         case action::INJECT: {
             return proxy::hook::run(act.cmd, id);

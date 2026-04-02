@@ -209,13 +209,6 @@ data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_
     stdout_pipe.write = {};
     stderr_pipe.write = {};
 
-    return capture_process_result(
-        [](HANDLE process_handle) -> eventide::task<int64_t, eventide::error> {
-
-        }(pi.hProcess),
-        open_capture_pipe(std::move(stdout_pipe.read), "stdout"),
-        open_capture_pipe(std::move(stderr_pipe.read), "stderr"),
-        stdout,
-        stderr);
+    return capture_process_result();
 };
 };  // namespace catter::proxy::hook
