@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
            })
             .after<&core::CatterConfig::help>([&](auto& step) {
                 step.usage(std::cout);
-                ret = 0;
+                ret = 1;
                 return step.stop();
             });
         auto res = cli.invoke(args);
