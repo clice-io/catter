@@ -48,7 +48,11 @@ public:
         return h != nullptr && h != INVALID_HANDLE_VALUE;
     }
 
-    HANDLE get() const noexcept {
+    HANDLE& get() noexcept {
+        return h;
+    }
+
+    const HANDLE& get() const noexcept {
         return h;
     }
 
@@ -56,13 +60,13 @@ public:
         return std::exchange(h, nullptr);
     }
 
-private:
     void close() noexcept {
         if(this->valid()) {
             CloseHandle(h);
         }
     }
 
+private:
     HANDLE h;
 };
 
