@@ -376,7 +376,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("97", "6bb5adfeaa91bae21a87c08030d89aad16ca3836")
+    add_versions("104", "191e46355d2bc958fc19379a99b9a2b8b77f2963")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -429,8 +429,10 @@ package("eventide")
                 os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "eventide"}, {curdir = package:sourcedir()})
                 return
             end
+            import("package.tools.xmake").install(package, configs, {target = "eventide"})
+        else
+            import("package.tools.xmake").install(package, configs)
         end
-        import("package.tools.xmake").install(package, configs, {target = "eventide"})
     end)
 
 
