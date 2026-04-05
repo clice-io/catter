@@ -140,6 +140,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
   }
 
   justUpdateNode(node: FlatTreeNodeInput<Id, Content>) {
+    this.detachNode(node.id);
     this.dataPool.set(node.id, {
       parent: node.parent ?? [],
       children: node.children ?? [],
@@ -148,6 +149,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
   }
 
   justRemoveNode(id: Id) {
+    this.detachNode(id);
     this.dataPool.delete(id);
   }
 
@@ -180,6 +182,31 @@ export class FlatTree<Id extends FlatTreeId, Content> {
       node.parent.length === 0 ||
       node.parent.every((parentId) => !this.dataPool.has(parentId))
     );
+  }
+
+  private detachNode(id: Id): void {
+    const existing = this.dataPool.get(id);
+    if (!existing) {
+      return;
+    }
+
+    for (const parentId of existing.parent) {
+      const parentNode = this.dataPool.get(parentId);
+      if (parentNode) {
+        parentNode.children = parentNode.children.filter(
+          (childId) => childId !== id,
+        );
+      }
+    }
+
+    for (const childId of existing.children) {
+      const childNode = this.dataPool.get(childId);
+      if (childNode) {
+        childNode.parent = childNode.parent.filter(
+          (parentId) => parentId !== id,
+        );
+      }
+    }
   }
 
   private stitchEdges() {

@@ -163,3 +163,18 @@ const cyclic = new data.FlatTree<number, string>();
 mergeNode(cyclic, { id: 1, children: [2], content: "one" });
 mergeNode(cyclic, { id: 2, children: [1], content: "two" });
 expectEq(cyclic.assemble(), false, "cycle detection");
+
+const mutable = new data.FlatTree<number, string>();
+mergeNode(mutable, { id: 1, content: "root" });
+mergeNode(mutable, { id: 2, parent: [1], content: "left" });
+mergeNode(mutable, { id: 3, content: "right" });
+expectEq(mutable.assemble(), true, "mutable assemble");
+
+mutable.update({ id: 2, parent: [3], content: "left moved" });
+const mutableWalk = mutable.walk();
+expectArrayEq(mutableWalk.children(1), [], "update detaches old parent");
+expectArrayEq(mutableWalk.children(3), [2], "update attaches new parent");
+
+mutable.remove(2);
+const afterRemove = mutable.walk();
+expectArrayEq(afterRemove.children(3), [], "remove detaches stale child edge");

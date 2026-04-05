@@ -50,12 +50,12 @@ function truncateMiddle(text: string, maxWidth: number): string {
   return `${text.slice(0, left)}....${text.slice(text.length - right)}`;
 }
 
-function quoteArg(text: string): string {
+function quoteArg(text: string, preserveQuoted = false): string {
   if (text.length === 0) {
     return '""';
   }
 
-  if (/[\s"'\\]/.test(text)) {
+  if (preserveQuoted || /[\s"'\\]/.test(text)) {
     return JSON.stringify(text);
   }
 
@@ -76,7 +76,7 @@ function formatCommand(
     visibleArgCount < 0 ? argv.slice(1) : argv.slice(1, visibleArgCount + 1);
   const clipped = visibleArgCount >= 0 && argv.length > tail.length + 1;
   const visible = [head, ...tail].map((part) =>
-    quoteArg(truncateMiddle(part, maxArgWidth)),
+    quoteArg(truncateMiddle(part, maxArgWidth), /[\s"'\\]/.test(part)),
   );
 
   if (clipped) {

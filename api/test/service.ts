@@ -19,7 +19,7 @@ service.register({
         ...config.options,
         log: false,
       },
-      execute: false,
+      execute: true,
     };
   },
 

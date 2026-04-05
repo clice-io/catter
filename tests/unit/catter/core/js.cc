@@ -175,7 +175,7 @@ TEST_CASE(run_service_js_file_and_callbacks) {
         EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
         EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
         EXPECT_TRUE(updated_config.options.log == false);
-        EXPECT_TRUE(updated_config.execute == false);
+        EXPECT_TRUE(updated_config.execute == true);
 
         js::CommandData data{
             .cwd = "/tmp",
