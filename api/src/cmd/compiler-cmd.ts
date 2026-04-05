@@ -428,6 +428,19 @@ function looksLikeLinkerInput(token: string): boolean {
   return LINK_INPUT_SUFFIXES.has(fs.path.extension(token).toLowerCase());
 }
 
+/**
+ * Interprets the argv remainder captured by a `cl`-style `/link` option.
+ *
+ * This stays deliberately narrow: it only recognizes linker switches that
+ * affect the high-level command model and forwards plausible file-like tokens
+ * as link inputs.
+ *
+ * @example
+ * ```ts
+ * // "/link /dll /out:bin/tool.dll foo.obj bar.res"
+ * // becomes { shared: true, output: "bin/tool.dll", inputs: ["foo.obj", "bar.res"] }
+ * ```
+ */
 function scanClLinkerRemainder(values: string[]) {
   let output: string | undefined;
   let shared = false;
@@ -504,6 +517,22 @@ function setRelocatableLinkResult(model: CommandModel): void {
   model.artifact = CompilerArtifactValue.Object;
 }
 
+/**
+ * Returns whether a parsed option consumes the rest of the argv in `cl` mode.
+ *
+ * `/link` is represented by LLVM as one option whose `values` already contain
+ * the linker remainder, so fallback scanning must treat those argv slots as
+ * consumed.
+ *
+ * @example
+ * ```ts
+ * // true for the parsed "/link /dll foo.obj" option item
+ * ```
+ */
+function consumesClLinkRemainder(parsedItem: ParsedOption): boolean {
+  return parsedItem.raw.id === ClangID.ID__SLASH_link;
+}
+
 function consumedArgCount(
   args: readonly string[],
   item: OptionItem,
@@ -568,6 +597,18 @@ function removeInputAt(model: CommandModel, index: number, path: string): void {
   );
 }
 
+/**
+ * Computes which raw argv positions have already been consumed by opttable parsing.
+ *
+ * The fallback pass uses this to avoid reinterpreting arguments that LLVM has
+ * already attached to a parsed option.
+ *
+ * @example
+ * ```ts
+ * // For ["--driver-mode=cl", "/link", "/dll", "foo.obj"],
+ * // the returned set includes the "/link" slot and its remainder slots.
+ * ```
+ */
 function collectConsumedArgIndexes(
   args: readonly string[],
   parsed: ParsedOption[],
@@ -575,7 +616,9 @@ function collectConsumedArgIndexes(
   const indexes = new Set<number>();
 
   for (const parsedItem of parsed) {
-    const count = consumedArgCount(args, parsedItem.raw, parsedItem.rawInfo);
+    const count = consumesClLinkRemainder(parsedItem)
+      ? 1 + parsedItem.raw.values.length
+      : consumedArgCount(args, parsedItem.raw, parsedItem.rawInfo);
     for (let offset = 0; offset < count; ++offset) {
       indexes.add(parsedItem.raw.index + offset);
     }
@@ -607,6 +650,130 @@ function isFallbackInputToken(token: string): boolean {
   return os.platform() !== "windows" && token.startsWith("/");
 }
 
+/**
+ * Applies fallback semantics for one argv token that opttable parsing did not consume.
+ *
+ * This is intentionally a second phase: the main analyzer trusts parsed options
+ * first, then this helper only fills gaps for tokens that remain unclaimed.
+ *
+ * @example
+ * ```ts
+ * // Handles fallback forms such as "-o out.o" or a positional source file.
+ * ```
+ */
+function applyClangLikeFallbackToken(
+  model: CommandModel,
+  args: readonly string[],
+  consumedIndexes: Set<number>,
+  index: number,
+  positionalOnly: boolean,
+): boolean {
+  const token = args[index];
+
+  if (positionalOnly) {
+    if (!hasRecordedInput(model, index, token)) {
+      recordInput(
+        model,
+        token,
+        classifyInputKind(token, model.explicitLanguage),
+        index,
+      );
+    }
+    return positionalOnly;
+  }
+
+  switch (token) {
+    case "--":
+      return true;
+    case "-c":
+      setCompileResult(model, CompilerArtifactValue.Object);
+      return false;
+    case "-S":
+      setCompileResult(
+        model,
+        model.artifact === CompilerArtifactValue.LlvmBitcode
+          ? CompilerArtifactValue.LlvmIR
+          : CompilerArtifactValue.Assembly,
+      );
+      return false;
+    case "-E":
+      model.phase = CompilerPhaseValue.Preprocess;
+      model.artifact = CompilerArtifactValue.Stdout;
+      return false;
+    case "-fsyntax-only":
+      model.phase = CompilerPhaseValue.SyntaxOnly;
+      model.artifact = CompilerArtifactValue.None;
+      return false;
+    case "-emit-llvm":
+    case "-emit-llvm-bc":
+      setCompileResult(
+        model,
+        model.artifact === CompilerArtifactValue.Assembly
+          ? CompilerArtifactValue.LlvmIR
+          : CompilerArtifactValue.LlvmBitcode,
+      );
+      return false;
+    case "-emit-pch":
+      setCompileResult(model, CompilerArtifactValue.Pch);
+      return false;
+    case "-emit-module":
+    case "-emit-module-interface":
+    case "-emit-reduced-module-interface":
+      setCompileResult(model, CompilerArtifactValue.Pcm);
+      return false;
+    case "-shared":
+      setLinkResult(model, CompilerArtifactValue.SharedLibrary);
+      return false;
+    case "-r":
+      setRelocatableLinkResult(model);
+      return false;
+    case "-x":
+      if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
+        model.explicitLanguage = args[index + 1];
+        consumedIndexes.add(index + 1);
+      }
+      return false;
+    case "-o":
+      if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
+        recordOutput(model, "primary", args[index + 1], index);
+        consumedIndexes.add(index + 1);
+      }
+      return false;
+  }
+
+  if (token.startsWith("-x") && token.length > 2) {
+    model.explicitLanguage = token.slice(2);
+    return false;
+  }
+
+  if (token.startsWith("-o") && token.length > 2) {
+    recordOutput(model, "primary", token.slice(2), index);
+    return false;
+  }
+
+  if (isFallbackInputToken(token) && !hasRecordedInput(model, index, token)) {
+    recordInput(
+      model,
+      token,
+      classifyInputKind(token, model.explicitLanguage),
+      index,
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Replays lightweight fallback parsing over argv slots that opttable parsing left untouched.
+ *
+ * This preserves existing behavior for partially modeled flags without letting
+ * fallback logic double-consume parsed options such as `cl`-style `/link`.
+ *
+ * @example
+ * ```ts
+ * // If "-o" was not present in parsed options, fallback can still record its output.
+ * ```
+ */
 function applyClangLikeDriverFallbacks(
   model: CommandModel,
   args: readonly string[],
@@ -620,98 +787,19 @@ function applyClangLikeDriverFallbacks(
       continue;
     }
 
-    const token = args[index];
-    if (positionalOnly) {
-      if (!hasRecordedInput(model, index, token)) {
-        recordInput(
-          model,
-          token,
-          classifyInputKind(token, model.explicitLanguage),
-          index,
-        );
-      }
-      continue;
-    }
+    positionalOnly = applyClangLikeFallbackToken(
+      model,
+      args,
+      consumedIndexes,
+      index,
+      positionalOnly,
+    );
 
-    switch (token) {
-      case "--":
-        positionalOnly = true;
-        continue;
-      case "-c":
-        setCompileResult(model, CompilerArtifactValue.Object);
-        continue;
-      case "-S":
-        setCompileResult(
-          model,
-          model.artifact === CompilerArtifactValue.LlvmBitcode
-            ? CompilerArtifactValue.LlvmIR
-            : CompilerArtifactValue.Assembly,
-        );
-        continue;
-      case "-E":
-        model.phase = CompilerPhaseValue.Preprocess;
-        model.artifact = CompilerArtifactValue.Stdout;
-        continue;
-      case "-fsyntax-only":
-        model.phase = CompilerPhaseValue.SyntaxOnly;
-        model.artifact = CompilerArtifactValue.None;
-        continue;
-      case "-emit-llvm":
-      case "-emit-llvm-bc":
-        setCompileResult(
-          model,
-          model.artifact === CompilerArtifactValue.Assembly
-            ? CompilerArtifactValue.LlvmIR
-            : CompilerArtifactValue.LlvmBitcode,
-        );
-        continue;
-      case "-emit-pch":
-        setCompileResult(model, CompilerArtifactValue.Pch);
-        continue;
-      case "-emit-module":
-      case "-emit-module-interface":
-      case "-emit-reduced-module-interface":
-        setCompileResult(model, CompilerArtifactValue.Pcm);
-        continue;
-      case "-shared":
-        setLinkResult(model, CompilerArtifactValue.SharedLibrary);
-        continue;
-      case "-r":
-        setRelocatableLinkResult(model);
-        continue;
-      case "-x":
-        if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
-          model.explicitLanguage = args[index + 1];
-          consumedIndexes.add(index + 1);
-          ++index;
-        }
-        continue;
-      case "-o":
-        if (index + 1 < args.length && !consumedIndexes.has(index + 1)) {
-          recordOutput(model, "primary", args[index + 1], index);
-          consumedIndexes.add(index + 1);
-          ++index;
-        }
-        continue;
-    }
-
-    if (token.startsWith("-x") && token.length > 2) {
-      model.explicitLanguage = token.slice(2);
-      continue;
-    }
-
-    if (token.startsWith("-o") && token.length > 2) {
-      recordOutput(model, "primary", token.slice(2), index);
-      continue;
-    }
-
-    if (isFallbackInputToken(token) && !hasRecordedInput(model, index, token)) {
-      recordInput(
-        model,
-        token,
-        classifyInputKind(token, model.explicitLanguage),
-        index,
-      );
+    if (
+      (args[index] === "-x" || args[index] === "-o") &&
+      consumedIndexes.has(index + 1)
+    ) {
+      ++index;
     }
   }
 }
@@ -756,6 +844,177 @@ function analyzeCompilerFamily(
   }
 }
 
+/**
+ * Marks the command as `cl`-style when the raw parsed option spelling proves it.
+ *
+ * This relies on opttable metadata instead of reparsing strings by hand.
+ *
+ * @example
+ * ```ts
+ * // "/c" or any option carrying CLOption visibility flips the style to "cl".
+ * ```
+ */
+function observeClStyle(
+  model: CommandModel,
+  parsedItem: ParsedOption,
+  allowClStyle: boolean,
+): void {
+  if (!allowClStyle) {
+    return;
+  }
+  if (
+    parsedItem.raw.key.startsWith("/") ||
+    (parsedItem.rawInfo.visibility & ClangVisibility.CLOption) !== 0
+  ) {
+    model.style = "cl";
+  }
+}
+
+/**
+ * Applies the semantic effect of one opttable-parsed clang-like option.
+ *
+ * The goal is to keep all first-class option handling in one place before any
+ * fallback scan of unconsumed argv slots happens.
+ *
+ * @example
+ * ```ts
+ * // "-c" selects object compilation, "/Tp file" records a source input,
+ * // and "/link ..." forwards its parsed remainder to the linker scanner.
+ * ```
+ */
+function applyParsedClangLikeOption(
+  model: CommandModel,
+  parsedItem: ParsedOption,
+  allowClStyle: boolean,
+): void {
+  switch (parsedItem.item.id as ClangID) {
+    case ClangID.ID_driver_mode:
+      if (allowClStyle && parsedItem.item.values[0]?.toLowerCase() === "cl") {
+        model.style = "cl";
+      }
+      break;
+    case ClangID.ID_c:
+    case ClangID.ID_emit_obj:
+      setCompileResult(model, CompilerArtifactValue.Object);
+      break;
+    case ClangID.ID_S:
+      setCompileResult(
+        model,
+        model.artifact === CompilerArtifactValue.LlvmBitcode
+          ? CompilerArtifactValue.LlvmIR
+          : CompilerArtifactValue.Assembly,
+      );
+      break;
+    case ClangID.ID_E:
+      model.phase = CompilerPhaseValue.Preprocess;
+      model.artifact = CompilerArtifactValue.Stdout;
+      break;
+    case ClangID.ID_fsyntax_only:
+      model.phase = CompilerPhaseValue.SyntaxOnly;
+      model.artifact = CompilerArtifactValue.None;
+      break;
+    case ClangID.ID_emit_llvm:
+    case ClangID.ID_emit_llvm_bc:
+      setCompileResult(
+        model,
+        model.artifact === CompilerArtifactValue.Assembly
+          ? CompilerArtifactValue.LlvmIR
+          : CompilerArtifactValue.LlvmBitcode,
+      );
+      break;
+    case ClangID.ID_emit_pch:
+      setCompileResult(model, CompilerArtifactValue.Pch);
+      break;
+    case ClangID.ID_emit_module:
+    case ClangID.ID_emit_module_interface:
+    case ClangID.ID_emit_reduced_module_interface:
+      setCompileResult(model, CompilerArtifactValue.Pcm);
+      break;
+    case ClangID.ID_emit_static_lib:
+      setArchiveResult(model);
+      break;
+    case ClangID.ID_shared:
+    case ClangID.ID__SLASH_LD:
+    case ClangID.ID__SLASH_LDd:
+      setLinkResult(model, CompilerArtifactValue.SharedLibrary);
+      break;
+    case ClangID.ID_r:
+      setRelocatableLinkResult(model);
+      break;
+    case ClangID.ID_o:
+    case ClangID.ID__SLASH_o:
+      recordOutput(
+        model,
+        "primary",
+        parsedItem.item.values[0],
+        parsedItem.item.index,
+      );
+      break;
+    case ClangID.ID__SLASH_Fo:
+      recordOutput(
+        model,
+        "object",
+        parsedItem.item.values[0],
+        parsedItem.item.index,
+      );
+      break;
+    case ClangID.ID__SLASH_Fe:
+      recordOutput(
+        model,
+        "executable",
+        parsedItem.item.values[0],
+        parsedItem.item.index,
+      );
+      break;
+    case ClangID.ID_x:
+      model.explicitLanguage = parsedItem.item.values[0];
+      break;
+    case ClangID.ID__SLASH_TC:
+      model.explicitLanguage = "c";
+      break;
+    case ClangID.ID__SLASH_TP:
+      model.explicitLanguage = "c++";
+      break;
+    case ClangID.ID__SLASH_Tc:
+    case ClangID.ID__SLASH_Tp:
+      recordInput(
+        model,
+        parsedItem.item.values[0],
+        "source",
+        parsedItem.item.index,
+      );
+      break;
+    case ClangID.ID__SLASH_link: {
+      const linkerScan = scanClLinkerRemainder(parsedItem.item.values);
+      recordOutput(model, "linker", linkerScan.output, parsedItem.item.index);
+      if (linkerScan.shared) {
+        setLinkResult(model, CompilerArtifactValue.SharedLibrary);
+      }
+      for (const input of linkerScan.inputs) {
+        recordInput(model, input, "link", parsedItem.item.index);
+      }
+      break;
+    }
+    case ClangID.ID_INPUT:
+      recordInput(
+        model,
+        parsedItem.item.key,
+        classifyInputKind(parsedItem.item.key, model.explicitLanguage),
+        parsedItem.item.index,
+      );
+      break;
+    default:
+      if (
+        parsedItem.info.group === ClangID.ID_Action_Group &&
+        model.phase === CompilerPhaseValue.Link &&
+        model.artifact === CompilerArtifactValue.Executable
+      ) {
+        setCompileResult(model, CompilerArtifactValue.Unknown);
+      }
+      break;
+  }
+}
+
 const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
   const model = createDefaultModel(compiler);
   const args = cmd.slice(1);
@@ -767,140 +1026,8 @@ const analyzeClangLikeCommand: CompilerFamilyAnalyzer = (cmd, compiler) => {
   const allowClStyle = supportsClStyleAnalysis();
 
   for (const parsedItem of parsed) {
-    if (
-      (allowClStyle && parsedItem.raw.key.startsWith("/")) ||
-      (allowClStyle &&
-        (parsedItem.rawInfo.visibility & ClangVisibility.CLOption) !== 0)
-    ) {
-      model.style = "cl";
-    }
-
-    switch (parsedItem.item.id as ClangID) {
-      case ClangID.ID_driver_mode:
-        if (allowClStyle && parsedItem.item.values[0]?.toLowerCase() === "cl") {
-          model.style = "cl";
-        }
-        break;
-      case ClangID.ID_c:
-      case ClangID.ID_emit_obj:
-        setCompileResult(model, CompilerArtifactValue.Object);
-        break;
-      case ClangID.ID_S:
-        setCompileResult(
-          model,
-          model.artifact === CompilerArtifactValue.LlvmBitcode
-            ? CompilerArtifactValue.LlvmIR
-            : CompilerArtifactValue.Assembly,
-        );
-        break;
-      case ClangID.ID_E:
-        model.phase = CompilerPhaseValue.Preprocess;
-        model.artifact = CompilerArtifactValue.Stdout;
-        break;
-      case ClangID.ID_fsyntax_only:
-        model.phase = CompilerPhaseValue.SyntaxOnly;
-        model.artifact = CompilerArtifactValue.None;
-        break;
-      case ClangID.ID_emit_llvm:
-      case ClangID.ID_emit_llvm_bc:
-        setCompileResult(
-          model,
-          model.artifact === CompilerArtifactValue.Assembly
-            ? CompilerArtifactValue.LlvmIR
-            : CompilerArtifactValue.LlvmBitcode,
-        );
-        break;
-      case ClangID.ID_emit_pch:
-        setCompileResult(model, CompilerArtifactValue.Pch);
-        break;
-      case ClangID.ID_emit_module:
-      case ClangID.ID_emit_module_interface:
-      case ClangID.ID_emit_reduced_module_interface:
-        setCompileResult(model, CompilerArtifactValue.Pcm);
-        break;
-      case ClangID.ID_emit_static_lib:
-        setArchiveResult(model);
-        break;
-      case ClangID.ID_shared:
-      case ClangID.ID__SLASH_LD:
-      case ClangID.ID__SLASH_LDd:
-        setLinkResult(model, CompilerArtifactValue.SharedLibrary);
-        break;
-      case ClangID.ID_r:
-        setRelocatableLinkResult(model);
-        break;
-      case ClangID.ID_o:
-      case ClangID.ID__SLASH_o:
-        recordOutput(
-          model,
-          "primary",
-          parsedItem.item.values[0],
-          parsedItem.item.index,
-        );
-        break;
-      case ClangID.ID__SLASH_Fo:
-        recordOutput(
-          model,
-          "object",
-          parsedItem.item.values[0],
-          parsedItem.item.index,
-        );
-        break;
-      case ClangID.ID__SLASH_Fe:
-        recordOutput(
-          model,
-          "executable",
-          parsedItem.item.values[0],
-          parsedItem.item.index,
-        );
-        break;
-      case ClangID.ID_x:
-        model.explicitLanguage = parsedItem.item.values[0];
-        break;
-      case ClangID.ID__SLASH_TC:
-        model.explicitLanguage = "c";
-        break;
-      case ClangID.ID__SLASH_TP:
-        model.explicitLanguage = "c++";
-        break;
-      case ClangID.ID__SLASH_Tc:
-      case ClangID.ID__SLASH_Tp:
-        recordInput(
-          model,
-          parsedItem.item.values[0],
-          "source",
-          parsedItem.item.index,
-        );
-        break;
-      case ClangID.ID__SLASH_link: {
-        const linkerScan = scanClLinkerRemainder(parsedItem.item.values);
-        recordOutput(model, "linker", linkerScan.output, parsedItem.item.index);
-        if (linkerScan.shared) {
-          setLinkResult(model, CompilerArtifactValue.SharedLibrary);
-        }
-        for (const input of linkerScan.inputs) {
-          recordInput(model, input, "link", parsedItem.item.index);
-        }
-        break;
-      }
-      case ClangID.ID_INPUT:
-        recordInput(
-          model,
-          parsedItem.item.key,
-          classifyInputKind(parsedItem.item.key, model.explicitLanguage),
-          parsedItem.item.index,
-        );
-        break;
-      default:
-        if (
-          parsedItem.info.group === ClangID.ID_Action_Group &&
-          model.phase === CompilerPhaseValue.Link &&
-          model.artifact === CompilerArtifactValue.Executable
-        ) {
-          setCompileResult(model, CompilerArtifactValue.Unknown);
-        }
-        break;
-    }
+    observeClStyle(model, parsedItem, allowClStyle);
+    applyParsedClangLikeOption(model, parsedItem, allowClStyle);
   }
 
   applyClangLikeDriverFallbacks(model, args, parsed);
