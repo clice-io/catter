@@ -161,15 +161,7 @@ const cases: ExpectedAnalysis[] = [
 if (os.platform() === "windows") {
   cases.splice(1, 0, {
     label: "clang cl-style compile no suffix into object dir",
-    cmd: [
-      "clang",
-      "--driver-mode=cl",
-      "/c",
-      "/Tp",
-      "src/noext",
-      "/Fo",
-      "build/",
-    ],
+    cmd: ["clang", "--driver-mode=cl", "/c", "/Tp", "src/noext", "/Fo:build/"],
     compiler: "clang",
     phase: cmd.CompilerPhase.Compile,
     artifact: cmd.CompilerArtifact.Object,

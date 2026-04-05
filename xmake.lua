@@ -430,6 +430,8 @@ package("eventide")
                 return
             end
             import("package.tools.xmake").install(package, configs, {target = "eventide"})
+        elseif is_plat("linux") then
+            import("package.tools.xmake").install(package, configs, {target = "eventide"})
         else
             import("package.tools.xmake").install(package, configs)
         end
