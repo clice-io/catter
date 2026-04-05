@@ -36,7 +36,7 @@ function cloneItem(item: CDBItem): CDBItem {
 
 function readEntireText(path: string): string {
   let content = "";
-  io.TextFileStream.with(path, "ascii", (stream) => {
+  io.TextFileStream.with(path, "utf-8", (stream) => {
     content = stream.readEntireFile();
   });
   return content;
@@ -94,9 +94,11 @@ function asItem(value: unknown, context: string): CDBItem {
 }
 
 function fileKey(item: CDBItem): string {
-  return fs.path.lexicalNormal(
-    fs.path.absolute(fs.path.joinAll(item.directory, item.file)),
-  );
+  const base = fs.path.absolute(item.directory);
+  const file = fs.path.isAbsolute(item.file)
+    ? item.file
+    : fs.path.joinAll(base, item.file);
+  return fs.path.lexicalNormal(file);
 }
 
 function itemKey(item: CDBItem): string {
@@ -144,7 +146,7 @@ function writeItemsToPath(path: string, items: CDBItem[]): void {
   }
   fs.createFile(path, true);
 
-  io.TextFileStream.with(path, "ascii", (stream) => {
+  io.TextFileStream.with(path, "utf-8", (stream) => {
     stream.write(JSON.stringify(items, null, 2));
   });
 }

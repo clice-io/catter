@@ -73,6 +73,12 @@ const PRIMARY_ARCHIVER_OPERATIONS = new Set<ArchiverOperation>([
   ArchiverOperation.Table,
   ArchiverOperation.Extract,
 ]);
+const MODELED_ARCHIVER_OPERATIONS = new Set<ArchiverOperation>([
+  ArchiverOperation.Print,
+  ArchiverOperation.QuickAppend,
+  ArchiverOperation.ReplaceOrInsert,
+  ArchiverOperation.Table,
+]);
 
 function exeStem(value: string): string {
   const slash = value.lastIndexOf("/");
@@ -207,6 +213,10 @@ function analyzeArchiverModel(
   }
   ++index;
 
+  if (!MODELED_ARCHIVER_OPERATIONS.has(parsedOperation.operation)) {
+    return undefined;
+  }
+
   const members = cmd.slice(index);
   const produce =
     parsedOperation.operation === ArchiverOperation.QuickAppend ||
@@ -214,10 +224,10 @@ function analyzeArchiverModel(
       ? [archive]
       : [];
   const consume =
-    parsedOperation.operation === ArchiverOperation.QuickAppend ||
-    parsedOperation.operation === ArchiverOperation.ReplaceOrInsert
-      ? [...members]
-      : [];
+    parsedOperation.operation === ArchiverOperation.Print ||
+    parsedOperation.operation === ArchiverOperation.Table
+      ? [archive]
+      : [...members];
 
   return {
     exe,
@@ -252,7 +262,7 @@ export class ArchiverAnalysis extends Analysis<ArchiverExe> {
    * ```
    */
   static supports(cmd: readonly string[]): boolean {
-    return cmd.length > 0 && isArchiverExe(exeStem(cmd[0]));
+    return analyzeArchiverModel(cmd) !== undefined;
   }
 
   /**
@@ -308,18 +318,18 @@ export class ArchiverAnalysis extends Analysis<ArchiverExe> {
    * ```
    */
   constructor(cmd: readonly string[]) {
-    const model = analyzeArchiverModel(cmd);
-    if (model === undefined) {
+    const resolved = analyzeArchiverModel(cmd);
+    if (resolved === undefined) {
       throw new Error("archiver command analysis required");
     }
 
-    super(model.exe, model.consume, model.produce);
-    this.operation = model.operation;
-    this.modifiers = [...model.modifiers];
-    this.thin = model.thin;
-    this.archive = model.archive;
-    this.members = [...model.members];
-    this.scriptMode = model.scriptMode;
+    super(resolved.exe, resolved.consume, resolved.produce);
+    this.operation = resolved.operation;
+    this.modifiers = [...resolved.modifiers];
+    this.thin = resolved.thin;
+    this.archive = resolved.archive;
+    this.members = [...resolved.members];
+    this.scriptMode = resolved.scriptMode;
   }
 }
 

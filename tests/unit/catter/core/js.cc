@@ -222,8 +222,6 @@ TEST_CASE(run_service_js_file_and_callbacks) {
 
 TEST_CASE(run_cdb_js_file) {
     auto f = [&]() {
-        const auto js_path = fs::path(config::data::js_test_path.data());
-        TempFileManager manager(js_path / "cdb-script-test-env");
         run_basic_js_case("cdb.js");
     };
 

@@ -610,6 +610,12 @@ function parseTypedValue(
     }
   }
 
+  if (rawValue.trim().length === 0) {
+    throw new Error(
+      `${commandName}: missing value for ${optionDisplayName(option)}`,
+    );
+  }
+
   const parsed = Number(rawValue);
   if (Number.isNaN(parsed)) {
     throw new Error(
@@ -715,12 +721,18 @@ function finalizeValues(
         .map((value) =>
           parsePositionalValue(normalized.command.name, argument, value),
         );
-      if (argument.required !== false && remaining.length === 0) {
+      if (
+        argument.required !== false &&
+        remaining.length === 0 &&
+        argument.default === undefined
+      ) {
         throw new Error(
           `${normalized.command.name}: missing required argument <${argument.valueName ?? argument.name}>`,
         );
       }
-      values[argument.name] = remaining;
+      if (remaining.length > 0 || argument.default === undefined) {
+        values[argument.name] = remaining;
+      }
       position = positionals.length;
       continue;
     }

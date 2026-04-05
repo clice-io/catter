@@ -59,15 +59,23 @@ inline auto RunMode::into(std::string_view text, const deco::decl::IntoContext& 
     return std::nullopt;
 }
 
+inline auto default_working_directory() noexcept -> std::filesystem::path {
+    try {
+        return std::filesystem::current_path();
+    } catch(const std::exception&) {
+        return {};
+    }
+}
+
 struct WorkingDirectory {
-    std::filesystem::path path = std::filesystem::current_path();
+    std::filesystem::path path = default_working_directory();
 
     auto into(std::string_view text, const deco::decl::IntoContext& context)
         -> std::optional<std::string> {
         try {
             path = std::filesystem::absolute(text);
         } catch(const std::exception& ex) {
-            return context.format_error(std::format("Wrong Path:{}", ex.what()));
+            return context.format_error(std::format("Wrong Path: {}", ex.what()));
         }
         return std::nullopt;
     }

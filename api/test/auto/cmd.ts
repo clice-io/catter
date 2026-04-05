@@ -171,6 +171,39 @@ expectArrayEq(
   ["libcommon.a"],
   "gnu archiver produce",
 );
+expectArrayEq(
+  gnuArchiverAnalysis.consume,
+  ["a.o", "b.o"],
+  "gnu archiver consume",
+);
+
+const tableArchiverAnalysis = cmd.ArchiverAnalysis.from(
+  cmd.analyze(["ar", "t", "libcommon.a"]),
+);
+debug.assertThrow(tableArchiverAnalysis !== undefined);
+if (tableArchiverAnalysis === undefined) {
+  throw new Error("expected table archiver analysis");
+}
+expectEq(
+  tableArchiverAnalysis.operation,
+  cmd.ArchiverOperation.Table,
+  "table archiver operation",
+);
+expectArrayEq(
+  tableArchiverAnalysis.consume,
+  ["libcommon.a"],
+  "table archiver consume",
+);
+expectArrayEq(tableArchiverAnalysis.produce, [], "table archiver produce");
+
+debug.assertThrow(!cmd.ArchiverAnalysis.supports(["ar", "--version"]));
+debug.assertThrow(
+  cmd.ArchiverAnalysis.analyze(["ar", "--version"]) === undefined,
+);
+debug.assertThrow(!cmd.ArchiverAnalysis.supports(["ar", "x", "libcommon.a"]));
+debug.assertThrow(
+  cmd.ArchiverAnalysis.analyze(["ar", "x", "libcommon.a"]) === undefined,
+);
 
 class ToyAnalysis extends cmd.Analysis<"toy-bundle"> {
   static readonly key = "toy-bundle";

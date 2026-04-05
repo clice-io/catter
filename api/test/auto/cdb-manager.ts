@@ -6,9 +6,16 @@ function expectEq<T>(actual: T, expected: T, label: string) {
   }
 }
 
+function expectDefined<T>(value: T | undefined, label: string): T {
+  if (value === undefined) {
+    throw new Error(`${label}: expected value`);
+  }
+  return value;
+}
+
 function readJSON(path: string): unknown {
   let content = "";
-  io.TextFileStream.with(path, "ascii", (stream) => {
+  io.TextFileStream.with(path, "utf-8", (stream) => {
     content = stream.readEntireFile();
   });
   return JSON.parse(content);
@@ -42,16 +49,22 @@ const inheritedItems = [
     arguments: ["clang++", "-c", "override.cc", "-DFROM_OLD"],
     output: "override-old.o",
   },
+  {
+    directory: buildDir,
+    file: fs.path.joinAll(sourceDir, "绝对路径.cc"),
+    arguments: ["clang++", "-c", "绝对路径.cc", "-DNAME=你好"],
+    output: "unicode.o",
+  },
 ];
 
 debug.assertThrow(fs.createFile(inheritedPath));
-io.TextFileStream.with(inheritedPath, "ascii", (stream) => {
+io.TextFileStream.with(inheritedPath, "utf-8", (stream) => {
   stream.write(JSON.stringify(inheritedItems, null, 2));
 });
 
 const manager = new cmd.CDBManager(inheritedPath);
 const initialItems = manager.items();
-expectEq(initialItems.length, 3, "initial item count");
+expectEq(initialItems.length, 4, "initial item count");
 
 const extraPath = fs.path.joinAll(testEnvPath, "other.json");
 const extra = new cmd.CDBManager(extraPath);
@@ -76,22 +89,49 @@ extra.addItem({
 manager.merge(extra);
 
 const mergedItems = manager.items();
-expectEq(mergedItems.length, 4, "merged item count");
-expectEq(mergedItems[0].file, "../src/keep.cc", "kept inherited file");
+expectEq(mergedItems.length, 5, "merged item count");
+const keptItem = expectDefined(
+  mergedItems.find((item) => item.file === "../src/keep.cc"),
+  "kept inherited item",
+);
+expectEq(keptItem.file, "../src/keep.cc", "kept inherited file");
+const overrideItem = expectDefined(
+  mergedItems.find((item) => item.output === "override-new.o"),
+  "override item",
+);
 expectEq(
-  mergedItems[1].command,
+  overrideItem.command,
   "clang++ -Winvalid -c override.cc",
   "override command",
 );
-expectEq(mergedItems[1].output, "override-new.o", "override output");
+expectEq(overrideItem.output, "override-new.o", "override output");
+const modulesItem = expectDefined(
+  mergedItems.find((item) => item.output === "override-mod.o"),
+  "second override item",
+);
 expectEq(
-  mergedItems[2].command,
+  modulesItem.command,
   "clang++ -Winvalid -c override.cc -fmodules",
   "second override command",
 );
-expectEq(mergedItems[2].output, "override-mod.o", "second override output");
-expectEq(mergedItems[3].file, "new.cc", "new item appended");
-debug.assertThrow(Array.isArray(mergedItems[3].arguments));
+expectEq(modulesItem.output, "override-mod.o", "second override output");
+const unicodeItem = expectDefined(
+  mergedItems.find((item) => item.output === "unicode.o"),
+  "unicode item",
+);
+expectEq(
+  unicodeItem.file,
+  fs.path.joinAll(sourceDir, "绝对路径.cc"),
+  "absolute unicode file preserved",
+);
+debug.assertThrow(Array.isArray(unicodeItem.arguments));
+expectEq(unicodeItem.arguments?.[3], "-DNAME=你好", "unicode flag preserved");
+const newItem = expectDefined(
+  mergedItems.find((item) => item.file === "new.cc"),
+  "new item",
+);
+expectEq(newItem.file, "new.cc", "new item appended");
+debug.assertThrow(Array.isArray(newItem.arguments));
 
 const savePath = fs.path.joinAll(testEnvPath, "out", "compile_commands.json");
 expectEq(manager.save(savePath), savePath, "save path");
@@ -102,17 +142,39 @@ debug.assertThrow(Array.isArray(savedJSON));
 if (!Array.isArray(savedJSON)) {
   throw new Error("saved cdb should be an array");
 }
-expectEq(savedJSON.length, 4, "saved item count");
+expectEq(savedJSON.length, 5, "saved item count");
 
 const reloaded = new cmd.CDBManager(savePath).items();
-expectEq(reloaded.length, 4, "reloaded item count");
+expectEq(reloaded.length, 5, "reloaded item count");
+const reloadedOverrideItem = expectDefined(
+  reloaded.find((item) => item.output === "override-new.o"),
+  "reloaded override item",
+);
 expectEq(
-  reloaded[1].command,
+  reloadedOverrideItem.command,
   "clang++ -Winvalid -c override.cc",
   "reloaded override command",
 );
+const reloadedModulesItem = expectDefined(
+  reloaded.find((item) => item.output === "override-mod.o"),
+  "reloaded second override item",
+);
 expectEq(
-  reloaded[2].command,
+  reloadedModulesItem.command,
   "clang++ -Winvalid -c override.cc -fmodules",
   "reloaded second override command",
+);
+const reloadedUnicodeItem = expectDefined(
+  reloaded.find((item) => item.output === "unicode.o"),
+  "reloaded unicode item",
+);
+expectEq(
+  reloadedUnicodeItem.file,
+  fs.path.joinAll(sourceDir, "绝对路径.cc"),
+  "reloaded absolute unicode file",
+);
+expectEq(
+  reloadedUnicodeItem.arguments?.[3],
+  "-DNAME=你好",
+  "reloaded unicode flag",
 );

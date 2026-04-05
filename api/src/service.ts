@@ -249,8 +249,8 @@ export function register(service: RegisterableService): void {
     ? service.asService()
     : service;
 
-  onStart(adaptedService.onStart);
-  onFinish(adaptedService.onFinish);
-  onCommand(adaptedService.onCommand);
-  onExecution(adaptedService.onExecution);
+  onStart((config) => adaptedService.onStart(config));
+  onFinish((event) => adaptedService.onFinish(event));
+  onCommand((id, data) => adaptedService.onCommand(id, data));
+  onExecution((id, event) => adaptedService.onExecution(id, event));
 }
