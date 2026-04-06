@@ -4,6 +4,7 @@
 #include <coroutine>
 #include <eventide/async/runtime/task.h>
 #include <format>
+#include <print>
 #include <string>
 #include <system_error>
 #include <filesystem>
@@ -209,26 +210,7 @@ struct StartedProcess {
 class ProcessExitState {
 public:
     ProcessExitState(RunningProcess&& process, eventide::event_loop* loop) :
-        process(std::move(process)), loop(loop), wait_handle{} {
-
-        HANDLE wait_object;
-
-        if(!RegisterWaitForSingleObject(
-               &wait_object,
-               process.process_handle(),
-               [](void* context, BOOLEAN did_timeout) {
-                   auto* self = static_cast<ProcessExitState*>(context);
-                   self->loop->post([self]() { self->awaiter_handle.resume(); });
-               },
-               this,
-               INFINITE,
-               WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE)) {
-            throw std::system_error(GetLastError(),
-                                    std::system_category(),
-                                    "Failed to register child process exit wait callback");
-        }
-        wait_handle = win::Handle(wait_object);
-    }
+        process(std::move(process)), loop(loop), wait_handle{} {}
 
     ProcessExitState(const ProcessExitState&) = delete;
     ProcessExitState(ProcessExitState&&) = default;
@@ -236,12 +218,37 @@ public:
     ProcessExitState& operator= (ProcessExitState&&) = default;
 
     ~ProcessExitState() {
-        if(wait_handle.valid()) {
-            UnregisterWaitEx(wait_handle.get(), INVALID_HANDLE_VALUE);
+        if(this->wait_handle.valid()) {
+            UnregisterWaitEx(this->wait_handle.get(), INVALID_HANDLE_VALUE);
+            this->wait_handle.release();
+            uv_close(reinterpret_cast<uv_handle_t*>(&this->async), nullptr);
         }
     }
 
+    void init() {
+        HANDLE wait_object;
+
+        if(!RegisterWaitForSingleObject(
+               &wait_object,
+               this->process.process_handle(),
+               [](void* context, BOOLEAN did_timeout) {
+                   auto* self = static_cast<ProcessExitState*>(context);
+                   self->loop->post([self]() { self->awaiter_handle.resume(); });
+               },
+               this,
+               INFINITE,
+               WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE)) {
+            
+            throw std::system_error(GetLastError(),
+                                    std::system_category(),
+                                    "Failed to register child process exit wait callback");
+        }
+        this->wait_handle = win::Handle(wait_object);
+        uv_async_init(&static_cast<uv_loop_t&>(*this->loop), &async, [](uv_async_s*) {});
+    }
+
     bool await_ready() noexcept {
+        assert(this->wait_handle.valid() && "ProcessExitState wait handle not initialized");
         return false;
     }
 
@@ -262,6 +269,7 @@ public:
     }
 
 private:
+    uv_async_t async;  // Used to wake up the event loop when the process exits
     RunningProcess process{};
     eventide::event_loop* loop{};
     win::Handle wait_handle{};
@@ -272,6 +280,7 @@ eventide::task<int64_t, eventide::error> wait_for_process_exit(RunningProcess&& 
                                                                eventide::event_loop* loop) {
 
     return [](ProcessExitState state) -> eventide::task<int64_t, eventide::error> {
+        state.init();
         co_return co_await state;
     }({std::move(process), loop});
 }

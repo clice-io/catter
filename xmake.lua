@@ -55,9 +55,9 @@ if has_config("dev") then
 
     if is_mode("debug") then
         if is_plat("windows") then
-            if toolchain == "msvc" then
-                set_policy("build.sanitizer.address", true)
-            end
+            -- if toolchain == "msvc" then
+            --     set_policy("build.sanitizer.address", true)
+            -- end
         else
             set_policy("build.sanitizer.address", true)
         end
