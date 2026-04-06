@@ -6,6 +6,7 @@
 #include <eventide/common/functional.h>
 #include <eventide/async/async.h>
 #include <eventide/async/io/loop.h>
+
 #include "config/ipc.h"
 #include "data.h"
 #include "pipe_proxy.h"

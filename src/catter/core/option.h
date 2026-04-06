@@ -14,19 +14,6 @@
 #include "ipc.h"
 
 namespace catter::core {
-namespace detail {
-
-inline auto make_inject_runtime() -> js::CatterRuntime {
-    return js::CatterRuntime{
-        .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
-        .supportEvents = {js::EventType::finish},
-        .type = js::CatterRuntime::Type::inject,
-        .supportParentId = true,
-    };
-}
-
-}  // namespace detail
-
 namespace config {
 
 struct RunMode {

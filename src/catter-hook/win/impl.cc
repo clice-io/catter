@@ -1,9 +1,5 @@
-#include "eventide/async/io/loop.h"
-#include "eventide/async/runtime/sync.h"
-#include "eventide/async/vocab/error.h"
+
 #include <coroutine>
-#include <eventide/async/io/process.h>
-#include <eventide/async/runtime/task.h>
 #include <format>
 #include <print>
 #include <string>
@@ -21,6 +17,11 @@
 #include <string.h>
 #include <io.h>
 
+#include <eventide/async/io/loop.h>
+#include <eventide/async/io/process.h>
+#include <eventide/async/runtime/sync.h>
+#include <eventide/async/runtime/task.h>
+#include <eventide/async/vocab/error.h>
 #include <eventide/reflection/enum.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
