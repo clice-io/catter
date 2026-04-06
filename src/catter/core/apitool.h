@@ -44,6 +44,8 @@ std::string serialize_value(const T& value) {
         return std::format("{}", value);
     } else if constexpr(std::is_same_v<U, std::string>) {
         return std::format("\"{}\"", catter::log::escape(value));
+    } else if constexpr(std::is_same_v<U, catter::qjs::Parameters>) {
+        return std::format("<{} js args>", value.size());
     } else if constexpr(std::is_same_v<U, catter::qjs::Object>) {
         try {
             return qjs::json::stringify(value);

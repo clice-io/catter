@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <eventide/deco/runtime.h>
+#include <eventide/deco/deco.h>
 
 #include "hook.h"
 #include "util/crossplat.h"

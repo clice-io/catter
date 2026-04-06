@@ -85,55 +85,55 @@ struct ScopedEnvVar {
 };
 
 TEST_SUITE(win_payload_resolver) {
-    TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
-        TempSandbox sandbox;
-        ScopedCurrentDirectory scope(sandbox.root);
+TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
+    TempSandbox sandbox;
+    ScopedCurrentDirectory scope(sandbox.root);
 
-        auto app_path = sandbox.root / "clang.exe";
-        touch_file(app_path);
+    auto app_path = sandbox.root / "clang.exe";
+    touch_file(app_path);
 
-        auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("clang");
-        EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
-    };
-
-    TEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
-        TempSandbox sandbox;
-        ScopedCurrentDirectory scope(sandbox.root);
-
-        auto app_path = sandbox.root / "bin" / "lld";
-        touch_file(app_path);
-
-        auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("bin\\lld");
-        EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
-        EXPECT_TRUE(fs::path(resolved).filename() == "lld");
-    };
-
-    TEST_CASE(command_line_resolver_searches_path_variable) {
-        TempSandbox sandbox;
-        auto cwd = sandbox.root / "cwd";
-        fs::create_directories(cwd);
-        ScopedCurrentDirectory scope(cwd);
-
-        auto app_dir = sandbox.root / "pathbin";
-        auto app_path = app_dir / "runner.exe";
-        touch_file(app_path);
-
-        ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
-
-        auto resolved = ct::win::payload::create_command_line_resolver<char>().resolve("runner");
-        EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
-    };
-
-    TEST_CASE(resolve_abspath_supports_quoted_command_line) {
-        TempSandbox sandbox;
-        ScopedCurrentDirectory scope(sandbox.root);
-
-        auto app_path = sandbox.root / "quoted.exe";
-        touch_file(app_path);
-
-        auto resolved = ct::win::payload::resolve_abspath<char>(nullptr, "\"quoted\" --help");
-        EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
-    };
+    auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("clang");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
 };
+
+TEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
+    TempSandbox sandbox;
+    ScopedCurrentDirectory scope(sandbox.root);
+
+    auto app_path = sandbox.root / "bin" / "lld";
+    touch_file(app_path);
+
+    auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("bin\\lld");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT_TRUE(fs::path(resolved).filename() == "lld");
+};
+
+TEST_CASE(command_line_resolver_searches_path_variable) {
+    TempSandbox sandbox;
+    auto cwd = sandbox.root / "cwd";
+    fs::create_directories(cwd);
+    ScopedCurrentDirectory scope(cwd);
+
+    auto app_dir = sandbox.root / "pathbin";
+    auto app_path = app_dir / "runner.exe";
+    touch_file(app_path);
+
+    ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
+
+    auto resolved = ct::win::payload::create_command_line_resolver<char>().resolve("runner");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+};
+
+TEST_CASE(resolve_abspath_supports_quoted_command_line) {
+    TempSandbox sandbox;
+    ScopedCurrentDirectory scope(sandbox.root);
+
+    auto app_path = sandbox.root / "quoted.exe";
+    touch_file(app_path);
+
+    auto resolved = ct::win::payload::resolve_abspath<char>(nullptr, "\"quoted\" --help");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+};
+};  // TEST_SUITE(win_payload_resolver)
 
 }  // namespace

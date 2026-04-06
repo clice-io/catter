@@ -9,7 +9,9 @@ set_languages("c++23")
 option("dev", {default = true})
 option("test", {default = false})
 
-local function add_prefix_includedirs(prefix)
+local prefix_includedirs = {}
+
+local function collect_prefix_includedirs(prefix)
     local include_candidates = {
         path.join(prefix, "include"),
         path.join(prefix, "Library", "include"),
@@ -17,22 +19,28 @@ local function add_prefix_includedirs(prefix)
 
     for _, includedir in ipairs(include_candidates) do
         if os.isdir(includedir) then
-            add_includedirs(includedir)
+            table.insert(prefix_includedirs, includedir)
         end
+    end
+end
+
+local function add_local_prefix_includedirs()
+    for _, includedir in ipairs(prefix_includedirs) do
+        add_includedirs(includedir)
     end
 end
 
 local conda_prefix = os.getenv("CONDA_PREFIX")
 if conda_prefix then
-    add_prefix_includedirs(conda_prefix)
+    collect_prefix_includedirs(conda_prefix)
 else
     local pixi_dev_prefix = path.join(os.projectdir(), ".pixi", "envs", "dev")
     local pixi_default_prefix = path.join(os.projectdir(), ".pixi", "envs", "default")
 
     if os.isdir(pixi_dev_prefix) then
-        add_prefix_includedirs(pixi_dev_prefix)
+        collect_prefix_includedirs(pixi_dev_prefix)
     elseif os.isdir(pixi_default_prefix) then
-        add_prefix_includedirs(pixi_default_prefix)
+        collect_prefix_includedirs(pixi_default_prefix)
     end
 end
 
@@ -72,6 +80,7 @@ end
 if is_plat("macosx") then
     -- https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
     set_toolchains("clang")
+    set_config("ranlib", "/usr/bin/ranlib")
     add_defines("_LIBCPP_DISABLE_AVAILABILITY=1")
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
@@ -119,6 +128,7 @@ add_requires("eventide")
 
 target("common")
     set_kind("static")
+    add_local_prefix_includedirs()
     add_includedirs("src/common", {public = true})
     add_files("src/common/**.cc")
 
@@ -128,6 +138,7 @@ target("common")
 target("catter-core")
     -- use object, avoid register invalid
     set_kind("object")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
 
@@ -140,6 +151,7 @@ target("catter-core")
 
 target("catter")
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
@@ -149,6 +161,7 @@ target("catter")
 target("catter-hook-win64")
     set_default(is_plat("windows"))
     set_kind("shared")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
     add_syslinks("user32", "advapi32")
@@ -166,6 +179,7 @@ target("catter-hook-win64")
 target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
+    add_local_prefix_includedirs()
 
     if is_mode("debug") then
         add_deps("common")
@@ -205,6 +219,7 @@ target("catter-hook-unix")
 
 target("catter-hook")
     set_kind("object")
+    add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/", {public = true})
     add_deps("common")
     if is_plat("windows") then
@@ -215,6 +230,7 @@ target("catter-hook")
 
 target("catter-proxy")
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
@@ -230,6 +246,7 @@ rule("ut-base")
 target("ut-common")
     set_default(has_config("test"))
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_rules("ut-base")
 
     add_files("tests/unit/common/**.cc")
@@ -240,6 +257,7 @@ target("ut-common")
 target("ut-catter")
     set_default(has_config("test"))
     set_kind("binary")
+    add_local_prefix_includedirs()
     add_rules("ut-base")
 
     add_files("tests/unit/catter/**.cc")
@@ -248,7 +266,7 @@ target("ut-catter")
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
     add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
     add_rules("build.js", {js_target = "build-js-test"})
-    add_files("api/src/**.ts", "api/test/*.ts")
+    add_files("api/src/**.ts", "api/test/**.ts")
 
     add_tests("default")
 
@@ -360,7 +378,7 @@ package("eventide")
     -- version from `git rev-list --count HEAD`
     add_versions("104", "191e46355d2bc958fc19379a99b9a2b8b77f2963")
 
-    add_deps("libuv 1.52.0")
+    add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
 
     on_install(function (package)
@@ -369,9 +387,54 @@ package("eventide")
         end
 
         local configs = {}
-        configs.dev = has_config("dev")
+        -- Build the dependency with a plain consumer config so we do not pull
+        -- in eventide's repo-local dev toolchain tweaks during package install.
+        configs.dev = false
         configs.test = false
-        import("package.tools.xmake").install(package, configs)
+        if package:is_plat("macosx") then
+            local conda_prefix = os.getenv("CONDA_PREFIX")
+            if conda_prefix then
+                local bindir = path.join(conda_prefix, "bin")
+                local libdir = path.join(conda_prefix, "lib")
+                local mode = package:is_debug() and "debug" or "release"
+                local builddir = package:builddir()
+                -- Pixi's clang cfg injects `.pixi/.../include`; disable that default
+                -- config just for eventide's package install and keep the rest explicit.
+                local argv = {
+                    "f", "-y", "-c",
+                    "--plat=" .. package:plat(),
+                    "--arch=" .. package:arch(),
+                    "--mode=" .. mode,
+                    "--kind=" .. (package:config("shared") and "shared" or "static"),
+                    "--builddir=" .. builddir,
+                    "--cc=" .. path.join(bindir, "clang"),
+                    "--cxx=" .. path.join(bindir, "clang++"),
+                    "--ld=" .. path.join(bindir, "clang++"),
+                    "--sh=" .. path.join(bindir, "clang++"),
+                    "--ar=" .. path.join(bindir, "llvm-ar"),
+                    "--ranlib=" .. path.join(bindir, "llvm-ranlib"),
+                    "--cflags=--no-default-config",
+                    "--cxflags=--no-default-config -D_LIBCPP_DISABLE_AVAILABILITY=1",
+                    "--ldflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
+                    "--shflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
+                    "--dev=false",
+                    "--test=false"
+                }
+                if package:config("asan") then
+                    table.insert(argv, "--policies=build.sanitizer.address")
+                end
+                os.vrunv("xmake", argv, {curdir = package:sourcedir()})
+                os.mkdir(path.join(builddir, ".deps", "eventide", package:plat(), package:arch(), mode))
+                os.vrunv("xmake", {"build", "eventide"}, {curdir = package:sourcedir()})
+                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "eventide"}, {curdir = package:sourcedir()})
+                return
+            end
+            import("package.tools.xmake").install(package, configs, {target = "eventide"})
+        elseif is_plat("linux") then
+            import("package.tools.xmake").install(package, configs, {target = "eventide"})
+        else
+            import("package.tools.xmake").install(package, configs)
+        end
     end)
 
 

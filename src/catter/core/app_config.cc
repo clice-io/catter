@@ -8,59 +8,22 @@
 
 namespace catter::app {
 
-StartupConfig to_startup_config(const core::Option::CatterOption& opt) {
-    return StartupConfig{
-        .log = true,
-        .mode = *opt.mode,
-        .script_path = *opt.script_path,
-        .script_args = opt.script_args.has_value() ? *opt.script_args : std::vector<std::string>{},
-        .build_system_command = *opt.args,
-        .working_dir = opt.working_dir.has_value() ? std::filesystem::absolute(*opt.working_dir)
-                                                   : std::filesystem::current_path(),
-    };
-}
-
-RuntimePlan build_runtime_plan(const StartupConfig& config) {
-    struct ModeMeta {
-        ipc::ServiceMode mode;
-        js::CatterRuntime runtime;
-    };
-
-    const static std::unordered_map<std::string_view, ModeMeta> mode_map = {
-        {"inject",
-         {.mode = ipc::ServiceMode::INJECT,
-          .runtime = {
-              .supportActions = {js::ActionType::drop,
-                                 js::ActionType::skip,
-                                 js::ActionType::modify},
-              .supportEvents = {js::EventType::finish, js::EventType::output},
-              .type = js::CatterRuntime::Type::inject,
-              .supportParentId = true,
-          }}}
-    };
-
-    auto it = mode_map.find(config.mode);
-    if(it == mode_map.end()) {
-        throw std::runtime_error(std::format("Unsupported mode: {}", config.mode));
-    }
-
-    return RuntimePlan{
-        .log = config.log,
-        .mode = it->second.mode,
-        .script_path = config.script_path,
-        .script_args = config.script_args,
-        .build_system_command = config.build_system_command,
-        .working_dir = config.working_dir,
-        .runtime = &it->second.runtime,
-    };
-}
-
 std::string load_script_content(const std::string& script_path) {
     const static std::unordered_map<std::string_view, std::string_view> internal_scripts = {
         {"script::cdb",
          R"(
     import { scripts, service } from "catter";
     service.register(new scripts.CDB());
+    )"},
+        {"script::cmd-tree",
+         R"(
+    import { scripts, service } from "catter";
+    service.register(new scripts.CmdTree());
+    )"},
+        {"script::target-tree",
+         R"(
+    import { scripts, service } from "catter";
+    service.register(new scripts.TargetTree());
     )"}
     };
 

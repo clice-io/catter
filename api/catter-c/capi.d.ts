@@ -145,11 +145,11 @@ export type CatterConfig = {
   };
 
   /**
-   * Whether the current script is supported by the runtime.
+   * Whether catter should execute the build-system command after `onStart`.
    *
-   * When `false`, catter aborts execution immediately.
+   * When `false`, catter stops before launching the build.
    */
-  isScriptSupported: boolean;
+  execute: boolean;
 };
 
 /**
@@ -355,6 +355,7 @@ export function option_parse(
   table: OptionTable,
   args: string[],
   cb: (parseRes: string | OptionItem) => boolean,
+  visibility?: number,
 ): void;
 
 export type Compiler =
