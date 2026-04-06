@@ -51,6 +51,7 @@ export type { OptionInfo, OptionItem, OptionTable } from "./types.js";
 
 const RENDER_JOINED = 1 << 2;
 const RENDER_SEPARATE = 1 << 3;
+const ALL_OPTION_VISIBILITY = 0xffff_ffff;
 
 function cloneOptionItem(item: OptionItem): OptionItem {
   return {
@@ -200,16 +201,22 @@ export function stringify(table: OptionTable, item: OptionItem): string {
 export function collect(
   table: OptionTable,
   args: string[],
+  visibility = ALL_OPTION_VISIBILITY,
 ): OptionItem[] | string {
   let res: OptionItem[] | string = [];
-  option_parse(table, args, (parseRes) => {
-    if (typeof parseRes === "string") {
-      res = parseRes;
-      return false;
-    }
-    (res as OptionItem[]).push(parseRes);
-    return true;
-  });
+  option_parse(
+    table,
+    args,
+    (parseRes) => {
+      if (typeof parseRes === "string") {
+        res = parseRes;
+        return false;
+      }
+      (res as OptionItem[]).push(parseRes);
+      return true;
+    },
+    visibility,
+  );
   return res;
 }
 
@@ -311,8 +318,9 @@ export function parse(
   table: OptionTable,
   args: string[],
   cb: (parseRes: string | OptionItem) => boolean,
+  visibility = ALL_OPTION_VISIBILITY,
 ): void {
-  option_parse(table, args, cb);
+  option_parse(table, args, cb, visibility);
 }
 
 /**

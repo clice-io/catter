@@ -101,3 +101,16 @@ SortUsingDeclarations: Never
 IncludeBlocks: Merge
 
 ForEachMacros: ["REFLECTABLE_RECORD"]
+NamespaceMacros: [TEST_SUITE]
+StatementMacros:
+  - DECO_CFG_START
+  - DECO_CFG
+  - DECO_CFG_END
+  - DecoKV
+  - DecoFlag
+  - DecoFlagN
+  - DecoComma
+  - DecoInput
+  - DecoPack
+  - DecoKVStyled
+  - DecoMulti

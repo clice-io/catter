@@ -11,6 +11,7 @@
 #include "capi/type.h"
 #include "ipc.h"
 #include "js.h"
+#include "option.h"
 #include "qjs.h"
 #include "session.h"
 #include "config/catter-proxy.h"
@@ -123,25 +124,27 @@ int64_t execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
 
 }  // namespace
 
-void run(const core::Option::CatterOption& opt) {
-    auto startup = to_startup_config(opt);
-    auto plan = build_runtime_plan(startup);
-    auto script_content = load_script_content(plan.script_path);
+void run(const core::CatterConfig& config) {
+    auto script_content = load_script_content(config.script_path.value());
 
-    js::init_qjs({.pwd = plan.working_dir});
-    js::run_js_file(script_content, plan.script_path);
+    js::init_qjs({.pwd = config.working_dir->path});
+    js::run_js_file(script_content, config.script_path.value());
 
-    auto config = js::on_start({
-        .scriptPath = plan.script_path,
-        .scriptArgs = plan.script_args,
-        .buildSystemCommand = plan.build_system_command,
-        .runtime = *plan.runtime,
-        .options = {.log = plan.log},
-        .isScriptSupported = true,
+    auto js_config = js::on_start({
+        .scriptPath = config.script_path.value(),
+        .scriptArgs = config.script_args,
+        .buildSystemCommand = config.command.value(),
+        .runtime = config.mode->runtime,
+        .options = {.log = config.log},
+        .execute = true,
     });
 
+    if(!js_config.execute) {
+        return;
+    }
+
     js::on_finish(js::Tag<js::EventType::finish>{
-        .code = execute_service(plan.mode, config),
+        .code = execute_service(config.mode->mode, js_config),
     });
 }
 

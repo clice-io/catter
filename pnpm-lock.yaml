@@ -51,12 +51,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  scripts:
-    devDependencies:
-      '@types/node':
-        specifier: ^25.2.0
-        version: 25.2.0
-
 packages:
 
   '@eslint-community/eslint-utils@4.9.0':
@@ -1744,6 +1738,7 @@ snapshots:
   '@types/node@25.2.0':
     dependencies:
       undici-types: 7.16.0
+    optional: true
 
   '@types/resolve@1.20.2': {}
 
@@ -2986,7 +2981,8 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-types@7.16.0: {}
+  undici-types@7.16.0:
+    optional: true
 
   universalify@2.0.1: {}
 

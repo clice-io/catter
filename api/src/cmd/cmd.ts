@@ -1,7 +1,6 @@
-import * as option from "../option/index.js";
-import { ClangID } from "../option/clang.js";
+import type { Compiler } from "catter-c";
 
-import { type Compiler } from "catter-c";
+import * as option from "../option/index.js";
 
 export { identify_compiler, Compiler } from "catter-c";
 

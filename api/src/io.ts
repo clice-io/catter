@@ -425,11 +425,11 @@ export class FileStream {
 /**
  * Type alias for supported text file encodings.
  *
- * Currently only `"ascii"` is supported.
+ * Currently `"ascii"` and `"utf-8"` are supported.
  *
  * @example
  * ```typescript
- * const encoding: SupportedTextEncodings = "ascii";
+ * const encoding: SupportedTextEncodings = "utf-8";
  * ```
  */
 export type SupportedTextEncodings =
@@ -522,17 +522,179 @@ const asciiEnDecStreamImpl: EnDecStreamImpl = {
     return this.decode(bytes);
   },
   decode: function (raw: Uint8Array): string {
-    return String.fromCharCode(...raw);
+    const chunkSize = 0x8000;
+    let result = "";
+    for (let i = 0; i < raw.length; i += chunkSize) {
+      result += String.fromCharCode(...raw.slice(i, i + chunkSize));
+    }
+    return result;
   },
   encode: function (data: string): Uint8Array {
     return new Uint8Array([...data].map((c) => c.charCodeAt(0)));
   },
 };
 
+function utf8SequenceLength(firstByte: number): number {
+  if ((firstByte & 0b1000_0000) === 0) {
+    return 1;
+  }
+  if ((firstByte & 0b1110_0000) === 0b1100_0000) {
+    return 2;
+  }
+  if ((firstByte & 0b1111_0000) === 0b1110_0000) {
+    return 3;
+  }
+  if ((firstByte & 0b1111_1000) === 0b1111_0000) {
+    return 4;
+  }
+  throw new Error(`Invalid UTF-8 leading byte: ${firstByte}`);
+}
+
+function utf8DecodeCodePoint(bytes: number[]): number {
+  switch (bytes.length) {
+    case 1:
+      return bytes[0];
+    case 2:
+      return ((bytes[0] & 0b0001_1111) << 6) | (bytes[1] & 0b0011_1111);
+    case 3:
+      return (
+        ((bytes[0] & 0b0000_1111) << 12) |
+        ((bytes[1] & 0b0011_1111) << 6) |
+        (bytes[2] & 0b0011_1111)
+      );
+    case 4:
+      return (
+        ((bytes[0] & 0b0000_0111) << 18) |
+        ((bytes[1] & 0b0011_1111) << 12) |
+        ((bytes[2] & 0b0011_1111) << 6) |
+        (bytes[3] & 0b0011_1111)
+      );
+    default:
+      throw new Error(`Unsupported UTF-8 sequence length: ${bytes.length}`);
+  }
+}
+
+function readUtf8Sequence(raw: FileStream): number[] | undefined {
+  const first = raw.read(1);
+  if (first.length === 0) {
+    return undefined;
+  }
+
+  const bytes = [first[0]];
+  const expectedLength = utf8SequenceLength(first[0]);
+  if (expectedLength === 1) {
+    return bytes;
+  }
+
+  const tail = raw.read(expectedLength - 1);
+  if (tail.length !== expectedLength - 1) {
+    throw new Error("Truncated UTF-8 sequence");
+  }
+  for (const byte of tail) {
+    bytes.push(byte);
+  }
+  return bytes;
+}
+
+const utf8EnDecStreamImpl: EnDecStreamImpl = {
+  write(raw: FileStream, data: string): void {
+    raw.write(this.encode(data));
+  },
+  readUntil(raw: FileStream, delimiter: string | null): string {
+    const delimiterBytes = delimiter === null ? null : this.encode(delimiter);
+    const collected: number[] = [];
+    const matchedDelimiter: number[] = [];
+
+    while (true) {
+      const next = raw.read(1);
+      if (next.length === 0) {
+        collected.push(...matchedDelimiter);
+        break;
+      }
+
+      if (delimiterBytes === null) {
+        collected.push(next[0]);
+        continue;
+      }
+
+      matchedDelimiter.push(next[0]);
+      const matchedPrefix = delimiterBytes
+        .slice(0, matchedDelimiter.length)
+        .every((byte, index) => byte === matchedDelimiter[index]);
+      if (matchedPrefix) {
+        if (matchedDelimiter.length === delimiterBytes.length) {
+          break;
+        }
+        continue;
+      }
+
+      collected.push(...matchedDelimiter);
+      matchedDelimiter.length = 0;
+    }
+
+    return this.decode(new Uint8Array(collected));
+  },
+  read(raw: FileStream, chars: number): string {
+    let result = "";
+    for (let count = 0; count < chars; ++count) {
+      const bytes = readUtf8Sequence(raw);
+      if (bytes === undefined) {
+        break;
+      }
+      result += String.fromCodePoint(utf8DecodeCodePoint(bytes));
+    }
+    return result;
+  },
+  decode(raw: Uint8Array): string {
+    let result = "";
+    for (let index = 0; index < raw.length; ) {
+      const expectedLength = utf8SequenceLength(raw[index]);
+      if (index + expectedLength > raw.length) {
+        throw new Error("Truncated UTF-8 sequence");
+      }
+      const bytes = Array.from(raw.slice(index, index + expectedLength));
+      result += String.fromCodePoint(utf8DecodeCodePoint(bytes));
+      index += expectedLength;
+    }
+    return result;
+  },
+  encode(data: string): Uint8Array {
+    const bytes: number[] = [];
+    for (const char of data) {
+      const codePoint = char.codePointAt(0);
+      if (codePoint === undefined) {
+        continue;
+      }
+      if (codePoint <= 0x7f) {
+        bytes.push(codePoint);
+      } else if (codePoint <= 0x7ff) {
+        bytes.push(
+          0b1100_0000 | (codePoint >> 6),
+          0b1000_0000 | (codePoint & 0b0011_1111),
+        );
+      } else if (codePoint <= 0xffff) {
+        bytes.push(
+          0b1110_0000 | (codePoint >> 12),
+          0b1000_0000 | ((codePoint >> 6) & 0b0011_1111),
+          0b1000_0000 | (codePoint & 0b0011_1111),
+        );
+      } else {
+        bytes.push(
+          0b1111_0000 | (codePoint >> 18),
+          0b1000_0000 | ((codePoint >> 12) & 0b0011_1111),
+          0b1000_0000 | ((codePoint >> 6) & 0b0011_1111),
+          0b1000_0000 | (codePoint & 0b0011_1111),
+        );
+      }
+    }
+    return new Uint8Array(bytes);
+  },
+};
+
 /**
  * High-level text file stream for reading and writing encoded text.
  *
- * Wraps a FileStream with encoding/decoding support. Currently only ASCII
+ * Wraps a FileStream with encoding/decoding support. Currently ASCII and UTF-8
  * encoding is supported. Handles line-based operations like readLine() and readLines().
  *
  * Must be closed explicitly via close() or used with the with() static method
@@ -540,7 +702,7 @@ const asciiEnDecStreamImpl: EnDecStreamImpl = {
  *
  * @example
  * ```typescript
- * const stream = new TextFileStream("text.txt", "ascii");
+ * const stream = new TextFileStream("text.txt", "utf-8");
  * const line = stream.readLine();
  * stream.close();
  * ```
@@ -548,7 +710,7 @@ const asciiEnDecStreamImpl: EnDecStreamImpl = {
  * @example
  * ```typescript
  * // Using with() for automatic cleanup
- * TextFileStream.with("text.txt", "ascii", (stream) => {
+ * TextFileStream.with("text.txt", "utf-8", (stream) => {
  *   const lines = stream.readLines();
  *   println("Read " + lines.length + " lines");
  * });
@@ -558,9 +720,9 @@ export class TextFileStream {
   /**
    * Array of encoding names supported by this implementation.
    *
-   * Currently only `"ascii"` is supported.
+   * Currently `"ascii"` and `"utf-8"` are supported.
    */
-  static supportedEncodings = ["ascii"] as const;
+  static supportedEncodings = ["ascii", "utf-8"] as const;
 
   /**
    * Map of encoding implementations keyed by encoding name.
@@ -569,6 +731,7 @@ export class TextFileStream {
     [key in SupportedTextEncodings]: EnDecStreamImpl;
   } = {
     ascii: asciiEnDecStreamImpl,
+    "utf-8": utf8EnDecStreamImpl,
   };
 
   private fileStream: FileStream;
@@ -579,7 +742,7 @@ export class TextFileStream {
    *
    * @param path - The file path. Can be relative or absolute.
    * @param encoding - The character encoding to use. Defaults to `"ascii"`.
-   *                   Currently only `"ascii"` is supported.
+   *                   Supported values are `"ascii"` and `"utf-8"`.
    * @throws Will throw if the file cannot be opened or if the encoding is not supported.
    */
   constructor(path: string, encoding: SupportedTextEncodings = "ascii") {
@@ -754,14 +917,14 @@ export class TextFileStream {
    * This is the recommended way to use TextFileStream to prevent resource leaks.
    *
    * @param path - The file path to open.
-   * @param encoding - The character encoding to use. Currently only `"ascii"` is supported.
+   * @param encoding - The character encoding to use. Supported values are `"ascii"` and `"utf-8"`.
    * @param callback - A function receiving the open TextFileStream.
    * @throws Will throw if the file cannot be opened, if the encoding is unsupported,
    *         or if the callback throws (after cleanup).
    *
    * @example
    * ```typescript
-   * TextFileStream.with("log.txt", "ascii", (stream) => {
+   * TextFileStream.with("log.txt", "utf-8", (stream) => {
    *   const lines = stream.readLines();
    *   for (let i = 0; i < lines.length; i++) {
    *     println(lines[i]);

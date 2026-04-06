@@ -1,6 +1,5 @@
 #pragma once
-#include <eventide/deco/decl.h>
-#include <eventide/deco/macro.h>
+#include <eventide/deco/deco.h>
 
 namespace catter::proxy {
 // clang-format off

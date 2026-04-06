@@ -5,6 +5,9 @@ import {
   service_on_start,
 } from "catter-c";
 
+export * from "./service/ignorable.js";
+export * from "./service/compiler-cmd-service.js";
+
 export type {
   Action,
   ActionType,
@@ -111,6 +114,26 @@ export interface CatterService {
    * @param event - Execution event payload for output or completion.
    */
   onExecution: (id: number, event: ExecutionEvent) => void;
+}
+
+/**
+ * Service-like object that can expose a plain {@link CatterService} view.
+ */
+export interface CatterServiceAdapter {
+  asService: () => CatterService;
+}
+
+/**
+ * Service shape accepted by {@link register}.
+ *
+ * If an object provides `asService()`, that adapter is preferred.
+ */
+export type RegisterableService = CatterService | CatterServiceAdapter;
+
+function hasServiceAdapter(
+  service: RegisterableService,
+): service is CatterServiceAdapter {
+  return "asService" in service && typeof service.asService === "function";
 }
 
 /**
@@ -221,9 +244,13 @@ export function onExecution(
  * });
  * ```
  */
-export function register(service: CatterService): void {
-  onStart(service.onStart.bind(service));
-  onFinish(service.onFinish.bind(service));
-  onCommand(service.onCommand.bind(service));
-  onExecution(service.onExecution.bind(service));
+export function register(service: RegisterableService): void {
+  const adaptedService = hasServiceAdapter(service)
+    ? service.asService()
+    : service;
+
+  onStart((config) => adaptedService.onStart(config));
+  onFinish((event) => adaptedService.onFinish(event));
+  onCommand((id, data) => adaptedService.onCommand(id, data));
+  onExecution((id, event) => adaptedService.onExecution(id, event));
 }

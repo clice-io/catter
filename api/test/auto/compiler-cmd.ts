@@ -1,0 +1,205 @@
+import { cmd, debug, fs, os } from "catter";
+
+type ExpectedAnalysis = {
+  label: string;
+  cmd: string[];
+  compiler: "clang" | "gcc";
+  phase: (typeof cmd.CompilerPhase)[keyof typeof cmd.CompilerPhase];
+  artifact: (typeof cmd.CompilerArtifact)[keyof typeof cmd.CompilerArtifact];
+  type: (typeof cmd.CompilerType)[keyof typeof cmd.CompilerType] | undefined;
+  inputs: string[];
+  outputs: string[];
+};
+
+function expectEq<T>(actual: T, expected: T, label: string) {
+  if (actual !== expected) {
+    throw new Error(`${label}: expected ${expected}, got ${actual}`);
+  }
+}
+
+function expectArrayEq(actual: string[], expected: string[], label: string) {
+  if (actual.length !== expected.length) {
+    throw new Error(
+      `${label}: expected [${expected.join(", ")}], got [${actual.join(", ")}]`,
+    );
+  }
+
+  for (let idx = 0; idx < actual.length; ++idx) {
+    if (actual[idx] !== expected[idx]) {
+      throw new Error(
+        `${label}: expected [${expected.join(", ")}], got [${actual.join(", ")}]`,
+      );
+    }
+  }
+}
+
+function normalizedJoin(...parts: string[]) {
+  return fs.path.lexicalNormal(fs.path.joinAll(...parts));
+}
+
+function expectAnalysis(expected: ExpectedAnalysis) {
+  const analysis = new cmd.CompilerAnalysis(expected.cmd);
+
+  expectEq(analysis.compiler, expected.compiler, `${expected.label} compiler`);
+  expectEq(analysis.phase, expected.phase, `${expected.label} phase`);
+  expectEq(analysis.artifact, expected.artifact, `${expected.label} artifact`);
+  expectEq(analysis.type, expected.type, `${expected.label} legacy type`);
+  expectArrayEq(analysis.inputs(), expected.inputs, `${expected.label} inputs`);
+  expectArrayEq(
+    analysis.outputs(),
+    expected.outputs,
+    `${expected.label} outputs`,
+  );
+}
+
+debug.assertThrow(cmd.CompilerAnalysis.supports(["clang", "-c", "main.cc"]));
+debug.assertThrow(cmd.CompilerAnalysis.supports(["gcc", "-c", "main.cc"]));
+debug.assertThrow(!cmd.CompilerAnalysis.supports(["nvcc", "-c", "kernel.cu"]));
+
+const cases: ExpectedAnalysis[] = [
+  {
+    label: "clang llvm ir explicit stdout output",
+    cmd: ["clang", "src/t.c", "-S", "-emit-llvm", "-o", "-"],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Compile,
+    artifact: cmd.CompilerArtifact.LlvmIR,
+    type: cmd.CompilerType.SourceToLlvmIR,
+    inputs: ["src/t.c"],
+    outputs: ["-"],
+  },
+  {
+    label: "gcc preprocess explicit language without suffix",
+    cmd: ["gcc", "-x", "c", "generated_input", "-E", "-P"],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.Preprocess,
+    artifact: cmd.CompilerArtifact.Stdout,
+    type: cmd.CompilerType.SourcePreprocess,
+    inputs: ["generated_input"],
+    outputs: [],
+  },
+  {
+    label: "gcc preprocess to file",
+    cmd: ["gcc", "-E", "src/a.c", "-o", "a.i"],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.Preprocess,
+    artifact: cmd.CompilerArtifact.Stdout,
+    type: cmd.CompilerType.SourcePreprocess,
+    inputs: ["src/a.c"],
+    outputs: ["a.i"],
+  },
+  {
+    label: "gcc syntax-only explicit language",
+    cmd: ["gcc", "-x", "c++", "generated", "-fsyntax-only", "-fno-exceptions"],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.SyntaxOnly,
+    artifact: cmd.CompilerArtifact.None,
+    type: cmd.CompilerType.SourceSyntaxOnly,
+    inputs: ["generated"],
+    outputs: [],
+  },
+  {
+    label: "gcc x-none resets classification for later object inputs",
+    cmd: [
+      "gcc",
+      "-x",
+      "c",
+      "generated_input",
+      "-x",
+      "none",
+      "obj/plain.o",
+      "-o",
+      "bin/app",
+    ],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.Link,
+    artifact: cmd.CompilerArtifact.Executable,
+    type: cmd.CompilerType.SourceToExe,
+    inputs: ["generated_input", "obj/plain.o"],
+    outputs: ["bin/app"],
+  },
+  {
+    label: "gcc relocatable link with extra linker flags",
+    cmd: [
+      "gcc",
+      "-nostdlib",
+      "-Wl,--build-id=sha1",
+      "-r",
+      "a.o",
+      "b.o",
+      "-o",
+      "partial.o",
+    ],
+    compiler: "gcc",
+    phase: cmd.CompilerPhase.RelocatableLink,
+    artifact: cmd.CompilerArtifact.Object,
+    type: cmd.CompilerType.RelocatableLink,
+    inputs: ["a.o", "b.o"],
+    outputs: ["partial.o"],
+  },
+  {
+    label: "clang archive static lib from object inputs",
+    cmd: ["clang", "--emit-static-lib", "a.o", "b.o", "-o", "libstuff.a"],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Archive,
+    artifact: cmd.CompilerArtifact.StaticLibrary,
+    type: cmd.CompilerType.ObjectToLib,
+    inputs: ["a.o", "b.o"],
+    outputs: ["libstuff.a"],
+  },
+  {
+    label: "clang compile multiple translation units with default outputs",
+    cmd: ["clang", "-c", "src/a.c", "src/b.cc"],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Compile,
+    artifact: cmd.CompilerArtifact.Object,
+    type: cmd.CompilerType.SourceToObject,
+    inputs: ["src/a.c", "src/b.cc"],
+    outputs: ["a.o", "b.o"],
+  },
+];
+
+if (os.platform() === "windows") {
+  cases.splice(1, 0, {
+    label: "clang cl-style compile no suffix into object dir",
+    cmd: ["clang", "--driver-mode=cl", "/c", "/Tp", "src/noext", "/Fo:build/"],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Compile,
+    artifact: cmd.CompilerArtifact.Object,
+    type: cmd.CompilerType.SourceToObject,
+    inputs: ["src/noext"],
+    outputs: [normalizedJoin("build", "noext.obj")],
+  });
+  cases.push({
+    label: "clang cl-style shared link via linker remainder",
+    cmd: [
+      "clang",
+      "--driver-mode=cl",
+      "/link",
+      "/dll",
+      "/out:bin/tool.dll",
+      "foo.obj",
+      "bar.res",
+    ],
+    compiler: "clang",
+    phase: cmd.CompilerPhase.Link,
+    artifact: cmd.CompilerArtifact.SharedLibrary,
+    type: cmd.CompilerType.ObjectToShare,
+    inputs: ["foo.obj", "bar.res"],
+    outputs: ["bin/tool.dll"],
+  });
+} else {
+  const clStyleSuppressed = new cmd.CompilerAnalysis([
+    "clang",
+    "--driver-mode=cl",
+    "main.c",
+  ]);
+  expectEq(
+    clStyleSuppressed.style,
+    "gnu",
+    "clang cl-style visibility suppressed style",
+  );
+}
+
+for (const testCase of cases) {
+  expectAnalysis(testCase);
+}

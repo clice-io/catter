@@ -36,17 +36,17 @@ struct ScopedEnvVar {
 };
 
 TEST_SUITE(win_payload_util) {
-    TEST_CASE(get_proxy_path_reads_environment_variable) {
-        ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
-        EXPECT_TRUE(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
-        EXPECT_TRUE(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
-    };
-
-    TEST_CASE(get_ipc_id_reads_environment_variable) {
-        ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
-        EXPECT_TRUE(ct::win::payload::get_ipc_id<char>() == "12345");
-        EXPECT_TRUE(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
-    };
+TEST_CASE(get_proxy_path_reads_environment_variable) {
+    ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
+    EXPECT_TRUE(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
+    EXPECT_TRUE(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
 };
+
+TEST_CASE(get_ipc_id_reads_environment_variable) {
+    ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
+    EXPECT_TRUE(ct::win::payload::get_ipc_id<char>() == "12345");
+    EXPECT_TRUE(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
+};
+};  // TEST_SUITE(win_payload_util)
 
 }  // namespace

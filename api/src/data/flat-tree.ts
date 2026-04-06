@@ -1,0 +1,445 @@
+import * as io from "../io.js";
+
+/**
+ * A comparable node identifier supported by `FlatTree`.
+ */
+export type FlatTreeId = PropertyKey;
+
+/**
+ * A single flat node description used to build or update a `FlatTree`.
+ */
+export interface FlatTreeNodeInput<Id extends FlatTreeId, Content> {
+  id: Id;
+  content: Content;
+  parent?: Id[];
+  children?: Id[];
+}
+
+export interface FlatTreeNodeStore<Id extends FlatTreeId, Content> {
+  id: Id;
+  content: Content;
+  parent: Id[];
+  children: Id[];
+}
+
+/**
+ * Relative relationship between two ids in a `FlatTree`.
+ */
+export const FlatTreeRelation = {
+  Self: "self",
+  Ancestor: "ancestor",
+  Descendant: "descendant",
+  None: "none",
+} as const;
+export type FlatTreeRelation =
+  (typeof FlatTreeRelation)[keyof typeof FlatTreeRelation];
+
+/**
+ * Lightweight traversal view returned by `FlatTree.walk()`.
+ *
+ * `first` is populated only when the graph has exactly one start node. When
+ * multiple starts exist, callers should begin from `children(undefined)`.
+ *
+ * @example
+ * ```ts
+ * import { data } from "catter";
+ *
+ * const tree = new data.FlatTree<number, string>();
+ * tree.justMergeNode({ id: 1, content: "root" });
+ * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+ *
+ * const walker = tree.walk();
+ * console.log(walker.first);
+ * console.log(walker.children(undefined));
+ * console.log(walker.children(1));
+ * ```
+ *
+ * Output:
+ * ```txt
+ * 1
+ * [1]
+ * [2]
+ * ```
+ */
+export interface FlatTreeWalker<Id extends FlatTreeId> {
+  first: Id | undefined;
+  children(id: Id | undefined): readonly Id[];
+}
+
+/**
+ * A mutable tree view built from flat `(id, parentId, content)` items.
+ *
+ * Missing parents are treated as roots. Nodes may be added incrementally,
+ * parents may appear after children, and a node may be referenced by multiple
+ * parents, forming a DAG.
+ *
+ * @example
+ * ```ts
+ * import { data } from "catter";
+ *
+ * const tree = new data.FlatTree<string, string>();
+ * tree.justMergeNode({ id: "app", content: "app" });
+ * tree.justMergeNode({ id: "main.o", parent: ["app"], content: "main.o" });
+ * tree.justMergeNode({ id: "util.o", parent: ["app"], content: "util.o" });
+ *
+ * console.log(tree.assemble());
+ * console.log(tree.roots());
+ * console.log(tree.walk().children("app"));
+ * ```
+ *
+ * Output:
+ * ```txt
+ * true
+ * ["app"]
+ * ["main.o", "util.o"]
+ * ```
+ */
+
+export class FlatTree<Id extends FlatTreeId, Content> {
+  private dataPool: Map<Id, FlatTreeNodeStore<Id, Content>> = new Map();
+
+  constructor() {}
+
+  /**
+   * Merges one node into the current graph without validating cycles.
+   *
+   * Existing parent and child links are unioned, while `content` is replaced
+   * by the new value.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+   * tree.justMergeNode({ id: 2, parent: [3], content: "leaf" });
+   *
+   * console.log(tree.node(2)?.parent);
+   * ```
+   *
+   * Output:
+   * ```txt
+   * [1, 3]
+   * ```
+   */
+  justMergeNode(node: FlatTreeNodeInput<Id, Content>) {
+    if (this.dataPool.has(node.id)) {
+      const pre = this.dataPool.get(node.id)!;
+      pre.parent = Array.from(new Set([...pre.parent, ...(node.parent ?? [])]));
+      pre.children = Array.from(
+        new Set([...pre.children, ...(node.children ?? [])]),
+      );
+      pre.content = node.content;
+    } else {
+      this.dataPool.set(node.id, {
+        parent: node.parent ?? [],
+        children: node.children ?? [],
+        ...node,
+      });
+    }
+  }
+
+  justUpdateNode(node: FlatTreeNodeInput<Id, Content>) {
+    this.detachNode(node.id);
+    this.dataPool.set(node.id, {
+      parent: node.parent ?? [],
+      children: node.children ?? [],
+      ...node,
+    });
+  }
+
+  justRemoveNode(id: Id) {
+    this.detachNode(id);
+    this.dataPool.delete(id);
+  }
+
+  merge(node: FlatTreeNodeInput<Id, Content>) {
+    this.justMergeNode(node);
+    return this.assemble();
+  }
+
+  update(node: FlatTreeNodeInput<Id, Content>) {
+    this.justUpdateNode(node);
+    return this.assemble();
+  }
+
+  remove(id: Id) {
+    this.justRemoveNode(id);
+    return this.assemble();
+  }
+
+  isRoot(id: Id): boolean {
+    return (this.dataPool.get(id)?.parent?.length ?? 0) === 0;
+  }
+
+  isStart(id: Id): boolean {
+    const node = this.dataPool.get(id);
+    if (!node) {
+      return false;
+    }
+
+    return (
+      node.parent.length === 0 ||
+      node.parent.every((parentId) => !this.dataPool.has(parentId))
+    );
+  }
+
+  private detachNode(id: Id): void {
+    const existing = this.dataPool.get(id);
+    if (!existing) {
+      return;
+    }
+
+    for (const parentId of existing.parent) {
+      const parentNode = this.dataPool.get(parentId);
+      if (parentNode) {
+        parentNode.children = parentNode.children.filter(
+          (childId) => childId !== id,
+        );
+      }
+    }
+
+    for (const childId of existing.children) {
+      const childNode = this.dataPool.get(childId);
+      if (childNode) {
+        childNode.parent = childNode.parent.filter(
+          (parentId) => parentId !== id,
+        );
+      }
+    }
+  }
+
+  private stitchEdges() {
+    for (const [id, node] of this.dataPool) {
+      for (const childId of node.children) {
+        const childNode = this.dataPool.get(childId);
+        if (childNode && !childNode.parent.includes(id)) {
+          childNode.parent.push(id);
+        }
+      }
+      for (const parentId of node.parent) {
+        const parentNode = this.dataPool.get(parentId);
+        if (parentNode && !parentNode.children.includes(id)) {
+          parentNode.children.push(id);
+        }
+      }
+    }
+  }
+
+  assemble(): boolean {
+    this.stitchEdges();
+
+    // 0=unvisited, 1=visited in this tree, 2=visited previously, no cycle found
+    const states: Map<Id, 0 | 1 | 2> = new Map();
+    for (const id of this.dataPool.keys()) {
+      states.set(id, 0);
+    }
+
+    let noCycle = true;
+
+    const hasCycleDFS = (nodeId: Id): boolean => {
+      const state = states.get(nodeId);
+      if (state === 1) return true;
+      if (state === 2) return false;
+
+      states.set(nodeId, 1);
+
+      const node = this.dataPool.get(nodeId);
+      if (node) {
+        for (const childId of node.children) {
+          if (hasCycleDFS(childId)) {
+            return true;
+          }
+        }
+      }
+
+      states.set(nodeId, 2);
+      return false;
+    };
+
+    for (const id of this.dataPool.keys()) {
+      if (states.get(id) === 0) {
+        if (hasCycleDFS(id)) {
+          noCycle = false;
+          break;
+        }
+      }
+    }
+
+    return noCycle;
+  }
+
+  /**
+   * Returns ids whose parent list is empty.
+   *
+   * Unlike `starts()`, this does not treat missing parents as entry points.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [99], content: "detached" });
+   *
+   * console.log(tree.roots());
+   * console.log(tree.starts());
+   * ```
+   *
+   * Output:
+   * ```txt
+   * [1]
+   * [1, 2]
+   * ```
+   */
+  roots(): Id[] {
+    this.stitchEdges();
+    return Array.from(this.dataPool.keys()).filter((id) => this.isRoot(id));
+  }
+
+  starts(): Id[] {
+    this.stitchEdges();
+    return Array.from(this.dataPool.keys()).filter((id) => this.isStart(id));
+  }
+
+  /**
+   * Builds a traversal helper over the stitched graph.
+   *
+   * The virtual root `children(undefined)` returns every start node. This is
+   * especially useful when the graph is a forest or when some nodes reference
+   * parents that were never inserted.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
+   * tree.justMergeNode({ id: 3, content: "orphan" });
+   *
+   * const walker = tree.walk();
+   * console.log(walker.first);
+   * console.log(walker.children(undefined));
+   * ```
+   *
+   * Output:
+   * ```txt
+   * undefined
+   * [2, 3]
+   * ```
+   */
+  walk(): FlatTreeWalker<Id> {
+    const starts = this.starts();
+
+    return {
+      first: starts.length === 1 ? starts[0] : undefined,
+      children: (id: Id | undefined): readonly Id[] => {
+        if (id === undefined) {
+          return starts;
+        }
+        return this.dataPool.get(id)?.children ?? [];
+      },
+    };
+  }
+
+  /**
+   * Reports the relative reachability between two ids.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
+   *
+   * console.log(tree.relation(1, 2));
+   * console.log(tree.relation(2, 1));
+   * console.log(tree.relation(2, 2));
+   * ```
+   *
+   * Output:
+   * ```txt
+   * ancestor
+   * descendant
+   * self
+   * ```
+   */
+  relation(leftId: Id, rightId: Id): FlatTreeRelation {
+    this.stitchEdges();
+
+    if (leftId === rightId) {
+      return FlatTreeRelation.Self;
+    }
+
+    const reach = (from: Id, to: Id): boolean => {
+      const pending = [from];
+      const seen = new Set<Id>();
+
+      while (pending.length > 0) {
+        const curr = pending.pop() as Id;
+        if (seen.has(curr)) {
+          continue;
+        }
+        seen.add(curr);
+
+        const node = this.dataPool.get(curr);
+        if (!node) {
+          continue;
+        }
+
+        for (const childId of node.children) {
+          if (childId === to) {
+            return true;
+          }
+          pending.push(childId);
+        }
+      }
+
+      return false;
+    };
+
+    if (reach(leftId, rightId)) {
+      return FlatTreeRelation.Ancestor;
+    }
+    if (reach(rightId, leftId)) {
+      return FlatTreeRelation.Descendant;
+    }
+    return FlatTreeRelation.None;
+  }
+
+  /**
+   * Returns the number of stored nodes.
+   *
+   * @example
+   * ```ts
+   * import { data } from "catter";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, content: "root" });
+   * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
+   *
+   * console.log(tree.size());
+   * ```
+   *
+   * Output:
+   * ```txt
+   * 2
+   * ```
+   */
+  size() {
+    return this.dataPool.size;
+  }
+
+  node(id: Id) {
+    return this.dataPool.get(id);
+  }
+
+  nodes() {
+    return this.dataPool.values();
+  }
+
+  reset() {
+    this.dataPool.clear();
+  }
+}
