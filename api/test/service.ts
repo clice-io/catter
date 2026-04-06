@@ -3,7 +3,6 @@ import { debug, service } from "catter";
 const serviceArg = "--from-service";
 
 let outputEventSeen = false;
-let finishEventSeen = false;
 let commandErrorBranchSeen = false;
 
 service.register({
@@ -25,10 +24,10 @@ service.register({
 
   onFinish(event) {
     debug.assertThrow(outputEventSeen);
-    debug.assertThrow(finishEventSeen);
     debug.assertThrow(commandErrorBranchSeen);
-    debug.assertThrow(event.type === "finish");
     debug.assertThrow(event.code === 0);
+    debug.assertThrow(event.stdout === "");
+    debug.assertThrow(event.stderr === "");
   },
 
   onCommand(id, data) {
@@ -57,16 +56,9 @@ service.register({
 
   onExecution(id, event) {
     debug.assertThrow(id === 7);
-
-    if (event.type === "output") {
-      debug.assertThrow(event.stdout === "hello from stdout");
-      debug.assertThrow(event.stderr === "hello from stderr");
-      outputEventSeen = true;
-      return;
-    }
-
-    debug.assertThrow(event.type === "finish");
     debug.assertThrow(event.code === 0);
-    finishEventSeen = true;
+    debug.assertThrow(event.stdout === "hello from stdout");
+    debug.assertThrow(event.stderr === "hello from stderr");
+    outputEventSeen = true;
   },
 });

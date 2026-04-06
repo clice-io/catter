@@ -27,7 +27,6 @@ TEST_CASE(catter_runtime_conversion) {
 
         js::CatterRuntime catter_runtime{
             .supportActions = {js::ActionType::skip, js::ActionType::modify},
-            .supportEvents = {js::EventType::finish},
             .type = js::CatterRuntime::Type::inject,
             .supportParentId = true
         };
@@ -49,7 +48,6 @@ TEST_CASE(command_data_and_action_conversion) {
             .argv = {"clang++", "main.cc", "-c"},
             .env = {"CC=clang++", "CATTER_LOG=1"},
             .runtime = {.supportActions = {js::ActionType::skip, js::ActionType::modify},
-                     .supportEvents = {js::EventType::finish, js::EventType::output},
                      .type = js::CatterRuntime::Type::env,
                      .supportParentId = true},
             .parent = 42
@@ -69,18 +67,15 @@ TEST_CASE(command_data_and_action_conversion) {
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(execution_event_and_config_conversion) {
+TEST_CASE(process_result_and_config_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto& ctx = runtime.context();
 
-        js::ExecutionEvent output_event = js::Tag<js::EventType::output>{
+        js::ProcessResult process_result{
+            .code = 0,
             .stdOut = "hello",
             .stdErr = "warn",
-            .code = 0,
-        };
-        js::ExecutionEvent finish_event = js::Tag<js::EventType::finish>{
-            .code = 1,
         };
 
         js::CatterConfig config{
@@ -88,15 +83,13 @@ TEST_CASE(execution_event_and_config_conversion) {
             .scriptArgs = {"--input", "compile_commands.json"},
             .buildSystemCommand = {"xmake", "build"},
             .runtime = {.supportActions = {js::ActionType::drop, js::ActionType::abort},
-                           .supportEvents = {js::EventType::finish},
                            .type = js::CatterRuntime::Type::inject,
                            .supportParentId = false},
             .options = {.log = true},
             .execute = true
         };
 
-        EXPECT_TRUE(is_roundtrip_equal(ctx, output_event));
-        EXPECT_TRUE(is_roundtrip_equal(ctx, finish_event));
+        EXPECT_TRUE(is_roundtrip_equal(ctx, process_result));
         EXPECT_TRUE(is_roundtrip_equal(ctx, config));
     };
 

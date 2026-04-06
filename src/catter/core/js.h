@@ -38,8 +38,8 @@ void set_on_command(qjs::Object cb);
 void set_on_execution(qjs::Object cb);
 
 CatterConfig on_start(CatterConfig config);
-void on_finish(ExecutionEvent event);
+void on_finish(ProcessResult result);
 Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
-void on_execution(uint32_t id, ExecutionEvent event);
+void on_execution(uint32_t id, ProcessResult result);
 
 };  // namespace catter::js

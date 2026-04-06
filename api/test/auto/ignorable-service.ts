@@ -3,12 +3,11 @@ import {
   service,
   type CatterRuntime,
   type CommandCaptureResult,
-  type ExecutionEvent,
+  type ProcessResult,
 } from "catter";
 
 const runtime: CatterRuntime = {
   supportActions: ["skip", "drop", "abort", "modify"],
-  supportEvents: ["finish"],
   type: "inject",
   supportParentId: true,
 };
@@ -44,7 +43,7 @@ class TestIgnorableService extends service.IgnorableService {
     return { type: "skip" };
   }
 
-  override onExecution(id: number, event: ExecutionEvent): void {
+  override onExecution(id: number, _result: ProcessResult): void {
     this.seenExecutionIds.push(id);
   }
 
@@ -83,9 +82,9 @@ debug.assertThrow(ignorable.seenCommandIds.length === 2);
 debug.assertThrow(ignorable.seenCommandIds[0] === 1);
 debug.assertThrow(ignorable.seenCommandIds[1] === 2);
 
-serviceView.onExecution(2, { type: "finish", code: 0 });
-serviceView.onExecution(3, { type: "finish", code: 0 });
-serviceView.onExecution(4, { type: "finish", code: 0 });
+serviceView.onExecution(2, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(3, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(4, { code: 0, stdout: "", stderr: "" });
 debug.assertThrow(ignorable.seenExecutionIds.length === 1);
 debug.assertThrow(ignorable.seenExecutionIds[0] === 2);
 

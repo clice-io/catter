@@ -16,8 +16,7 @@ export type {
   CatterRuntime,
   CommandCaptureResult,
   CommandData,
-  EventType,
-  ExecutionEvent,
+  ProcessResult,
 } from "catter-c";
 
 import type {
@@ -25,9 +24,8 @@ import type {
   ActionType,
   CatterConfig,
   CatterRuntime,
-  EventType,
   CommandCaptureResult,
-  ExecutionEvent,
+  ProcessResult,
 } from "catter-c";
 
 /**
@@ -48,21 +46,6 @@ export const ActionKind = [
 ] as const satisfies readonly ActionType[];
 
 /**
- * Supported execution event kinds.
- *
- * These string literals match the `type` field emitted in {@link ExecutionEvent}.
- *
- * @example
- * ```typescript
- * const isOutputEvent = EventKind.includes("output");
- * ```
- */
-export const EventKind = [
-  "finish",
-  "output",
-] as const satisfies readonly EventType[];
-
-/**
  * Callback group for subscribing to catter lifecycle and command events.
  *
  * @example
@@ -71,8 +54,8 @@ export const EventKind = [
  *   onStart(config) {
  *     return config;
  *   },
- *   onFinish(event) {
- *     println("exit code = " + event.code);
+ *   onFinish(result) {
+ *     println("exit code = " + result.code);
  *   },
  *   onCommand() {
  *     return { type: "skip" };
@@ -95,25 +78,25 @@ export interface CatterService {
   /**
    * Called after catter finishes processing.
    *
-   * @param event - Final execution event for the current catter run.
+   * @param result - Final process result for the current catter run.
    */
-  onFinish: (event: ExecutionEvent) => void;
+  onFinish: (result: ProcessResult) => void;
 
   /**
    * Called when catter captures a command.
    *
-   * @param id - Unique command identifier that can be correlated with execution events.
+   * @param id - Unique command identifier that can be correlated with process results.
    * @param data - Tagged command capture result with a `success` discriminator.
    */
   onCommand: (id: number, data: CommandCaptureResult) => Action;
 
   /**
-   * Called when a captured command emits execution events.
+   * Called when a captured command completes.
    *
    * @param id - Unique command identifier, matching the value passed to {@link CatterService.onCommand}.
-   * @param event - Execution event payload for output or completion.
+   * @param result - Completed process result payload.
    */
-  onExecution: (id: number, event: ExecutionEvent) => void;
+  onExecution: (id: number, result: ProcessResult) => void;
 }
 
 /**
@@ -159,16 +142,16 @@ export function onStart(cb: (config: CatterConfig) => CatterConfig): void {
 /**
  * Registers a callback that runs after catter finishes.
  *
- * @param cb - Callback invoked once when the current catter run is shutting down, with the final execution event.
+ * @param cb - Callback invoked once when the current catter run is shutting down, with the final process result.
  *
  * @example
  * ```typescript
- * onFinish((event) => {
- *   println("build interception finished with code " + event.code);
+ * onFinish((result) => {
+ *   println("build interception finished with code " + result.code);
  * });
  * ```
  */
-export function onFinish(cb: (event: ExecutionEvent) => void): void {
+export function onFinish(cb: (result: ProcessResult) => void): void {
   service_on_finish(cb);
 }
 
@@ -200,21 +183,19 @@ export function onCommand(
 }
 
 /**
- * Registers a callback that receives execution events for captured commands.
+ * Registers a callback that receives final process results for captured commands.
  *
- * @param cb - Callback invoked with the command ID and each emitted execution event, such as process output or exit.
+ * @param cb - Callback invoked with the command ID and the completed process result, including exit code and captured output.
  *
  * @example
  * ```typescript
- * onExecution((id, event) => {
- *   if (event.type === "finish") {
- *     println("command " + id + " exited with " + event.code);
- *   }
+ * onExecution((id, result) => {
+ *   println("command " + id + " exited with " + result.code);
  * });
  * ```
  */
 export function onExecution(
-  cb: (id: number, event: ExecutionEvent) => void,
+  cb: (id: number, result: ProcessResult) => void,
 ): void {
   service_on_execution(cb);
 }
@@ -234,8 +215,8 @@ export function onExecution(
  *   onStart(config) {
  *     return config;
  *   },
- *   onFinish(event) {
- *     println("exit code = " + event.code);
+ *   onFinish(result) {
+ *     println("exit code = " + result.code);
  *   },
  *   onCommand(id, data) {
  *     return { type: "skip" };
@@ -250,7 +231,7 @@ export function register(service: RegisterableService): void {
     : service;
 
   onStart((config) => adaptedService.onStart(config));
-  onFinish((event) => adaptedService.onFinish(event));
+  onFinish((result) => adaptedService.onFinish(result));
   onCommand((id, data) => adaptedService.onCommand(id, data));
-  onExecution((id, event) => adaptedService.onExecution(id, event));
+  onExecution((id, result) => adaptedService.onExecution(id, result));
 }

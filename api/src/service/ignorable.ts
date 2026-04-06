@@ -2,7 +2,7 @@ import type {
   Action,
   CatterConfig,
   CommandCaptureResult,
-  ExecutionEvent,
+  ProcessResult,
 } from "catter-c";
 
 /**
@@ -31,8 +31,8 @@ export abstract class IgnorableService {
   private readonly ignoredCommandIds = new Set<number>();
   private readonly serviceAdapter = {
     onStart: (config: CatterConfig): CatterConfig => this.onStart(config),
-    onFinish: (event: ExecutionEvent): void => {
-      this.onFinish(event);
+    onFinish: (result: ProcessResult): void => {
+      this.onFinish(result);
     },
     onCommand: (id: number, data: CommandCaptureResult): Action => {
       this.rememberCommand(id, data.success ? data.data.parent : undefined);
@@ -49,12 +49,12 @@ export abstract class IgnorableService {
 
       return action;
     },
-    onExecution: (id: number, event: ExecutionEvent): void => {
+    onExecution: (id: number, result: ProcessResult): void => {
       if (this.hasCommand(id) && this.hasIgnoredAncestor(id)) {
         return;
       }
 
-      this.onExecution(id, event);
+      this.onExecution(id, result);
     },
   };
 
@@ -62,19 +62,19 @@ export abstract class IgnorableService {
     return config;
   }
 
-  onFinish(_event: ExecutionEvent): void {}
+  onFinish(_result: ProcessResult): void {}
 
   onCommand(_id: number, _data: CommandCaptureResult): IgnorableAction {
     return { type: "skip" };
   }
 
-  onExecution(_id: number, _event: ExecutionEvent): void {}
+  onExecution(_id: number, _result: ProcessResult): void {}
 
   asService(): {
     onStart: (config: CatterConfig) => CatterConfig;
-    onFinish: (event: ExecutionEvent) => void;
+    onFinish: (result: ProcessResult) => void;
     onCommand: (id: number, data: CommandCaptureResult) => Action;
-    onExecution: (id: number, event: ExecutionEvent) => void;
+    onExecution: (id: number, result: ProcessResult) => void;
   } {
     return this.serviceAdapter;
   }

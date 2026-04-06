@@ -28,7 +28,6 @@ const inline static std::unordered_map<std::string_view, RunMode> mode_map = {
      {.mode = ipc::ServiceMode::INJECT,
       .runtime = {
           .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
-          .supportEvents = {js::EventType::finish},
           .type = js::CatterRuntime::Type::inject,
           .supportParentId = true,
       }}}

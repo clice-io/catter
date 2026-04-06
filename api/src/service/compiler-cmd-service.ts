@@ -2,7 +2,7 @@ import type {
   Action,
   CatterConfig,
   CommandCaptureResult,
-  ExecutionEvent,
+  ProcessResult,
 } from "catter-c";
 
 import { CompilerAnalysis } from "../cmd/index.js";
@@ -20,8 +20,8 @@ export abstract class CompilerService extends IgnorableService {
   private readonly compilerCommandIds = new Set<number>();
   private readonly compilerServiceAdapter = {
     onStart: (config: CatterConfig): CatterConfig => this.onStart(config),
-    onFinish: (event: ExecutionEvent): void => {
-      this.onFinish(event);
+    onFinish: (result: ProcessResult): void => {
+      this.onFinish(result);
     },
     onCommand: (id: number, data: CommandCaptureResult): Action => {
       this.rememberCommand(id, data.success ? data.data.parent : undefined);
@@ -42,7 +42,7 @@ export abstract class CompilerService extends IgnorableService {
 
       return action;
     },
-    onExecution: (id: number, event: ExecutionEvent): void => {
+    onExecution: (id: number, result: ProcessResult): void => {
       if (this.hasIgnoredAncestor(id)) {
         return;
       }
@@ -51,15 +51,15 @@ export abstract class CompilerService extends IgnorableService {
         return;
       }
 
-      this.onExecution(id, event);
+      this.onExecution(id, result);
     },
   };
 
   override asService(): {
     onStart: (config: CatterConfig) => CatterConfig;
-    onFinish: (event: ExecutionEvent) => void;
+    onFinish: (result: ProcessResult) => void;
     onCommand: (id: number, data: CommandCaptureResult) => Action;
-    onExecution: (id: number, event: ExecutionEvent) => void;
+    onExecution: (id: number, result: ProcessResult) => void;
   } {
     return this.compilerServiceAdapter;
   }

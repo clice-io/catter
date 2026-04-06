@@ -42,11 +42,11 @@ CatterConfig on_start(CatterConfig config) {
     return CatterConfig::make(self.on_start(config.to_object(self.on_start.context())));
 }
 
-void on_finish(ExecutionEvent event) {
+void on_finish(ProcessResult result) {
     if(!self.on_finish) {
         throw std::runtime_error("service.onFinish is not registered");
     }
-    return self.on_finish(event.to_object(self.on_finish.context()));
+    return self.on_finish(result.to_object(self.on_finish.context()));
 }
 
 Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
@@ -64,11 +64,11 @@ Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
     return Action::make(self.on_command(id, std::move(command_result)));
 }
 
-void on_execution(uint32_t id, ExecutionEvent event) {
+void on_execution(uint32_t id, ProcessResult result) {
     if(!self.on_execution) {
         throw std::runtime_error("service.onExecution is not registered");
     }
-    return self.on_execution(id, event.to_object(self.on_execution.context()));
+    return self.on_execution(id, result.to_object(self.on_execution.context()));
 }
 
 void set_on_start(qjs::Object cb) {

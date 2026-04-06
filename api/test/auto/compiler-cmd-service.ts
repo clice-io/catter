@@ -3,12 +3,11 @@ import {
   service,
   type CatterRuntime,
   type CommandCaptureResult,
-  type ExecutionEvent,
+  type ProcessResult,
 } from "catter";
 
 const runtime: CatterRuntime = {
   supportActions: ["skip", "drop", "abort", "modify"],
-  supportEvents: ["finish"],
   type: "inject",
   supportParentId: true,
 };
@@ -40,7 +39,7 @@ class TestCompilerService extends service.CompilerService {
     return { type: "skip" };
   }
 
-  override onExecution(id: number, _event: ExecutionEvent): void {
+  override onExecution(id: number, _result: ProcessResult): void {
     this.seenExecutionIds.push(id);
   }
 
@@ -85,12 +84,12 @@ debug.assertThrow(compilerService.seenCommandIds.length === 2);
 debug.assertThrow(compilerService.seenCommandIds[0] === 2);
 debug.assertThrow(compilerService.seenCommandIds[1] === 6);
 
-serviceView.onExecution(1, { type: "finish", code: 0 });
-serviceView.onExecution(2, { type: "finish", code: 0 });
-serviceView.onExecution(3, { type: "finish", code: 0 });
-serviceView.onExecution(5, { type: "finish", code: 0 });
-serviceView.onExecution(6, { type: "finish", code: 0 });
-serviceView.onExecution(7, { type: "finish", code: 0 });
+serviceView.onExecution(1, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(2, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(3, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(5, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(6, { code: 0, stdout: "", stderr: "" });
+serviceView.onExecution(7, { code: 0, stdout: "", stderr: "" });
 debug.assertThrow(compilerService.seenExecutionIds.length === 2);
 debug.assertThrow(compilerService.seenExecutionIds[0] === 2);
 debug.assertThrow(compilerService.seenExecutionIds[1] === 6);

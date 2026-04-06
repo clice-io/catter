@@ -302,8 +302,6 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 
 enum class ActionType { skip, drop, abort, modify };
 
-enum class EventType { finish, output };
-
 struct CatterOptions {
     static CatterOptions make(qjs::Object object) {
         return detail::make_reflected_object<CatterOptions>(std::move(object));
@@ -334,7 +332,6 @@ struct CatterRuntime {
 
 public:
     std::vector<ActionType> supportActions;
-    std::vector<EventType> supportEvents;
     Type type;
     bool supportParentId;
 };
@@ -379,6 +376,23 @@ public:
     std::optional<int64_t> parent;
 };
 
+struct ProcessResult {
+    static ProcessResult make(qjs::Object object) {
+        return detail::make_reflected_object<ProcessResult>(std::move(object));
+    }
+
+    qjs::Object to_object(JSContext* ctx) const {
+        return detail::to_reflected_object(ctx, *this);
+    }
+
+    bool operator== (const ProcessResult&) const = default;
+
+public:
+    int64_t code;
+    std::string stdOut;
+    std::string stdErr;
+};
+
 struct CatterErr {
     static CatterErr make(qjs::Object object) {
         return detail::make_reflected_object<CatterErr>(std::move(object));
@@ -397,27 +411,13 @@ public:
 using Action =
     TaggedUnion<ActionType::skip, ActionType::drop, ActionType::abort, ActionType::modify>;
 
-using ExecutionEvent = TaggedUnion<EventType::output, EventType::finish>;
-
 TAG<ActionType::modify> {
     CommandData data;
     bool operator== (const Tag& other) const = default;
 };
 
-TAG<EventType::output> {
-    std::string stdOut;
-    std::string stdErr;
-    int64_t code;
-    bool operator== (const Tag& other) const = default;
-};
-
-TAG<EventType::finish> {
-    int64_t code;
-    bool operator== (const Tag& other) const = default;
-};
-
 template <>
-struct detail::property_name_mapper<Tag<EventType::output>> {
+struct detail::property_name_mapper<ProcessResult> {
     constexpr static std::string_view map(std::string_view field_name) {
         if(field_name == "stdOut") {
             return "stdout";
