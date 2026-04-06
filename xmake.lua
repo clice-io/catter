@@ -55,9 +55,9 @@ if has_config("dev") then
 
     if is_mode("debug") then
         if is_plat("windows") then
-            -- if toolchain == "msvc" then
-            --     set_policy("build.sanitizer.address", true)
-            -- end
+            if toolchain == "msvc" then
+                set_policy("build.sanitizer.address", true)
+            end
         else
             set_policy("build.sanitizer.address", true)
         end
@@ -376,7 +376,7 @@ package("eventide")
 
     set_urls("https://github.com/clice-io/eventide.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("104", "191e46355d2bc958fc19379a99b9a2b8b77f2963")
+    add_versions("111", "a400b5a57f2b237542c3aa252a067b45525c258e")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")

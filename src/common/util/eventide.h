@@ -54,7 +54,8 @@ inline process_event make_process_event(eventide::process::options& opts) {
         }
 
         return {
-            .wait_task = [](eventide::process proc) -> eventide::task<int64_t, eventide::error> {
+            .wait_task =
+                [](eventide::process proc) noexcept -> eventide::task<int64_t, eventide::error> {
                 auto wait_ret = co_await proc.wait();
                 if(!wait_ret) {
                     co_return eventide::outcome_error(wait_ret.error());

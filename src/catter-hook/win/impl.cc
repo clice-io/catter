@@ -2,6 +2,7 @@
 #include "eventide/async/runtime/sync.h"
 #include "eventide/async/vocab/error.h"
 #include <coroutine>
+#include <eventide/async/io/process.h>
 #include <eventide/async/runtime/task.h>
 #include <format>
 #include <print>
@@ -207,48 +208,25 @@ struct StartedProcess {
     win::Handle stderr_read{};
 };
 
-class ProcessExitState {
+class ProcessWaiter {
 public:
-    ProcessExitState(RunningProcess&& process, eventide::event_loop* loop) :
-        process(std::move(process)), loop(loop), wait_handle{} {}
+    ProcessWaiter(HANDLE process_handle, eventide::relay relay) noexcept :
+        process_handle(process_handle), relay(std::move(relay)) {}
 
-    ProcessExitState(const ProcessExitState&) = delete;
-    ProcessExitState(ProcessExitState&&) = default;
-    ProcessExitState& operator= (const ProcessExitState&) = delete;
-    ProcessExitState& operator= (ProcessExitState&&) = default;
+    ProcessWaiter(const ProcessWaiter&) = delete;
+    ProcessWaiter(ProcessWaiter&&) = default;
+    ProcessWaiter& operator= (const ProcessWaiter&) = delete;
+    ProcessWaiter& operator= (ProcessWaiter&&) = default;
 
-    ~ProcessExitState() {
-        if(this->wait_handle.valid()) {
-            UnregisterWaitEx(this->wait_handle.get(), INVALID_HANDLE_VALUE);
-            this->wait_handle.release();
-            uv_close(reinterpret_cast<uv_handle_t*>(&this->async), nullptr);
+    ~ProcessWaiter() {
+        if(this->valid()) {
+            UnregisterWaitEx(this->wait_handle, INVALID_HANDLE_VALUE);
         }
-    }
-
-    void init() {
-        HANDLE wait_object;
-
-        if(!RegisterWaitForSingleObject(
-               &wait_object,
-               this->process.process_handle(),
-               [](void* context, BOOLEAN did_timeout) {
-                   auto* self = static_cast<ProcessExitState*>(context);
-                   self->loop->post([self]() { self->awaiter_handle.resume(); });
-               },
-               this,
-               INFINITE,
-               WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE)) {
-            
-            throw std::system_error(GetLastError(),
-                                    std::system_category(),
-                                    "Failed to register child process exit wait callback");
-        }
-        this->wait_handle = win::Handle(wait_object);
-        uv_async_init(&static_cast<uv_loop_t&>(*this->loop), &async, [](uv_async_s*) {});
     }
 
     bool await_ready() noexcept {
-        assert(this->wait_handle.valid() && "ProcessExitState wait handle not initialized");
+        this->init();
+        assert(this->valid() && "ProcessExitState wait handle not initialized");
         return false;
     }
 
@@ -257,32 +235,54 @@ public:
         return;
     }
 
-    int64_t await_resume() {
+    eventide::process::wait_result await_resume() noexcept {
         DWORD exit_code = 0;
-        if(!GetExitCodeProcess(this->process.process_handle(), &exit_code)) {
-            throw std::system_error(GetLastError(),
-                                    std::system_category(),
-                                    "Failed to get child process exit code");
+        if(!GetExitCodeProcess(this->process_handle, &exit_code)) {
+            return eventide::outcome_error(eventide::error(uv_translate_sys_error(GetLastError())));
         } else {
-            return static_cast<int64_t>(exit_code);
+            return eventide::process::exit_status{
+                .status = static_cast<int64_t>(exit_code),
+                .term_signal = 0,  // Windows does not have Unix-style signals
+            };
         }
     }
 
 private:
-    uv_async_t async;  // Used to wake up the event loop when the process exits
-    RunningProcess process{};
-    eventide::event_loop* loop{};
-    win::Handle wait_handle{};
+    bool valid() const noexcept {
+        return this->process_handle != INVALID_HANDLE_VALUE;
+    }
+
+    void init() noexcept {
+        if(!RegisterWaitForSingleObject(
+               &this->wait_handle,
+               this->process_handle,
+               [](void* context, BOOLEAN did_timeout) {
+                   auto* self = static_cast<ProcessWaiter*>(context);
+                   self->relay.send([self]() { self->awaiter_handle.resume(); });
+               },
+               this,
+               INFINITE,
+               WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE)) {
+            // libuv handle this case by aborting the process, so we do the same
+            std::println("Failed to call RegisterWaitForSingleObject: {}, aborting",
+                         std::system_error(GetLastError(), std::system_category()).what());
+            std::abort();
+        }
+    }
+
+    HANDLE process_handle;
+    eventide::relay relay;
+    HANDLE wait_handle{};
     std::coroutine_handle<> awaiter_handle{};
 };
 
-eventide::task<int64_t, eventide::error> wait_for_process_exit(RunningProcess&& process,
-                                                               eventide::event_loop* loop) {
-
-    return [](ProcessExitState state) -> eventide::task<int64_t, eventide::error> {
-        state.init();
-        co_return co_await state;
-    }({std::move(process), loop});
+eventide::task<int64_t, eventide::error>
+    wait_for_process_exit(RunningProcess process, eventide::event_loop* loop) noexcept {
+    auto wait_ret = co_await ProcessWaiter(process.process_handle(), loop->create_relay());
+    if(!wait_ret) {
+        co_return eventide::outcome_error(wait_ret.error());
+    }
+    co_return wait_ret->status;
 }
 
 StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string proxy_path) {
