@@ -114,8 +114,8 @@ action make_decision(command cmd) {
     return Impl::request<Request::MAKE_DECISION>(cmd);
 }
 
-void finish(int64_t ret_code) {
-    Impl::request<Request::FINISH>(ret_code);
+void finish(process_result result) {
+    Impl::request<Request::FINISH>(std::move(result));
 }
 
 void report_error(ipcid_t parent_id, std::string error_msg) noexcept {

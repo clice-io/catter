@@ -156,7 +156,6 @@ TEST_CASE(run_service_js_file_and_callbacks) {
                                js::ActionType::drop,
                                js::ActionType::abort,
                                js::ActionType::modify},
-            .supportEvents = {js::EventType::finish, js::EventType::output},
             .type = js::CatterRuntime::Type::inject,
             .supportParentId = true,
         };
@@ -202,19 +201,17 @@ TEST_CASE(run_service_js_file_and_callbacks) {
         auto error_action = js::on_command(7, std::unexpected(err));
         EXPECT_TRUE(error_action.type() == js::ActionType::skip);
 
-        js::ExecutionEvent output_event = js::Tag<js::EventType::output>{
+        js::ProcessResult execution_result{
+            .code = 0,
             .stdOut = "hello from stdout",
             .stdErr = "hello from stderr",
+        };
+        js::on_execution(7, execution_result);
+
+        js::ProcessResult finish_result{
             .code = 0,
         };
-        js::on_execution(7, output_event);
-
-        js::ExecutionEvent finish_event = js::Tag<js::EventType::finish>{
-            .code = 0,
-        };
-        js::on_execution(7, finish_event);
-
-        js::on_finish(finish_event);
+        js::on_finish(finish_result);
     };
 
     EXPECT_NOTHROWS(f());

@@ -40,46 +40,24 @@ export type Action =
 export type ActionType = Action["type"];
 
 /**
- * Event emitted while a command is executing.
+ * Process result reported for a completed execution.
  */
-export type ExecutionEvent =
-  | {
-      /**
-       * Event category.
-       */
-      type: "output";
+export type ProcessResult = {
+  /**
+   * Final process exit code.
+   */
+  code: number;
 
-      /**
-       * Standard output content for an `"output"` event.
-       */
-      stdout: string;
+  /**
+   * Captured standard output content.
+   */
+  stdout: string;
 
-      /**
-       * Standard error content for an `"output"` event.
-       */
-      stderr: string;
-
-      /**
-       * Runtime-defined status code for this output event.
-       */
-      code: number;
-    }
-  | {
-      /**
-       * Event category.
-       */
-      type: "finish";
-
-      /**
-       * Final process exit code.
-       */
-      code: number;
-    };
-
-/**
- * Execution event discriminator extracted from {@link ExecutionEvent}.
- */
-export type EventType = ExecutionEvent["type"];
+  /**
+   * Captured standard error content.
+   */
+  stderr: string;
+};
 
 /**
  * Runtime capabilities exposed to the script.
@@ -89,11 +67,6 @@ export type CatterRuntime = {
    * Actions supported by the current runtime.
    */
   supportActions: ActionType[];
-
-  /**
-   * Execution event kinds supported by the current runtime.
-   */
-  supportEvents: EventType[];
 
   /**
    * Runtime implementation type.
@@ -227,12 +200,12 @@ export type CommandCaptureResult =
 export function service_on_start(
   cb: (config: CatterConfig) => CatterConfig,
 ): void;
-export function service_on_finish(cb: (event: ExecutionEvent) => void): void;
+export function service_on_finish(cb: (result: ProcessResult) => void): void;
 export function service_on_command(
   cb: (id: number, data: CommandCaptureResult) => Action,
 ): void;
 export function service_on_execution(
-  cb: (id: number, event: ExecutionEvent) => void,
+  cb: (id: number, result: ProcessResult) => void,
 ): void;
 // io
 export function stdout_print(content: string): void;

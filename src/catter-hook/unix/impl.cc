@@ -15,11 +15,12 @@
 #include "util/crossplat.h"
 #include "util/log.h"
 #include "util/eventide.h"
+#include "util/pipe_proxy.h"
 #include "unix/config.h"
 
 namespace catter::proxy::hook {
 
-int64_t run(data::command command, data::ipcid_t id, std::string proxy_path) {
+data::process_result run(data::command command, data::ipcid_t id, std::string proxy_path) {
     LOG_INFO("new command id is: {}", id);
 
     const auto lib_path =
@@ -62,8 +63,11 @@ int64_t run(data::command command, data::ipcid_t id, std::string proxy_path) {
         .args = command.args,
         .env = command.env,
         .cwd = command.cwd,
+        .streams = {eventide::process::stdio::inherit(),
+                    eventide::process::stdio::pipe(false, true),
+                    eventide::process::stdio::pipe(false, true)}
     };
-    return catter::wait(catter::spawn(opts));
+    return catter::capture_process_result(make_process_event(opts));
 };
 
 };  // namespace catter::proxy::hook

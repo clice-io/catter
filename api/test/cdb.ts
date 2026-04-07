@@ -9,7 +9,6 @@ import {
 
 const runtime: CatterRuntime = {
   supportActions: ["skip", "drop", "abort", "modify"],
-  supportEvents: ["finish"],
   type: "inject",
   supportParentId: true,
 };
@@ -67,7 +66,7 @@ try {
     ),
   );
 
-  serviceView.onFinish({ type: "finish", code: 0 });
+  serviceView.onFinish({ code: 0, stdout: "", stderr: "" });
 
   const items = new cmd.CDBManager(savePath).items();
   debug.assertThrow(items.length === 1);

@@ -94,10 +94,10 @@ export class CDB extends service.IgnorableService {
     return config;
   }
 
-  override onFinish(event: service.ExecutionEvent) {
-    if (event.code !== 0) {
+  override onFinish(result: service.ProcessResult) {
+    if (result.code !== 0) {
       io.println(
-        `Build failed with exit code ${event.code}. CDB will not be saved.`,
+        `Build failed with exit code ${result.code}. CDB will not be saved.`,
       );
       return;
     }

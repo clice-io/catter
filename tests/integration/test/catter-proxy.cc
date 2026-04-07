@@ -63,9 +63,14 @@ public:
         return data::action{.type = data::action::WRAP, .cmd = cmd};
     }
 
-    void finish(int64_t code) override {
+    void finish(data::process_result result) override {
         this->finish_called = true;
-        std::println("[{}] Command finished with code: {}", this->id, code);
+        std::println(
+            "[{}] Command finished: \n    -> code = {}\n    -> stdout = `{}` \n    -> stderr = `{}`",
+            this->id,
+            result.code,
+            log::escape(result.std_out),
+            log::escape(result.std_err));
     }
 
     void report_error(data::ipcid_t parent_id, std::string error_msg) override {

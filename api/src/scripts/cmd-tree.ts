@@ -146,10 +146,10 @@ export class CmdTree extends service.IgnorableService {
     return config;
   }
 
-  override onFinish(event: service.ExecutionEvent): void {
-    if (event.code !== 0) {
+  override onFinish(result: service.ProcessResult): void {
+    if (result.code !== 0) {
       io.println(
-        `Build failed with exit code ${event.code}. Printing partial command tree.`,
+        `Build failed with exit code ${result.code}. Printing partial command tree.`,
       );
     }
 

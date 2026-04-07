@@ -28,7 +28,7 @@ public:
 
     virtual ipcid_t create(ipcid_t parent_id) = 0;
     virtual data::action make_decision(data::command cmd) = 0;
-    virtual void finish(int64_t code) = 0;
+    virtual void finish(data::process_result result) = 0;
     virtual void report_error(ipcid_t parent_id, std::string error_msg) = 0;
 };
 

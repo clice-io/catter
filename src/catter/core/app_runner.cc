@@ -20,7 +20,6 @@
 
 namespace catter::app {
 namespace {
-
 class ServiceImpl : public ipc::InjectService {
 public:
     ServiceImpl(data::ipcid_t id, const js::CatterRuntime* runtime) : id(id), runtime(runtime) {}
@@ -66,8 +65,13 @@ public:
         }
     }
 
-    void finish(int64_t code) override {
-        js::on_execution(this->id, js::Tag<js::EventType::finish>{.code = code});
+    void finish(data::process_result result) override {
+        js::on_execution(this->id,
+                         js::ProcessResult{
+                             .code = result.code,
+                             .stdOut = std::move(result.std_out),
+                             .stdErr = std::move(result.std_err),
+                         });
     }
 
     void report_error(data::ipcid_t parent_id, std::string error_msg) override {
@@ -143,7 +147,7 @@ void run(const core::CatterConfig& config) {
         return;
     }
 
-    js::on_finish(js::Tag<js::EventType::finish>{
+    js::on_finish(js::ProcessResult{
         .code = execute_service(config.mode->mode, js_config),
     });
 }
