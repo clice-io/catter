@@ -9,20 +9,14 @@
 
 namespace catter::util {
 
-constexpr inline size_t PIPE_PROXY_OUTPUT_LIMIT = 64 * 1024;
-constexpr inline std::string_view PIPE_PROXY_TRUNCATION_MARKER =
-    "[... truncated leading output ...]\n";
-
-void append_bounded_output(std::string& buffer,
-                           std::string_view chunk,
-                           bool& truncated,
-                           size_t limit = PIPE_PROXY_OUTPUT_LIMIT);
-
 class PipeProxy {
 public:
+    constexpr static size_t output_limit = 64 * 1024;
+    constexpr static std::string_view truncation_marker = "[... truncated leading output ...]\n";
+
     PipeProxy(eventide::pipe&& pipe, FILE* sink, std::string_view name) :
         pipe(std::move(pipe)), sink(sink), name(name) {
-        output_buffer.reserve(PIPE_PROXY_OUTPUT_LIMIT);
+        output_buffer.reserve(1024);
     }
 
     PipeProxy(const PipeProxy&) = delete;
@@ -37,6 +31,11 @@ public:
     }
 
     eventide::task<void> monitor();
+
+    static void append_bounded_output(std::string& buffer,
+                                      std::string_view chunk,
+                                      bool& truncated,
+                                      size_t limit = output_limit);
 
     const std::string& output() const noexcept {
         return output_buffer;

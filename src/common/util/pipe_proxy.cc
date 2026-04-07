@@ -9,10 +9,10 @@
 
 namespace catter::util {
 
-void append_bounded_output(std::string& buffer,
-                           std::string_view chunk,
-                           bool& truncated,
-                           size_t limit) {
+void PipeProxy::append_bounded_output(std::string& buffer,
+                                      std::string_view chunk,
+                                      bool& truncated,
+                                      size_t limit) {
     if(chunk.empty()) {
         return;
     }
@@ -24,15 +24,15 @@ void append_bounded_output(std::string& buffer,
 
     truncated = true;
 
-    if(limit <= PIPE_PROXY_TRUNCATION_MARKER.size()) {
-        buffer.assign(PIPE_PROXY_TRUNCATION_MARKER.substr(0, limit));
+    if(limit <= truncation_marker.size()) {
+        buffer.assign(truncation_marker.substr(0, limit));
         return;
     }
 
-    const size_t payload_limit = limit - PIPE_PROXY_TRUNCATION_MARKER.size();
+    const size_t payload_limit = limit - truncation_marker.size();
     std::string_view current_payload = buffer;
-    if(current_payload.starts_with(PIPE_PROXY_TRUNCATION_MARKER)) {
-        current_payload.remove_prefix(PIPE_PROXY_TRUNCATION_MARKER.size());
+    if(current_payload.starts_with(truncation_marker)) {
+        current_payload.remove_prefix(truncation_marker.size());
     }
 
     const size_t keep_from_chunk = std::min(payload_limit, chunk.size());
@@ -43,7 +43,7 @@ void append_bounded_output(std::string& buffer,
 
     std::string next;
     next.reserve(limit);
-    next.append(PIPE_PROXY_TRUNCATION_MARKER);
+    next.append(truncation_marker);
     next.append(current_payload);
     next.append(chunk.substr(chunk.size() - keep_from_chunk));
     buffer = std::move(next);
@@ -69,9 +69,9 @@ eventide::task<void> PipeProxy::monitor() {
 
         // Keep the tail because build failures usually surface the decisive diagnostics last,
         // while the full stream is still forwarded to the sink in real time.
-        append_bounded_output(output_buffer,
-                              std::string_view(chunk->data(), chunk->size()),
-                              output_truncated);
+        PipeProxy::append_bounded_output(output_buffer,
+                                         std::string_view(chunk->data(), chunk->size()),
+                                         output_truncated);
 
         if(sink != nullptr) {
             std::span<const char> bytes(chunk->data(), chunk->size());
