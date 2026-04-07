@@ -48,11 +48,7 @@ public:
         return h != nullptr && h != INVALID_HANDLE_VALUE;
     }
 
-    HANDLE& get() noexcept {
-        return h;
-    }
-
-    const HANDLE& get() const noexcept {
+    HANDLE get() const noexcept {
         return h;
     }
 

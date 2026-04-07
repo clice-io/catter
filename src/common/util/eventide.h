@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <cstdio>
 #include <stdexcept>
 #include <format>
@@ -85,9 +86,8 @@ inline data::process_result capture_process_result(process_event proc_event,
         current_loop.schedule(stderr_task);
 
         auto wait_ret = co_await std::move(wait_task);
-        stdout_proxy.stop();
-        stderr_proxy.stop();
-
+        assert(stderr_task->is_finished() && stdout_task->is_finished() &&
+               "wait returned before pipes finished?");
         stdout_task.result();
         stderr_task.result();
 

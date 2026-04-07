@@ -19,25 +19,12 @@ public:
     PipeProxy& operator= (PipeProxy&&) = delete;
 
     ~PipeProxy() {
-        try {
-            stop();
-        } catch(...) {}
+        if(pipe.handle()) {
+            pipe.stop();
+        }
     }
 
     eventide::task<void> monitor();
-
-    void stop() {
-        if(stopped) {
-            return;
-        }
-
-        stopped = true;
-        pipe.stop();
-    }
-
-    bool active() const noexcept {
-        return pipe.handle() != nullptr;
-    }
 
     const std::string& output() const noexcept {
         return output_buffer;
@@ -48,7 +35,6 @@ private:
     FILE* sink = nullptr;
     std::string name{};
     std::string output_buffer{};
-    bool stopped = false;
 };
 
 }  // namespace catter::util
