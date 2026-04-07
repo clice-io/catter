@@ -57,8 +57,9 @@ public:
     }
 
     void close() noexcept {
-        if(this->valid()) {
-            CloseHandle(h);
+        auto old = std::exchange(h, nullptr);
+        if(old != nullptr && old != INVALID_HANDLE_VALUE) {
+            CloseHandle(old);
         }
     }
 
