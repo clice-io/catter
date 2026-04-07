@@ -1,5 +1,6 @@
 #include "pipe_proxy.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <format>
 #include <span>
@@ -7,6 +8,46 @@
 #include <string_view>
 
 namespace catter::util {
+
+void append_bounded_output(std::string& buffer,
+                           std::string_view chunk,
+                           bool& truncated,
+                           size_t limit) {
+    if(chunk.empty()) {
+        return;
+    }
+
+    if(!truncated && buffer.size() + chunk.size() <= limit) {
+        buffer.append(chunk.data(), chunk.size());
+        return;
+    }
+
+    truncated = true;
+
+    if(limit <= PIPE_PROXY_TRUNCATION_MARKER.size()) {
+        buffer.assign(PIPE_PROXY_TRUNCATION_MARKER.substr(0, limit));
+        return;
+    }
+
+    const size_t payload_limit = limit - PIPE_PROXY_TRUNCATION_MARKER.size();
+    std::string_view current_payload = buffer;
+    if(current_payload.starts_with(PIPE_PROXY_TRUNCATION_MARKER)) {
+        current_payload.remove_prefix(PIPE_PROXY_TRUNCATION_MARKER.size());
+    }
+
+    const size_t keep_from_chunk = std::min(payload_limit, chunk.size());
+    const size_t keep_from_existing = payload_limit - keep_from_chunk;
+    if(current_payload.size() > keep_from_existing) {
+        current_payload.remove_prefix(current_payload.size() - keep_from_existing);
+    }
+
+    std::string next;
+    next.reserve(limit);
+    next.append(PIPE_PROXY_TRUNCATION_MARKER);
+    next.append(current_payload);
+    next.append(chunk.substr(chunk.size() - keep_from_chunk));
+    buffer = std::move(next);
+}
 
 eventide::task<void> PipeProxy::monitor() {
     while(true) {
@@ -26,7 +67,11 @@ eventide::task<void> PipeProxy::monitor() {
             continue;
         }
 
-        output_buffer.append(chunk->data(), chunk->size());
+        // Keep the tail because build failures usually surface the decisive diagnostics last,
+        // while the full stream is still forwarded to the sink in real time.
+        append_bounded_output(output_buffer,
+                              std::string_view(chunk->data(), chunk->size()),
+                              output_truncated);
 
         if(sink != nullptr) {
             std::span<const char> bytes(chunk->data(), chunk->size());
