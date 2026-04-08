@@ -1,4 +1,3 @@
-#include <linux/limits.h>
 #ifndef CATTER_WINDOWS
 
 #include "shared/resolver.h"
@@ -9,6 +8,7 @@
 #include <ranges>
 #include <string>
 
+#include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -20,23 +20,6 @@ constexpr char k_path_separator = ':';
 
 bool contains_dir_separator(std::string_view candidate) {
     return candidate.contains(k_dir_separator);
-}
-
-const char* get_env_value(const char** envp, std::string_view key) {
-    if(envp == nullptr) {
-        return nullptr;
-    }
-    for(size_t i = 0; envp[i] != nullptr; ++i) {
-        std::string_view entry(envp[i]);
-        auto pos = entry.find('=');
-        if(pos == std::string_view::npos) {
-            continue;
-        }
-        if(entry.substr(0, pos) == key) {
-            return envp[i] + pos + 1;
-        }
-    }
-    return nullptr;
 }
 
 }  // namespace
