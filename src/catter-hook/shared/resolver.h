@@ -19,16 +19,15 @@ std::basic_string<CharT> resolve_command_line_token(std::basic_string_view<CharT
 #else
 
 [[nodiscard]]
-std::expected<std::filesystem::path, int>
-resolve_path_like(std::string_view file);
+std::expected<std::filesystem::path, int> resolve_path_like(std::string_view file);
 
 [[nodiscard]]
-std::expected<std::filesystem::path, int>
-resolve_from_search_path(std::string_view file, const char* search_path);
+std::expected<std::filesystem::path, int> resolve_from_search_path(std::string_view file,
+                                                                   const char* search_path);
 
 [[nodiscard]]
-std::expected<std::filesystem::path, int>
-resolve_from_path_env(std::string_view file, const char** envp);
+std::expected<std::filesystem::path, int> resolve_from_path_env(std::string_view file,
+                                                                const char** envp);
 
 #endif
 

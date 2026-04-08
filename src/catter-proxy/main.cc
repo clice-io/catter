@@ -40,14 +40,16 @@ std::string resolve_executable(const catter::proxy::ProxyOption& opt) {
     auto resolved =
         catter::hook::shared::resolver::resolve_command_line_token<char>(opt.args->front());
     if(resolved.empty() || resolved == opt.args->front()) {
-        throw std::runtime_error(std::format("failed to resolve executable: {}", opt.args->front()));
+        throw std::runtime_error(
+            std::format("failed to resolve executable: {}", opt.args->front()));
     }
     return resolved;
 #else
     auto resolved =
         catter::hook::shared::resolver::resolve_from_path_env(opt.args->front(), nullptr);
     if(!resolved.has_value()) {
-        throw std::runtime_error(std::format("failed to resolve executable: {}", opt.args->front()));
+        throw std::runtime_error(
+            std::format("failed to resolve executable: {}", opt.args->front()));
     }
     return resolved->string();
 #endif

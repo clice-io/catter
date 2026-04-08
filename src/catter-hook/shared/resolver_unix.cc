@@ -50,8 +50,8 @@ std::expected<std::filesystem::path, int> resolve_path_like(std::string_view fil
     return std::unexpected(errno);
 }
 
-std::expected<std::filesystem::path, int>
-resolve_from_search_path(std::string_view file, const char* search_path) {
+std::expected<std::filesystem::path, int> resolve_from_search_path(std::string_view file,
+                                                                   const char* search_path) {
     if(contains_dir_separator(file)) {
         return resolve_path_like(file);
     }
@@ -59,8 +59,7 @@ resolve_from_search_path(std::string_view file, const char* search_path) {
         return std::unexpected(ENOENT);
     }
 
-    for(const auto& path :
-        std::views::split(std::string_view(search_path), k_path_separator)) {
+    for(const auto& path: std::views::split(std::string_view(search_path), k_path_separator)) {
         if(path.empty()) {
             continue;
         }
