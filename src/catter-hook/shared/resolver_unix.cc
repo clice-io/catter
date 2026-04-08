@@ -71,10 +71,9 @@ std::expected<fs::path, int> resolve_from_search_path(std::string_view file,
     size_t start = 0;
     while(start <= search_path.size()) {
         auto separator = search_path.find(':', start);
-        auto entry = search_path.substr(start,
-                                        separator == std::string_view::npos ? search_path.size() -
-                                                                                  start
-                                                                            : separator - start);
+        auto entry = search_path.substr(
+            start,
+            separator == std::string_view::npos ? search_path.size() - start : separator - start);
         if(!entry.empty() && (file.size() + entry.size() + 2) <= PATH_MAX) {
             fs::path candidate(entry.begin(), entry.end());
             candidate /= file;

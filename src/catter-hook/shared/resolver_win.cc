@@ -223,8 +223,8 @@ void push_if_non_empty(std::vector<std::basic_string<char_t>>& out,
 }
 
 template <WindowsChar char_t>
-std::basic_string<char_t> join_search_paths(
-    const std::vector<std::basic_string<char_t>>& search_paths) {
+std::basic_string<char_t>
+    join_search_paths(const std::vector<std::basic_string<char_t>>& search_paths) {
     std::basic_string<char_t> merged;
     for(const auto& path: search_paths) {
         if(path.empty()) {
@@ -249,34 +249,23 @@ std::expected<std::basic_string<char_t>, DWORD>
     auto merged_paths = join_search_paths(search_paths);
     auto token_str = std::basic_string<char_t>(token);
     constexpr auto exe_suffix = std::is_same_v<char_t, char> ? ".exe" : L".exe";
-    std::basic_string<char_t> resolved =
-        call_winapi_with_growing_buffer<char_t, DWORD>(MAX_PATH,
-                                                       [&](char_t* buffer, DWORD size) {
-                                                           return fix_search_path<char_t>(
-                                                               merged_paths.empty()
-                                                                   ? nullptr
-                                                                   : merged_paths.c_str(),
-                                                               token_str.c_str(),
-                                                               exe_suffix,
-                                                               size,
-                                                               buffer,
-                                                               nullptr);
-                                                       },
-                                                       [](DWORD result,
-                                                          size_t buffer_size)
-                                                           -> WinApiBufferDecision<char_t> {
-                                                           if(static_cast<size_t>(result) <
-                                                              buffer_size) {
-                                                               return WinApiBufferDecision<char_t>{
-                                                                   .done = true,
-                                                                   .output_size =
-                                                                       static_cast<size_t>(result)};
-                                                           }
-                                                           return WinApiBufferDecision<char_t>{
-                                                               .next_size =
-                                                                   static_cast<size_t>(result) +
-                                                                   1};
-                                                       });
+    std::basic_string<char_t> resolved = call_winapi_with_growing_buffer<char_t, DWORD>(
+        MAX_PATH,
+        [&](char_t* buffer, DWORD size) {
+            return fix_search_path<char_t>(merged_paths.empty() ? nullptr : merged_paths.c_str(),
+                                           token_str.c_str(),
+                                           exe_suffix,
+                                           size,
+                                           buffer,
+                                           nullptr);
+        },
+        [](DWORD result, size_t buffer_size) -> WinApiBufferDecision<char_t> {
+            if(static_cast<size_t>(result) < buffer_size) {
+                return WinApiBufferDecision<char_t>{.done = true,
+                                                    .output_size = static_cast<size_t>(result)};
+            }
+            return WinApiBufferDecision<char_t>{.next_size = static_cast<size_t>(result) + 1};
+        });
     if(!resolved.empty()) {
         return resolved;
     }
@@ -332,10 +321,9 @@ std::basic_string<char_t> extract_command_line_token(std::basic_string_view<char
     constexpr char_t quote_char = char_t('"');
     constexpr char_t space_char = char_t(' ');
 
-    auto first_non_space =
-        std::find_if_not(command_line.begin(),
-                         command_line.end(),
-                         [](char_t ch) { return ch == space_char; });
+    auto first_non_space = std::find_if_not(command_line.begin(),
+                                            command_line.end(),
+                                            [](char_t ch) { return ch == space_char; });
     std::basic_string_view<char_t> view(first_non_space, command_line.end());
     if(view.empty()) {
         return {};
@@ -367,9 +355,8 @@ WindowsResolver<char_t> WindowsResolver<char_t>::from_current_process() {
         .module_directory = get_module_directory<char_t>(nullptr),
         .system_directory = get_system_directory_dynamic<char_t>(),
         .windows_directory = windows_directory,
-        .path_entries =
-            split_path_var<char_t>(get_environment_variable_dynamic<char_t>(path_env_name<char_t>.data(),
-                                                                            4096)),
+        .path_entries = split_path_var<char_t>(
+            get_environment_variable_dynamic<char_t>(path_env_name<char_t>.data(), 4096)),
     });
 }
 
@@ -391,9 +378,8 @@ std::expected<std::basic_string<char_t>, DWORD> WindowsResolver<char_t>::resolve
     push_if_non_empty(search_paths, context_.module_directory);
     push_if_non_empty(search_paths, context_.current_directory);
     push_if_non_empty(search_paths, context_.system_directory);
-    push_if_non_empty(
-        search_paths,
-        append_child_directory(context_.windows_directory, system16_name<char_t>));
+    push_if_non_empty(search_paths,
+                      append_child_directory(context_.windows_directory, system16_name<char_t>));
     push_if_non_empty(search_paths, context_.windows_directory);
     for(const auto& path_entry: context_.path_entries) {
         push_if_non_empty(search_paths, path_entry);
