@@ -2,38 +2,32 @@
 
 #include <filesystem>
 #include <vector>
-#include <windows.h>
+
+#include "shared/winapi.h"
 
 namespace catter::win {
 
-// Anonymous namespace for internal linkage
-// to avoid symbol conflicts.
-namespace {
 constexpr static char EXE_NAME[] = "catter-proxy.exe";
 constexpr static char DLL_NAME[] = "catter-hook-win64.dll";
-
-template <typename char_t>
-concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
 
 template <CharT char_t>
 constexpr char_t ENV_VAR_IPC_ID[] = {};
 
 template <>
-constexpr char ENV_VAR_IPC_ID<char>[] = "CATTER_IPC_ID";
+inline constexpr char ENV_VAR_IPC_ID<char>[] = "CATTER_IPC_ID";
 
 template <>
-constexpr wchar_t ENV_VAR_IPC_ID<wchar_t>[] = L"CATTER_IPC_ID";
+inline constexpr wchar_t ENV_VAR_IPC_ID<wchar_t>[] = L"CATTER_IPC_ID";
 
 template <CharT char_t>
 constexpr char_t ENV_VAR_PROXY_PATH[] = {};
 
 template <>
-constexpr char ENV_VAR_PROXY_PATH<char>[] = "CATTER_PROXY_PATH";
+inline constexpr char ENV_VAR_PROXY_PATH<char>[] = "CATTER_PROXY_PATH";
 
 template <>
-constexpr wchar_t ENV_VAR_PROXY_PATH<wchar_t>[] = L"CATTER_PROXY_PATH";
+inline constexpr wchar_t ENV_VAR_PROXY_PATH<wchar_t>[] = L"CATTER_PROXY_PATH";
 
 using ipc_id_t = int64_t;
 
-}  // namespace
 }  // namespace catter::win

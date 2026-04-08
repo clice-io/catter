@@ -155,8 +155,16 @@ target("catter")
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
-
-
+target("hook-resolver")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_includedirs("src/catter-hook/", {public = true})
+    if is_plat("windows") then
+        add_syslinks("user32", "advapi32")
+        add_files("src/catter-hook/shared/resolver_win.cc")
+    else
+        add_files("src/catter-hook/shared/resolver_unix.cc")
+    end
 
 target("catter-hook-win64")
     set_default(is_plat("windows"))
@@ -164,7 +172,6 @@ target("catter-hook-win64")
     add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
-    add_syslinks("user32", "advapi32")
     add_packages("minhook")
     add_deps("hook-resolver")
     local toolchain = get_config("toolchain")
@@ -237,15 +244,7 @@ target("catter-proxy")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
 
-target("hook-resolver")
-    set_kind("static")
-    add_local_prefix_includedirs()
-    add_includedirs("src/catter-hook/", {public = true})
-    if is_plat("windows") then
-        add_files("src/catter-hook/shared/resolver_win.cc")
-    else
-        add_files("src/catter-hook/shared/resolver_unix.cc")
-    end
+
 
 
 rule("ut-base")

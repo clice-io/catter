@@ -9,11 +9,10 @@
 #include <utility>
 #include <vector>
 
-#include "../win/payload/winapi.h"
+#include "winapi.h"
 
 namespace catter::hook::shared::resolver {
-using namespace catter::win::payload;
-
+using namespace catter::win;
 namespace {
 namespace detail {
 
