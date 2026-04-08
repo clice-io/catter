@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <string_view>
 
+#include "environment.h"
 #include "shared/resolver.h"
 
 namespace catter {
@@ -32,7 +33,8 @@ struct Resolver {
     [[nodiscard]]
     virtual std::expected<std::filesystem::path, int> from_path(std::string_view file,
                                                                 const char** envp) const {
-        return hook::shared::resolver::resolve_from_path_env(file, envp);
+        return hook::shared::resolver::resolve_from_path_env(file,
+                                                             env::get_env_value(envp, "PATH"));
     }
 
     [[nodiscard]]

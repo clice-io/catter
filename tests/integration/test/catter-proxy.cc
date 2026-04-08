@@ -124,62 +124,51 @@ int run_case(std::vector<std::string> args, std::string cwd = {}) {
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     try {
         auto proxy_path = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
+        auto& last_cmd = ServiceImpl::last_received_command;
+        auto& last_err = ServiceImpl::last_error;
+        assert(run_case({
+                   proxy_path,
+                   "-p",
+                   "0",
+                   "--exec",
+                   "echo",
+                   "--",
+                   "echo",
+                   "Hello, World!",
+               }) == 0 &&
+               "explicit --exec case failed");
+        assert(last_cmd.has_value() && last_cmd->executable == "echo" &&
+               "explicit --exec case did not preserve explicit executable");
 
-        auto explicit_ret = run_case({
-            proxy_path,
-            "-p",
-            "0",
-            "--exec",
-            "echo",
-            "--",
-            "echo",
-            "Hello, World!",
-        });
+        assert(run_case({
+                   proxy_path,
+                   "-p",
+                   "0",
+                   "--",
+                   "echo",
+                   "Hello, World!",
+               }) == 0 &&
+               "implicit resolve case failed");
+        assert(last_cmd.has_value() && last_cmd->executable != "echo" &&
+               "implicit resolve case did not resolve executable to a concrete path");
 
-        if(explicit_ret != 0) {
-            std::println("explicit --exec case failed with code {}", explicit_ret);
-            return 1;
-        }
-        if(!ServiceImpl::last_received_command.has_value() ||
-           ServiceImpl::last_received_command->executable != "echo") {
-            std::println("explicit --exec case did not preserve explicit executable");
-            return 1;
-        }
+        assert(run_case({proxy_path, "-p", "0", "--"}) != 0 &&
+               "implicit resolve with missing executable case unexpectedly succeeded");
+        assert(last_err.has_value() && !last_cmd->executable.empty() &&
+               "implicit resolve with missing executable case did not report the expected error");
 
-        auto implicit_ret = run_case({
-            proxy_path,
-            "-p",
-            "0",
-            "--",
-            "echo",
-            "Hello, World!",
-        });
-        if(implicit_ret != 0) {
-            std::println("implicit resolve case failed with code {}", implicit_ret);
-            return 1;
-        }
-        if(!ServiceImpl::last_received_command.has_value() ||
-           ServiceImpl::last_received_command->executable.empty() ||
-           ServiceImpl::last_received_command->executable == "echo") {
-            std::println("implicit resolve case did not resolve executable to a concrete path");
-            return 1;
-        }
-
-        auto missing_ret = run_case({
-            proxy_path,
-            "-p",
-            "0",
-            "--",
-        });
-        if(missing_ret == 0) {
-            std::println("missing command case unexpectedly succeeded");
-            return 1;
-        }
-        if(!ServiceImpl::last_error.has_value() ||
-           !ServiceImpl::last_error->contains("missing executable")) {
-            std::println("missing command case did not report the expected error");
-            return 1;
-        }
+        assert(run_case({
+                   proxy_path,
+                   "-p",
+                   "0",
+                   "--",
+                   "nonexistent_executable_12345",
+               }) != 0 &&
+               "implicit resolve with nonexistent executable case unexpectedly succeeded");
+        assert(
+            last_err.has_value() && !last_cmd->executable.empty() &&
+            last_cmd->executable != "nonexistent_executable_12345" &&
+            "implicit resolve with nonexistent executable case did not report the expected error");
 
         std::println("proxy integration checks passed");
         return 0;

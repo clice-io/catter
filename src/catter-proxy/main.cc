@@ -27,29 +27,24 @@ using namespace catter;
 namespace {
 using catter::data::action;
 
-std::string resolve_executable(const catter::proxy::ProxyOption& opt) {
-    if(opt.exec.has_value()) {
-        return *opt.exec;
-    }
-
-    if(!opt.args.has_value() || opt.args->empty()) {
-        throw std::runtime_error("missing executable: provide --exec or place a command after --");
-    }
+std::string resolve_executable(std::string_view exe, const std::vector<std::string>& env) {
 
 #ifdef CATTER_WINDOWS
-    auto resolved =
-        catter::hook::shared::resolver::resolve_command_line_token<char>(opt.args->front());
-    if(resolved.empty() || resolved == opt.args->front()) {
-        throw std::runtime_error(
-            std::format("failed to resolve executable: {}", opt.args->front()));
-    }
-    return resolved;
+    return catter::hook::shared::resolver::resolve_command_line_token<char>(exe);
 #else
-    auto resolved =
-        catter::hook::shared::resolver::resolve_from_path_env(opt.args->front(), nullptr);
+    std::string path_env;
+    for(const auto& env_var: env) {
+        if(env_var.starts_with("PATH=")) {
+            path_env = env_var.substr(5);
+            break;
+        }
+    }
+    if(path_env.empty()) {
+        throw std::runtime_error("PATH environment variable not found");
+    }
+    auto resolved = catter::hook::shared::resolver::resolve_from_path_env(exe, path_env.c_str());
     if(!resolved.has_value()) {
-        throw std::runtime_error(
-            std::format("failed to resolve executable: {}", opt.args->front()));
+        throw std::runtime_error(std::format("failed to resolve executable: {}", exe));
     }
     return resolved->string();
 #endif
@@ -102,10 +97,15 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 
         data::command cmd = {
             .cwd = std::filesystem::current_path().string(),
-            .executable = resolve_executable(opt),
             .args = *opt.args,
             .env = catter::util::get_environment(),
         };
+
+        if(opt.exec.has_value()) {
+            cmd.executable = *opt.exec;
+        } else {
+            cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
+        }
 
         auto id = proxy::ipc::create(*opt.parent_id);
 

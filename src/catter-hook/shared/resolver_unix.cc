@@ -1,3 +1,4 @@
+#include <linux/limits.h>
 #ifndef CATTER_WINDOWS
 
 #include "shared/resolver.h"
@@ -7,6 +8,7 @@
 #include <filesystem>
 #include <ranges>
 #include <string>
+
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -39,9 +41,11 @@ const char* get_env_value(const char** envp, std::string_view key) {
 
 }  // namespace
 
-std::expected<std::filesystem::path, int> resolve_path_like(std::string_view file) {
-    std::filesystem::path path(file);
-    if(!std::filesystem::exists(path) || !std::filesystem::is_regular_file(path)) {
+namespace fs = std::filesystem;
+
+std::expected<fs::path, int> resolve_path_like(std::string_view file) {
+    fs::path path(file);
+    if(!fs::exists(path) || !fs::is_regular_file(path)) {
         return std::unexpected(ENOENT);
     }
     if(::access(path.c_str(), X_OK) == 0) {
@@ -50,51 +54,54 @@ std::expected<std::filesystem::path, int> resolve_path_like(std::string_view fil
     return std::unexpected(errno);
 }
 
-std::expected<std::filesystem::path, int> resolve_from_search_path(std::string_view file,
-                                                                   const char* search_path) {
+std::expected<fs::path, int> resolve_from_search_path(std::string_view file,
+                                                      const char* search_path) {
     if(contains_dir_separator(file)) {
+        // the file contains a dir separator, it is treated as path.
         return resolve_path_like(file);
-    }
-    if(search_path == nullptr) {
+    } else {
+        // otherwise use the given search path to locate the executable.
+        for(const auto& path: std::views::split(std::string_view(search_path), k_path_separator)) {
+            // ignore empty entries
+            if(path.empty()) {
+                continue;
+            }
+            // check if it's possible to assemble a PATH
+            if((file.size() + path.size() + 2) > PATH_MAX) {
+                continue;
+            }
+            // create a path
+            fs::path candidate(path.begin(), path.end());
+            candidate /= file;
+            // check if it's okay to execute.
+            if(auto result = resolve_path_like(candidate.c_str()); result.has_value()) {
+                return result;
+            }
+        }
+        // if all attempt were failing, then quit with a failure.
         return std::unexpected(ENOENT);
     }
-
-    for(const auto& path: std::views::split(std::string_view(search_path), k_path_separator)) {
-        if(path.empty()) {
-            continue;
-        }
-        std::filesystem::path candidate(path.begin(), path.end());
-        candidate /= file;
-        if(auto resolved = resolve_path_like(candidate.string()); resolved.has_value()) {
-            return resolved;
-        }
-    }
-    return std::unexpected(ENOENT);
 }
 
-std::expected<std::filesystem::path, int> resolve_from_path_env(std::string_view file,
-                                                                const char** envp) {
+std::expected<fs::path, int> resolve_from_path_env(std::string_view file, const char* path_env) {
     if(contains_dir_separator(file)) {
+        // the file contains a dir separator, it is treated as path.
         return resolve_path_like(file);
-    }
-
-    if(const char* path_env = get_env_value(envp, "PATH"); path_env != nullptr) {
-        return resolve_from_search_path(file, path_env);
-    }
-
-    if(const char* path_env = std::getenv("PATH"); path_env != nullptr) {
-        return resolve_from_search_path(file, path_env);
-    }
-
-    const size_t search_path_length = ::confstr(_CS_PATH, nullptr, 0);
-    if(search_path_length != 0) {
-        std::string search_path(search_path_length - 1, '\0');
-        if(::confstr(_CS_PATH, search_path.data(), search_path_length) != 0) {
-            return resolve_from_search_path(file, search_path.data());
+    } else {
+        // otherwise use the PATH variable to locate the executable.
+        if(path_env != nullptr) {
+            return resolve_from_search_path(file, path_env);
         }
+        // fall back to `confstr` PATH value if the environment has no value.
+        const size_t search_path_length = ::confstr(_CS_PATH, nullptr, 0);
+        if(search_path_length != 0) {
+            std::string search_path(search_path_length - 1, '\0');
+            if(::confstr(_CS_PATH, search_path.data(), search_path_length) != 0) {
+                return resolve_from_search_path(file, search_path.data());
+            }
+        }
+        return std::unexpected(ENOENT);
     }
-
-    return std::unexpected(ENOENT);
 }
 
 }  // namespace catter::hook::shared::resolver

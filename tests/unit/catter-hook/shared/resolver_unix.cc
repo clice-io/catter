@@ -41,9 +41,8 @@ TEST_CASE(resolve_from_path_env_uses_environment_PATH) {
     manager.create("./path-tool", ec);
     EXPECT_TRUE(!ec);
 
-    auto path = std::format("PATH={}", fs::absolute(manager.root).string());
-    const char* envp[] = {path.c_str(), nullptr};
-    auto resolved = resolver::resolve_from_path_env("path-tool", envp);
+    auto path = fs::absolute(manager.root).string();
+    auto resolved = resolver::resolve_from_path_env("path-tool", path.c_str());
     EXPECT_TRUE(resolved.has_value());
     EXPECT_TRUE(resolved.value() == fs::absolute(manager.root / "path-tool"));
 };

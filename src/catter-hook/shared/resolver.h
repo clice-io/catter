@@ -27,7 +27,7 @@ std::expected<std::filesystem::path, int> resolve_from_search_path(std::string_v
 
 [[nodiscard]]
 std::expected<std::filesystem::path, int> resolve_from_path_env(std::string_view file,
-                                                                const char** envp);
+                                                                const char* path_env);
 
 #endif
 
