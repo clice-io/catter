@@ -124,22 +124,6 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
     return AnonymousPipe{.read = win::Handle(read), .write = win::Handle(write)};
 }
 
-eventide::pipe open_capture_pipe(win::Handle pipe, std::string_view name) {
-    auto fd = uv_open_osfhandle(pipe.get());
-    if(fd < 0) {
-        throw std::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
-    }
-
-    auto opened = eventide::pipe::open(fd, eventide::pipe::options{}, catter::default_loop());
-    if(!opened) {
-        throw std::runtime_error(
-            std::format("{} pipe open failed: {}", name, opened.error().message()));
-    }
-    pipe.release();  // Ownership transferred to eventide
-
-    return std::move(*opened);
-}
-
 eventide::pipe open_capture_pipe(win::Handle pipe,
                                  std::string_view name,
                                  eventide::event_loop& loop) {
