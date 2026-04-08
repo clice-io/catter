@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <list>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -49,6 +50,7 @@ public:
 
     data::action make_decision(data::command cmd) override {
         this->make_decision_called = true;
+        last_command = cmd;
         std::string args_str;
         for(const auto& arg: cmd.args) {
             args_str.append(arg).append(" ");
@@ -75,6 +77,7 @@ public:
 
     void report_error(data::ipcid_t parent_id, std::string error_msg) override {
         this->error_reported = true;
+        last_error = error_msg;
         std::println("[{}] Error reported for command with parent id {} : {}",
                      this->id,
                      parent_id,
@@ -93,29 +96,86 @@ public:
     bool finish_called = false;
     bool error_reported = false;
     data::ipcid_t id;
+    inline static std::optional<data::command> last_command = std::nullopt;
+    inline static std::optional<std::string> last_error = std::nullopt;
 };
+
+int run_case(Session::ProcessLaunchPlan launch_plan) {
+    ServiceImpl::last_command.reset();
+    ServiceImpl::last_error.reset();
+
+    Session session;
+    auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
+    return session.run(std::move(session_plan));
+}
 
 int main(int argc, char* argv[]) {
     // catter::log::mute_logger();
     try {
-        Session session;
-        Session::ProcessLaunchPlan launch_plan;
-        launch_plan.executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-        launch_plan.args = {
-            launch_plan.executable,
-            "-p",
-            "0",
-            "--exec",
-            "echo",
-            "--",
-            "echo",
-            "Hello, World!",
-        };
+        auto proxy_executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
 
-        std::println("Session started.");
-        auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
-        auto ret = session.run(std::move(session_plan));
-        std::println("Session finished with code: {}", ret);
+        Session::ProcessLaunchPlan explicit_plan{
+            .executable = proxy_executable,
+            .args =
+                {
+                       proxy_executable, "-p",
+                       "0", "--exec",
+#ifdef CATTER_WINDOWS
+                       "cmd.exe", "--",
+                       "cmd.exe", "/c",
+                       "echo Hello, World!",
+#else
+                    "/bin/echo",
+                    "--",
+                    "/bin/echo",
+                    "Hello, World!",
+#endif
+                       },
+        };
+        auto ret = run_case(std::move(explicit_plan));
+        if(ret != 0 || !ServiceImpl::last_command.has_value()) {
+            return 1;
+        }
+
+        Session::ProcessLaunchPlan implicit_plan{
+            .executable = proxy_executable,
+            .args =
+                {
+                       proxy_executable, "-p",
+                       "0", "--",
+#ifdef CATTER_WINDOWS
+                       "cmd", "/c",
+                       "echo Hello, World!",
+#else
+                    "echo",
+                    "Hello, World!",
+#endif
+                       },
+        };
+        ret = run_case(std::move(implicit_plan));
+        if(ret != 0 || !ServiceImpl::last_command.has_value()) {
+            return 1;
+        }
+#ifdef CATTER_WINDOWS
+        if(ServiceImpl::last_command->executable.find("cmd") == std::string::npos) {
+            return 1;
+        }
+#else
+        if(ServiceImpl::last_command->executable != "/usr/bin/echo" &&
+           ServiceImpl::last_command->executable != "/bin/echo") {
+            return 1;
+        }
+#endif
+
+        Session::ProcessLaunchPlan error_plan{
+            .executable = proxy_executable,
+            .args = {proxy_executable, "-p", "0", "--"},
+        };
+        ret = run_case(std::move(error_plan));
+        if(ret == 0 || !ServiceImpl::last_error.has_value()) {
+            return 1;
+        }
+
         return 0;
     } catch(const std::exception& ex) {
         std::println("Fatal error: {}", ex.what());

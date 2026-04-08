@@ -92,7 +92,10 @@ private:
     const js::CatterRuntime* runtime = nullptr;
 };
 
-int64_t inject(const js::CatterConfig& config) {
+int64_t inject(const js::CatterConfig& config, const std::filesystem::path& working_dir) {
+    if(config.buildSystemCommand.empty()) {
+        throw std::runtime_error("Build system command is empty.");
+    }
 
     auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
     Session::ProcessLaunchPlan launch_plan{
@@ -101,8 +104,8 @@ int64_t inject(const js::CatterConfig& config) {
             {
                    proxy_path.string(),
                    "-p", "0",
-                   "--exec", config.buildSystemCommand.front(),
                    "--", },
+        .cwd = std::filesystem::absolute(working_dir).string(),
     };
     append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 
@@ -113,10 +116,12 @@ int64_t inject(const js::CatterConfig& config) {
     return session.run(std::move(session_plan));
 }
 
-int64_t execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
+int64_t execute_service(ipc::ServiceMode mode,
+                        const js::CatterConfig& config,
+                        const std::filesystem::path& working_dir) {
     switch(mode) {
         case ipc::ServiceMode::INJECT: {
-            return inject(config);
+            return inject(config, working_dir);
         }
         default: {
             throw std::runtime_error(
@@ -148,7 +153,7 @@ void run(const core::CatterConfig& config) {
     }
 
     js::on_finish(js::ProcessResult{
-        .code = execute_service(config.mode->mode, js_config),
+        .code = execute_service(config.mode->mode, js_config, config.working_dir->path),
     });
 }
 

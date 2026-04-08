@@ -1,65 +1,39 @@
-#include <algorithm>
 #include <string>
 #include <string_view>
 
 #include "win/env.h"
 
-#include "resolver.h"
+#include "shared/resolver.h"
 #include "util.h"
 
 namespace catter::win::payload {
 
 namespace {
-
-template <CharT char_t>
-std::basic_string<char_t> extract_first_token(std::basic_string_view<char_t> command_line) {
-    constexpr char_t quote_char = char_t('"');
-    constexpr char_t space_char = char_t(' ');
-
-    auto trimmed = [](std::basic_string_view<char_t> value) {
-        auto first_non_space =
-            std::find_if_not(value.begin(), value.end(), [](char_t c) { return c == space_char; });
-        return std::basic_string<char_t>(first_non_space, value.end());
-    }(command_line);
-
-    std::basic_string_view<char_t> view(trimmed);
-    if(view.empty()) {
-        return {};
-    }
-
-    if(view.front() == quote_char) {
-        auto closing_quote = view.find(quote_char, 1);
-        if(closing_quote == std::basic_string_view<char_t>::npos) {
-            return std::basic_string<char_t>(view.substr(1));
-        }
-        return std::basic_string<char_t>(view.substr(1, closing_quote - 1));
-    }
-
-    auto first_space =
-        std::find_if(view.begin(), view.end(), [](char_t c) { return c == space_char; });
-    return std::basic_string<char_t>(view.begin(), first_space);
-}
-
 template <CharT char_t>
 std::basic_string<char_t> resolve_abspath_impl(const char_t* application_name,
                                                const char_t* command_line) {
+    auto resolver = hook::shared::WindowsResolver<char_t>::from_current_process();
     std::basic_string<char_t> raw_app_name;
 
-    // CreateProcess takes lpApplicationName first; when absent, the executable
-    // is parsed from the first token in lpCommandLine.
     if(application_name != nullptr && application_name[0] != char_t('\0')) {
         raw_app_name.assign(application_name);
-        return create_app_name_resolver<char_t>().resolve(raw_app_name);
+        if(auto resolved = resolver.resolve_application_name(raw_app_name); resolved.has_value()) {
+            return std::move(*resolved);
+        }
+        return raw_app_name;
     }
 
-    raw_app_name = extract_first_token<char_t>(command_line == nullptr
-                                                   ? std::basic_string_view<char_t>{}
-                                                   : std::basic_string_view<char_t>{command_line});
+    raw_app_name = hook::shared::extract_command_line_token<char_t>(
+        command_line == nullptr ? std::basic_string_view<char_t>{}
+                                : std::basic_string_view<char_t>{command_line});
     if(raw_app_name.empty()) {
         return {};
     }
 
-    return create_command_line_resolver<char_t>().resolve(raw_app_name);
+    if(auto resolved = resolver.resolve_command_line_token(raw_app_name); resolved.has_value()) {
+        return std::move(*resolved);
+    }
+    return raw_app_name;
 }
 
 }  // namespace

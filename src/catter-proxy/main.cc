@@ -16,6 +16,7 @@
 
 #include "opt/proxy/option.h"
 #include "config/catter-proxy.h"
+#include "shared/resolver.h"
 #include "util/log.h"
 #include "util/eventide.h"
 #include "util/crossplat.h"
@@ -25,6 +26,58 @@ using namespace catter;
 
 namespace {
 using catter::data::action;
+
+#ifndef CATTER_WINDOWS
+const char* get_env_value(const std::vector<std::string>& env, std::string_view key) {
+    for(const auto& entry: env) {
+        auto separator = entry.find('=');
+        if(separator == key.size() && entry.substr(0, separator) == key) {
+            return entry.c_str() + separator + 1;
+        }
+    }
+    return nullptr;
+}
+#endif
+
+std::string resolve_executable(const catter::proxy::ProxyOption& opt,
+                               const std::vector<std::string>& env) {
+    if(opt.exec.has_value()) {
+        return *opt.exec;
+    }
+
+    if(!opt.args.has_value() || opt.args->empty()) {
+        throw std::runtime_error(
+            "Missing executable: provide --exec or at least one argument after '--'.");
+    }
+
+    auto executable_token = opt.args->front();
+
+#ifdef CATTER_WINDOWS
+    auto resolved = catter::hook::shared::WindowsResolver<char>::from_current_process()
+                        .resolve_command_line_token(executable_token);
+    if(!resolved.has_value()) {
+        throw std::runtime_error(std::format(
+            "Failed to resolve executable token '{}': {}",
+            executable_token,
+            std::system_error(static_cast<int>(resolved.error()), std::system_category()).what()));
+    }
+    return std::move(*resolved);
+#else
+    const char* path_value = get_env_value(env, "PATH");
+    std::expected<std::filesystem::path, int> resolved =
+        executable_token.contains('/') ? catter::hook::shared::resolve_path_like(executable_token)
+        : path_value != nullptr
+            ? catter::hook::shared::resolve_from_search_path(executable_token, path_value)
+            : catter::hook::shared::resolve_from_environment(executable_token, nullptr);
+    if(!resolved.has_value()) {
+        throw std::runtime_error(
+            std::format("Failed to resolve executable token '{}': {}",
+                        executable_token,
+                        std::system_error(resolved.error(), std::system_category()).what()));
+    }
+    return resolved->string();
+#endif
+}
 
 data::process_result run(data::action act, data::ipcid_t id) {
     using catter::data::action;
@@ -58,15 +111,21 @@ data::process_result run(data::action act, data::ipcid_t id) {
 
 int proxy_main(const catter::proxy::ProxyOption& opt) {
     try {
+        if(opt.error_msg.has_value()) {
+            proxy::ipc::report_error(*opt.parent_id, *opt.error_msg);
+            return -1;
+        }
+
         // This function is for the hook to call, it will never be called in this file.
         // The implementation is in hook.cc
         proxy::ipc::set_service_mode(data::ServiceMode::INJECT);
 
+        auto env = catter::util::get_environment();
         data::command cmd = {
             .cwd = std::filesystem::current_path().string(),
-            .executable = *opt.exec,
-            .args = *opt.args,
-            .env = catter::util::get_environment(),
+            .executable = resolve_executable(opt, env),
+            .args = opt.args.value_or(std::vector<std::string>{}),
+            .env = std::move(env),
         };
 
         auto id = proxy::ipc::create(*opt.parent_id);
@@ -80,10 +139,12 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
         return static_cast<int>(result.code);
     } catch(const std::exception& e) {
         std::string args;
-        args.reserve(opt.args->size() * 5);
-        for(int i = 0; i < opt.args->size(); ++i) {
-            args += ' ';
-            args += (*opt.args)[i];
+        if(opt.args.has_value()) {
+            args.reserve(opt.args->size() * 5);
+            for(int i = 0; i < opt.args->size(); ++i) {
+                args += ' ';
+                args += (*opt.args)[i];
+            }
         }
 
         LOG_CRITICAL("Exception in catter-proxy: {}. Args: {}", e.what(), args);
