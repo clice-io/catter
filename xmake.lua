@@ -309,7 +309,6 @@ target("ut-catter-hook-win64")
     add_rules("ut-base")
 
     add_includedirs("src/catter-hook/")
-    add_files("src/catter-hook/win/payload/resolver.cc")
     add_files("src/catter-hook/win/payload/util.cc")
     add_files("tests/unit/catter-hook/win/**.cc")
     add_files("tests/unit/catter-hook/shared/**.cc")

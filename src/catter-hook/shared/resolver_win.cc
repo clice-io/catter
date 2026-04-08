@@ -13,6 +13,7 @@
 
 namespace catter::hook::shared::resolver {
 using namespace catter::win;
+
 namespace {
 namespace detail {
 

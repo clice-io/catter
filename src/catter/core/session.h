@@ -41,9 +41,9 @@ public:
         eventide::function<eventide::task<void>(data::ipcid_t, eventide::pipe&&)>;
 
     struct ProcessLaunchPlan {
+        std::string cwd;
         std::string executable;
         std::vector<std::string> args;
-        std::string cwd;
     };
 
     struct RunPlan {

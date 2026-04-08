@@ -99,13 +99,13 @@ int64_t inject(const js::CatterConfig& config) {
 
     auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
     Session::ProcessLaunchPlan launch_plan{
+        .cwd = config.buildSystemCommandCwd,
         .executable = proxy_path.string(),
         .args =
             {
                    proxy_path.string(),
                    "-p", "0",
                    "--", },
-        .cwd = config.buildSystemCommandCwd,
     };
     append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 
