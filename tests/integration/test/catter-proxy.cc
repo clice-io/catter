@@ -110,10 +110,11 @@ namespace {
 int run_case(std::vector<std::string> args, std::string cwd = {}) {
     ServiceImpl::reset_observed_state();
     Session session;
-    Session::ProcessLaunchPlan launch_plan;
-    launch_plan.executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-    launch_plan.cwd = std::move(cwd);
-    launch_plan.args = std::move(args);
+    Session::ProcessLaunchPlan launch_plan{
+        .cwd = std::move(cwd),
+        .executable = (util::get_catter_root_path() / config::proxy::EXE_NAME).string(),
+        .args = std::move(args),
+    };
     auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
     return static_cast<int>(session.run(std::move(session_plan)));
 }

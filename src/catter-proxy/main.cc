@@ -118,12 +118,13 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
         return static_cast<int>(result.code);
     } catch(const std::exception& e) {
         std::string args;
-        args.reserve(opt.args->size() * 5);
-        for(int i = 0; i < opt.args->size(); ++i) {
-            args += ' ';
-            args += (*opt.args)[i];
+        if(opt.args.has_value()) {
+            args.reserve(opt.args->size() * 5);
+            for(int i = 0; i < opt.args->size(); ++i) {
+                args += ' ';
+                args += (*opt.args)[i];
+            }
         }
-
         LOG_CRITICAL("Exception in catter-proxy: {}. Args: {}", e.what(), args);
         proxy::ipc::report_error(*opt.parent_id, e.what());
         return -1;
