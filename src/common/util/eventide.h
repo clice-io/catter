@@ -26,19 +26,6 @@ auto wait(Task&& task) {
     return task.result();
 }
 
-inline eventide::task<int64_t> spawn(const eventide::process::options& opts) {
-    auto spawn_ret = eventide::process::spawn(opts, default_loop());
-    if(!spawn_ret) {
-        throw std::runtime_error(
-            std::format("process spawn failed: {}", spawn_ret.error().message()));
-    }
-    auto ret = co_await spawn_ret->proc.wait();
-    if(!ret) {
-        throw std::runtime_error(std::format("process wait failed: {}", ret.error().message()));
-    }
-    co_return ret->status;
-}
-
 struct process_info {
     eventide::task<int64_t, eventide::error> wait_task;
     eventide::pipe stdout_pipe;
