@@ -5,8 +5,11 @@
 #include <stdexcept>
 #include <string>
 
+#include <eventide/async/io/loop.h>
+
 #include "session.h"
 
+#include "util/guard.h"
 #include "util/log.h"
 #include "util/crossplat.h"
 #include "util/eventide.h"
@@ -55,7 +58,7 @@ eventide::task<void> Session::loop(ClientAcceptor acceptor) {
             break;
         }
         linked_clients.push_back(acceptor(i, std::move(*client)));
-        default_loop().schedule(linked_clients.back());
+        eventide::event_loop::current().schedule(linked_clients.back());
         LOG_INFO("Accepted new client with id: {}", i);
     }
 
@@ -75,6 +78,18 @@ eventide::task<void> Session::loop(ClientAcceptor acceptor) {
 }
 
 eventide::task<int64_t> Session::spawn(std::string executable, std::vector<std::string> args) {
+    // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
+    // prevent the session from running
+    auto guard = util::make_guard([&]() noexcept {
+        if(this->acc) {
+            auto err = this->acc->stop();
+            this->acc.reset();
+            if(err.has_error()) {
+                LOG_ERROR("Failed to stop acceptor: {}", err.message());
+            }
+        }
+    });
+
     eventide::process::options opts{
         .file = executable,
         .args = args,
@@ -91,14 +106,19 @@ eventide::task<int64_t> Session::spawn(std::string executable, std::vector<std::
 
     LOG_INFO("Spawning process: \n    exe = {} \n    args = {}", executable, args_str);
 
-    auto ret = co_await catter::spawn(opts);
-
-    auto error = this->acc->stop();  // Stop accepting new clients after spawning the process
-    if(error) {
-        throw std::runtime_error(std::format("Failed to stop acceptor: {}", error.message()));
+    auto spawn_ret = eventide::process::spawn(opts, eventide::event_loop::current());
+    if(!spawn_ret) {
+        throw std::runtime_error(
+            std::format("process spawn failed: {}", spawn_ret.error().message()));
     }
 
-    this->acc.reset();  // Ensure acceptor is destroyed after stopping
+    auto exit_status = co_await spawn_ret->proc.wait();
+    if(exit_status.has_error()) {
+        throw std::runtime_error(
+            std::format("process wait failed: {}", exit_status.error().message()));
+    }
+
+    auto [ret, signal] = *exit_status;
     co_return ret;
 }
 
