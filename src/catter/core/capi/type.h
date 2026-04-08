@@ -351,6 +351,7 @@ public:
     std::string scriptPath;
     std::vector<std::string> scriptArgs;
     std::vector<std::string> buildSystemCommand;
+    std::string buildSystemCommandCwd;
     CatterRuntime runtime;
     CatterOptions options;
     bool execute;

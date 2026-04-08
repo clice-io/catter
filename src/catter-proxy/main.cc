@@ -11,6 +11,7 @@
 #include <eventide/async/async.h>
 #include <eventide/deco/deco.h>
 
+#include "shared/resolver.h"
 #include "ipc.h"
 #include "hook.h"
 
@@ -25,6 +26,32 @@ using namespace catter;
 
 namespace {
 using catter::data::action;
+
+std::string resolve_executable(const catter::proxy::ProxyOption& opt) {
+    if(opt.exec.has_value()) {
+        return *opt.exec;
+    }
+
+    if(!opt.args.has_value() || opt.args->empty()) {
+        throw std::runtime_error("missing executable: provide --exec or place a command after --");
+    }
+
+#ifdef CATTER_WINDOWS
+    auto resolved =
+        catter::hook::shared::resolver::resolve_command_line_token<char>(opt.args->front());
+    if(resolved.empty() || resolved == opt.args->front()) {
+        throw std::runtime_error(std::format("failed to resolve executable: {}", opt.args->front()));
+    }
+    return resolved;
+#else
+    auto resolved =
+        catter::hook::shared::resolver::resolve_from_path_env(opt.args->front(), nullptr);
+    if(!resolved.has_value()) {
+        throw std::runtime_error(std::format("failed to resolve executable: {}", opt.args->front()));
+    }
+    return resolved->string();
+#endif
+}
 
 data::process_result run(data::action act, data::ipcid_t id) {
     using catter::data::action;
@@ -58,13 +85,22 @@ data::process_result run(data::action act, data::ipcid_t id) {
 
 int proxy_main(const catter::proxy::ProxyOption& opt) {
     try {
+        if(opt.error_msg.has_value() && !opt.args.has_value()) {
+            proxy::ipc::report_error(*opt.parent_id, *opt.error_msg);
+            return -1;
+        }
+
+        if(!opt.args.has_value()) {
+            throw std::runtime_error("missing command arguments after --");
+        }
+
         // This function is for the hook to call, it will never be called in this file.
         // The implementation is in hook.cc
         proxy::ipc::set_service_mode(data::ServiceMode::INJECT);
 
         data::command cmd = {
             .cwd = std::filesystem::current_path().string(),
-            .executable = *opt.exec,
+            .executable = resolve_executable(opt),
             .args = *opt.args,
             .env = catter::util::get_environment(),
         };
@@ -98,7 +134,7 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 }  // namespace
 
 // we do not output in proxy, it must be invoked by main program.
-// usage: catter-proxy.exe -p <parent ipc id> --exec <exe path> -- <args...>
+// usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
 int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
     try {

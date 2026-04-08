@@ -36,7 +36,8 @@ int64_t Session::run(RunPlan run_plan) {
 
     auto loop_task = this->loop(std::move(run_plan.callback));
     auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
-                                  std::move(run_plan.launch_plan.args));
+                                  std::move(run_plan.launch_plan.args),
+                                  std::move(run_plan.launch_plan.cwd));
 
     default_loop().schedule(loop_task);
     default_loop().schedule(spawn_task);
@@ -77,7 +78,9 @@ eventide::task<void> Session::loop(ClientAcceptor acceptor) {
     co_return;
 }
 
-eventide::task<int64_t> Session::spawn(std::string executable, std::vector<std::string> args) {
+eventide::task<int64_t> Session::spawn(std::string executable,
+                                       std::vector<std::string> args,
+                                       std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -93,6 +96,7 @@ eventide::task<int64_t> Session::spawn(std::string executable, std::vector<std::
     eventide::process::options opts{
         .file = executable,
         .args = args,
+        .cwd = cwd,
         .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
         .streams = {eventide::process::stdio::ignore(),
                      eventide::process::stdio::ignore(),
@@ -104,7 +108,10 @@ eventide::task<int64_t> Session::spawn(std::string executable, std::vector<std::
         args_str += std::format("{} ", arg);
     }
 
-    LOG_INFO("Spawning process: \n    exe = {} \n    args = {}", executable, args_str);
+    LOG_INFO("Spawning process: \n    exe = {} \n    cwd = {} \n    args = {}",
+             executable,
+             cwd,
+             args_str);
 
     auto spawn_ret = eventide::process::spawn(opts, eventide::event_loop::current());
     if(!spawn_ret) {

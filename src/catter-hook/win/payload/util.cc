@@ -4,7 +4,7 @@
 
 #include "win/env.h"
 
-#include "resolver.h"
+#include "shared/resolver.h"
 #include "util.h"
 
 namespace catter::win::payload {
@@ -49,7 +49,7 @@ std::basic_string<char_t> resolve_abspath_impl(const char_t* application_name,
     // is parsed from the first token in lpCommandLine.
     if(application_name != nullptr && application_name[0] != char_t('\0')) {
         raw_app_name.assign(application_name);
-        return create_app_name_resolver<char_t>().resolve(raw_app_name);
+        return catter::hook::shared::resolver::resolve_application_name<char_t>(raw_app_name);
     }
 
     raw_app_name = extract_first_token<char_t>(command_line == nullptr
@@ -59,7 +59,7 @@ std::basic_string<char_t> resolve_abspath_impl(const char_t* application_name,
         return {};
     }
 
-    return create_command_line_resolver<char_t>().resolve(raw_app_name);
+    return catter::hook::shared::resolver::resolve_command_line_token<char_t>(raw_app_name);
 }
 
 }  // namespace

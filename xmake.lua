@@ -166,6 +166,7 @@ target("catter-hook-win64")
     add_files("src/catter-hook/win/payload/*.cc")
     add_syslinks("user32", "advapi32")
     add_packages("minhook")
+    add_deps("hook-resolver")
     local toolchain = get_config("toolchain")
     if toolchain == "msvc" or toolchain == "clang-cl" then
         add_cxxflags("/GR-")
@@ -180,6 +181,7 @@ target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
     add_local_prefix_includedirs()
+    add_deps("hook-resolver")
 
     if is_mode("debug") then
         add_deps("common")
@@ -231,9 +233,19 @@ target("catter-hook")
 target("catter-proxy")
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_deps("common", "catter-hook")
+    add_deps("common", "catter-hook", "hook-resolver")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
+
+target("hook-resolver")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_includedirs("src/catter-hook/", {public = true})
+    if is_plat("windows") then
+        add_files("src/catter-hook/shared/resolver_win.cc")
+    else
+        add_files("src/catter-hook/shared/resolver_unix.cc")
+    end
 
 
 rule("ut-base")
@@ -284,8 +296,9 @@ target("ut-catter-hook-unix")
     add_files("src/catter-hook/unix/payload/*.cc")
 
     add_files("tests/unit/catter-hook/unix/**.cc")
+    add_files("tests/unit/catter-hook/shared/**.cc")
 
-    add_deps("common")
+    add_deps("common", "hook-resolver")
 
     if is_plat("linux", "macosx") then
         add_tests("default")
@@ -300,8 +313,9 @@ target("ut-catter-hook-win64")
     add_files("src/catter-hook/win/payload/resolver.cc")
     add_files("src/catter-hook/win/payload/util.cc")
     add_files("tests/unit/catter-hook/win/**.cc")
+    add_files("tests/unit/catter-hook/shared/**.cc")
 
-    add_deps("common")
+    add_deps("common", "hook-resolver")
 
     if is_plat("windows") then
         add_tests("default")

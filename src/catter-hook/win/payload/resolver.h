@@ -3,26 +3,26 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 #include "winapi.h"
+#include "shared/resolver.h"
 
 namespace catter::win::payload {
 
 template <CharT char_t>
 class Resolver {
 public:
-    explicit Resolver(std::vector<std::basic_string<char_t>> search_paths) :
-        m_search_paths(std::move(search_paths)) {}
+    enum class Mode {
+        application_name,
+        command_line_token,
+    };
+
+    explicit Resolver(Mode mode) : m_mode(mode) {}
 
     std::basic_string<char_t> resolve(std::basic_string_view<char_t> app_name) const;
 
 private:
-    static std::basic_string<char_t>
-        join_search_paths(const std::vector<std::basic_string<char_t>>& search_paths);
-    std::vector<std::basic_string<char_t>> m_search_paths;
+    Mode m_mode;
 };
 
 template <CharT char_t>
