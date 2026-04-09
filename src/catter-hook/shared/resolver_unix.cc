@@ -28,8 +28,9 @@ namespace fs = std::filesystem;
 
 std::expected<fs::path, int> resolve_path_like(std::string_view file) {
     fs::path path(file);
-    if(!fs::exists(path) || !fs::is_regular_file(path)) {
-        return std::unexpected(ENOENT);
+    std::error_code ec;
+    if(!fs::is_regular_file(path, ec)) {
+        return std::unexpected(ec ? ec.value() : ENOENT);
     }
     if(::access(path.c_str(), X_OK) == 0) {
         return path;
