@@ -1,6 +1,20 @@
-#include "resolver.h"
+#ifdef CATTER_WINDOWS
 
-namespace catter::win::payload {
+#include "shared/resolver.h"
+
+#include <algorithm>
+#include <concepts>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "winapi.h"
+
+namespace catter::hook::shared::resolver {
+using namespace catter::win;
+
+namespace {
 namespace detail {
 
 template <CharT char_t>
@@ -80,40 +94,49 @@ constexpr std::basic_string_view<wchar_t> exe_suffix<wchar_t> = L".exe";
 }  // namespace detail
 
 template <CharT char_t>
-std::basic_string<char_t> Resolver<char_t>::resolve(std::basic_string_view<char_t> app_name) const {
-    if(app_name.empty()) {
-        return {};
-    }
+class Resolver {
+public:
+    explicit Resolver(std::vector<std::basic_string<char_t>> search_paths) :
+        m_search_paths(std::move(search_paths)) {}
 
-    auto original_name = std::basic_string<char_t>(app_name);
-
-    auto search_paths = join_search_paths(m_search_paths);
-    auto resolved = SearchPathDynamic<char_t>(search_paths.empty() ? nullptr : search_paths.c_str(),
-                                              app_name,
-                                              detail::exe_suffix<char_t>.data());
-    if(!resolved.empty()) {
-        return resolved;
-    }
-
-    // Keep original input when search paths do not resolve an existing file.
-    return original_name;
-}
-
-template <CharT char_t>
-std::basic_string<char_t> Resolver<char_t>::join_search_paths(
-    const std::vector<std::basic_string<char_t>>& search_paths) {
-    std::basic_string<char_t> merged;
-    for(const auto& path: search_paths) {
-        if(path.empty()) {
-            continue;
+    std::basic_string<char_t> resolve(std::basic_string_view<char_t> app_name) const {
+        if(app_name.empty()) {
+            return {};
         }
-        if(!merged.empty()) {
-            merged.push_back(char_t(';'));
+
+        auto original_name = std::basic_string<char_t>(app_name);
+
+        auto search_paths = join_search_paths(m_search_paths);
+        auto resolved =
+            SearchPathDynamic<char_t>(search_paths.empty() ? nullptr : search_paths.c_str(),
+                                      app_name,
+                                      detail::exe_suffix<char_t>.data());
+        if(!resolved.empty()) {
+            return resolved;
         }
-        merged.append(path);
+
+        // Keep original input when search paths do not resolve an existing file.
+        return original_name;
     }
-    return merged;
-}
+
+private:
+    static std::basic_string<char_t>
+        join_search_paths(const std::vector<std::basic_string<char_t>>& search_paths) {
+        std::basic_string<char_t> merged;
+        for(const auto& path: search_paths) {
+            if(path.empty()) {
+                continue;
+            }
+            if(!merged.empty()) {
+                merged.push_back(char_t(';'));
+            }
+            merged.append(path);
+        }
+        return merged;
+    }
+
+    std::vector<std::basic_string<char_t>> m_search_paths;
+};
 
 template <CharT char_t>
 Resolver<char_t> create_app_name_resolver() {
@@ -166,12 +189,23 @@ Resolver<char_t> create_command_line_resolver() {
     return Resolver<char_t>(std::move(search_paths));
 }
 
-template class Resolver<char>;
-template class Resolver<wchar_t>;
+}  // namespace
 
-template Resolver<char> create_app_name_resolver();
-template Resolver<wchar_t> create_app_name_resolver();
-template Resolver<char> create_command_line_resolver();
-template Resolver<wchar_t> create_command_line_resolver();
+template <typename CharT>
+std::basic_string<CharT> resolve_application_name(std::basic_string_view<CharT> application_name) {
+    return create_app_name_resolver<CharT>().resolve(application_name);
+}
 
-}  // namespace catter::win::payload
+template <typename CharT>
+std::basic_string<CharT> resolve_command_line_token(std::basic_string_view<CharT> token) {
+    return create_command_line_resolver<CharT>().resolve(token);
+}
+
+template std::basic_string<char> resolve_application_name(std::basic_string_view<char>);
+template std::basic_string<wchar_t> resolve_application_name(std::basic_string_view<wchar_t>);
+template std::basic_string<char> resolve_command_line_token(std::basic_string_view<char>);
+template std::basic_string<wchar_t> resolve_command_line_token(std::basic_string_view<wchar_t>);
+
+}  // namespace catter::hook::shared::resolver
+
+#endif

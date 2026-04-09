@@ -6,6 +6,9 @@
 #include <limits.h>
 #include <string_view>
 
+#include "environment.h"
+#include "shared/resolver.h"
+
 namespace catter {
 
 /**
@@ -23,15 +26,22 @@ struct Resolver {
      */
     [[nodiscard]]
     virtual std::expected<std::filesystem::path, int>
-        from_current_directory(std::string_view file) const;
+        from_current_directory(std::string_view file) const {
+        return hook::shared::resolver::resolve_path_like(file);
+    }
 
     [[nodiscard]]
     virtual std::expected<std::filesystem::path, int> from_path(std::string_view file,
-                                                                const char** envp) const;
+                                                                const char** envp) const {
+        return hook::shared::resolver::resolve_from_path_env(file,
+                                                             env::get_env_value(envp, "PATH"));
+    }
 
     [[nodiscard]]
     virtual std::expected<std::filesystem::path, int>
-        from_search_path(std::string_view file, const char* search_path) const;
+        from_search_path(std::string_view file, const char* search_path) const {
+        return hook::shared::resolver::resolve_from_search_path(file, search_path);
+    }
 
 };  // namespace Resolver
 }  // namespace catter

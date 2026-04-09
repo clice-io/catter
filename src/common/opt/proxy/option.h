@@ -11,7 +11,8 @@ struct ProxyOption {
     ) <int> parent_id;
 
     DecoKV(meta_var = "<Executable>",
-           help = "a path, specify the executable to run")
+           help = "a path, specify the executable to run",
+           required = false)
     <std::string> exec;
 
     DecoInput(

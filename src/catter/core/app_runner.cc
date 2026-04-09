@@ -93,15 +93,18 @@ private:
 };
 
 int64_t inject(const js::CatterConfig& config) {
+    if(config.buildSystemCommand.empty()) {
+        throw std::runtime_error("buildSystemCommand must not be empty");
+    }
 
     auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
     Session::ProcessLaunchPlan launch_plan{
+        .cwd = config.buildSystemCommandCwd,
         .executable = proxy_path.string(),
         .args =
             {
                    proxy_path.string(),
                    "-p", "0",
-                   "--exec", config.buildSystemCommand.front(),
                    "--", },
     };
     append_range_to_vector(launch_plan.args, config.buildSystemCommand);
@@ -138,6 +141,7 @@ void run(const core::CatterConfig& config) {
         .scriptPath = config.script_path.value(),
         .scriptArgs = config.script_args,
         .buildSystemCommand = config.command.value(),
+        .buildSystemCommandCwd = config.working_dir->path.string(),
         .runtime = config.mode->runtime,
         .options = {.log = config.log},
         .execute = true,

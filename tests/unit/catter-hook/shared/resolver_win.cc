@@ -1,5 +1,6 @@
-#include "win/payload/resolver.h"
-#include "win/payload/util.h"
+#ifdef CATTER_WINDOWS
+
+#include "shared/resolver.h"
 
 #include <eventide/zest/zest.h>
 
@@ -9,8 +10,8 @@
 
 #include <windows.h>
 
-namespace ct = catter;
 namespace fs = std::filesystem;
+namespace resolver = catter::hook::shared::resolver;
 
 namespace {
 
@@ -19,7 +20,7 @@ struct TempSandbox {
 
     TempSandbox() {
         root = fs::temp_directory_path() /
-               (L"catter_win_payload_resolver_ut_" + std::to_wstring(GetCurrentProcessId()) + L"_" +
+               (L"catter_shared_resolver_ut_" + std::to_wstring(GetCurrentProcessId()) + L"_" +
                 std::to_wstring(GetTickCount64()));
         fs::create_directories(root);
     }
@@ -84,7 +85,39 @@ struct ScopedEnvVar {
     }
 };
 
-TEST_SUITE(win_payload_resolver) {
+TEST_SUITE(shared_win_resolver) {
+
+TEST_CASE(resolve_application_name_searches_current_directory) {
+    TempSandbox sandbox;
+    ScopedCurrentDirectory scope(sandbox.root);
+
+    auto app_path = sandbox.root / "clang.exe";
+    touch_file(app_path);
+
+    auto resolved = resolver::resolve_application_name<char>("clang");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+};
+
+TEST_CASE(resolve_command_line_token_searches_PATH) {
+    TempSandbox sandbox;
+    auto cwd = sandbox.root / "cwd";
+    fs::create_directories(cwd);
+    ScopedCurrentDirectory scope(cwd);
+
+    auto app_dir = sandbox.root / "pathbin";
+    auto app_path = app_dir / "runner.exe";
+    touch_file(app_path);
+    ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
+
+    auto resolved = resolver::resolve_command_line_token<char>("runner");
+    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+};
+
+TEST_CASE(resolve_command_line_token_preserves_missing_token_for_callers) {
+    auto resolved = resolver::resolve_command_line_token<char>("definitely-missing-binary");
+    EXPECT_TRUE(resolved == "definitely-missing-binary");
+};
+
 TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
@@ -92,7 +125,7 @@ TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
     auto app_path = sandbox.root / "clang.exe";
     touch_file(app_path);
 
-    auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("clang");
+    auto resolved = resolver::resolve_application_name<char>("clang");
     EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
 };
 
@@ -103,7 +136,7 @@ TEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
     auto app_path = sandbox.root / "bin" / "lld";
     touch_file(app_path);
 
-    auto resolved = ct::win::payload::create_app_name_resolver<char>().resolve("bin\\lld");
+    auto resolved = resolver::resolve_application_name<char>("bin\\lld");
     EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
     EXPECT_TRUE(fs::path(resolved).filename() == "lld");
 };
@@ -120,20 +153,23 @@ TEST_CASE(command_line_resolver_searches_path_variable) {
 
     ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
 
-    auto resolved = ct::win::payload::create_command_line_resolver<char>().resolve("runner");
+    auto resolved = resolver::resolve_command_line_token<char>("runner");
     EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
 };
 
-TEST_CASE(resolve_abspath_supports_quoted_command_line) {
+TEST_CASE(resolve_command_line_token_resolves_binary_name_in_current_directory) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
 
     auto app_path = sandbox.root / "quoted.exe";
     touch_file(app_path);
 
-    auto resolved = ct::win::payload::resolve_abspath<char>(nullptr, "\"quoted\" --help");
+    auto resolved = resolver::resolve_command_line_token<char>("quoted");
     EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
 };
-};  // TEST_SUITE(win_payload_resolver)
+
+};  // TEST_SUITE(shared_win_resolver)
 
 }  // namespace
+
+#endif

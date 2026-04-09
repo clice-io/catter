@@ -41,6 +41,7 @@ public:
         eventide::function<eventide::task<void>(data::ipcid_t, eventide::pipe&&)>;
 
     struct ProcessLaunchPlan {
+        std::string cwd;
         std::string executable;
         std::vector<std::string> args;
     };
@@ -79,7 +80,9 @@ public:
 private:
     eventide::task<void> loop(ClientAcceptor acceptor);
 
-    eventide::task<int64_t> spawn(std::string executable, std::vector<std::string> args);
+    eventide::task<int64_t> spawn(std::string executable,
+                                  std::vector<std::string> args,
+                                  std::string cwd);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

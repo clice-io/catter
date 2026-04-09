@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef CATTER_WINDOWS
 #include <filesystem>
 #include <type_traits>
 
@@ -13,7 +13,7 @@
 
 #include <windows.h>
 
-namespace catter::win::payload {
+namespace catter::win {
 
 template <typename char_t>
 concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
@@ -264,4 +264,6 @@ std::basic_string<char_t> SearchPathDynamic(const char_t* path,
             return WinApiBufferDecision{.next_size = static_cast<size_t>(result) + 1};
         });
 }
-}  // namespace catter::win::payload
+}  // namespace catter::win
+
+#endif
