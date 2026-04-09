@@ -44,7 +44,9 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
     }
     auto resolved = catter::hook::shared::resolver::resolve_from_path_env(exe, path_env.c_str());
     if(!resolved.has_value()) {
-        throw std::runtime_error(std::format("failed to resolve executable: {}", exe));
+        // if not found, just return the original string and let the system handle it, which will
+        // produce the same error as if we did not resolve it.
+        return std::string(exe);
     }
     return resolved->string();
 #endif
