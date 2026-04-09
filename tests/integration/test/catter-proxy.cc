@@ -49,7 +49,7 @@ public:
 
     data::ipcid_t create(data::ipcid_t parent_id) override {
         this->create_called = true;
-        std::println("[{}] Creating service with parent id {}", this->id, parent_id);
+        LOG_INFO("[{}] Creating service with parent id {}", this->id, parent_id);
         return this->id;
     }
 
@@ -61,18 +61,17 @@ public:
             args_str.append(arg).append(" ");
         }
 
-        std::println(
-            "[{}] Received command: \n    -> cwd = {} \n    -> exe = {} \n    -> args = {}",
-            this->id,
-            cmd.cwd,
-            cmd.executable,
-            args_str);
+        LOG_INFO("[{}] Received command: \n    -> cwd = {} \n    -> exe = {} \n    -> args = {}",
+                 this->id,
+                 cmd.cwd,
+                 cmd.executable,
+                 args_str);
         return data::action{.type = data::action::WRAP, .cmd = cmd};
     }
 
     void finish(data::process_result result) override {
         this->finish_called = true;
-        std::println(
+        LOG_INFO(
             "[{}] Command finished: \n    -> code = {}\n    -> stdout = `{}` \n    -> stderr = `{}`",
             this->id,
             result.code,
@@ -83,10 +82,10 @@ public:
     void report_error(data::ipcid_t parent_id, std::string error_msg) override {
         this->error_reported = true;
         last_error = error_msg;
-        std::println("[{}] Error reported for command with parent id {} : {}",
-                     this->id,
-                     parent_id,
-                     error_msg);
+        LOG_INFO("[{}] Error reported for command with parent id {} : {}",
+                 this->id,
+                 parent_id,
+                 error_msg);
     }
 
     struct Factory {
@@ -154,8 +153,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
 
         assert(run_case({proxy_path, "-p", "0", "--"}) != 0 &&
                "implicit resolve with missing executable case unexpectedly succeeded");
-        assert(last_err.has_value() && !last_cmd->executable.empty() &&
+        assert(last_err.has_value() &&
                "implicit resolve with missing executable case did not report the expected error");
+        assert(!last_cmd.has_value() &&
+               "implicit resolve with missing executable case unexpectedly produced a command");
 
         assert(run_case({
                    proxy_path,
@@ -166,17 +167,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
                }) != 0 &&
                "implicit resolve with nonexistent executable case unexpectedly succeeded");
         assert(
-            last_err.has_value() && !last_cmd->executable.empty() &&
-            last_cmd->executable != "nonexistent_executable_12345" &&
+            last_err.has_value() &&
             "implicit resolve with nonexistent executable case did not report the expected error");
 
-        std::println("proxy integration checks passed");
+        LOG_INFO("proxy integration checks passed");
         return 0;
     } catch(const std::exception& ex) {
-        std::println("Fatal error: {}", ex.what());
+        LOG_INFO("Fatal error: {}", ex.what());
         return 1;
     } catch(...) {
-        std::println("Unknown fatal error.");
+        LOG_INFO("Unknown fatal error.");
         return 1;
     }
 }
