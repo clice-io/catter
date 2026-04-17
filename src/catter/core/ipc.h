@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-#include <eventide/async/async.h>
+#include <kota/async/async.h>
 
 #include "util/data.h"
 
@@ -32,6 +32,6 @@ public:
     virtual void report_error(ipcid_t parent_id, std::string error_msg) = 0;
 };
 
-eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pipe client);
+kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe client);
 
 }  // namespace catter::ipc

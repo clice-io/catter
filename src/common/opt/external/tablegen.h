@@ -4,11 +4,11 @@
 #include <span>
 #include <string_view>
 
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 namespace catter::opt::external_detail {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace llvm {
 

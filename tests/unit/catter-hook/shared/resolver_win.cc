@@ -2,7 +2,7 @@
 
 #include "shared/resolver.h"
 
-#include <eventide/zest/zest.h>
+#include <kota/zest/zest.h>
 
 #include <filesystem>
 #include <fstream>

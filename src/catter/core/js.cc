@@ -3,7 +3,7 @@
 #include <format>
 #include <stdexcept>
 
-#include <eventide/reflection/enum.h>
+#include <kota/meta/enum.h>
 
 #include "config/js-lib.h"
 

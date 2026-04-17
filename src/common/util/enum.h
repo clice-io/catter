@@ -7,8 +7,8 @@
 #include <string_view>
 #include <type_traits>
 
-#include <eventide/reflection/enum.h>
-#include <eventide/reflection/struct.h>
+#include <kota/meta/enum.h>
+#include <kota/meta/struct.h>
 
 namespace catter {
 
@@ -22,7 +22,7 @@ struct in_place_enum {
 template <typename E, typename F>
     requires std::is_enum_v<E> && std::is_invocable_v<F, in_place_enum<E{}>>
 auto dispatch(E e, F&& f) {
-    using Enum = eventide::refl::reflection<E>;
+    using Enum = kota::meta::reflection<E>;
     using R = std::invoke_result_t<F, in_place_enum<E{}>>;
     using Callback = R(F && f);
 
@@ -60,7 +60,7 @@ auto dispatch(E e, F&& f) {
 template <typename E, typename F>
     requires std::is_enum_v<E> && std::is_invocable_v<F, in_place_enum<E{}>>
 auto dispatch(std::string_view e, F&& f) {
-    using Enum = eventide::refl::reflection<E>;
+    using Enum = kota::meta::reflection<E>;
     using R = std::invoke_result_t<F, in_place_enum<E{}>>;
     using Callback = R(F && f);
 

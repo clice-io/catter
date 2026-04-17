@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include <eventide/async/async.h>
+#include <kota/async/async.h>
 
 namespace catter::util {
 
@@ -14,7 +14,7 @@ public:
     constexpr static size_t output_limit = 64 * 1024;
     constexpr static std::string_view truncation_marker = "[... truncated leading output ...]\n";
 
-    PipeProxy(eventide::pipe&& pipe, FILE* sink, std::string_view name) :
+    PipeProxy(kota::pipe&& pipe, FILE* sink, std::string_view name) :
         pipe(std::move(pipe)), sink(sink), name(name) {
         output_buffer.reserve(1024);
     }
@@ -30,7 +30,7 @@ public:
         }
     }
 
-    eventide::task<void> monitor();
+    kota::task<void> monitor();
 
     static void append_bounded_output(std::string& buffer,
                                       std::string_view chunk,
@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    eventide::pipe pipe{};
+    kota::pipe pipe{};
     FILE* sink = nullptr;
     std::string name{};
     std::string output_buffer{};

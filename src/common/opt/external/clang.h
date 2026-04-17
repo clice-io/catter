@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 namespace catter::opt::clang {
 
@@ -36,6 +36,6 @@ enum DriverClass : unsigned {
     FlangOption = 1u << 6,
 };
 
-const eventide::option::OptTable& table();
+const kota::option::OptTable& table();
 
 }  // namespace catter::opt::clang

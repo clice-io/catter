@@ -4,8 +4,8 @@
 #include "mock/mock_linker.h"
 #include "mock/mock_resolver.h"
 
-#include <eventide/deco/deco.h>
-#include <eventide/zest/zest.h>
+#include <kota/deco/deco.h>
+#include <kota/zest/zest.h>
 
 #include <filesystem>
 
@@ -38,7 +38,8 @@ TEST_CASE(execve_success_flow) {
 
     // Verify the proxy received the correct intercepted instructions
     auto f = [&]() {
-        auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv)->options;
+        auto parse_res =
+            kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv)->options;
         EXPECT_TRUE(std::to_string(*parse_res.parent_id) == session.self_id);
         EXPECT_TRUE(*parse_res.exec == "/bin/ls");
         EXPECT_TRUE(parse_res.args.has_value());
@@ -62,7 +63,7 @@ TEST_CASE(execvpe_success_using_mock_PATH_resolution) {
     EXPECT_TRUE(linker.last_path == session.proxy_path);
     // Verify translation of relative 'python' to absolute path
     auto f = [&]() {
-        auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
+        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
         EXPECT_TRUE(*parse_res->options.exec == "/usr/bin/python");
     };
     EXPECT_NOTHROWS(f());
@@ -81,7 +82,7 @@ TEST_CASE(posix_spawn_success_flow) {
     EXPECT_TRUE(linker.last_path == session.proxy_path);
 
     auto f = [&]() {
-        auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
+        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
         EXPECT_TRUE(*parse_res->options.exec == "/app/run");
         EXPECT_TRUE(parse_res->options.args->at(1) == "--arg1");
     };

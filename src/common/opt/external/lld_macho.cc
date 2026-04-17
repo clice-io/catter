@@ -7,7 +7,7 @@
 
 namespace catter::opt::lld_macho {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace detail {
 

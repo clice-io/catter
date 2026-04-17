@@ -7,7 +7,7 @@
 
 namespace catter::opt::llvm_lib {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace detail {
 

@@ -2,7 +2,7 @@
 #include <print>
 #include <string_view>
 
-#include <eventide/deco/deco.h>
+#include <kota/deco/deco.h>
 
 #include "qjs.h"
 #include "app_runner.h"
@@ -14,14 +14,14 @@
 using namespace catter;
 
 int main(int argc, char* argv[]) {
-    auto args = deco::util::argvify(argc, argv, 1);
-    deco::cli::text::set_default_renderer(deco::cli::text::ModernRenderer());
+    auto args = kota::deco::util::argvify(argc, argv, 1);
+    kota::deco::cli::text::set_default_renderer(kota::deco::cli::text::ModernRenderer());
     // -1 is continue, else return
     int ret = -1;
 
     try {
         log::init_logger("catter", util::get_catter_data_path() / config::core::LOG_PATH_REL);
-        auto cli = deco::cli::command<core::CatterConfig>(
+        auto cli = kota::deco::cli::command<core::CatterConfig>(
             "catter [options for catter] script [options for script] -- [build system command]");
         cli.after<&core::CatterConfig::script_path>([](auto& step) {
                unsigned idx = step.next_cursor();

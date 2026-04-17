@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-#include <eventide/option/option.h>
-#include <eventide/zest/macro.h>
-#include <eventide/zest/zest.h>
+#include <kota/option/option.h>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"
@@ -16,7 +16,7 @@
 #include "opt/external/llvm_dlltool.h"
 #include "opt/external/llvm_lib.h"
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 using namespace catter;
 
 namespace {

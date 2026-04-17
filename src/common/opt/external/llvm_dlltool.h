@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 namespace catter::opt::llvm_dlltool {
 
@@ -26,6 +26,6 @@ enum ID : unsigned {
 #undef OPTION
 };
 
-const eventide::option::OptTable& table();
+const kota::option::OptTable& table();
 
 }  // namespace catter::opt::llvm_dlltool

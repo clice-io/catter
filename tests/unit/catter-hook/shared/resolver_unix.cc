@@ -3,7 +3,7 @@
 #include "shared/resolver.h"
 #include "temp_file_manager.h"
 
-#include <eventide/zest/zest.h>
+#include <kota/zest/zest.h>
 
 #include <filesystem>
 #include <format>

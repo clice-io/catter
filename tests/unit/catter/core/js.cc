@@ -4,8 +4,8 @@
 #include "util/output.h"
 
 #include <cstdio>
-#include <eventide/zest/macro.h>
-#include <eventide/zest/zest.h>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 
 #include <exception>
 #include <algorithm>
@@ -110,27 +110,27 @@ void run_auto_js_case(const fs::path& relative_path) {
     run_basic_js_case(relative_path.generic_string(), auto_js_case_uses_fs_test_env(relative_path));
 }
 
-eventide::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
+kota::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
     try {
         run_auto_js_case(relative_path);
-        return eventide::zest::TestState::Passed;
+        return kota::zest::TestState::Passed;
     } catch(const std::exception& ex) {
         output::redLn("auto js test failed: {}: {}", relative_path.string(), ex.what());
-        return eventide::zest::TestState::Failed;
+        return kota::zest::TestState::Failed;
     } catch(...) {
         output::redLn("auto js test failed: {}: unknown exception", relative_path.string());
-        return eventide::zest::TestState::Fatal;
+        return kota::zest::TestState::Fatal;
     }
 }
 
-std::vector<eventide::zest::TestCase> auto_js_test_cases() {
-    std::vector<eventide::zest::TestCase> cases;
+std::vector<kota::zest::TestCase> auto_js_test_cases() {
+    std::vector<kota::zest::TestCase> cases;
     const auto js_path = fs::path(config::data::js_test_path.data());
 
     for(const auto& relative_path: collect_auto_js_case_paths(js_path)) {
         const auto full_path = (js_path / relative_path).string();
         const auto case_name = auto_js_case_name(relative_path);
-        cases.emplace_back(eventide::zest::TestCase{
+        cases.emplace_back(kota::zest::TestCase{
             .name = case_name,
             .path = full_path,
             .line = 1,
@@ -251,7 +251,7 @@ TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
 namespace {
 
 const bool auto_js_tests_registered = [] {
-    eventide::zest::Runner::instance().add_suite("js_auto_tests", &auto_js_test_cases);
+    kota::zest::Runner::instance().add_suite("js_auto_tests", &auto_js_test_cases);
     return true;
 }();
 

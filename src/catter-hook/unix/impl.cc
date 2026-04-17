@@ -14,7 +14,7 @@
 #include "util/data.h"
 #include "util/crossplat.h"
 #include "util/log.h"
-#include "util/eventide.h"
+#include "util/kotatsu.h"
 #include "util/pipe_proxy.h"
 #include "unix/config.h"
 
@@ -58,14 +58,14 @@ data::process_result run(data::command command, data::ipcid_t id, std::string pr
              command.executable,
              cmd_for_print);
 
-    eventide::process::options opts{
+    kota::process::options opts{
         .file = command.executable,
         .args = command.args,
         .env = command.env,
         .cwd = command.cwd,
-        .streams = {eventide::process::stdio::inherit(),
-                    eventide::process::stdio::pipe(false, true),
-                    eventide::process::stdio::pipe(false, true)}
+        .streams = {kota::process::stdio::inherit(),
+                    kota::process::stdio::pipe(false, true),
+                    kota::process::stdio::pipe(false, true)}
     };
     return catter::capture_process_result(make_process_event(opts));
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 namespace catter::opt::nvcc {
 
@@ -396,6 +396,6 @@ enum ID : unsigned {
     ID_alias_x,
 };
 
-const eventide::option::OptTable& table();
+const kota::option::OptTable& table();
 
 }  // namespace catter::opt::nvcc

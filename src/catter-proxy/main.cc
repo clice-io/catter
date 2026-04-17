@@ -1,6 +1,6 @@
 #include <cstdint>
 #include <cstdlib>
-#include <eventide/async/io/loop.h>
+#include <kota/async/io/loop.h>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -8,8 +8,8 @@
 #include <system_error>
 #include <vector>
 
-#include <eventide/async/async.h>
-#include <eventide/deco/deco.h>
+#include <kota/async/async.h>
+#include <kota/deco/deco.h>
 
 #include "shared/resolver.h"
 #include "ipc.h"
@@ -18,7 +18,7 @@
 #include "opt/proxy/option.h"
 #include "config/catter-proxy.h"
 #include "util/log.h"
-#include "util/eventide.h"
+#include "util/kotatsu.h"
 #include "util/crossplat.h"
 #include "util/output.h"
 
@@ -57,15 +57,15 @@ data::process_result run(data::action act, data::ipcid_t id) {
     switch(act.type) {
         case action::WRAP: {
 
-            eventide::process::options opts{
+            kota::process::options opts{
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
                 .env = act.cmd.env,
                 .cwd = act.cmd.cwd,
                 .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
-                .streams = {eventide::process::stdio::inherit(),
-                             eventide::process::stdio::pipe(false, true),
-                             eventide::process::stdio::pipe(false, true)}
+                .streams = {kota::process::stdio::inherit(),
+                             kota::process::stdio::pipe(false, true),
+                             kota::process::stdio::pipe(false, true)}
             };
 
             return catter::capture_process_result(make_process_event(opts));
@@ -150,16 +150,16 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
         log::mute_logger();
     }
 
-    deco::cli::Command<catter::proxy::Option> cli(
+    kota::deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");
 
     int ret = 0;
-    auto args = deco::util::argvify(argc, argv, 1);
+    auto args = kota::deco::util::argvify(argc, argv, 1);
     cli.match(catter::proxy::Option::Cate::help,
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
                [&](const auto& opt) { ret = proxy_main(opt.proxy_opt); })
-        .on_error([&](const deco::cli::ParseError& err) {
+        .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
             ret = -1;
         })

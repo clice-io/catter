@@ -1,5 +1,5 @@
 #pragma once
-#include <eventide/deco/deco.h>
+#include <kota/deco/deco.h>
 
 namespace catter::proxy {
 // clang-format off
@@ -36,13 +36,13 @@ struct HelpOpt {
 
 struct Option {
     struct Cate {
-        constexpr static deco::decl::Category proxy = {
+        constexpr static kota::deco::decl::Category proxy = {
             .exclusive = true,
             .required = false,
             .name = "proxy",
             .description = "Options for catter-proxy",
         };
-        constexpr static deco::decl::Category help = {
+        constexpr static kota::deco::decl::Category help = {
             .exclusive = true,
             .required = false,
             .name = "help",

@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 #include "opt/external/clang.h"
 #include "opt/external/lld_coff.h"
@@ -25,7 +25,7 @@
 
 namespace {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 using OptionParseCallback = catter::qjs::Function<bool(catter::qjs::Parameters)>;
 constexpr uint32_t kAllOptionVisibility = std::numeric_limits<uint32_t>::max();

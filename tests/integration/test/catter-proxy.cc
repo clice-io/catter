@@ -22,15 +22,15 @@
 #include <print>
 #include <optional>
 
-#include <eventide/async/async.h>
-#include <eventide/reflection/name.h>
+#include <kota/async/async.h>
+#include <kota/meta/name.h>
 
 #include "session.h"
 #include "ipc.h"
 #include "config/ipc.h"
 #include "config/catter-proxy.h"
 #include "util/crossplat.h"
-#include "util/eventide.h"
+#include "util/kotatsu.h"
 #include "util/serde.h"
 #include "util/data.h"
 #include "util/log.h"

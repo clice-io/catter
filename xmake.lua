@@ -123,7 +123,7 @@ end
 
 add_requires("quickjs-ng", {version = "v0.11.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
-add_requires("eventide")
+add_requires("kotatsu")
 
 
 target("common")
@@ -133,7 +133,7 @@ target("common")
     add_files("src/common/**.cc")
 
     add_packages("spdlog", {public = true})
-    add_packages("eventide", {public = true})
+    add_packages("kotatsu", {public = true})
 
 target("catter-core")
     -- use object, avoid register invalid
@@ -251,7 +251,7 @@ rule("ut-base")
     on_load(function (target)
         target:add("includedirs", "tests/unit/base/")
         target:add("files", "tests/unit/base/**.cc")
-        target:add("packages", "eventide")
+        target:add("packages", "kotatsu")
     end)
 
 target("ut-common")
@@ -382,13 +382,13 @@ rule("build.js")
         })
     end)
 
-package("eventide")
+package("kotatsu")
     set_homepage("https://clice.io")
     set_license("Apache-2.0")
 
-    set_urls("https://github.com/clice-io/eventide.git")
+    set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("111", "a400b5a57f2b237542c3aa252a067b45525c258e")
+    add_versions("1", "5000f1ce7a49240b39d516f1c0fff119e579b70b")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -400,7 +400,7 @@ package("eventide")
 
         local configs = {}
         -- Build the dependency with a plain consumer config so we do not pull
-        -- in eventide's repo-local dev toolchain tweaks during package install.
+        -- in kotatsu's repo-local dev toolchain tweaks during package install.
         configs.dev = false
         configs.test = false
         if package:is_plat("macosx") then
@@ -411,7 +411,7 @@ package("eventide")
                 local mode = package:is_debug() and "debug" or "release"
                 local builddir = package:builddir()
                 -- Pixi's clang cfg injects `.pixi/.../include`; disable that default
-                -- config just for eventide's package install and keep the rest explicit.
+                -- config just for kotatsu's package install and keep the rest explicit.
                 local argv = {
                     "f", "-y", "-c",
                     "--plat=" .. package:plat(),
@@ -436,16 +436,16 @@ package("eventide")
                     table.insert(argv, "--policies=build.sanitizer.address")
                 end
                 os.vrunv("xmake", argv, {curdir = package:sourcedir()})
-                os.mkdir(path.join(builddir, ".deps", "eventide", package:plat(), package:arch(), mode))
-                os.vrunv("xmake", {"build", "eventide"}, {curdir = package:sourcedir()})
-                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "eventide"}, {curdir = package:sourcedir()})
+                os.mkdir(path.join(builddir, ".deps", "kotatsu", package:plat(), package:arch(), mode))
+                os.vrunv("xmake", {"build", "kotatsu"}, {curdir = package:sourcedir()})
+                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "kotatsu"}, {curdir = package:sourcedir()})
                 return
             end
-            import("package.tools.xmake").install(package, configs, {target = "eventide"})
+            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
         elseif is_plat("linux") then
-            import("package.tools.xmake").install(package, configs, {target = "eventide"})
+            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
         else
-            import("package.tools.xmake").install(package, configs)
+            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
         end
     end)
 
