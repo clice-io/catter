@@ -15,17 +15,9 @@
 #include <system_error>
 #include <vector>
 #include <io.h>
+#include <uv.h>
 #include <kota/async/async.h>
 #include <kota/meta/enum.h>
-
-// Must be defined before any header drags in <windows.h> (<uv.h> and
-// "win/win32.h" both do). Ensures the lean variant is selected so winsock.h
-// does not leak in and collide with <system_error> etc.
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
-#include <uv.h>
 
 #include "util/crossplat.h"
 #include "util/data.h"

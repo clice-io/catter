@@ -9,13 +9,6 @@
 #include <system_error>
 #include <type_traits>
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 // clang-format off
 // Windows SDK headers are order-sensitive: <windows.h> defines the macros and
 // types (HANDLE, DWORD, BOOL, HMODULE, ...) that the others depend on, so it

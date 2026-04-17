@@ -109,6 +109,7 @@ elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
 elseif is_plat("windows") then
     add_defines("CATTER_WINDOWS")
+    add_defines("WIN32_LEAN_AND_MEAN", "NOMINMAX")
     add_requires("minhook", {version = "v1.3.4"})
 end
 
