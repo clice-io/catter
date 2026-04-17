@@ -3,8 +3,8 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
-#include <dlfcn.h>
 #include <expected>
+#include <dlfcn.h>
 #include <spawn.h>
 #include <unistd.h>
 

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <array>
+#include <climits>
+#include <cstdint>
 #include <dlfcn.h>
-#include <limits.h>
-#include <stdint.h>
 #include <unistd.h>
 
 #ifdef CATTER_LINUX

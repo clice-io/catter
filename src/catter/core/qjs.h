@@ -8,7 +8,6 @@
 #include <format>
 #include <memory>
 #include <optional>
-#include <quickjs.h>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -17,11 +16,11 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#include <quickjs.h>
 #include <cpptrace/cpptrace.hpp>
-#include <kota/meta/name.h>
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
+#include <kota/meta/name.h>
 
 // namespace meta
 

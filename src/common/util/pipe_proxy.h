@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <string>
 #include <string_view>
-
 #include <kota/async/async.h>
 
 namespace catter::util {

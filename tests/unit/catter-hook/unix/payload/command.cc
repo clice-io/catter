@@ -5,13 +5,12 @@
 #include <span>
 #include <string_view>
 #include <vector>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
+#include <kota/deco/deco.h>
 
 #include "session.h"
 #include "opt/proxy/option.h"
-
-#include <kota/deco/deco.h>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
 
 namespace ct = catter;
 

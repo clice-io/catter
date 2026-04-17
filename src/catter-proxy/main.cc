@@ -6,6 +6,8 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <kota/async/async.h>
+#include <kota/deco/deco.h>
 
 #include "hook.h"
 #include "ipc.h"
@@ -16,9 +18,6 @@
 #include "util/kotatsu.h"
 #include "util/log.h"
 #include "util/output.h"
-
-#include <kota/async/async.h>
-#include <kota/deco/deco.h>
 
 using namespace catter;
 

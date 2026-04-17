@@ -1,9 +1,9 @@
 #ifndef CATTER_WINDOWS
 
 #include <cerrno>
+#include <climits>
 #include <cstdlib>
 #include <filesystem>
-#include <limits.h>
 #include <ranges>
 #include <string>
 #include <sys/stat.h>

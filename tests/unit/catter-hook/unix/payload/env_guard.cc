@@ -3,11 +3,10 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <kota/zest/zest.h>
 
 #include "environment.h"
 #include "unix/config.h"
-
-#include <kota/zest/zest.h>
 
 namespace ct = catter;
 namespace cfg = catter::config::hook;

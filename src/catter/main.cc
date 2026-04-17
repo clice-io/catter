@@ -1,6 +1,7 @@
 #include <iostream>
 #include <print>
 #include <string_view>
+#include <kota/deco/deco.h>
 
 #include "app_runner.h"
 #include "option.h"
@@ -8,8 +9,6 @@
 #include "config/catter.h"
 #include "util/crossplat.h"
 #include "util/log.h"
-
-#include <kota/deco/deco.h>
 
 using namespace catter;
 

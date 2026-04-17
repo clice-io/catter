@@ -4,10 +4,9 @@
 #include <fstream>
 #include <string>
 #include <windows.h>
+#include <kota/zest/zest.h>
 
 #include "shared/resolver.h"
-
-#include <kota/zest/zest.h>
 
 namespace fs = std::filesystem;
 namespace resolver = catter::hook::shared::resolver;

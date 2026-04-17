@@ -1,10 +1,10 @@
 #include <atomic>
 #include <cerrno>
+#include <climits>
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <dlfcn.h>
-#include <limits.h>
 #include <spawn.h>
 
 #include "crossplat.h"

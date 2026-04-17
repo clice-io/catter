@@ -1,10 +1,10 @@
 #include "executor.h"
 
 #include <cerrno>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <expected>
-#include <limits.h>
 #include <span>
 #include <unistd.h>
 

@@ -3,7 +3,6 @@
 
 #include <string>
 #include <windows.h>
-
 #include <kota/zest/zest.h>
 
 namespace ct = catter;

@@ -11,16 +11,15 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <kota/support/functional.h>
+#include <kota/support/type_traits.h>
+#include <kota/meta/enum.h>
 
 #include "util/data.h"
 #include "util/enum.h"
 #include "util/log.h"
 #include "util/packet_io.h"
 #include "util/serde.h"
-
-#include <kota/meta/enum.h>
-#include <kota/support/functional.h>
-#include <kota/support/type_traits.h>
 
 namespace catter::ipc {
 using namespace data;

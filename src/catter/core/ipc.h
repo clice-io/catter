@@ -1,9 +1,8 @@
 #pragma once
 #include <memory>
+#include <kota/async/async.h>
 
 #include "util/data.h"
-
-#include <kota/async/async.h>
 
 namespace catter::ipc {
 

@@ -2,13 +2,12 @@
 
 #include <memory>
 #include <string>
-
-#include "config/log.h"
-
 #include <spdlog/logger.h>
 #include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
+
+#include "config/log.h"
 
 // every target have a single logger instance
 // which have commandline and file sink

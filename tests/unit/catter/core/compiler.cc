@@ -1,7 +1,6 @@
 #include "compiler.h"
 
 #include <optional>
-
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 

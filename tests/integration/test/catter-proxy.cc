@@ -22,6 +22,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <kota/async/async.h>
+#include <kota/meta/name.h>
 
 #include "ipc.h"
 #include "session.h"
@@ -31,9 +33,6 @@
 #include "util/kotatsu.h"
 #include "util/log.h"
 #include "util/serde.h"
-
-#include <kota/async/async.h>
-#include <kota/meta/name.h>
 
 using namespace catter;
 

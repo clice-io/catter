@@ -21,12 +21,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <kota/deco/deco.h>
 
 #include "hook.h"
 #include "util/crossplat.h"
 #include "util/log.h"
-
-#include <kota/deco/deco.h>
 
 #ifdef CATTER_WINDOWS
 

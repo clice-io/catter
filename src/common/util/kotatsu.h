@@ -3,13 +3,12 @@
 #include <cstdio>
 #include <format>
 #include <stdexcept>
+#include <kota/support/functional.h>
+#include <kota/async/async.h>
 
 #include "data.h"
 #include "pipe_proxy.h"
 #include "config/ipc.h"
-
-#include <kota/async/async.h>
-#include <kota/support/functional.h>
 
 namespace catter {
 

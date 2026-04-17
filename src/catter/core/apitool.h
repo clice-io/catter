@@ -6,11 +6,10 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <kota/support/function_traits.h>
 
 #include "qjs.h"
 #include "util/log.h"
-
-#include <kota/support/function_traits.h>
 
 namespace catter::capi::util {
 std::filesystem::path absolute_of(std::string js_path);

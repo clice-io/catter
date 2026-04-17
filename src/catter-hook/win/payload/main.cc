@@ -1,8 +1,8 @@
-#include <MinHook.h>
 #include <array>
 #include <format>
 #include <string>
 #include <string_view>
+#include <MinHook.h>
 #include <windows.h>
 
 #include "win/payload/util.h"

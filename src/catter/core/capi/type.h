@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <fcntl.h>
 #include <format>
 #include <optional>
 #include <string>
@@ -9,13 +8,13 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <fcntl.h>
+#include <kota/support/type_traits.h>
+#include <kota/meta/enum.h>
+#include <kota/meta/struct.h>
 
 #include "qjs.h"
 #include "util/enum.h"
-
-#include <kota/meta/enum.h>
-#include <kota/meta/struct.h>
-#include <kota/support/type_traits.h>
 
 namespace catter::js {
 

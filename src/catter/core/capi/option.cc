@@ -3,10 +3,11 @@
 #include <expected>
 #include <format>
 #include <limits>
-#include <quickjs.h>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <quickjs.h>
+#include <kota/option/option.h>
 
 #include "qjs.h"
 #include "../apitool.h"
@@ -19,8 +20,6 @@
 #include "opt/external/llvm_dlltool.h"
 #include "opt/external/llvm_lib.h"
 #include "opt/external/nvcc.h"
-
-#include <kota/option/option.h>
 
 namespace {
 

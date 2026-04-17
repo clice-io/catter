@@ -6,10 +6,9 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <kota/option/option.h>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/option/option.h>
 
 using namespace catter;
 

@@ -7,11 +7,10 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <kota/deco/deco.h>
 
 #include "ipc.h"
 #include "capi/type.h"
-
-#include <kota/deco/deco.h>
 
 namespace catter::core {
 namespace config {

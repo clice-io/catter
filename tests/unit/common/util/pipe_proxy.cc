@@ -2,7 +2,6 @@
 
 #include <string>
 #include <string_view>
-
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 

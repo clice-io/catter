@@ -3,10 +3,9 @@
 #include <filesystem>
 #include <format>
 #include <system_error>
+#include <kota/zest/zest.h>
 
 #include "temp_file_manager.h"
-
-#include <kota/zest/zest.h>
 
 namespace fs = std::filesystem;
 namespace ct = catter;

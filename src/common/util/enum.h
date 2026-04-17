@@ -1,12 +1,11 @@
 #pragma once
 #include <array>
 #include <cstddef>
-#include <fcntl.h>
 #include <functional>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
-
+#include <fcntl.h>
 #include <kota/meta/enum.h>
 #include <kota/meta/struct.h>
 

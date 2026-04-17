@@ -3,7 +3,6 @@
 #include <climits>
 #include <expected>
 #include <filesystem>
-#include <limits.h>
 #include <string_view>
 
 #include "environment.h"

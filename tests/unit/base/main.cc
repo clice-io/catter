@@ -1,10 +1,9 @@
 #include <string>
 #include <string_view>
+#include <kota/zest/zest.h>
 
 #include "util/crossplat.h"
 #include "util/log.h"
-
-#include <kota/zest/zest.h>
 
 int main(int argc, char** argv) {
     std::string filter;

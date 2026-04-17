@@ -6,6 +6,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <kota/async/async.h>
 
 #include "config/catter-proxy.h"
 #include "config/ipc.h"
@@ -13,8 +14,6 @@
 #include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
-
-#include <kota/async/async.h>
 
 namespace catter {
 

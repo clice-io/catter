@@ -1,9 +1,9 @@
 #include "util/serde.h"
 
-#include "util/data.h"
-
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+
+#include "util/data.h"
 
 using namespace catter;
 
