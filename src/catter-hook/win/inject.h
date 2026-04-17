@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
-#include <windows.h>
+
+#include "win/win32.h"
 
 namespace catter::proxy::hook {
 bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path);

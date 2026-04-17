@@ -388,7 +388,7 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("1", "5000f1ce7a49240b39d516f1c0fff119e579b70b")
+    add_versions("118", "0d361e7969f28b373abfa0182e84ad48dcec2296")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -403,6 +403,12 @@ package("kotatsu")
         -- in kotatsu's repo-local dev toolchain tweaks during package install.
         configs.dev = false
         configs.test = false
+        -- Pin the kotatsu submodules catter actually consumes so upstream
+        -- default flips do not silently drop features we depend on.
+        configs.async = true
+        configs.option = true
+        configs.deco = true
+        configs.ztest = true
         if package:is_plat("macosx") then
             local conda_prefix = os.getenv("CONDA_PREFIX")
             if conda_prefix then
@@ -430,7 +436,11 @@ package("kotatsu")
                     "--ldflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
                     "--shflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
                     "--dev=false",
-                    "--test=false"
+                    "--test=false",
+                    "--async=true",
+                    "--option=true",
+                    "--deco=true",
+                    "--ztest=true"
                 }
                 if package:config("asan") then
                     table.insert(argv, "--policies=build.sanitizer.address")

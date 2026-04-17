@@ -6,11 +6,7 @@
 #include <string_view>
 #include <type_traits>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#include <windows.h>
+#include "win/win32.h"
 
 namespace catter::win {
 

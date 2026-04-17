@@ -125,7 +125,7 @@ IncludeCategories:
     Priority: 10
     SortPriority: 12
 
-  # 3. kotatsu (split by submodule, à la eventide)
+  # 3. kotatsu (split by submodule)
   - Regex: '^<(kota/zest)/'
     Priority: 10
     SortPriority: 13

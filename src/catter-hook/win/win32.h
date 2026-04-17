@@ -12,6 +12,9 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 
 // clang-format off
 // Windows SDK headers are order-sensitive: <windows.h> defines the macros and

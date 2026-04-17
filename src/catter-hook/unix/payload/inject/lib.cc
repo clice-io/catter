@@ -6,13 +6,13 @@
 #include <cstdlib>
 #include <dlfcn.h>
 #include <spawn.h>
+#include <unistd.h>
 
 #include "crossplat.h"
 #include "debug.h"
 #include "executor.h"
 #include "linker.h"
 #include "session.h"
-#include "unistd.h"
 #include "unix/config.h"
 
 #define EXPORT_SYMBOL __attribute__((visibility("default")))

@@ -23,7 +23,6 @@
 #include <string>
 #include <vector>
 #include <kota/async/async.h>
-#include <kota/meta/name.h>
 
 #include "ipc.h"
 #include "session.h"
