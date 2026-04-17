@@ -1,7 +1,8 @@
 #pragma once
-#include <string>
 #include <expected>
+#include <string>
 #include <unordered_map>
+
 #include "resolver.h"
 
 namespace ct = catter;

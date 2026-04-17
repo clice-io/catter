@@ -10,12 +10,12 @@
 #include <variant>
 #include <vector>
 
-#include <kota/support/type_traits.h>
-#include <kota/meta/enum.h>
-#include <kota/meta/struct.h>
-
 #include "qjs.h"
 #include "util/enum.h"
+
+#include <kota/meta/enum.h>
+#include <kota/meta/struct.h>
+#include <kota/support/type_traits.h>
 
 namespace catter::js {
 

@@ -1,18 +1,19 @@
 #include "js.h"
-#include "config/js-test.h"
-#include "temp_file_manager.h"
-#include "util/output.h"
 
-#include <cstdio>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-
-#include <exception>
 #include <algorithm>
+#include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <vector>
+
+#include "temp_file_manager.h"
+#include "config/js-test.h"
+#include "util/output.h"
+
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 
 namespace fs = std::filesystem;
 using namespace catter;

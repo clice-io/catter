@@ -3,8 +3,8 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <type_traits>
+#include <vector>
 
 #include <kota/async/async.h>
 #include <kota/meta/struct.h>

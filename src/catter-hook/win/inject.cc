@@ -1,19 +1,18 @@
 
-#include <format>
-#include <system_error>
+#include <Psapi.h>
 #include <cassert>
-#include <string>
-#include <stdexcept>
-
-#include <kota/meta/enum.h>
-
-#include <windows.h>
+#include <format>
 #include <libloaderapi.h>
 #include <minwindef.h>
-#include <Psapi.h>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+#include <windows.h>
 
 #include "util/log.h"
 #include "win/win32.h"
+
+#include <kota/meta/enum.h>
 
 using namespace std::literals;
 

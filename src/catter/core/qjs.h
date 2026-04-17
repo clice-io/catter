@@ -5,24 +5,23 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <format>
+#include <memory>
 #include <optional>
+#include <quickjs.h>
 #include <ranges>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <vector>
-#include <memory>
 #include <utility>
-#include <format>
-
-#include <kota/meta/name.h>
-#include <kota/support/type_traits.h>
-#include <kota/support/functional.h>
+#include <vector>
 
 #include <cpptrace/cpptrace.hpp>
-#include <quickjs.h>
+#include <kota/meta/name.h>
+#include <kota/support/functional.h>
+#include <kota/support/type_traits.h>
 
 // namespace meta
 

@@ -1,11 +1,11 @@
+#include "util.h"
+
 #include <algorithm>
 #include <string>
 #include <string_view>
 
-#include "win/env.h"
-
 #include "shared/resolver.h"
-#include "util.h"
+#include "win/env.h"
 
 namespace catter::win::payload {
 

@@ -3,18 +3,18 @@
 #include <string>
 #include <vector>
 
-#include <kota/option/option.h>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"
 #include "opt/external/lld_macho.h"
 #include "opt/external/lld_mingw.h"
 #include "opt/external/lld_wasm.h"
-#include "opt/external/nvcc.h"
 #include "opt/external/llvm_dlltool.h"
 #include "opt/external/llvm_lib.h"
+#include "opt/external/nvcc.h"
+
+#include <kota/option/option.h>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 
 namespace eo = kota::option;
 using namespace catter;

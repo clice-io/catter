@@ -1,16 +1,15 @@
 #pragma once
 #include <cassert>
 #include <cstdio>
-#include <stdexcept>
 #include <format>
+#include <stdexcept>
 
-#include <kota/support/functional.h>
-#include <kota/async/async.h>
-#include <kota/async/io/loop.h>
-
-#include "config/ipc.h"
 #include "data.h"
 #include "pipe_proxy.h"
+#include "config/ipc.h"
+
+#include <kota/async/async.h>
+#include <kota/support/functional.h>
 
 namespace catter {
 

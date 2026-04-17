@@ -1,6 +1,5 @@
 #pragma once
 #include <filesystem>
-
 #include <windows.h>
 
 namespace catter::proxy::hook {

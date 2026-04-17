@@ -1,6 +1,8 @@
 #include "command.h"
-#include "session.h"
+
 #include <format>
+
+#include "session.h"
 
 namespace {
 void push_proxy_args(catter::CmdBuilder::command::ArgvTy& argv,

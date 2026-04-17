@@ -1,22 +1,22 @@
 
 #pragma once
+#include <chrono>
 #include <format>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <type_traits>
-#include <chrono>
-#include <stdexcept>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <windows.h>
+#include <Psapi.h>
 #include <libloaderapi.h>
 #include <minwindef.h>
-#include <Psapi.h>
+#include <windows.h>
 
 namespace catter::win {
 class Handle {

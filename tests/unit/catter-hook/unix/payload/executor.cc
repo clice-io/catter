@@ -1,13 +1,14 @@
 #include "executor.h"
-#include "opt/proxy/option.h"
+
+#include <filesystem>
+
 #include "session.h"
 #include "mock/mock_linker.h"
 #include "mock/mock_resolver.h"
+#include "opt/proxy/option.h"
 
 #include <kota/deco/deco.h>
 #include <kota/zest/zest.h>
-
-#include <filesystem>
 
 namespace ct = catter;
 namespace fs = std::filesystem;

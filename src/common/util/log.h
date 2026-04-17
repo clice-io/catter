@@ -1,7 +1,8 @@
 #pragma once
-#include <ranges>
 #include <filesystem>
 #include <iostream>
+#include <ranges>
+
 #include "spdlog/spdlog.h"
 
 /**

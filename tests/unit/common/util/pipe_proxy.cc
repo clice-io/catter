@@ -1,10 +1,10 @@
+#include "util/pipe_proxy.h"
+
 #include <string>
 #include <string_view>
 
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-
-#include "util/pipe_proxy.h"
 
 using namespace catter::util;
 

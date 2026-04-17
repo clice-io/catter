@@ -1,13 +1,13 @@
 #ifndef CATTER_WINDOWS
 
-#include "shared/resolver.h"
-#include "temp_file_manager.h"
-
-#include <kota/zest/zest.h>
-
 #include <filesystem>
 #include <format>
 #include <system_error>
+
+#include "temp_file_manager.h"
+#include "shared/resolver.h"
+
+#include <kota/zest/zest.h>
 
 namespace fs = std::filesystem;
 namespace resolver = catter::hook::shared::resolver;

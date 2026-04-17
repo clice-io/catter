@@ -1,7 +1,8 @@
-#include <kota/meta/enum.h>
+#include "compiler.h"
 
 #include "apitool.h"
-#include "compiler.h"
+
+#include <kota/meta/enum.h>
 
 using namespace catter;
 

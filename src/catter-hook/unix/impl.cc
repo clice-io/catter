@@ -1,22 +1,21 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <dirent.h>
 #include <filesystem>
 #include <format>
-
 #include <limits.h>
 #include <spawn.h>
-#include <unistd.h>
-#include <dirent.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include "hook.h"
-#include "util/data.h"
-#include "util/crossplat.h"
-#include "util/log.h"
-#include "util/kotatsu.h"
-#include "util/pipe_proxy.h"
 #include "unix/config.h"
+#include "util/crossplat.h"
+#include "util/data.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
+#include "util/pipe_proxy.h"
 
 namespace catter::proxy::hook {
 

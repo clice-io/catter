@@ -1,3 +1,5 @@
+#include "session.h"
+
 #include <cassert>
 #include <format>
 #include <list>
@@ -5,16 +7,14 @@
 #include <stdexcept>
 #include <string>
 
-#include <kota/async/io/loop.h>
-
-#include "session.h"
-
-#include "util/guard.h"
-#include "util/log.h"
-#include "util/crossplat.h"
-#include "util/kotatsu.h"
-#include "config/ipc.h"
 #include "config/catter-proxy.h"
+#include "config/ipc.h"
+#include "util/crossplat.h"
+#include "util/guard.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
+
+#include <kota/async/async.h>
 
 namespace catter {
 

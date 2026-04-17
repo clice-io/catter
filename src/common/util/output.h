@@ -1,7 +1,7 @@
 #pragma once
-#include <print>
 #include <cstdlib>
 #include <format>
+#include <print>
 #include <string_view>
 
 namespace catter::output {

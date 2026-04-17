@@ -1,3 +1,5 @@
+#include "config/ipc.h"
+
 #include <cstddef>
 #include <print>
 #include <stdexcept>
@@ -5,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-#include <kota/async/async.h>
-
-#include "config/ipc.h"
-#include "util/log.h"
 #include "util/data.h"
 #include "util/kotatsu.h"
+#include "util/log.h"
 #include "util/packet_io.h"
+
+#include <kota/async/async.h>
 
 namespace catter::proxy::ipc {
 using namespace data;

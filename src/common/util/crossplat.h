@@ -1,10 +1,10 @@
 #pragma once
-#include <system_error>
-#include <vector>
-#include <string>
-#include <filesystem>
-#include <thread>
 #include <chrono>
+#include <filesystem>
+#include <string>
+#include <system_error>
+#include <thread>
+#include <vector>
 
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept;

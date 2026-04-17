@@ -1,9 +1,10 @@
 #pragma once
-#include "session.h"
 #include <filesystem>
 #include <span>
 #include <string>
 #include <vector>
+
+#include "session.h"
 
 namespace catter {
 class CmdBuilder {

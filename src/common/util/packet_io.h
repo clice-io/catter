@@ -6,11 +6,11 @@
 #include <stdexcept>
 #include <vector>
 
-#include <kota/async/async.h>
-
 #include "util/data.h"
 #include "util/log.h"
 #include "util/serde.h"
+
+#include <kota/async/async.h>
 
 namespace catter {
 

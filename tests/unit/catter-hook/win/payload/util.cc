@@ -1,11 +1,10 @@
 
 #include "win/payload/util.h"
 
-#include <kota/zest/zest.h>
-
 #include <string>
-
 #include <windows.h>
+
+#include <kota/zest/zest.h>
 
 namespace ct = catter;
 

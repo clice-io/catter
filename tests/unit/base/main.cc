@@ -1,7 +1,8 @@
-#include "util/crossplat.h"
-#include "util/log.h"
 #include <string>
 #include <string_view>
+
+#include "util/crossplat.h"
+#include "util/log.h"
 
 #include <kota/zest/zest.h>
 

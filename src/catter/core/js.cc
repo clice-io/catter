@@ -1,15 +1,15 @@
+#include "js.h"
+
 #include <cstdio>
 #include <cstring>
 #include <format>
 #include <stdexcept>
 
-#include <kota/meta/enum.h>
-
+#include "apitool.h"
+#include "qjs.h"
 #include "config/js-lib.h"
 
-#include "js.h"
-#include "qjs.h"
-#include "apitool.h"
+#include <kota/meta/enum.h>
 
 namespace catter::js {
 

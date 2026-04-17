@@ -1,7 +1,7 @@
 #pragma once
 
-#include <uv.h>
 #include <print>
+#include <uv.h>
 
 void walk_cb(uv_handle_t* handle, void* arg) {
     const char* type_name = uv_handle_type_name(handle->type);

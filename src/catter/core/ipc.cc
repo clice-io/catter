@@ -1,26 +1,26 @@
+#include "ipc.h"
+
 #include <cassert>
 #include <cstddef>
+#include <format>
+#include <memory>
 #include <new>
 #include <optional>
 #include <print>
 #include <tuple>
-#include <memory>
-#include <format>
 #include <type_traits>
 #include <utility>
+#include <vector>
+
+#include "util/data.h"
+#include "util/enum.h"
+#include "util/log.h"
+#include "util/packet_io.h"
+#include "util/serde.h"
 
 #include <kota/meta/enum.h>
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
-#include <vector>
-
-#include "ipc.h"
-
-#include "util/enum.h"
-#include "util/log.h"
-#include "util/serde.h"
-#include "util/data.h"
-#include "util/packet_io.h"
 
 namespace catter::ipc {
 using namespace data;

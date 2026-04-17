@@ -1,3 +1,5 @@
+#include "opt/external/clang.h"
+
 #include <array>
 #include <expected>
 #include <span>
@@ -8,8 +10,6 @@
 #include <kota/option/option.h>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-
-#include "opt/external/clang.h"
 
 using namespace catter;
 

@@ -1,20 +1,19 @@
 #pragma once
 
-#include <dlfcn.h>
-#include <unistd.h>
 #include <array>
+#include <dlfcn.h>
 #include <limits.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #ifdef CATTER_LINUX
-#include <sys/syscall.h>
 #include <pthread.h>
+#include <sys/syscall.h>
 
 inline pid_t get_thread_id(void) {
     return (pid_t)syscall(SYS_gettid);
 }
 #elif defined(CATTER_MAC)
-#include <pthread.h>
 
 inline uint64_t get_thread_id(void) {
     uint64_t tid;
@@ -45,7 +44,6 @@ inline const char** environment() noexcept {
 #include <string>
 
 #ifdef CATTER_LINUX
-#include <unistd.h>
 #elif defined(CATTER_MAC)
 #include <mach-o/dyld.h>
 #else

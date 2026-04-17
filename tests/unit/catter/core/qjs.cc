@@ -1,12 +1,12 @@
+#include "qjs.h"
+
+#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <stdexcept>
 #include <vector>
 
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-
-#include "qjs.h"
 
 using namespace catter;
 

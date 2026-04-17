@@ -1,12 +1,5 @@
 #include "executor.h"
 
-#include "command.h"
-#include "debug.h"
-#include "resolver.h"
-#include "linker.h"
-#include "session.h"
-#include "env_guard.h"
-
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -14,6 +7,13 @@
 #include <limits.h>
 #include <span>
 #include <unistd.h>
+
+#include "command.h"
+#include "debug.h"
+#include "env_guard.h"
+#include "linker.h"
+#include "resolver.h"
+#include "session.h"
 
 namespace {
 

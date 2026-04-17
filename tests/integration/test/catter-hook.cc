@@ -13,20 +13,20 @@
 
 // CHECK-OUTPUT: -p 0 --exec /bin/echo -- /bin/echo Hello, World!
 // clang-format on
+#include <format>
 #include <functional>
 #include <iostream>
+#include <print>
 #include <ranges>
 #include <string>
-#include <format>
-#include <print>
 #include <unordered_map>
 #include <vector>
-
-#include <kota/deco/deco.h>
 
 #include "hook.h"
 #include "util/crossplat.h"
 #include "util/log.h"
+
+#include <kota/deco/deco.h>
 
 #ifdef CATTER_WINDOWS
 
@@ -68,8 +68,8 @@ std::unordered_map<std::string, std::function<void()>> funcs = {
 }  // namespace test
 #else
 #include <spawn.h>
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 extern char** environ;
 
 namespace test {

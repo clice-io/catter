@@ -1,12 +1,13 @@
 #include "util/crossplat.h"
-#include <cerrno>
-#include <filesystem>
+
 #include <array>
+#include <cerrno>
 #include <climits>
+#include <filesystem>
+#include <format>
+#include <string>
 #include <system_error>
 #include <vector>
-#include <string>
-#include <format>
 
 #if defined(CATTER_LINUX)
 #include <unistd.h>
@@ -46,7 +47,6 @@ std::filesystem::path get_executable_path() {
 
 #elif defined(CATTER_MAC)
 
-#include <unistd.h>
 #include <crt_externs.h>
 #include <mach-o/dyld.h>
 

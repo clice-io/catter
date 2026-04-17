@@ -1,17 +1,17 @@
 #include "command.h"
-#include "session.h"
 
+#include <filesystem>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <vector>
+
+#include "session.h"
 #include "opt/proxy/option.h"
 
 #include <kota/deco/deco.h>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-
-#include <filesystem>
-#include <optional>
-#include <string_view>
-#include <vector>
-#include <span>
 
 namespace ct = catter;
 

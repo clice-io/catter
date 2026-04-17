@@ -1,11 +1,13 @@
 #include "env_guard.h"
-#include "unix/config.h"
-#include "unix/payload/environment.h"
+
 #include <cstddef>
 #include <cstring>
 #include <list>
 #include <ranges>
 #include <string_view>
+
+#include "unix/config.h"
+#include "unix/payload/environment.h"
 
 namespace {
 const char* handle_env(std::list<std::string>& new_preload, char* entry) noexcept {

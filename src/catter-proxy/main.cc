@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <cstdlib>
-#include <kota/async/io/loop.h>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -8,19 +7,18 @@
 #include <system_error>
 #include <vector>
 
+#include "hook.h"
+#include "ipc.h"
+#include "config/catter-proxy.h"
+#include "opt/proxy/option.h"
+#include "shared/resolver.h"
+#include "util/crossplat.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
+#include "util/output.h"
+
 #include <kota/async/async.h>
 #include <kota/deco/deco.h>
-
-#include "shared/resolver.h"
-#include "ipc.h"
-#include "hook.h"
-
-#include "opt/proxy/option.h"
-#include "config/catter-proxy.h"
-#include "util/log.h"
-#include "util/kotatsu.h"
-#include "util/crossplat.h"
-#include "util/output.h"
 
 using namespace catter;
 

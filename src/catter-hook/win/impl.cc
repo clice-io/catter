@@ -1,47 +1,41 @@
 
-#include <coroutine>
-#include <format>
-#include <print>
-#include <string>
-#include <system_error>
-#include <filesystem>
-#include <vector>
-#include <memory>
 #include <atomic>
 #include <cassert>
-#include <cstdio>
+#include <coroutine>
 #include <cstdint>
-#include <string>
-#include <string_view>
+#include <cstdio>
+#include <filesystem>
+#include <format>
+#include <io.h>
+#include <memory>
+#include <print>
 #include <stdexcept>
 #include <string.h>
-#include <io.h>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
 
-#include <kota/async/io/loop.h>
-#include <kota/async/io/process.h>
-#include <kota/async/runtime/sync.h>
-#include <kota/async/runtime/task.h>
-#include <kota/async/vocab/error.h>
+#include <kota/async/async.h>
 #include <kota/meta/enum.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <uv.h>
-#include <windows.h>
+#include <Psapi.h>
 #include <libloaderapi.h>
 #include <minwindef.h>
-#include <Psapi.h>
+#include <uv.h>
+#include <windows.h>
 
-#include "util/log.h"
-#include "util/data.h"
 #include "util/crossplat.h"
+#include "util/data.h"
 #include "util/kotatsu.h"
-
+#include "util/log.h"
 #include "win/env.h"
-#include "win/win32.h"
 #include "win/inject.h"
+#include "win/win32.h"
 
 namespace catter::proxy::hook {
 

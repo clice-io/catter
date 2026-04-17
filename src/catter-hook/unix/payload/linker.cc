@@ -1,4 +1,5 @@
 #include "./linker.h"
+
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -6,8 +7,9 @@
 #include <expected>
 #include <spawn.h>
 #include <unistd.h>
-#include "debug.h"
+
 #include "crossplat.h"
+#include "debug.h"
 
 using execve_t = int (*)(const char* path, char* const argv[], char* const envp[]);
 using posix_spawn_t = int (*)(pid_t* pid,

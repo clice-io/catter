@@ -96,9 +96,28 @@ SpacesInSquareBrackets: false
 # Order
 QualifierAlignment: Custom
 QualifierOrder: ["constexpr", "const", "inline", "static", "type"]
-SortIncludes: Never
+SortIncludes: true
 SortUsingDeclarations: Never
-IncludeBlocks: Merge
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^["<](spdlog|cpptrace|quickjs-ng|minhook)/'
+    Priority: 30
+    SortPriority: 31
+
+  - Regex: '^["<](kota)/'
+    Priority: 30
+    SortPriority: 32
+
+  - Regex: "^<.*"
+    Priority: 10
+    SortPriority: 10
+
+  - Regex: '^".*/.*"'
+    Priority: 20
+    SortPriority: 23
+
+  - Regex: ".*"
+    Priority: 20
 
 ForEachMacros: ["REFLECTABLE_RECORD"]
 NamespaceMacros: [TEST_SUITE]

@@ -1,9 +1,10 @@
 #include "session.h"
 
+#include <string>
+
 #include "debug.h"
 #include "environment.h"
 #include "unix/config.h"
-#include <string>
 
 namespace {
 std::string proxy_path_string = "";

@@ -11,11 +11,11 @@
 #include <utility>
 #include <vector>
 
-#include <kota/support/functional.h>
-#include <kota/async/async.h>
-
 #include "ipc.h"
 #include "util/data.h"
+
+#include <kota/async/async.h>
+#include <kota/support/functional.h>
 
 namespace catter {
 

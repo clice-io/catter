@@ -1,5 +1,5 @@
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <expected>
 #include <format>
 #include <limits>
@@ -8,20 +8,19 @@
 #include <string_view>
 #include <vector>
 
-#include <kota/option/option.h>
-
+#include "qjs.h"
+#include "../apitool.h"
 #include "opt/external/clang.h"
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"
 #include "opt/external/lld_macho.h"
 #include "opt/external/lld_mingw.h"
 #include "opt/external/lld_wasm.h"
-#include "opt/external/nvcc.h"
 #include "opt/external/llvm_dlltool.h"
 #include "opt/external/llvm_lib.h"
-#include "qjs.h"
+#include "opt/external/nvcc.h"
 
-#include "../apitool.h"
+#include <kota/option/option.h>
 
 namespace {
 

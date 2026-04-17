@@ -3,7 +3,6 @@
 #include <filesystem>
 
 #include "qjs.h"
-
 #include "capi/type.h"
 
 namespace catter::js {

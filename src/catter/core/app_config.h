@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "capi/type.h"
 #include "ipc.h"
 #include "./option.h"
+#include "capi/type.h"
 
 namespace catter::app {
 

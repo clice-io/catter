@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/data.h"
 #include "util/crossplat.h"
+#include "util/data.h"
 
 namespace catter::proxy::hook {
 /// Run the command with catter proxy hook
