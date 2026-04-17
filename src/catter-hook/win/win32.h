@@ -13,10 +13,15 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+// clang-format off
+// Windows SDK headers are order-sensitive: <windows.h> defines the macros and
+// types (HANDLE, DWORD, BOOL, HMODULE, ...) that the others depend on, so it
+// must come first. Do not let clang-format alphabetize this block.
+#include <windows.h>
 #include <Psapi.h>
 #include <libloaderapi.h>
 #include <minwindef.h>
-#include <windows.h>
+// clang-format on
 
 namespace catter::win {
 class Handle {

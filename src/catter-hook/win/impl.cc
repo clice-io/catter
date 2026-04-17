@@ -18,15 +18,14 @@
 #include <kota/async/async.h>
 #include <kota/meta/enum.h>
 
+// Must be defined before any header drags in <windows.h> (<uv.h> and
+// "win/win32.h" both do). Ensures the lean variant is selected so winsock.h
+// does not leak in and collide with <system_error> etc.
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <Psapi.h>
-#include <libloaderapi.h>
-#include <minwindef.h>
 #include <uv.h>
-#include <windows.h>
 
 #include "util/crossplat.h"
 #include "util/data.h"

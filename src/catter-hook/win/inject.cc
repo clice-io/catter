@@ -4,10 +4,6 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <Psapi.h>
-#include <libloaderapi.h>
-#include <minwindef.h>
-#include <windows.h>
 #include <kota/meta/enum.h>
 
 #include "util/log.h"

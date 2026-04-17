@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 #include <MinHook.h>
-#include <windows.h>
 
 #include "win/payload/util.h"
+#include "win/win32.h"
 
 // Use anonymous namespace to avoid exporting symbols
 namespace {

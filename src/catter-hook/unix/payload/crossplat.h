@@ -4,10 +4,10 @@
 #include <climits>
 #include <cstdint>
 #include <dlfcn.h>
+#include <pthread.h>  // order-stable: used unconditionally by get_thread_id()
 #include <unistd.h>
 
 #ifdef CATTER_LINUX
-#include <pthread.h>
 #include <sys/syscall.h>
 
 inline pid_t get_thread_id(void) {
