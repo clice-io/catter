@@ -1,16 +1,10 @@
 
-#include <format>
-#include <system_error>
 #include <cassert>
-#include <string>
+#include <format>
 #include <stdexcept>
-
-#include <eventide/reflection/enum.h>
-
-#include <windows.h>
-#include <libloaderapi.h>
-#include <minwindef.h>
-#include <Psapi.h>
+#include <string>
+#include <system_error>
+#include <kota/meta/enum.h>
 
 #include "util/log.h"
 #include "win/win32.h"
@@ -120,7 +114,7 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
         throw std::runtime_error("failed to write into process");
     }
 
-    for(auto method: eventide::refl::reflection<InjectMethod>::member_values) {
+    for(auto method: kota::meta::reflection<InjectMethod>::member_values) {
         try {
             auto thread = inject(hProcess, Space.get(), method);
             if(auto error = win::wait_for_object(thread.get(), 3s); error) {
@@ -139,7 +133,7 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
             }
         } catch(const std::exception& e) {
             LOG_ERROR("Injection with method {} failed: {}",
-                      eventide::refl::enum_name(method),
+                      kota::meta::enum_name(method),
                       e.what());
         }
     }

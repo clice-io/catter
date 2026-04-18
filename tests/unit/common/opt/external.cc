@@ -2,21 +2,20 @@
 #include <expected>
 #include <string>
 #include <vector>
-
-#include <eventide/option/option.h>
-#include <eventide/zest/macro.h>
-#include <eventide/zest/zest.h>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
+#include <kota/option/option.h>
 
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"
 #include "opt/external/lld_macho.h"
 #include "opt/external/lld_mingw.h"
 #include "opt/external/lld_wasm.h"
-#include "opt/external/nvcc.h"
 #include "opt/external/llvm_dlltool.h"
 #include "opt/external/llvm_lib.h"
+#include "opt/external/nvcc.h"
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 using namespace catter;
 
 namespace {

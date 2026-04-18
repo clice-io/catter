@@ -7,7 +7,7 @@
 
 namespace catter::opt::nvcc {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace detail {
 

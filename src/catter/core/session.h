@@ -10,9 +10,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#include <eventide/common/functional.h>
-#include <eventide/async/async.h>
+#include <kota/support/functional.h>
+#include <kota/async/async.h>
 
 #include "ipc.h"
 #include "util/data.h"
@@ -36,9 +35,8 @@ concept ServiceFactoryLike =
 
 class Session {
 public:
-    using PipeAcceptor = eventide::acceptor<eventide::pipe>;
-    using ClientAcceptor =
-        eventide::function<eventide::task<void>(data::ipcid_t, eventide::pipe&&)>;
+    using PipeAcceptor = kota::acceptor<kota::pipe>;
+    using ClientAcceptor = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
 
     struct ProcessLaunchPlan {
         std::string cwd;
@@ -64,7 +62,7 @@ public:
             .launch_plan = std::move(launch_plan),
             .callback =
                 [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
-                                                                      eventide::pipe&& client) {
+                                                                      kota::pipe&& client) {
                     return ipc::accept(factory(id), std::move(client));
                 },
         };
@@ -78,11 +76,11 @@ public:
     int64_t run(RunPlan run_plan);
 
 private:
-    eventide::task<void> loop(ClientAcceptor acceptor);
+    kota::task<void> loop(ClientAcceptor acceptor);
 
-    eventide::task<int64_t> spawn(std::string executable,
-                                  std::vector<std::string> args,
-                                  std::string cwd);
+    kota::task<int64_t> spawn(std::string executable,
+                              std::vector<std::string> args,
+                              std::string cwd);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

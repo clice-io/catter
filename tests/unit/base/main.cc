@@ -1,9 +1,9 @@
-#include "util/crossplat.h"
-#include "util/log.h"
 #include <string>
 #include <string_view>
+#include <kota/zest/zest.h>
 
-#include <eventide/zest/zest.h>
+#include "util/crossplat.h"
+#include "util/log.h"
 
 int main(int argc, char** argv) {
     std::string filter;
@@ -22,5 +22,5 @@ int main(int argc, char** argv) {
 
     catter::log::init_logger("ut", catter::util::get_catter_data_path() / "test.log", false);
 
-    return eventide::zest::Runner::instance().run_tests(filter);
+    return kota::zest::Runner::instance().run_tests(filter);
 }

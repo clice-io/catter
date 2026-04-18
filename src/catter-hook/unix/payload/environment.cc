@@ -1,7 +1,9 @@
 #include "environment.h"
-#include "debug.h"
+
 #include <cstddef>
 #include <string_view>
+
+#include "debug.h"
 
 namespace catter::env {
 

@@ -5,8 +5,7 @@
 #include <span>
 #include <stdexcept>
 #include <vector>
-
-#include <eventide/async/async.h>
+#include <kota/async/async.h>
 
 #include "util/data.h"
 #include "util/log.h"
@@ -18,14 +17,14 @@ class PacketChannel {
 public:
     PacketChannel() = default;
 
-    explicit PacketChannel(eventide::pipe&& pipe) : pipe(std::move(pipe)) {}
+    explicit PacketChannel(kota::pipe&& pipe) : pipe(std::move(pipe)) {}
 
     PacketChannel(const PacketChannel&) = delete;
     PacketChannel& operator= (const PacketChannel&) = delete;
     PacketChannel(PacketChannel&&) = default;
     PacketChannel& operator= (PacketChannel&&) = default;
 
-    eventide::task<std::optional<data::packet>> read_packet() {
+    kota::task<std::optional<data::packet>> read_packet() {
         size_t packet_size = 0;
         if(!(co_await read_exact(reinterpret_cast<char*>(&packet_size),
                                  sizeof(packet_size),
@@ -41,7 +40,7 @@ public:
         co_return payload;
     }
 
-    eventide::task<void, eventide::error> write_packet(const std::vector<char>& payload) {
+    kota::task<void, kota::error> write_packet(const std::vector<char>& payload) {
         auto serialized = Serde<data::packet>::serialize(payload);
         LOG_DEBUG("Writing {} bytes: {}", serialized.size(), log::to_hex(serialized));
         co_await this->pipe.write(serialized).or_fail();
@@ -49,7 +48,7 @@ public:
     }
 
 private:
-    eventide::task<bool> read_exact(char* dst, size_t len, bool allow_eof = false) {
+    kota::task<bool> read_exact(char* dst, size_t len, bool allow_eof = false) {
         size_t total_read = 0;
         while(total_read < len) {
             auto ret =
@@ -72,7 +71,7 @@ private:
         co_return true;
     }
 
-    eventide::pipe pipe{};
+    kota::pipe pipe{};
 };
 
 }  // namespace catter

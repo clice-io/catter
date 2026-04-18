@@ -1,16 +1,16 @@
+#include "config/ipc.h"
+
 #include <cstddef>
 #include <print>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <kota/async/async.h>
 
-#include <eventide/async/async.h>
-
-#include "config/ipc.h"
-#include "util/log.h"
 #include "util/data.h"
-#include "util/eventide.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
 #include "util/packet_io.h"
 
 namespace catter::proxy::ipc {
@@ -19,9 +19,8 @@ using namespace data;
 class Impl {
 public:
     Impl() noexcept {
-        auto ret = wait(eventide::pipe::connect(config::ipc::pipe_name(),
-                                                eventide::pipe::options(),
-                                                default_loop()));
+        auto ret = wait(
+            kota::pipe::connect(config::ipc::pipe_name(), kota::pipe::options(), default_loop()));
         if(!ret) {
             std::println("pipe connect failed: {}", ret.error().message());
             std::terminate();

@@ -1,26 +1,25 @@
+#include "ipc.h"
+
 #include <cassert>
 #include <cstddef>
+#include <format>
+#include <memory>
 #include <new>
 #include <optional>
 #include <print>
 #include <tuple>
-#include <memory>
-#include <format>
 #include <type_traits>
 #include <utility>
-
-#include <eventide/reflection/enum.h>
-#include <eventide/common/functional.h>
-#include <eventide/common/meta.h>
 #include <vector>
+#include <kota/support/functional.h>
+#include <kota/support/type_traits.h>
+#include <kota/meta/enum.h>
 
-#include "ipc.h"
-
+#include "util/data.h"
 #include "util/enum.h"
 #include "util/log.h"
-#include "util/serde.h"
-#include "util/data.h"
 #include "util/packet_io.h"
+#include "util/serde.h"
 
 namespace catter::ipc {
 using namespace data;
@@ -30,7 +29,7 @@ struct Helper;
 
 template <auto... MemFns>
 struct Dispatcher {
-    using Class = std::common_type_t<typename eventide::mem_fn<MemFns>::ClassType...>;
+    using Class = std::common_type_t<typename kota::mem_fn<MemFns>::ClassType...>;
 
     template <size_t I>
     constexpr static auto get() {
@@ -41,7 +40,7 @@ struct Dispatcher {
     static consteval auto match_mem_fn() {
         constexpr auto idx = []<size_t I>(this auto self, std::in_place_index_t<I>) {
             if constexpr(I < sizeof...(MemFns)) {
-                using Fn = eventide::mem_fn<get<I>()>::FunctionType;
+                using Fn = kota::mem_fn<get<I>()>::FunctionType;
                 if constexpr(std::same_as<Fn, RequestType<Req>>) {
                     return I;
                 } else {
@@ -63,7 +62,7 @@ struct Dispatcher {
 
     template <typename Ret, typename... Args>
     struct Helper<Ret(Args...)> {
-        static std::optional<std::vector<char>> call(eventide::function_ref<Ret(Args...)> callback,
+        static std::optional<std::vector<char>> call(kota::function_ref<Ret(Args...)> callback,
                                                      BufferReader& buf_reader) {
             auto args_tuple = std::tuple<Args...>{Serde<Args>::deserialize(buf_reader)...};
             if constexpr(std::is_void_v<Ret>) {
@@ -78,7 +77,7 @@ struct Dispatcher {
 
     static std::optional<std::vector<char>> dispatch(Class& obj, BufferReader& buf_reader) {
         Request req = Serde<Request>::deserialize(buf_reader);
-        LOG_INFO("Handling request of type: {}", eventide::refl::enum_name(req));
+        LOG_INFO("Handling request of type: {}", kota::meta::enum_name(req));
 
         return catter::dispatch(
             req,
@@ -86,19 +85,18 @@ struct Dispatcher {
                 constexpr auto mem_fn = match_mem_fn<E>();
                 if constexpr(mem_fn == nullptr) {
                     LOG_INFO("No matching member function found for request type: {}",
-                             eventide::refl::enum_name(req));
+                             kota::meta::enum_name(req));
                     throw std::runtime_error(
                         std::format("No matching member function found for request type: {}",
-                                    eventide::refl::enum_name(req)));
+                                    kota::meta::enum_name(req)));
                 } else {
-                    return Helper<RequestType<E>>::call(eventide::bind_ref<mem_fn>(obj),
-                                                        buf_reader);
+                    return Helper<RequestType<E>>::call(kota::bind_ref<mem_fn>(obj), buf_reader);
                 }
             });
     }
 };
 
-eventide::task<void> accept(std::unique_ptr<InjectService> service, eventide::pipe client) {
+kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe client) {
     PacketChannel channel(std::move(client));
 
     auto sm_packet = co_await channel.read_packet();

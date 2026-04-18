@@ -7,7 +7,7 @@
 
 namespace catter::opt::llvm_dlltool {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace detail {
 

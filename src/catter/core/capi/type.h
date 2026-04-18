@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <fcntl.h>
 #include <format>
 #include <optional>
 #include <string>
@@ -9,10 +8,10 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <eventide/common/meta.h>
-#include <eventide/reflection/enum.h>
-#include <eventide/reflection/struct.h>
+#include <fcntl.h>
+#include <kota/support/type_traits.h>
+#include <kota/meta/enum.h>
+#include <kota/meta/struct.h>
 
 #include "qjs.h"
 #include "util/enum.h"
@@ -123,11 +122,11 @@ struct TaggedUnion : public std::variant<Tag<Es>...> {
 };
 
 namespace detail {
-namespace et = eventide;
+namespace et = kota;
 
 template <typename E>
 constexpr E enum_value(std::string_view name) {
-    if(auto val = et::refl::enum_value<E>(name); val.has_value()) {
+    if(auto val = et::meta::enum_value<E>(name); val.has_value()) {
         return *val;
     }
     throw std::runtime_error(std::format("Invalid enum value name: {}", name));
@@ -135,7 +134,7 @@ constexpr E enum_value(std::string_view name) {
 
 template <typename E>
 constexpr std::string_view enum_name(E value) {
-    return et::refl::enum_name(value, "unknown");
+    return et::meta::enum_name(value, "unknown");
 }
 
 template <typename E>
@@ -177,7 +176,7 @@ struct Bridge {
 };
 
 template <typename T>
-    requires et::refl::reflectable_class<T>
+    requires et::meta::reflectable_class<T>
 struct Bridge<T> {
     static T from_js(const qjs::Value& value) {
         return make_reflected_object<T>(value.as<qjs::Object>());
@@ -281,7 +280,7 @@ void write_property(qjs::Object& object,
 template <typename T>
 T make_reflected_object(qjs::Object object) {
     T value{};
-    et::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+    et::meta::for_each(value, [&]<typename FieldType>(FieldType field) {
         using field_type = std::remove_const_t<typename FieldType::type>;
         field.value() =
             read_property<field_type>(object, property_name_mapper<T>::map(FieldType::name()));
@@ -292,7 +291,7 @@ T make_reflected_object(qjs::Object object) {
 template <typename T>
 qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
     auto object = qjs::Object::empty_one(ctx);
-    et::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+    et::meta::for_each(value, [&]<typename FieldType>(FieldType field) {
         write_property(object, property_name_mapper<T>::map(FieldType::name()), ctx, field.value());
     });
     return object;

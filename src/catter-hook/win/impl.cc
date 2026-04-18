@@ -1,47 +1,31 @@
 
-#include <coroutine>
-#include <format>
-#include <print>
-#include <string>
-#include <system_error>
-#include <filesystem>
-#include <vector>
-#include <memory>
 #include <atomic>
 #include <cassert>
-#include <cstdio>
+#include <coroutine>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <format>
+#include <memory>
+#include <print>
+#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <stdexcept>
-#include <string.h>
+#include <system_error>
+#include <vector>
 #include <io.h>
-
-#include <eventide/async/io/loop.h>
-#include <eventide/async/io/process.h>
-#include <eventide/async/runtime/sync.h>
-#include <eventide/async/runtime/task.h>
-#include <eventide/async/vocab/error.h>
-#include <eventide/reflection/enum.h>
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-
 #include <uv.h>
-#include <windows.h>
-#include <libloaderapi.h>
-#include <minwindef.h>
-#include <Psapi.h>
+#include <kota/async/async.h>
+#include <kota/meta/enum.h>
 
-#include "util/log.h"
-#include "util/data.h"
 #include "util/crossplat.h"
-#include "util/eventide.h"
-
+#include "util/data.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
 #include "win/env.h"
-#include "win/win32.h"
 #include "win/inject.h"
+#include "win/win32.h"
 
 namespace catter::proxy::hook {
 
@@ -124,20 +108,18 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
     return AnonymousPipe{.read = win::Handle(read), .write = win::Handle(write)};
 }
 
-eventide::pipe open_capture_pipe(win::Handle pipe,
-                                 std::string_view name,
-                                 eventide::event_loop& loop) {
+kota::pipe open_capture_pipe(win::Handle pipe, std::string_view name, kota::event_loop& loop) {
     auto fd = uv_open_osfhandle(pipe.get());
     if(fd < 0) {
         throw std::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
     }
 
-    auto opened = eventide::pipe::open(fd, eventide::pipe::options{}, loop);
+    auto opened = kota::pipe::open(fd, kota::pipe::options{}, loop);
     if(!opened) {
         throw std::runtime_error(
             std::format("{} pipe open failed: {}", name, opened.error().message()));
     }
-    pipe.release();  // Ownership transferred to eventide
+    pipe.release();  // Ownership transferred to kotatsu
 
     return std::move(*opened);
 }
@@ -195,7 +177,7 @@ struct StartedProcess {
 
 class ProcessWaiter {
 public:
-    ProcessWaiter(HANDLE process_handle, eventide::relay relay) noexcept :
+    ProcessWaiter(HANDLE process_handle, kota::relay relay) noexcept :
         process_handle(process_handle), relay(std::move(relay)) {}
 
     ProcessWaiter(const ProcessWaiter&) = delete;
@@ -220,12 +202,12 @@ public:
         return;
     }
 
-    eventide::process::wait_result await_resume() noexcept {
+    kota::process::wait_result await_resume() noexcept {
         DWORD exit_code = 0;
         if(!GetExitCodeProcess(this->process_handle, &exit_code)) {
-            return eventide::outcome_error(eventide::error(uv_translate_sys_error(GetLastError())));
+            return kota::outcome_error(kota::error(uv_translate_sys_error(GetLastError())));
         } else {
-            return eventide::process::exit_status{
+            return kota::process::exit_status{
                 .status = static_cast<int64_t>(exit_code),
                 .term_signal = 0,  // Windows does not have Unix-style signals
             };
@@ -256,16 +238,16 @@ private:
     }
 
     HANDLE process_handle;
-    eventide::relay relay;
+    kota::relay relay;
     HANDLE wait_handle{};
     std::coroutine_handle<> awaiter_handle{};
 };
 
-eventide::task<int64_t, eventide::error>
-    wait_for_process_exit(RunningProcess process, eventide::event_loop* loop) noexcept {
+kota::task<int64_t, kota::error> wait_for_process_exit(RunningProcess process,
+                                                       kota::event_loop* loop) noexcept {
     auto wait_ret = co_await ProcessWaiter(process.process_handle(), loop->create_relay());
     if(!wait_ret) {
-        co_return eventide::outcome_error(wait_ret.error());
+        co_return kota::outcome_error(wait_ret.error());
     }
     co_return wait_ret->status;
 }
@@ -332,7 +314,7 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
 data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
 
     return capture_process_result(
-        [cmd, id, proxy_path](eventide::event_loop& loop) mutable -> catter::process_info {
+        [cmd, id, proxy_path](kota::event_loop& loop) mutable -> catter::process_info {
             LOG_INFO("new command id is: {}", id);
             auto started = start_process(std::move(cmd), id, std::move(proxy_path));
 

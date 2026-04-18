@@ -13,16 +13,15 @@
 
 // CHECK-OUTPUT: -p 0 --exec /bin/echo -- /bin/echo Hello, World!
 // clang-format on
+#include <format>
 #include <functional>
 #include <iostream>
+#include <print>
 #include <ranges>
 #include <string>
-#include <format>
-#include <print>
 #include <unordered_map>
 #include <vector>
-
-#include <eventide/deco/deco.h>
+#include <kota/deco/deco.h>
 
 #include "hook.h"
 #include "util/crossplat.h"
@@ -68,8 +67,8 @@ std::unordered_map<std::string, std::function<void()>> funcs = {
 }  // namespace test
 #else
 #include <spawn.h>
-#include <unistd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 extern char** environ;
 
 namespace test {
@@ -158,7 +157,7 @@ int main(int argc, char* argv[]) {
     catter::log::mute_logger();
 
     try {
-        auto args = deco::util::argvify(argc, argv, 0);
+        auto args = kota::deco::util::argvify(argc, argv, 0);
 
         if(args.size() == 3 && args[1] == "--test") {
             std::string executable = catter::util::get_executable_path().string();

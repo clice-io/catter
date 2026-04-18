@@ -1,20 +1,19 @@
+#include "session.h"
+
 #include <cassert>
 #include <format>
 #include <list>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <kota/async/async.h>
 
-#include <eventide/async/io/loop.h>
-
-#include "session.h"
-
-#include "util/guard.h"
-#include "util/log.h"
-#include "util/crossplat.h"
-#include "util/eventide.h"
-#include "config/ipc.h"
 #include "config/catter-proxy.h"
+#include "config/ipc.h"
+#include "util/crossplat.h"
+#include "util/guard.h"
+#include "util/kotatsu.h"
+#include "util/log.h"
 
 namespace catter {
 
@@ -25,7 +24,7 @@ int64_t Session::run(RunPlan run_plan) {
     }
 #endif
     auto acc_ret =
-        eventide::pipe::listen(config::ipc::pipe_name(), eventide::pipe::options(), default_loop());
+        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), default_loop());
 
     if(!acc_ret) {
         throw std::runtime_error(
@@ -48,18 +47,18 @@ int64_t Session::run(RunPlan run_plan) {
     return spawn_task.result();
 }
 
-eventide::task<void> Session::loop(ClientAcceptor acceptor) {
-    std::list<eventide::task<void>> linked_clients;
+kota::task<void> Session::loop(ClientAcceptor acceptor) {
+    std::list<kota::task<void>> linked_clients;
     for(auto i: std::views::iota(data::ipcid_t(1))) {
         auto client = co_await this->acc->accept();
         if(!client) {
-            assert(client.error() == eventide::error::operation_aborted);
+            assert(client.error() == kota::error::operation_aborted);
             // Accept can fail with operation_aborted when the acceptor is stopped, which is
             // expected
             break;
         }
         linked_clients.push_back(acceptor(i, std::move(*client)));
-        eventide::event_loop::current().schedule(linked_clients.back());
+        kota::event_loop::current().schedule(linked_clients.back());
         LOG_INFO("Accepted new client with id: {}", i);
     }
 
@@ -78,9 +77,9 @@ eventide::task<void> Session::loop(ClientAcceptor acceptor) {
     co_return;
 }
 
-eventide::task<int64_t> Session::spawn(std::string executable,
-                                       std::vector<std::string> args,
-                                       std::string cwd) {
+kota::task<int64_t> Session::spawn(std::string executable,
+                                   std::vector<std::string> args,
+                                   std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -93,14 +92,14 @@ eventide::task<int64_t> Session::spawn(std::string executable,
         }
     });
 
-    eventide::process::options opts{
+    kota::process::options opts{
         .file = executable,
         .args = args,
         .cwd = cwd,
         .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
-        .streams = {eventide::process::stdio::ignore(),
-                     eventide::process::stdio::ignore(),
-                     eventide::process::stdio::ignore()}
+        .streams = {kota::process::stdio::ignore(),
+                     kota::process::stdio::ignore(),
+                     kota::process::stdio::ignore()}
     };
 
     std::string args_str;
@@ -113,7 +112,7 @@ eventide::task<int64_t> Session::spawn(std::string executable,
              cwd,
              args_str);
 
-    auto spawn_ret = eventide::process::spawn(opts, eventide::event_loop::current());
+    auto spawn_ret = kota::process::spawn(opts, kota::event_loop::current());
     if(!spawn_ret) {
         throw std::runtime_error(
             std::format("process spawn failed: {}", spawn_ret.error().message()));

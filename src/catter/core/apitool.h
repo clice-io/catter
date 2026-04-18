@@ -6,12 +6,10 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#include <eventide/common/function_traits.h>
-
-#include "util/log.h"
+#include <kota/support/function_traits.h>
 
 #include "qjs.h"
+#include "util/log.h"
 
 namespace catter::capi::util {
 std::filesystem::path absolute_of(std::string js_path);
@@ -24,7 +22,7 @@ std::vector<api_register>& api_registers();
 
 template <typename Tuple, typename Ret>
 struct remove_first_param_signature {
-    static_assert(eventide::dependent_false<Tuple>, "Function must have at least one parameter");
+    static_assert(kota::dependent_false<Tuple>, "Function must have at least one parameter");
 };
 
 template <typename First, typename... Args, typename Ret>
@@ -34,8 +32,8 @@ struct remove_first_param_signature<std::tuple<First, Args...>, Ret> {
 
 template <typename Fn>
 using without_first_param_t =
-    typename remove_first_param_signature<eventide::function_args_t<Fn>,
-                                          eventide::function_return_t<Fn>>::type;
+    typename remove_first_param_signature<kota::function_args_t<Fn>,
+                                          kota::function_return_t<Fn>>::type;
 
 template <typename T>
 std::string serialize_value(const T& value) {
@@ -53,7 +51,7 @@ std::string serialize_value(const T& value) {
             return std::format("<object stringify failed: {}>", e.what());
         }
     } else {
-        static_assert(eventide::dependent_false<U>, "Unsupported CAPI value type for logging");
+        static_assert(kota::dependent_false<U>, "Unsupported CAPI value type for logging");
     }
 }
 
@@ -68,13 +66,13 @@ inline std::string serialize_args() {
 
 template <auto Fn>
 constexpr std::string_view capi_name() {
-    constexpr auto name = eventide::refl::pointer_name<{Fn}>();
+    constexpr auto name = kota::meta::pointer_name<{Fn}>();
     return std::string_view{name.data(), name.size()};
 }
 
 template <auto V, typename Sign = std::remove_pointer_t<decltype(V)>>
 struct hooked {
-    static_assert(eventide::dependent_false<Sign>, "Unsupported function signature for hooking");
+    static_assert(kota::dependent_false<Sign>, "Unsupported function signature for hooking");
 };
 
 template <auto V, typename R, typename... CallArgs>

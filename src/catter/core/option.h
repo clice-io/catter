@@ -7,11 +7,10 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <kota/deco/deco.h>
 
-#include <eventide/deco/deco.h>
-
-#include "capi/type.h"
 #include "ipc.h"
+#include "capi/type.h"
 
 namespace catter::core {
 namespace config {
@@ -19,7 +18,7 @@ namespace config {
 struct RunMode {
     ipc::ServiceMode mode;
     js::CatterRuntime runtime;
-    auto into(std::string_view text, const deco::decl::IntoContext& context)
+    auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string>;
 };
 
@@ -33,7 +32,7 @@ const inline static std::unordered_map<std::string_view, RunMode> mode_map = {
       }}}
 };
 
-inline auto RunMode::into(std::string_view text, const deco::decl::IntoContext& context)
+inline auto RunMode::into(std::string_view text, const kota::deco::decl::IntoContext& context)
     -> std::optional<std::string> {
 
     auto it = mode_map.find(text);
@@ -56,7 +55,7 @@ inline auto default_working_directory() noexcept -> std::filesystem::path {
 struct WorkingDirectory {
     std::filesystem::path path = default_working_directory();
 
-    auto into(std::string_view text, const deco::decl::IntoContext& context)
+    auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
         try {
             path = std::filesystem::absolute(text);
@@ -70,7 +69,7 @@ struct WorkingDirectory {
 
 struct CatterConfig {
 
-    constexpr inline static deco::decl::Category catter_category = {
+    constexpr inline static kota::deco::decl::Category catter_category = {
         .exclusive = true,
         .required = true,
         .name = "OPTIONS",

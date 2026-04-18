@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <format>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <string>
@@ -12,23 +14,19 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
-#include <vector>
-#include <memory>
 #include <utility>
-#include <format>
-
-#include <eventide/reflection/name.h>
-#include <eventide/common/meta.h>
-#include <eventide/common/functional.h>
-
-#include <cpptrace/cpptrace.hpp>
+#include <vector>
 #include <quickjs.h>
+#include <cpptrace/cpptrace.hpp>
+#include <kota/support/functional.h>
+#include <kota/support/type_traits.h>
+#include <kota/meta/name.h>
 
 // namespace meta
 
 namespace catter::qjs {
 
-namespace refl = eventide::refl;
+namespace refl = kota::meta;
 
 namespace detail {
 
@@ -531,7 +529,7 @@ public:
 
     static Function from(JSContext* ctx, Sign*) {
         static_assert(
-            eventide::dependent_false<Sign*>,
+            kota::dependent_false<Sign*>,
             "Invocable type can't be function type, please use from_raw for function pointer");
     }
 
@@ -747,7 +745,7 @@ public:
 
     static Function from(JSContext* ctx, Sign*) {
         static_assert(
-            eventide::dependent_false<Sign*>,
+            kota::dependent_false<Sign*>,
             "Invocable type can't be function type, please use from_raw for function pointer");
     }
 
@@ -985,8 +983,7 @@ public:
 
     template <typename TT>
     struct array_trans {
-        static_assert(eventide::dependent_false<TT>,
-                      "Unsupported array element type for array_trans");
+        static_assert(kota::dependent_false<TT>, "Unsupported array element type for array_trans");
     };
 
     template <typename TT>
@@ -1072,7 +1069,7 @@ struct value_trans<Num> {
         } else if constexpr(std::is_signed_v<Num>) {
             return Value{ctx, JS_NewInt64(ctx, static_cast<int64_t>(value))};
         } else {
-            static_assert(eventide::dependent_false<Num>, "Unsupported integral type for value");
+            static_assert(kota::dependent_false<Num>, "Unsupported integral type for value");
         }
     }
 
@@ -1110,7 +1107,7 @@ struct value_trans<Num> {
             }
 
         } else {
-            static_assert(eventide::dependent_false<Num>, "Unsupported integral type for value");
+            static_assert(kota::dependent_false<Num>, "Unsupported integral type for value");
         }
     }
 

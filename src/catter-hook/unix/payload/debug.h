@@ -3,9 +3,9 @@
 #ifdef DEBUG
 #include <filesystem>
 
-#include "util/log.h"
-#include "util/crossplat.h"
 #include "unix/config.h"
+#include "util/crossplat.h"
+#include "util/log.h"
 
 #define INFO(...) LOG_INFO(__VA_ARGS__)
 #define WARN(...) LOG_WARN(__VA_ARGS__)

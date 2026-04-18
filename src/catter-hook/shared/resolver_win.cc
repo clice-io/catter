@@ -1,7 +1,5 @@
 #ifdef CATTER_WINDOWS
 
-#include "shared/resolver.h"
-
 #include <algorithm>
 #include <concepts>
 #include <string>
@@ -10,6 +8,7 @@
 #include <vector>
 
 #include "winapi.h"
+#include "shared/resolver.h"
 
 namespace catter::hook::shared::resolver {
 using namespace catter::win;

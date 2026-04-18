@@ -49,13 +49,13 @@ void PipeProxy::append_bounded_output(std::string& buffer,
     buffer = std::move(next);
 }
 
-eventide::task<void> PipeProxy::monitor() {
+kota::task<void> PipeProxy::monitor() {
     while(true) {
         auto chunk = co_await pipe.read_chunk();
         if(!chunk) {
-            if(chunk.error() == eventide::error::end_of_file ||
-               chunk.error() == eventide::error::operation_aborted ||
-               chunk.error() == eventide::error::broken_pipe) {
+            if(chunk.error() == kota::error::end_of_file ||
+               chunk.error() == kota::error::operation_aborted ||
+               chunk.error() == kota::error::broken_pipe) {
                 break;
             }
 

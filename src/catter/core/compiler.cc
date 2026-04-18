@@ -1,11 +1,11 @@
 
+#include "compiler.h"
+
 #include <array>
-#include <string>
 #include <regex>
 #include <stdexcept>
+#include <string>
 #include <string_view>
-
-#include "compiler.h"
 
 namespace catter {
 struct CompilerPattern {

@@ -8,12 +8,12 @@
 #include <utility>
 
 #include "app_config.h"
-#include "capi/type.h"
 #include "ipc.h"
 #include "js.h"
 #include "option.h"
 #include "qjs.h"
 #include "session.h"
+#include "capi/type.h"
 #include "config/catter-proxy.h"
 #include "util/crossplat.h"
 #include "util/data.h"

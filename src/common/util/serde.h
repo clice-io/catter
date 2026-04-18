@@ -3,11 +3,10 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <type_traits>
-
-#include <eventide/async/async.h>
-#include <eventide/reflection/struct.h>
+#include <vector>
+#include <kota/async/async.h>
+#include <kota/meta/struct.h>
 
 namespace catter {
 
@@ -87,7 +86,7 @@ struct Serde<T> {
     }
 
     template <CoReader Invocable>
-    static eventide::task<T> co_deserialize(Invocable&& reader) {
+    static kota::task<T> co_deserialize(Invocable&& reader) {
         T value;
         co_await reader(reinterpret_cast<char*>(&value), sizeof(T));
         co_return value;
@@ -109,7 +108,7 @@ struct Serde<std::string> {
     }
 
     template <CoReader Invocable>
-    static eventide::task<std::string> co_deserialize(Invocable&& reader) {
+    static kota::task<std::string> co_deserialize(Invocable&& reader) {
         size_t len = co_await Serde<size_t>::co_deserialize(std::forward<Invocable>(reader));
         std::string str(len, '\0');
         co_await reader(str.data(), len);
@@ -141,7 +140,7 @@ struct Serde<std::vector<T>> {
     }
 
     template <CoReader Invocable>
-    static eventide::task<std::vector<T>> co_deserialize(Invocable&& reader) {
+    static kota::task<std::vector<T>> co_deserialize(Invocable&& reader) {
         std::vector<T> vec;
         size_t len = co_await Serde<size_t>::co_deserialize(std::forward<Invocable>(reader));
         vec.reserve(len);
@@ -168,7 +167,7 @@ struct Serde<T> {
     }
 
     template <CoReader Invocable>
-    static eventide::task<T> co_deserialize(Invocable&& reader) {
+    static kota::task<T> co_deserialize(Invocable&& reader) {
         using enum_type = std::underlying_type_t<T>;
         enum_type value =
             co_await Serde<enum_type>::co_deserialize(std::forward<Invocable>(reader));
@@ -176,11 +175,11 @@ struct Serde<T> {
     }
 };
 
-template <eventide::refl::reflectable_class T>
+template <kota::meta::reflectable_class T>
 struct Serde<T> {
     static std::vector<char> serialize(const T& value) {
         std::vector<char> buffer;
-        eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+        kota::meta::for_each(value, [&]<typename FieldType>(FieldType field) {
             append_range_to_vector(
                 buffer,
                 Serde<std::remove_const_t<typename FieldType::type>>::serialize(field.value()));
@@ -191,7 +190,7 @@ struct Serde<T> {
     template <Reader Invocable>
     static T deserialize(Invocable&& reader) {
         T value{};
-        eventide::refl::for_each(value, [&]<typename FieldType>(FieldType field) {
+        kota::meta::for_each(value, [&]<typename FieldType>(FieldType field) {
             field.value() =
                 Serde<std::remove_const_t<typename FieldType::type>>::deserialize(reader);
         });

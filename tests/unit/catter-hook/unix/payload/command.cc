@@ -1,17 +1,16 @@
 #include "command.h"
-#include "session.h"
-
-#include "opt/proxy/option.h"
-
-#include <eventide/deco/deco.h>
-#include <eventide/zest/macro.h>
-#include <eventide/zest/zest.h>
 
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string_view>
 #include <vector>
-#include <span>
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
+#include <kota/deco/deco.h>
+
+#include "session.h"
+#include "opt/proxy/option.h"
 
 namespace ct = catter;
 
@@ -40,7 +39,7 @@ TEST_CASE(proxy_cmd_constructs_correct_arguments) {
     EXPECT_TRUE(cmd.argv.at(0) == session.proxy_path);
 
     auto f = [&]() {
-        auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv)->options;
+        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv)->options;
         EXPECT_TRUE(*parse_res.parent_id == 99);
         EXPECT_TRUE(*parse_res.exec == target_path);
         EXPECT_TRUE(parse_res.args.has_value());
@@ -77,7 +76,7 @@ TEST_CASE(error_cmd_formats_message_correctly_without_separator) {
     EXPECT_TRUE(last_arg.find("in command: invalid --help") != std::string::npos);
 
     auto f = [&]() {
-        auto parse_res = deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv);
+        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(cmd.argv);
         EXPECT_FALSE(parse_res->options.args.has_value());
     };
 

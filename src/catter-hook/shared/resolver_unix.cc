@@ -1,16 +1,15 @@
 #ifndef CATTER_WINDOWS
 
-#include "shared/resolver.h"
-
 #include <cerrno>
+#include <climits>
 #include <cstdlib>
 #include <filesystem>
 #include <ranges>
 #include <string>
-
-#include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include "shared/resolver.h"
 
 namespace catter::hook::shared::resolver {
 namespace {

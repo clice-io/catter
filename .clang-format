@@ -96,11 +96,77 @@ SpacesInSquareBrackets: false
 # Order
 QualifierAlignment: Custom
 QualifierOrder: ["constexpr", "const", "inline", "static", "type"]
-SortIncludes: Never
+SortIncludes: true
 SortUsingDeclarations: Never
-IncludeBlocks: Merge
+IncludeBlocks: Regroup
+# NOTE: clang-format's Regroup places items with a higher SortPriority
+# after items with a lower SortPriority regardless of their Priority value.
+# So every SortPriority in the Priority-10 block must be strictly smaller
+# than every SortPriority in the Priority-20 block — otherwise the groups
+# get interleaved. Keep the numbers packed and monotonic below.
+IncludeCategories:
+  # 1. C++ stdlib: <xxx> with no suffix and no subdir
+  - Regex: '^<[^./>]+>'
+    Priority: 10
+    SortPriority: 10
 
-ForEachMacros: ["REFLECTABLE_RECORD"]
+  # 2a. System / C libraries: bare <xxx.h>
+  - Regex: '^<[^/>]+\.h>'
+    Priority: 10
+    SortPriority: 11
+
+  # 2b. System headers under a subdir (sys/, mach-o/, linux/, net/, etc.)
+  - Regex: '^<(sys|mach-o|linux|bits|asm|arpa|net|netinet)/'
+    Priority: 10
+    SortPriority: 11
+
+  # 3. Third-party libraries with a subdir prefix
+  - Regex: '^<(spdlog|cpptrace|quickjs-ng|minhook)/'
+    Priority: 10
+    SortPriority: 12
+
+  # 3. kotatsu (split by submodule)
+  - Regex: '^<(kota/zest)/'
+    Priority: 10
+    SortPriority: 13
+
+  - Regex: '^<(kota/support)/'
+    Priority: 10
+    SortPriority: 14
+
+  - Regex: '^<(kota/async)/'
+    Priority: 10
+    SortPriority: 15
+
+  - Regex: '^<(kota/meta)/'
+    Priority: 10
+    SortPriority: 16
+
+  - Regex: '^<(kota/option)/'
+    Priority: 10
+    SortPriority: 17
+
+  - Regex: '^<(kota/deco)/'
+    Priority: 10
+    SortPriority: 18
+
+  - Regex: '^<kota/'
+    Priority: 10
+    SortPriority: 19
+
+  # 4. Project-local headers ("..."): bare name first, then subdir'd
+  - Regex: '^"[^/]+"'
+    Priority: 20
+    SortPriority: 20
+
+  - Regex: '^".*/.*"'
+    Priority: 20
+    SortPriority: 21
+
+  - Regex: '.*'
+    Priority: 20
+    SortPriority: 22
+
 NamespaceMacros: [TEST_SUITE]
 StatementMacros:
   - DECO_CFG_START

@@ -1,22 +1,21 @@
+#include "opt/external/clang.h"
+
 #include <array>
 #include <expected>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <eventide/option/option.h>
-#include <eventide/zest/macro.h>
-#include <eventide/zest/zest.h>
-
-#include "opt/external/clang.h"
+#include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
+#include <kota/option/option.h>
 
 using namespace catter;
 
 namespace {
 
 struct ParseResult {
-    std::vector<eventide::option::ParsedArgumentOwning> args;
+    std::vector<kota::option::ParsedArgumentOwning> args;
     std::vector<std::string> errors;
 };
 
@@ -26,10 +25,10 @@ ParseResult parse_command(std::span<const std::string> argv) {
     ParseResult result;
     opt::clang::table().parse_args(
         args,
-        [&](std::expected<eventide::option::ParsedArgument, std::string> parsed) {
+        [&](std::expected<kota::option::ParsedArgument, std::string> parsed) {
             if(parsed.has_value()) {
                 result.args.emplace_back(
-                    eventide::option::ParsedArgumentOwning::from_parsed_argument(*parsed));
+                    kota::option::ParsedArgumentOwning::from_parsed_argument(*parsed));
             } else {
                 result.errors.emplace_back(parsed.error());
             }
@@ -37,7 +36,7 @@ ParseResult parse_command(std::span<const std::string> argv) {
     return result;
 }
 
-std::string_view canonical_spelling(const eventide::option::ParsedArgumentOwning& arg) {
+std::string_view canonical_spelling(const kota::option::ParsedArgumentOwning& arg) {
     auto option = opt::clang::table().option(arg.unaliased_opt());
     if(!option.valid()) {
         return arg.get_spelling_view();

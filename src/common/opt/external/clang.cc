@@ -3,12 +3,11 @@
 #include <array>
 #include <span>
 #include <string_view>
-
-#include <eventide/option/option.h>
+#include <kota/option/option.h>
 
 namespace catter::opt::clang {
 
-namespace eo = eventide::option;
+namespace eo = kota::option;
 
 namespace detail {
 
@@ -40,7 +39,7 @@ constexpr std::size_t OptionCount = 0
 
 // `clang-Driver-Options.inc` reuses LLVM driver flag names directly in the generated
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
-// `eventide::option::OptTable::Info` without pulling in LLVM's option library.
+// `kota::option::OptTable::Info` without pulling in LLVM's option library.
 enum Flag : unsigned {
     HelpHidden = eo::HelpHidden,
     RenderAsInput = eo::RenderAsInput,
@@ -60,7 +59,7 @@ constexpr auto DefaultHelpVariants = std::array<std::pair<std::array<unsigned, 2
 
 // The generated prefix table only uses a small fixed set of layouts for clang
 // driver options, so we map the encoded table offsets to the corresponding
-// `eventide::option` prefix spans directly.
+// `kota::option` prefix spans directly.
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
         case 0: return eo::pfx_none;
