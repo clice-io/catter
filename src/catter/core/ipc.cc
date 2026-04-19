@@ -19,7 +19,6 @@
 #include "util/data.h"
 #include "util/enum.h"
 #include "util/log.h"
-#include "util/serde.h"
 
 namespace catter::ipc {
 using namespace data;

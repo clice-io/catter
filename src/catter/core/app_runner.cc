@@ -107,7 +107,7 @@ int64_t inject(const js::CatterConfig& config) {
                    "-p", "0",
                    "--", },
     };
-    append_range_to_vector(launch_plan.args, config.buildSystemCommand);
+    util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 
     Session session;
     auto session_plan = Session::make_run_plan(std::move(launch_plan),

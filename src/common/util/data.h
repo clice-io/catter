@@ -2,9 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <kota/ipc/protocol.h>
-
-#include "util/serde.h"
 
 namespace catter::data {
 

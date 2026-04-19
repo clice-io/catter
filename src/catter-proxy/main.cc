@@ -78,12 +78,12 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id) {
     }
 }
 
-kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) {
+kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
     auto& current = kota::event_loop::current();
     auto ret =
         co_await kota::pipe::connect(config::ipc::pipe_name(), kota::pipe::options(), current);
     if(!ret) {
-        std::println("Failed to connect to IPC pipe: {}, error: {}",
+        LOG_CRITICAL("Failed to connect to IPC pipe: {}, error: {}",
                      config::ipc::pipe_name(),
                      ret.error().message());
         std::abort();

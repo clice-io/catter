@@ -1,5 +1,7 @@
 #pragma once
 
+#include <kota/async/runtime/task.h>
+
 #include "util/crossplat.h"
 #include "util/data.h"
 
