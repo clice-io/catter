@@ -49,11 +49,11 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
 #endif
 }
 
-data::process_result run(data::action act, data::ipcid_t id) {
+kota::task<data::process_result> run(data::action act, data::ipcid_t id) {
     using catter::data::action;
+
     switch(act.type) {
         case action::WRAP: {
-
             kota::process::options opts{
                 .file = act.cmd.executable,
                 .args = act.cmd.args,
@@ -64,26 +64,44 @@ data::process_result run(data::action act, data::ipcid_t id) {
                              kota::process::stdio::pipe(false, true),
                              kota::process::stdio::pipe(false, true)}
             };
-
-            return catter::capture_process_result(make_process_event(opts));
+            co_return co_await capture_process_result(make_process_event(opts));
         }
         case action::INJECT: {
-            return proxy::hook::run(act.cmd, id);
+            co_return co_await proxy::hook::run(act.cmd, id);
         }
         case action::DROP: {
-            return data::process_result{.code = 0};
+            co_return data::process_result{.code = 0};
         }
         default: {
-            return data::process_result{.code = -1};
+            co_return data::process_result{.code = -1};
         }
     }
 }
 
-int proxy_main(const catter::proxy::ProxyOption& opt) {
+kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) {
+    auto& current = kota::event_loop::current();
+    auto ret =
+        co_await kota::pipe::connect(config::ipc::pipe_name(), kota::pipe::options(), current);
+    if(!ret) {
+        std::println("Failed to connect to IPC pipe: {}, error: {}",
+                     config::ipc::pipe_name(),
+                     ret.error().message());
+        std::abort();
+    }
+    auto peer = proxy::ipc::Peer{
+        kota::ipc::BincodePeer{current,
+                               std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
+    };
+
+    // we need to add peer.run() to the event loop before co_awaiting any peer method
+    auto run_task = peer.run();
+    current.schedule(run_task);
+
+    std::string err;
     try {
         if(opt.error_msg.has_value() && !opt.args.has_value()) {
-            proxy::ipc::report_error(*opt.parent_id, *opt.error_msg);
-            return -1;
+            co_await peer.report_error(*opt.parent_id, *opt.error_msg);
+            co_return -1;
         }
 
         if(!opt.args.has_value()) {
@@ -92,7 +110,7 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
 
         // This function is for the hook to call, it will never be called in this file.
         // The implementation is in hook.cc
-        proxy::ipc::set_service_mode(data::ServiceMode::INJECT);
+        co_await peer.set_service_mode(data::ServiceMode::INJECT);
 
         data::command cmd = {
             .cwd = std::filesystem::current_path().string(),
@@ -106,15 +124,15 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
             cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
         }
 
-        auto id = proxy::ipc::create(*opt.parent_id);
+        auto id = co_await peer.create(*opt.parent_id);
 
-        auto received_act = proxy::ipc::make_decision(cmd);
+        auto received_act = co_await peer.make_decision(cmd);
 
-        auto result = run(received_act, id);
+        auto result = co_await run(received_act, id);
 
-        proxy::ipc::finish(std::move(result));
+        co_await peer.finish(std::move(result));
 
-        return static_cast<int>(result.code);
+        co_return static_cast<int>(result.code);
     } catch(const std::exception& e) {
         std::string args;
         if(opt.args.has_value()) {
@@ -125,13 +143,13 @@ int proxy_main(const catter::proxy::ProxyOption& opt) {
             }
         }
         LOG_CRITICAL("Exception in catter-proxy: {}. Args: {}", e.what(), args);
-        proxy::ipc::report_error(*opt.parent_id, e.what());
-        return -1;
+        err = e.what();
     } catch(...) {
         LOG_CRITICAL("Unknown exception in catter-proxy.");
-        proxy::ipc::report_error(*opt.parent_id, "Unknown exception in catter-proxy.");
-        return -1;
+        err = "Unknown exception in catter-proxy.";
     }
+    co_await peer.report_error(*opt.parent_id, err);
+    co_return -1;
 }
 }  // namespace
 
@@ -155,7 +173,7 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
     cli.match(catter::proxy::Option::Cate::help,
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
-               [&](const auto& opt) { ret = proxy_main(opt.proxy_opt); })
+               [&](const auto& opt) { ret = wait(proxy_main(opt.proxy_opt)); })
         .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
             ret = -1;

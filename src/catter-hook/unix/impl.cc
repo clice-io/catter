@@ -19,7 +19,9 @@
 
 namespace catter::proxy::hook {
 
-data::process_result run(data::command command, data::ipcid_t id, std::string proxy_path) {
+kota::task<data::process_result> run(data::command command,
+                                     data::ipcid_t id,
+                                     std::string proxy_path) {
     LOG_INFO("new command id is: {}", id);
 
     const auto lib_path =

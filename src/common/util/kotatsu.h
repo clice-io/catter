@@ -54,40 +54,35 @@ inline process_event make_process_event(kota::process::options& opts) {
     };
 }
 
-inline data::process_result capture_process_result(process_event proc_event,
-                                                   FILE* stdout_sink = stdout,
-                                                   FILE* stderr_sink = stderr) {
+inline kota::task<data::process_result> capture_process_result(process_event proc_event,
+                                                               FILE* stdout_sink = stdout,
+                                                               FILE* stderr_sink = stderr) {
+    auto& current_loop = kota::event_loop::current();
 
-    auto event = [&]() -> kota::task<data::process_result> {
-        auto& current_loop = kota::event_loop::current();
+    auto [wait_task, stdout_pipe, stderr_pipe] = proc_event(current_loop);
+    util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
+    util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
+    auto stdout_task = stdout_proxy.monitor();
+    auto stderr_task = stderr_proxy.monitor();
+    current_loop.schedule(stdout_task);
+    current_loop.schedule(stderr_task);
 
-        auto [wait_task, stdout_pipe, stderr_pipe] = proc_event(current_loop);
-        util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
-        util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
-        auto stdout_task = stdout_proxy.monitor();
-        auto stderr_task = stderr_proxy.monitor();
-        current_loop.schedule(stdout_task);
-        current_loop.schedule(stderr_task);
+    auto wait_ret = co_await std::move(wait_task);
+    assert(stderr_task->is_finished() && stdout_task->is_finished() &&
+           "wait returned before pipes finished?");
+    stdout_task.result();
+    stderr_task.result();
 
-        auto wait_ret = co_await std::move(wait_task);
-        assert(stderr_task->is_finished() && stdout_task->is_finished() &&
-               "wait returned before pipes finished?");
-        stdout_task.result();
-        stderr_task.result();
+    if(!wait_ret) {
+        throw std::runtime_error(
+            std::format("process wait failed: {}", wait_ret.error().message()));
+    }
 
-        if(!wait_ret) {
-            throw std::runtime_error(
-                std::format("process wait failed: {}", wait_ret.error().message()));
-        }
-
-        co_return data::process_result{
-            .code = *wait_ret,
-            .std_out = stdout_proxy.output(),
-            .std_err = stderr_proxy.output(),
-        };
+    co_return data::process_result{
+        .code = *wait_ret,
+        .std_out = stdout_proxy.output(),
+        .std_err = stderr_proxy.output(),
     };
-
-    return wait(event());
 }
 
 }  // namespace catter

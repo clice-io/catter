@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <kota/ipc/protocol.h>
 
 #include "util/serde.h"
 
@@ -37,41 +38,52 @@ enum class ServiceMode : uint8_t {
     INJECT,
 };
 
-enum class Request : uint8_t {
-    CREATE,
-    MAKE_DECISION,
-    REPORT_ERROR,
-    FINISH,
-};
-
-template <Request Req>
-struct RequestHelper {
-    using RequestType = void;
-};
-
-template <>
-struct RequestHelper<Request::CREATE> {
-    using RequestType = ipcid_t(ipcid_t parent_id);
-};
-
-template <>
-struct RequestHelper<Request::MAKE_DECISION> {
-    using RequestType = action(command cmd);
-};
-
-template <>
-struct RequestHelper<Request::REPORT_ERROR> {
-    using RequestType = void(ipcid_t parent_id, std::string error_msg);
-};
-
-template <>
-struct RequestHelper<Request::FINISH> {
-    using RequestType = void(process_result result);
-};
-
-template <Request Req>
-using RequestType = typename RequestHelper<Req>::RequestType;
-
-using packet = std::vector<char>;
-
 }  // namespace catter::data
+
+namespace catter::ipc {
+namespace req {
+struct Create {
+    using Params = data::ipcid_t;
+    using Result = data::ipcid_t;
+    constexpr inline static std::string_view method = "create";
+};
+
+struct MakeDecision {
+    using Params = data::command;
+    using Result = data::action;
+    constexpr inline static std::string_view method = "make_decision";
+};
+
+struct ReportError {
+    struct Params {
+        data::ipcid_t parent_id;
+        std::string error_msg;
+    };
+
+    using Result = std::nullptr_t;
+    constexpr inline static std::string_view method = "report_error";
+};
+
+struct Finish {
+    using Params = data::process_result;
+    using Result = std::nullptr_t;
+    constexpr inline static std::string_view method = "finish";
+};
+}  // namespace req
+};  // namespace catter::ipc
+
+namespace kota::ipc::protocol {
+using namespace catter::ipc;
+
+template <>
+struct RequestTraits<req::Create> : req::Create {};
+
+template <>
+struct RequestTraits<req::MakeDecision> : req::MakeDecision {};
+
+template <>
+struct RequestTraits<req::ReportError> : req::ReportError {};
+
+template <>
+struct RequestTraits<req::Finish> : req::Finish {};
+}  // namespace kota::ipc::protocol
