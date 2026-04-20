@@ -26,6 +26,10 @@ struct Peer {
         return this->peer.run();
     }
 
+    auto close() {
+        return this->peer.close();
+    }
+
     kota::task<void> set_service_mode(data::ServiceMode mode) {
         co_return;
     }

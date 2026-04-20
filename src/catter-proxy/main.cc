@@ -15,6 +15,7 @@
 #include "opt/proxy/option.h"
 #include "shared/resolver.h"
 #include "util/crossplat.h"
+#include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
 #include "util/output.h"
@@ -96,6 +97,15 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
     // we need to add peer.run() to the event loop before co_awaiting any peer method
     auto run_task = peer.run();
     current.schedule(run_task);
+
+    // ensure peer is closed when proxy_main exits, otherwise the peer might still be running and
+    // trying to access resources that have been cleaned up after proxy_main exits.
+    auto guard = util::make_guard([&]() noexcept {
+        auto err = peer.close();
+        if(err.has_error()) {
+            LOG_ERROR("Failed to close IPC peer: {}", err.error().message);
+        }
+    });
 
     std::string err;
     try {
