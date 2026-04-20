@@ -12,6 +12,10 @@
 namespace catter::proxy::ipc {
 
 struct Peer {
+    using RequestType = catter::ipc::RequestType;
+    template <RequestType Type>
+    using Request = catter::ipc::Request<Type>;
+
     template <typename Tag, typename Traits = typename kota::ipc::protocol::RequestTraits<Tag>>
     typename kota::task<typename Traits::Result>
         send_request(const typename Traits::Params& params) {
@@ -35,20 +39,20 @@ struct Peer {
     }
 
     kota::task<data::ipcid_t> create(data::ipcid_t parent_id) {
-        co_return co_await this->send_request<catter::ipc::req::Create>(parent_id);
+        co_return co_await this->send_request<Request<RequestType::CREATE>>(parent_id);
     }
 
     kota::task<data::action> make_decision(data::command cmd) {
-        co_return co_await this->send_request<catter::ipc::req::MakeDecision>(cmd);
+        co_return co_await this->send_request<Request<RequestType::MAKE_DECISION>>(cmd);
     }
 
     kota::task<void> finish(data::process_result result) {
-        co_await this->send_request<catter::ipc::req::Finish>(result);
+        co_await this->send_request<Request<RequestType::FINISH>>(result);
     }
 
     kota::task<void> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept {
         try {
-            co_await this->send_request<catter::ipc::req::ReportError>({parent_id, error_msg});
+            co_await this->send_request<Request<RequestType::REPORT_ERROR>>({parent_id, error_msg});
         } catch(...) {
             // can't do anything if reporting error failed, just swallow the error
         }

@@ -30,28 +30,28 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     // auto service_mode = Serde<ServiceMode>::deserialize(BufferReader(*sm_packet));
     // assert(service_mode == ServiceMode::INJECT && "Unsupported service mode received");
 
-    peer.on_request<req::Create>(
-        [&](const Context& ctx,
-            const req::Create::Params& params) -> kota::ipc::RequestResult<req::Create> {
+    peer.on_request<Request<RequestType::CREATE>>(
+        [&](const Context& ctx, const Request<RequestType::CREATE>::Params& params)
+            -> kota::ipc::RequestResult<Request<RequestType::CREATE>> {
             co_return service->create(params);
         });
 
-    peer.on_request<req::MakeDecision>(
-        [&](const Context& ctx, const req::MakeDecision::Params& params)
-            -> kota::ipc::RequestResult<req::MakeDecision> {
+    peer.on_request<Request<RequestType::MAKE_DECISION>>(
+        [&](const Context& ctx, const Request<RequestType::MAKE_DECISION>::Params& params)
+            -> kota::ipc::RequestResult<Request<RequestType::MAKE_DECISION>> {
             co_return service->make_decision(params);
         });
 
-    peer.on_request<req::Finish>(
-        [&](const Context& ctx,
-            const req::Finish::Params& params) -> kota::ipc::RequestResult<req::Finish> {
+    peer.on_request<Request<RequestType::FINISH>>(
+        [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
+            -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
             service->finish(params);
             co_return nullptr;
         });
 
-    peer.on_request<req::ReportError>(
-        [&](const Context& ctx,
-            const req::ReportError::Params& params) -> kota::ipc::RequestResult<req::ReportError> {
+    peer.on_request<Request<RequestType::REPORT_ERROR>>(
+        [&](const Context& ctx, const Request<RequestType::REPORT_ERROR>::Params& params)
+            -> kota::ipc::RequestResult<Request<RequestType::REPORT_ERROR>> {
             service->report_error(params.parent_id, params.error_msg);
             co_return nullptr;
         });

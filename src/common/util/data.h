@@ -40,20 +40,33 @@ enum class ServiceMode : uint8_t {
 }  // namespace catter::data
 
 namespace catter::ipc {
-namespace req {
-struct Create {
+
+enum class RequestType : uint8_t {
+    CREATE,
+    MAKE_DECISION,
+    REPORT_ERROR,
+    FINISH,
+};
+
+template <RequestType Type>
+struct Request;
+
+template <>
+struct Request<RequestType::CREATE> {
     using Params = data::ipcid_t;
     using Result = data::ipcid_t;
     constexpr inline static std::string_view method = "create";
 };
 
-struct MakeDecision {
+template <>
+struct Request<RequestType::MAKE_DECISION> {
     using Params = data::command;
     using Result = data::action;
     constexpr inline static std::string_view method = "make_decision";
 };
 
-struct ReportError {
+template <>
+struct Request<RequestType::REPORT_ERROR> {
     struct Params {
         data::ipcid_t parent_id;
         std::string error_msg;
@@ -63,26 +76,18 @@ struct ReportError {
     constexpr inline static std::string_view method = "report_error";
 };
 
-struct Finish {
+template <>
+struct Request<RequestType::FINISH> {
     using Params = data::process_result;
     using Result = std::nullptr_t;
     constexpr inline static std::string_view method = "finish";
 };
-}  // namespace req
 };  // namespace catter::ipc
 
 namespace kota::ipc::protocol {
 using namespace catter::ipc;
 
-template <>
-struct RequestTraits<req::Create> : req::Create {};
+template <RequestType Type>
+struct RequestTraits<Request<Type>> : Request<Type> {};
 
-template <>
-struct RequestTraits<req::MakeDecision> : req::MakeDecision {};
-
-template <>
-struct RequestTraits<req::ReportError> : req::ReportError {};
-
-template <>
-struct RequestTraits<req::Finish> : req::Finish {};
 }  // namespace kota::ipc::protocol
