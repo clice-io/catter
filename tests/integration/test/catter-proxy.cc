@@ -29,6 +29,7 @@
 #include "config/ipc.h"
 #include "util/crossplat.h"
 #include "util/data.h"
+#include "util/exception.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
 
@@ -120,62 +121,67 @@ int run_case(std::vector<std::string> args, std::string cwd = {}) {
 }  // namespace
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
-    try {
-        auto proxy_path = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
-        auto& last_cmd = ServiceImpl::last_received_command;
-        auto& last_err = ServiceImpl::last_error;
-        assert(run_case({
-                   proxy_path,
-                   "-p",
-                   "0",
-                   "--exec",
-                   "echo",
-                   "--",
-                   "echo",
-                   "Hello, World!",
-               }) == 0 &&
-               "explicit --exec case failed");
-        assert(last_cmd.has_value() && last_cmd->executable == "echo" &&
-               "explicit --exec case did not preserve explicit executable");
+    int ret = 0;
+    cpptrace::try_catch(
+        [&] {
+            auto proxy_path = (util::get_catter_root_path() / config::proxy::EXE_NAME).string();
+            auto& last_cmd = ServiceImpl::last_received_command;
+            auto& last_err = ServiceImpl::last_error;
+            assert(run_case({
+                       proxy_path,
+                       "-p",
+                       "0",
+                       "--exec",
+                       "echo",
+                       "--",
+                       "echo",
+                       "Hello, World!",
+                   }) == 0 &&
+                   "explicit --exec case failed");
+            assert(last_cmd.has_value() && last_cmd->executable == "echo" &&
+                   "explicit --exec case did not preserve explicit executable");
 
-        assert(run_case({
-                   proxy_path,
-                   "-p",
-                   "0",
-                   "--",
-                   "echo",
-                   "Hello, World!",
-               }) == 0 &&
-               "implicit resolve case failed");
-        assert(last_cmd.has_value() && last_cmd->executable != "echo" &&
-               "implicit resolve case did not resolve executable to a concrete path");
+            assert(run_case({
+                       proxy_path,
+                       "-p",
+                       "0",
+                       "--",
+                       "echo",
+                       "Hello, World!",
+                   }) == 0 &&
+                   "implicit resolve case failed");
+            assert(last_cmd.has_value() && last_cmd->executable != "echo" &&
+                   "implicit resolve case did not resolve executable to a concrete path");
 
-        assert(run_case({proxy_path, "-p", "0", "--"}) != 0 &&
-               "implicit resolve with missing executable case unexpectedly succeeded");
-        assert(last_err.has_value() &&
-               "implicit resolve with missing executable case did not report the expected error");
-        assert(!last_cmd.has_value() &&
-               "implicit resolve with missing executable case unexpectedly produced a command");
+            assert(run_case({proxy_path, "-p", "0", "--"}) != 0 &&
+                   "implicit resolve with missing executable case unexpectedly succeeded");
+            assert(
+                last_err.has_value() &&
+                "implicit resolve with missing executable case did not report the expected error");
+            assert(!last_cmd.has_value() &&
+                   "implicit resolve with missing executable case unexpectedly produced a command");
 
-        assert(run_case({
-                   proxy_path,
-                   "-p",
-                   "0",
-                   "--",
-                   "nonexistent_executable_12345",
-               }) != 0 &&
-               "implicit resolve with nonexistent executable case unexpectedly succeeded");
-        assert(
-            last_err.has_value() &&
-            "implicit resolve with nonexistent executable case did not report the expected error");
+            assert(run_case({
+                       proxy_path,
+                       "-p",
+                       "0",
+                       "--",
+                       "nonexistent_executable_12345",
+                   }) != 0 &&
+                   "implicit resolve with nonexistent executable case unexpectedly succeeded");
+            assert(
+                last_err.has_value() &&
+                "implicit resolve with nonexistent executable case did not report the expected " "error");
 
-        LOG_INFO("proxy integration checks passed");
-        return 0;
-    } catch(const std::exception& ex) {
-        LOG_INFO("Fatal error: {}", ex.what());
-        return 1;
-    } catch(...) {
-        LOG_INFO("Unknown fatal error.");
-        return 1;
-    }
+            LOG_INFO("proxy integration checks passed");
+        },
+        [&](const std::exception& ex) {
+            LOG_INFO("{}", util::format_exception("Fatal error: {}", ex.what()));
+            ret = 1;
+        },
+        [&] {
+            LOG_INFO("{}", util::format_exception("Unknown fatal error."));
+            ret = 1;
+        });
+    return ret;
 }

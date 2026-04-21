@@ -12,6 +12,7 @@
 
 #include "temp_file_manager.h"
 #include "config/js-test.h"
+#include "util/exception.h"
 #include "util/output.h"
 
 namespace fs = std::filesystem;
@@ -41,41 +42,43 @@ void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
 }
 
 void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false) {
-    try {
-        auto js_path = fs::path(config::data::js_test_path.data());
-        ensure_qjs_initialized(js_path);
+    cpptrace::try_catch(
+        [&] {
+            auto js_path = fs::path(config::data::js_test_path.data());
+            ensure_qjs_initialized(js_path);
 
-        if(with_fs_test_env) {
-            auto js_path_res = fs::path(config::data::js_test_res_path.data());
-            TempFileManager manager(js_path_res / "fs-test-env");
+            if(with_fs_test_env) {
+                auto js_path_res = fs::path(config::data::js_test_res_path.data());
+                TempFileManager manager(js_path_res / "fs-test-env");
 
-            std::error_code ec;
-            manager.create("a/tmp.txt", ec, "Alpha!\nBeta!\nKid A;\nend;");
-            if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: a/tmp.txt");
-            }
-            manager.create("b/tmp2.txt", ec, "Ok computer!\n");
-            if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: b/tmp2.txt");
-            }
-            manager.create("c/a.txt", ec);
-            if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: c/a.txt");
-            }
-            manager.create("c/b.txt", ec);
-            if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: c/b.txt");
+                std::error_code ec;
+                manager.create("a/tmp.txt", ec, "Alpha!\nBeta!\nKid A;\nend;");
+                if(ec) {
+                    throw std::runtime_error("failed to prepare fs test file: a/tmp.txt");
+                }
+                manager.create("b/tmp2.txt", ec, "Ok computer!\n");
+                if(ec) {
+                    throw std::runtime_error("failed to prepare fs test file: b/tmp2.txt");
+                }
+                manager.create("c/a.txt", ec);
+                if(ec) {
+                    throw std::runtime_error("failed to prepare fs test file: c/a.txt");
+                }
+                manager.create("c/b.txt", ec);
+                if(ec) {
+                    throw std::runtime_error("failed to prepare fs test file: c/b.txt");
+                }
+
+                run_js_file_by_name(js_path, file_name);
+                return;
             }
 
             run_js_file_by_name(js_path, file_name);
-            return;
-        }
-
-        run_js_file_by_name(js_path, file_name);
-    } catch(qjs::Exception& ex) {
-        output::redLn("{}", ex.what());
-        throw ex;
-    }
+        },
+        [](qjs::Exception& ex) {
+            output::redLn("{}", util::format_exception("{}", ex.what()));
+            cpptrace::rethrow();
+        });
 }
 
 bool auto_js_case_uses_fs_test_env(const fs::path& relative_path) {
@@ -111,16 +114,23 @@ void run_auto_js_case(const fs::path& relative_path) {
 }
 
 kota::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
-    try {
-        run_auto_js_case(relative_path);
-        return kota::zest::TestState::Passed;
-    } catch(const std::exception& ex) {
-        output::redLn("auto js test failed: {}: {}", relative_path.string(), ex.what());
-        return kota::zest::TestState::Failed;
-    } catch(...) {
-        output::redLn("auto js test failed: {}: unknown exception", relative_path.string());
-        return kota::zest::TestState::Fatal;
-    }
+    auto state = kota::zest::TestState::Passed;
+    cpptrace::try_catch([&] { run_auto_js_case(relative_path); },
+                        [&](const std::exception& ex) {
+                            output::redLn("{}",
+                                          util::format_exception("auto js test failed: {}: {}",
+                                                                 relative_path.string(),
+                                                                 ex.what()));
+                            state = kota::zest::TestState::Failed;
+                        },
+                        [&] {
+                            output::redLn(
+                                "{}",
+                                util::format_exception("auto js test failed: {}: unknown exception",
+                                                       relative_path.string()));
+                            state = kota::zest::TestState::Fatal;
+                        });
+    return state;
 }
 
 std::vector<kota::zest::TestCase> auto_js_test_cases() {
@@ -231,15 +241,17 @@ TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
         ensure_qjs_initialized(js_path);
 
         bool caught = false;
-        try {
-            js::run_js_file("await Promise.reject(new Error('async boom'));\n", "reject.js");
-        } catch(const qjs::Exception& ex) {
-            caught = true;
-            std::string message = ex.what();
-            EXPECT_TRUE(message.contains("async boom"));
-            EXPECT_TRUE(message.contains("Stack Trace:"));
-            EXPECT_TRUE(message.contains("reject.js"));
-        }
+        cpptrace::try_catch(
+            [&] {
+                js::run_js_file("await Promise.reject(new Error('async boom'));\n", "reject.js");
+            },
+            [&](const qjs::Exception& ex) {
+                caught = true;
+                std::string message = ex.what();
+                EXPECT_TRUE(message.contains("async boom"));
+                EXPECT_TRUE(message.contains("Stack Trace:"));
+                EXPECT_TRUE(message.contains("reject.js"));
+            });
 
         EXPECT_TRUE(caught);
     };

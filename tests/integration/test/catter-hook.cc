@@ -25,6 +25,7 @@
 
 #include "hook.h"
 #include "util/crossplat.h"
+#include "util/exception.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
 
@@ -157,38 +158,42 @@ std::unordered_map<std::string, std::function<void()>> funcs = {
 int main(int argc, char* argv[]) {
     catter::log::mute_logger();
 
-    try {
-        auto args = kota::deco::util::argvify(argc, argv, 0);
+    int ret = 0;
+    cpptrace::try_catch(
+        [&] {
+            auto args = kota::deco::util::argvify(argc, argv, 0);
 
-        if(args.size() == 3 && args[1] == "--test") {
-            std::string executable = catter::util::get_executable_path().string();
+            if(args.size() == 3 && args[1] == "--test") {
+                std::string executable = catter::util::get_executable_path().string();
 
-            catter::data::command cmd{
-                .cwd = std::filesystem::current_path().string(),
-                .executable = executable,
-                .args = {executable, args[2]},
-                .env = catter::util::get_environment(),
-            };
-            return static_cast<int>(catter::wait(catter::proxy::hook::run(cmd, 0)).code);
-        } else if(args.size() == 2) {
-            if(auto it = test::funcs.find(args[1]); it != test::funcs.end()) {
-                std::invoke(it->second);
-                return 0;
+                catter::data::command cmd{
+                    .cwd = std::filesystem::current_path().string(),
+                    .executable = executable,
+                    .args = {executable, args[2]},
+                    .env = catter::util::get_environment(),
+                };
+                ret = static_cast<int>(catter::wait(catter::proxy::hook::run(cmd, 0)).code);
+            } else if(args.size() == 2) {
+                if(auto it = test::funcs.find(args[1]); it != test::funcs.end()) {
+                    std::invoke(it->second);
+                    ret = 0;
+                } else {
+                    std::println("Unknown function: {}", args[1]);
+                    ret = -1;
+                }
             } else {
-                std::println("Unknown function: {}", args[1]);
-                return -1;
+                std::string line;
+                for(auto& arg: args) {
+                    line.append(arg).append(" ");
+                }
+                line.pop_back();
+                std::print("{}", line);
+                ret = 0;
             }
-        } else {
-            std::string line;
-            for(auto& arg: args) {
-                line.append(arg).append(" ");
-            }
-            line.pop_back();
-            std::print("{}", line);
-            return 0;
-        }
-    } catch(const std::exception& e) {
-        std::println("Exception: {}", e.what());
-        return -1;
-    }
+        },
+        [&](const std::exception& e) {
+            std::println("{}", catter::util::format_exception("Exception: {}", e.what()));
+            ret = -1;
+        });
+    return ret;
 }
