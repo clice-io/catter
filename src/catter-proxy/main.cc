@@ -117,9 +117,10 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                     throw std::runtime_error("missing command arguments after --");
                 }
 
-                // This function is for the hook to call, it will never be called in this file.
-                // The implementation is in hook.cc
-                co_await peer.set_service_mode(data::ServiceMode::INJECT);
+                if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
+                    throw std::runtime_error(
+                        "catter is not in inject mode, cannot handle the request");
+                }
 
                 data::command cmd = {
                     .cwd = std::filesystem::current_path().string(),

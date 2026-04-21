@@ -42,6 +42,7 @@ enum class ServiceMode : uint8_t {
 namespace catter::ipc {
 
 enum class RequestType : uint8_t {
+    CHECK_MODE,
     CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
@@ -50,6 +51,13 @@ enum class RequestType : uint8_t {
 
 template <RequestType Type>
 struct Request;
+
+template <>
+struct Request<RequestType::CHECK_MODE> {
+    using Params = data::ServiceMode;
+    using Result = bool;
+    constexpr inline static std::string_view method = "check_mode";
+};
 
 template <>
 struct Request<RequestType::CREATE> {

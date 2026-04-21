@@ -27,11 +27,15 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     kota::ipc::BincodePeer peer(kota::event_loop::current(),
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(client)));
     using Context = kota::ipc::BincodePeer::RequestContext;
-    // auto service_mode = Serde<ServiceMode>::deserialize(BufferReader(*sm_packet));
-    // assert(service_mode == ServiceMode::INJECT && "Unsupported service mode received");
+
+    peer.on_request<Request<RequestType::CHECK_MODE>>(
+        [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
+            -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
+            co_return params == data::ServiceMode::INJECT;
+        });
 
     peer.on_request<Request<RequestType::CREATE>>(
-        [&](const Context& ctx, const Request<RequestType::CREATE>::Params& params)
+        [&](const Context& ctx, Request<RequestType::CREATE>::Params params)
             -> kota::ipc::RequestResult<Request<RequestType::CREATE>> {
             co_return service->create(params);
         });
