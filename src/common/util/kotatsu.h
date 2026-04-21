@@ -64,9 +64,9 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
     util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
     util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
 
-    auto ret = co_await kota::when_all(std::move(wait_task),
+    auto ret = co_await kota::when_all{std::move(wait_task),
                                        stdout_proxy.monitor(),
-                                       stderr_proxy.monitor());
+                                       stderr_proxy.monitor()};
 
     if(!ret) {
         throw std::runtime_error(std::format("process wait failed: {}", ret.error().message()));

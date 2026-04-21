@@ -94,8 +94,9 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                                std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
     };
 
-    auto [code, _] = co_await kota::when_all(
-        [](const catter::proxy::ProxyOption& opt, proxy::ipc::Peer& peer) -> kota::task<int> {
+    auto [code, _] = co_await kota::when_all{
+        [](const catter::proxy::ProxyOption& opt,
+           proxy::ipc::Peer& peer) noexcept -> kota::task<int> {
             // ensure peer is closed when proxy_main exits, otherwise the peer might still be
             // running and trying to access resources that have been cleaned up after proxy_main
             // exits.
@@ -161,7 +162,7 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
             co_await peer.report_error(*opt.parent_id, err);
             co_return -1;
         }(opt, peer),
-        peer.run());
+        peer.run()};
     co_return code;
 }
 }  // namespace
