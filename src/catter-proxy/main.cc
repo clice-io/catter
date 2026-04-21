@@ -107,63 +107,68 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                     LOG_ERROR("Failed to close IPC peer: {}", err.error().message);
                 }
             });
-            std::string err;
-            try {
+            auto report_error = [&](std::string err) -> kota::task<int> {
+                LOG_CRITICAL("{}", err);
+                co_await peer.report_error(*opt.parent_id, err);
+                co_return -1;
+            };
 
-                if(opt.error_msg.has_value() && !opt.args.has_value()) {
-                    co_await peer.report_error(*opt.parent_id, *opt.error_msg);
-                    co_return -1;
-                }
-
-                if(!opt.args.has_value()) {
-                    throw std::runtime_error("missing command arguments after --");
-                }
-
-                if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
-                    throw std::runtime_error(
-                        "catter is not in inject mode, cannot handle the request");
-                }
-
-                data::command cmd = {
-                    .cwd = std::filesystem::current_path().string(),
-                    .args = *opt.args,
-                    .env = catter::util::get_environment(),
-                };
-
-                if(opt.exec.has_value()) {
-                    cmd.executable = *opt.exec;
-                } else {
-                    cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
-                }
-
-                auto id = co_await peer.create(*opt.parent_id);
-
-                auto received_act = co_await peer.make_decision(cmd);
-
-                auto result = co_await run(received_act, id);
-
-                co_await peer.finish(std::move(result));
-
-                co_return static_cast<int>(result.code);
-            } catch(const std::exception& e) {
-                std::string args;
-                if(opt.args.has_value()) {
-                    args.reserve(opt.args->size() * 5);
-                    for(int i = 0; i < opt.args->size(); ++i) {
-                        args += ' ';
-                        args += (*opt.args)[i];
+            co_return co_await util::co_try_catch(
+                [&]() noexcept -> kota::task<int> {
+                    if(opt.error_msg.has_value() && !opt.args.has_value()) {
+                        co_await peer.report_error(*opt.parent_id, *opt.error_msg);
+                        co_return -1;
                     }
-                }
-                err = util::format_exception("Exception in catter-proxy: {}. Args: {}",
-                                             e.what(),
-                                             args);
-                LOG_CRITICAL("{}", err);
-            } catch(...) {
-                err = util::format_exception("Unknown exception in catter-proxy.");
-                LOG_CRITICAL("{}", err);
-            }
-            co_await peer.report_error(*opt.parent_id, err);
-            co_return -1;
+
+                    if(!opt.args.has_value()) {
+                        throw std::runtime_error("missing command arguments after --");
+                    }
+
+                    if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
+                        throw std::runtime_error(
+                            "catter is not in inject mode, cannot handle the request");
+                    }
+
+                    data::command cmd = {
+                        .cwd = std::filesystem::current_path().string(),
+                        .args = *opt.args,
+                        .env = catter::util::get_environment(),
+                    };
+
+                    if(opt.exec.has_value()) {
+                        cmd.executable = *opt.exec;
+                    } else {
+                        cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
+                    }
+
+                    auto id = co_await peer.create(*opt.parent_id);
+
+                    auto received_act = co_await peer.make_decision(cmd);
+
+                    auto result = co_await run(received_act, id);
+
+                    co_await peer.finish(std::move(result));
+
+                    co_return static_cast<int>(result.code);
+                },
+                [&](const std::exception& e) -> kota::task<int> {
+                    std::string args;
+                    if(opt.args.has_value()) {
+                        args.reserve(opt.args->size() * 5);
+                        for(int i = 0; i < opt.args->size(); ++i) {
+                            args += ' ';
+                            args += (*opt.args)[i];
+                        }
+                    }
+                    auto err = util::format_exception("Exception in catter-proxy: {}. Args: {}",
+                                                      e.what(),
+                                                      args);
+                    return report_error(std::move(err));
+                },
+                [&]() -> kota::task<int> {
+                    auto err = util::format_exception("Unknown exception in catter-proxy.");
+                    return report_error(std::move(err));
+                });
         }(opt, peer),
         peer.run()};
     co_return code;
