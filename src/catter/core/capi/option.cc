@@ -10,6 +10,7 @@
 #include <kota/option/option.h>
 
 #include "qjs.h"
+#include "type.h"
 #include "../apitool.h"
 #include "opt/external/clang.h"
 #include "opt/external/lld_coff.h"
@@ -71,18 +72,16 @@ std::vector<std::string> split_alias_args(const char* alias_args) {
     return result;
 }
 
-catter::qjs::Object make_option_item(JSContext* ctx,
-                                     [[maybe_unused]] const eo::OptTable& table,
-                                     const eo::ParsedArgument& arg) {
-    auto item = catter::qjs::Object::empty_one(ctx);
-
-    item.set_property("values",
-                      catter::qjs::Array<std::string>::from(ctx, copy_values(arg.values)));
-    item.set_property("key", std::string(arg.get_spelling_view()));
-    item.set_property("id", static_cast<uint32_t>(arg.option_id.id()));
-    item.set_property("index", static_cast<uint32_t>(arg.index));
+catter::js::OptionItem make_option_item([[maybe_unused]] const eo::OptTable& table,
+                                        const eo::ParsedArgument& arg) {
+    catter::js::OptionItem item{
+        .values = copy_values(arg.values),
+        .key = std::string(arg.get_spelling_view()),
+        .id = static_cast<uint32_t>(arg.option_id.id()),
+        .index = static_cast<uint32_t>(arg.index),
+    };
     if(arg.unaliased_option_id.has_value()) {
-        item.set_property("unalias", static_cast<uint32_t>(arg.unaliased_option_id->id()));
+        item.unalias = static_cast<uint32_t>(arg.unaliased_option_id->id());
     }
     return item;
 }
@@ -119,20 +118,20 @@ CTX_CAPI(option_get_info,
     }
 
     const auto& info = table.options()[option.id() - 1];
-    auto res = qjs::Object::empty_one(ctx);
-    res.set_property("id", static_cast<uint32_t>(info.id));
-    res.set_property("prefixedKey", std::string(option.prefixed_name()));
-    res.set_property("kind", static_cast<uint32_t>(info.kind));
-    res.set_property("group", static_cast<uint32_t>(info.group_id));
-    res.set_property("alias", static_cast<uint32_t>(info.alias_id));
-    res.set_property("aliasArgs",
-                     qjs::Array<std::string>::from(ctx, split_alias_args(info.alias_args)));
-    res.set_property("flags", static_cast<uint32_t>(info.flags));
-    res.set_property("visibility", static_cast<uint32_t>(info.visibility));
-    res.set_property("param", static_cast<uint32_t>(info.param));
-    res.set_property("help", std::string(info.help_text != nullptr ? info.help_text : ""));
-    res.set_property("meta_var", std::string(info.meta_var != nullptr ? info.meta_var : ""));
-    return res;
+    return js::OptionInfo{
+        .id = static_cast<uint32_t>(info.id),
+        .prefixedKey = std::string(option.prefixed_name()),
+        .kind = static_cast<uint32_t>(info.kind),
+        .group = static_cast<uint32_t>(info.group_id),
+        .alias = static_cast<uint32_t>(info.alias_id),
+        .aliasArgs = split_alias_args(info.alias_args),
+        .flags = static_cast<uint32_t>(info.flags),
+        .visibility = static_cast<uint32_t>(info.visibility),
+        .param = static_cast<uint32_t>(info.param),
+        .help = std::string(info.help_text != nullptr ? info.help_text : ""),
+        .meta_var = std::string(info.meta_var != nullptr ? info.meta_var : ""),
+    }
+        .to_object(ctx);
 };
 
 CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) {
@@ -160,7 +159,7 @@ CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) 
             }
             return emit_callback_value(
                 callback,
-                catter::qjs::Value::from(make_option_item(ctx, table, *parsed)));
+                catter::qjs::Value::from(make_option_item(table, *parsed).to_object(ctx)));
         }
         return emit_callback_value(callback, catter::qjs::Value::from(ctx, parsed.error()));
     });
