@@ -2,8 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-
-#include "util/serde.h"
+#include <string_view>
+#include <kota/ipc/protocol.h>
 
 namespace catter::data {
 
@@ -37,41 +37,65 @@ enum class ServiceMode : uint8_t {
     INJECT,
 };
 
-enum class Request : uint8_t {
+}  // namespace catter::data
+
+namespace catter::ipc {
+
+enum class RequestType : uint8_t {
+    CHECK_MODE,
     CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
 };
 
-template <Request Req>
-struct RequestHelper {
-    using RequestType = void;
+template <RequestType Type>
+struct Request;
+
+template <>
+struct Request<RequestType::CHECK_MODE> {
+    using Params = data::ServiceMode;
+    using Result = bool;
+    constexpr inline static std::string_view method = "check_mode";
 };
 
 template <>
-struct RequestHelper<Request::CREATE> {
-    using RequestType = ipcid_t(ipcid_t parent_id);
+struct Request<RequestType::CREATE> {
+    using Params = data::ipcid_t;
+    using Result = data::ipcid_t;
+    constexpr inline static std::string_view method = "create";
 };
 
 template <>
-struct RequestHelper<Request::MAKE_DECISION> {
-    using RequestType = action(command cmd);
+struct Request<RequestType::MAKE_DECISION> {
+    using Params = data::command;
+    using Result = data::action;
+    constexpr inline static std::string_view method = "make_decision";
 };
 
 template <>
-struct RequestHelper<Request::REPORT_ERROR> {
-    using RequestType = void(ipcid_t parent_id, std::string error_msg);
+struct Request<RequestType::REPORT_ERROR> {
+    struct Params {
+        data::ipcid_t parent_id;
+        std::string error_msg;
+    };
+
+    using Result = std::nullptr_t;
+    constexpr inline static std::string_view method = "report_error";
 };
 
 template <>
-struct RequestHelper<Request::FINISH> {
-    using RequestType = void(process_result result);
+struct Request<RequestType::FINISH> {
+    using Params = data::process_result;
+    using Result = std::nullptr_t;
+    constexpr inline static std::string_view method = "finish";
 };
+};  // namespace catter::ipc
 
-template <Request Req>
-using RequestType = typename RequestHelper<Req>::RequestType;
+namespace kota::ipc::protocol {
+using namespace catter::ipc;
 
-using packet = std::vector<char>;
+template <RequestType Type>
+struct RequestTraits<Request<Type>> : Request<Type> {};
 
-}  // namespace catter::data
+}  // namespace kota::ipc::protocol

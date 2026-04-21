@@ -31,7 +31,6 @@
 #include "util/data.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
-#include "util/serde.h"
 
 using namespace catter;
 
@@ -113,7 +112,9 @@ int run_case(std::vector<std::string> args, std::string cwd = {}) {
         .args = std::move(args),
     };
     auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
-    return static_cast<int>(session.run(std::move(session_plan)));
+    auto ret = static_cast<int>(session.run(std::move(session_plan)));
+    LOG_INFO("Session finished with exit code {}", ret);
+    return ret;
 }
 
 }  // namespace

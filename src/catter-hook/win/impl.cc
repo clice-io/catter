@@ -311,7 +311,7 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
 }
 }  // namespace
 
-data::process_result run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
+kota::task<data::process_result> run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
 
     return capture_process_result(
         [cmd, id, proxy_path](kota::event_loop& loop) mutable -> catter::process_info {
