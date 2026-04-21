@@ -6,6 +6,7 @@
 #include <system_error>
 #include <kota/meta/enum.h>
 
+#include "util/exception.h"
 #include "util/log.h"
 #include "win/win32.h"
 
@@ -115,26 +116,33 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
     }
 
     for(auto method: kota::meta::reflection<InjectMethod>::member_values) {
-        try {
-            auto thread = inject(hProcess, Space.get(), method);
-            if(auto error = win::wait_for_object(thread.get(), 3s); error) {
-                throw std::system_error(error.value(),
-                                        std::system_category(),
-                                        "Failed to wait for remote thread");
-            }
-            DWORD remote_exit_code = 0;
-            if(!GetExitCodeThread(thread.get(), &remote_exit_code)) {
-                throw std::system_error(GetLastError(),
-                                        std::system_category(),
-                                        "Failed to get remote thread exit code");
-            }
-            if(remote_exit_code != 0) {
-                return true;
-            }
-        } catch(const std::exception& e) {
-            LOG_ERROR("Injection with method {} failed: {}",
-                      kota::meta::enum_name(method),
-                      e.what());
+        bool injected = false;
+        cpptrace::try_catch(
+            [&] {
+                auto thread = inject(hProcess, Space.get(), method);
+                if(auto error = win::wait_for_object(thread.get(), 3s); error) {
+                    throw std::system_error(error.value(),
+                                            std::system_category(),
+                                            "Failed to wait for remote thread");
+                }
+                DWORD remote_exit_code = 0;
+                if(!GetExitCodeThread(thread.get(), &remote_exit_code)) {
+                    throw std::system_error(GetLastError(),
+                                            std::system_category(),
+                                            "Failed to get remote thread exit code");
+                }
+                if(remote_exit_code != 0) {
+                    injected = true;
+                }
+            },
+            [&](const std::exception& e) {
+                LOG_ERROR("{}",
+                          util::format_exception("Injection with method {} failed: {}",
+                                                 kota::meta::enum_name(method),
+                                                 e.what()));
+            });
+        if(injected) {
+            return true;
         }
     }
     return false;

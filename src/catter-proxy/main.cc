@@ -15,6 +15,7 @@
 #include "opt/proxy/option.h"
 #include "shared/resolver.h"
 #include "util/crossplat.h"
+#include "util/exception.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -153,11 +154,13 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                         args += (*opt.args)[i];
                     }
                 }
-                LOG_CRITICAL("Exception in catter-proxy: {}. Args: {}", e.what(), args);
-                err = e.what();
+                err = util::format_exception("Exception in catter-proxy: {}. Args: {}",
+                                             e.what(),
+                                             args);
+                LOG_CRITICAL("{}", err);
             } catch(...) {
-                LOG_CRITICAL("Unknown exception in catter-proxy.");
-                err = "Unknown exception in catter-proxy.";
+                err = util::format_exception("Unknown exception in catter-proxy.");
+                LOG_CRITICAL("{}", err);
             }
             co_await peer.report_error(*opt.parent_id, err);
             co_return -1;
@@ -171,13 +174,13 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
 // usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
 int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
-    try {
-        log::init_logger("catter-proxy.log",
-                         util::get_catter_data_path() / config::proxy::LOG_PATH_REL,
-                         false);
-    } catch(const std::exception&) {
-        log::mute_logger();
-    }
+    cpptrace::try_catch(
+        [&] {
+            log::init_logger("catter-proxy.log",
+                             util::get_catter_data_path() / config::proxy::LOG_PATH_REL,
+                             false);
+        },
+        [](const std::exception&) { log::mute_logger(); });
 
     kota::deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");

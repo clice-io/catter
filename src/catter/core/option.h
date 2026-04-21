@@ -11,6 +11,7 @@
 
 #include "ipc.h"
 #include "capi/type.h"
+#include "util/exception.h"
 
 namespace catter::core {
 namespace config {
@@ -57,12 +58,13 @@ struct WorkingDirectory {
 
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
-        try {
-            path = std::filesystem::absolute(text);
-        } catch(const std::exception& ex) {
-            return context.format_error(std::format("Wrong Path: {}", ex.what()));
-        }
-        return std::nullopt;
+        std::optional<std::string> error;
+        cpptrace::try_catch([&] { path = std::filesystem::absolute(text); },
+                            [&](const std::exception& ex) {
+                                error =
+                                    context.format_error(std::format("Wrong Path: {}", ex.what()));
+                            });
+        return error;
     }
 };
 }  // namespace config

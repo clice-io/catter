@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -9,6 +10,7 @@
 #include <kota/support/function_traits.h>
 
 #include "qjs.h"
+#include "util/exception.h"
 #include "util/log.h"
 
 namespace catter::capi::util {
@@ -45,11 +47,13 @@ std::string serialize_value(const T& value) {
     } else if constexpr(std::is_same_v<U, catter::qjs::Parameters>) {
         return std::format("<{} js args>", value.size());
     } else if constexpr(std::is_same_v<U, catter::qjs::Object>) {
-        try {
-            return qjs::json::stringify(value);
-        } catch(const std::exception& e) {
-            return std::format("<object stringify failed: {}>", e.what());
-        }
+        std::string result;
+        cpptrace::try_catch([&] { result = qjs::json::stringify(value); },
+                            [&](const std::exception& e) {
+                                result = util::format_exception("<object stringify failed: {}>",
+                                                                e.what());
+                            });
+        return result;
     } else {
         static_assert(kota::dependent_false<U>, "Unsupported CAPI value type for logging");
     }
@@ -77,27 +81,44 @@ struct hooked {
 
 template <auto V, typename R, typename... CallArgs>
 static R invoke_with_log(const std::string& args_s, CallArgs&&... call_args) {
-    try {
-        if constexpr(std::is_void_v<R>) {
-            V(std::forward<CallArgs>(call_args)...);
-            LOG_INFO("Invoke C API `{}`:\n    -> args = {}\n    -> ret = <void>",
-                     capi_name<V>(),
-                     args_s);
-            return;
-        } else {
-            auto ret = V(std::forward<CallArgs>(call_args)...);
-            LOG_INFO("Invoke C API `{}`:\n    -> args = {}\n    -> ret = {}",
-                     capi_name<V>(),
-                     args_s,
-                     serialize_value(ret));
-            return ret;
-        }
-    } catch(const std::exception& e) {
-        LOG_INFO("Invoke C API `{}`:\n    -> args = {}\n    -> throw = {}",
-                 capi_name<V>(),
-                 args_s,
-                 e.what());
-        throw;
+    if constexpr(std::is_void_v<R>) {
+        cpptrace::try_catch(
+            [&] {
+                V(std::forward<CallArgs>(call_args)...);
+                LOG_INFO("Invoke C API `{}`:\n    -> args = {}\n    -> ret = <void>",
+                         capi_name<V>(),
+                         args_s);
+            },
+            [&](const std::exception& e) {
+                LOG_INFO("{}",
+                         util::format_exception(
+                             "Invoke C API `{}`:\n    -> args = {}\n    -> throw = {}",
+                             capi_name<V>(),
+                             args_s,
+                             e.what()));
+                cpptrace::rethrow();
+            });
+        return;
+    } else {
+        std::optional<R> result;
+        cpptrace::try_catch(
+            [&] {
+                result.emplace(V(std::forward<CallArgs>(call_args)...));
+                LOG_INFO("Invoke C API `{}`:\n    -> args = {}\n    -> ret = {}",
+                         capi_name<V>(),
+                         args_s,
+                         serialize_value(*result));
+            },
+            [&](const std::exception& e) {
+                LOG_INFO("{}",
+                         util::format_exception(
+                             "Invoke C API `{}`:\n    -> args = {}\n    -> throw = {}",
+                             capi_name<V>(),
+                             args_s,
+                             e.what()));
+                cpptrace::rethrow();
+            });
+        return std::move(*result);
     }
 }
 

@@ -9,6 +9,7 @@
 #include "apitool.h"
 #include "qjs.h"
 #include "config/js-lib.h"
+#include "util/exception.h"
 
 namespace catter::js {
 
@@ -123,13 +124,15 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
 
         auto catch_fn = CallBack::from(js_ctx, [&](qjs::Parameters args) {
             state = Rejected;
-            try {
-                for(auto& arg: args) {
-                    error_strace += arg.as<qjs::Error>().format() + "\n";
-                }
-            } catch(const std::exception& e) {
-                error_strace += std::format("Exception: {}\n", e.what());
-            }
+            cpptrace::try_catch(
+                [&] {
+                    for(auto& arg: args) {
+                        error_strace += arg.as<qjs::Error>().format() + "\n";
+                    }
+                },
+                [&](const std::exception& e) {
+                    error_strace += util::format_exception("Exception: {}", e.what()) + "\n";
+                });
         });
 
         then_promise["catch"].as<Catch>().invoke(then_promise, qjs::Object::from(catch_fn));

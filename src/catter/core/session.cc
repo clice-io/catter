@@ -11,6 +11,7 @@
 #include "config/catter-proxy.h"
 #include "config/ipc.h"
 #include "util/crossplat.h"
+#include "util/exception.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -65,11 +66,12 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
     std::string error_msg;
 
     for(auto& client_task: linked_clients) {
-        try {
-            client_task.result();  // Await completion and propagate exceptions
-        } catch(const std::exception& ex) {
-            error_msg += std::format("Exception in client task: {}\n", ex.what());
-        }
+        cpptrace::try_catch([&] { client_task.result(); },
+                            [&](const std::exception& ex) {
+                                error_msg += util::format_exception("Exception in client task: {}",
+                                                                    ex.what()) +
+                                             "\n";
+                            });
     }
     if(!error_msg.empty()) {
         throw std::runtime_error(error_msg);

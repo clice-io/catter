@@ -22,6 +22,8 @@
 #include <kota/support/type_traits.h>
 #include <kota/meta/name.h>
 
+#include "util/exception.h"
+
 // namespace meta
 
 namespace catter::qjs {
@@ -654,24 +656,36 @@ private:
                 using T = detail::type_get<Params, N>;
                 return qjs::Value{ctx, argv[N]}.as<T>();
             };
-            try {
-                if constexpr(std::is_void_v<R>) {
-                    fn(transformer(std::in_place_index<Is>)...);
-                    return JS_UNDEFINED;
-                } else {
-                    auto res = fn(transformer(std::in_place_index<Is>)...);
-
-                    if constexpr(std::is_same_v<R, Object>) {
-                        return res.release();
+            JSValue result = JS_UNDEFINED;
+            cpptrace::try_catch(
+                [&] {
+                    if constexpr(std::is_void_v<R>) {
+                        fn(transformer(std::in_place_index<Is>)...);
+                        result = JS_UNDEFINED;
                     } else {
-                        return qjs::Value::from(ctx, res).release();
+                        auto res = fn(transformer(std::in_place_index<Is>)...);
+
+                        if constexpr(std::is_same_v<R, Object>) {
+                            result = res.release();
+                        } else {
+                            result = qjs::Value::from(ctx, res).release();
+                        }
                     }
-                }
-            } catch(const qjs::Exception& e) {
-                return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
-            } catch(const std::exception& e) {
-                return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
-            }
+                },
+                [&](const qjs::Exception& e) {
+                    auto message =
+                        util::format_exception("Exception in C++ function: {}", e.what());
+                    result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+                },
+                [&](const std::exception& e) {
+                    auto message = util::format_exception("Unexpected exception: {}", e.what());
+                    result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+                },
+                [&] {
+                    auto message = util::format_exception("Unknown exception in C++ function.");
+                    result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+                });
+            return result;
         }(std::make_index_sequence<sizeof...(Args)>{});
     }
 
@@ -867,24 +881,35 @@ private:
             args.emplace_back(ctx, argv[i]);
         }
 
-        try {
-            if constexpr(std::is_void_v<R>) {
-                fn(std::move(args));
-                return JS_UNDEFINED;
-            } else {
-                auto res = fn(std::move(args));
-
-                if constexpr(std::is_same_v<R, Object>) {
-                    return res.release();
+        JSValue result = JS_UNDEFINED;
+        cpptrace::try_catch(
+            [&] {
+                if constexpr(std::is_void_v<R>) {
+                    fn(std::move(args));
+                    result = JS_UNDEFINED;
                 } else {
-                    return qjs::Value::from(ctx, res).release();
+                    auto res = fn(std::move(args));
+
+                    if constexpr(std::is_same_v<R, Object>) {
+                        result = res.release();
+                    } else {
+                        result = qjs::Value::from(ctx, res).release();
+                    }
                 }
-            }
-        } catch(const qjs::Exception& e) {
-            return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
-        } catch(const std::exception& e) {
-            return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
-        }
+            },
+            [&](const qjs::Exception& e) {
+                auto message = util::format_exception("Exception in C++ function: {}", e.what());
+                result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+            },
+            [&](const std::exception& e) {
+                auto message = util::format_exception("Unexpected exception: {}", e.what());
+                result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+            },
+            [&] {
+                auto message = util::format_exception("Unknown exception in C++ function.");
+                result = JS_ThrowInternalError(ctx, "%s", message.c_str());
+            });
+        return result;
     }
 
     template <typename Opaque, typename Register>
