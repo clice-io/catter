@@ -6,6 +6,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 
 #include "config/catter-proxy.h"
@@ -27,7 +28,7 @@ int64_t Session::run(RunPlan run_plan) {
         kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), default_loop());
 
     if(!acc_ret) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("Failed to create acceptor: {}", acc_ret.error().message()));
     }
 
@@ -72,7 +73,7 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
         }
     }
     if(!error_msg.empty()) {
-        throw std::runtime_error(error_msg);
+        throw cpptrace::runtime_error(error_msg);
     }
     co_return;
 }
@@ -114,13 +115,13 @@ kota::task<int64_t> Session::spawn(std::string executable,
 
     auto spawn_ret = kota::process::spawn(opts, kota::event_loop::current());
     if(!spawn_ret) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("process spawn failed: {}", spawn_ret.error().message()));
     }
 
     auto exit_status = co_await spawn_ret->proc.wait();
     if(exit_status.has_error()) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("process wait failed: {}", exit_status.error().message()));
     }
 

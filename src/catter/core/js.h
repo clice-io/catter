@@ -16,7 +16,6 @@ const RuntimeConfig& get_global_runtime_config();
 /**
  * Initialize QuickJS runtime and context, register C++ APIs, and load JS libraries.
  * You can re-init it to reset the runtime and set new config, like pwd.
- * @throws std::runtime_error or std::exception if initialization fails.
  */
 void init_qjs(const RuntimeConfig& config);
 

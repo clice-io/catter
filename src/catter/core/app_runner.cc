@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <cpptrace/exceptions.hpp>
+
 #include "app_config.h"
 #include "ipc.h"
 #include "js.h"
@@ -61,7 +63,7 @@ public:
                             }
                 };
             }
-            default: throw std::runtime_error("Unhandled action type");
+            default: throw cpptrace::runtime_error("Unhandled action type");
         }
     }
 
@@ -94,7 +96,7 @@ private:
 
 int64_t inject(const js::CatterConfig& config) {
     if(config.buildSystemCommand.empty()) {
-        throw std::runtime_error("buildSystemCommand must not be empty");
+        throw cpptrace::runtime_error("buildSystemCommand must not be empty");
     }
 
     auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
@@ -122,11 +124,11 @@ int64_t execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
             return inject(config);
         }
         default: {
-            throw std::runtime_error(
+            throw cpptrace::runtime_error(
                 std::format("UnExpected mode: {:0x}", static_cast<uint8_t>(mode)));
         }
     }
-    throw std::runtime_error("Not implemented");
+    throw cpptrace::runtime_error("Not implemented");
 }
 
 }  // namespace

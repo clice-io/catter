@@ -14,11 +14,13 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <cpptrace/exceptions.hpp>
 #include <io.h>
 #include <uv.h>
 #include <kota/async/async.h>
 #include <kota/meta/enum.h>
 
+#include "util/exception.h"
 #include "util/crossplat.h"
 #include "util/data.h"
 #include "util/kotatsu.h"
@@ -90,7 +92,7 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
     HANDLE read = nullptr;
     HANDLE write = nullptr;
     if(!CreatePipe(&read, &write, &sa, 0)) {
-        throw std::system_error(GetLastError(),
+        throw catter::system_error(GetLastError(),
                                 std::system_category(),
                                 std::format("Failed to create {} capture pipe", name));
     }
@@ -99,7 +101,7 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
         auto err = GetLastError();
         CloseHandle(read);
         CloseHandle(write);
-        throw std::system_error(
+        throw catter::system_error(
             err,
             std::system_category(),
             std::format("Failed to disable inheritance for {} capture pipe", name));
@@ -111,12 +113,12 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
 kota::pipe open_capture_pipe(win::Handle pipe, std::string_view name, kota::event_loop& loop) {
     auto fd = uv_open_osfhandle(pipe.get());
     if(fd < 0) {
-        throw std::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
+        throw cpptrace::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
     }
 
     auto opened = kota::pipe::open(fd, kota::pipe::options{}, loop);
     if(!opened) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("{} pipe open failed: {}", name, opened.error().message()));
     }
     pipe.release();  // Ownership transferred to kotatsu
@@ -161,7 +163,7 @@ private:
             }
         } else {
             LOG_ERROR("Failed to get exit code of process during cleanup: {}",
-                      std::system_error(GetLastError(), std::system_category()).what());
+                      catter::system_error(GetLastError(), std::system_category()).what());
         }
     }
 
@@ -232,7 +234,7 @@ private:
                WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE)) {
             // libuv handle this case by aborting the process, so we do the same
             std::println("Failed to call RegisterWaitForSingleObject: {}, aborting",
-                         std::system_error(GetLastError(), std::system_category()).what());
+                         catter::system_error(GetLastError(), std::system_category()).what());
             std::abort();
         }
     }
@@ -287,18 +289,18 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
                        cmd.cwd.empty() ? nullptr : cmd.cwd.c_str(),
                        &si,
                        &pi)) {
-        throw std::system_error(GetLastError(), std::system_category(), "Failed to create process");
+        throw catter::system_error(GetLastError(), std::system_category(), "Failed to create process");
     }
 
     RunningProcess process = {pi};
 
     if(!try_inject(process.process_handle(),
                    catter::util::get_catter_root_path() / win::DLL_NAME)) {
-        throw std::runtime_error("Failed to inject DLL into target process");
+        throw cpptrace::runtime_error("Failed to inject DLL into target process");
     }
 
     if(ResumeThread(process.thread_handle()) == static_cast<DWORD>(-1)) {
-        throw std::system_error(GetLastError(),
+        throw catter::system_error(GetLastError(),
                                 std::system_category(),
                                 "Failed to resume target process");
     }

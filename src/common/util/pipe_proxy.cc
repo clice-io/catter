@@ -1,5 +1,5 @@
 #include "pipe_proxy.h"
-
+#include <cpptrace/exceptions.hpp>
 #include <algorithm>
 #include <cstdio>
 #include <format>
@@ -59,7 +59,7 @@ kota::task<void> PipeProxy::monitor() {
                 break;
             }
 
-            throw std::runtime_error(
+            throw cpptrace::runtime_error(
                 std::format("{} pipe read failed: {}", name, chunk.error().message()));
         }
 

@@ -9,6 +9,7 @@
 #include <variant>
 #include <vector>
 #include <fcntl.h>
+#include <cpptrace/exceptions.hpp>
 #include <kota/support/type_traits.h>
 #include <kota/meta/enum.h>
 #include <kota/meta/struct.h>
@@ -129,7 +130,7 @@ constexpr E enum_value(std::string_view name) {
     if(auto val = et::meta::enum_value<E>(name); val.has_value()) {
         return *val;
     }
-    throw std::runtime_error(std::format("Invalid enum value name: {}", name));
+    throw cpptrace::runtime_error(std::format("Invalid enum value name: {}", name));
 }
 
 template <typename E>

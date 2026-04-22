@@ -6,6 +6,7 @@
 #include <string_view>
 #include <type_traits>
 #include <fcntl.h>
+#include <cpptrace/exceptions.hpp>
 #include <kota/meta/enum.h>
 #include <kota/meta/struct.h>
 
@@ -53,7 +54,7 @@ auto dispatch(E e, F&& f) {
     if(left < Enum::member_values.size() && static_cast<U>(Enum::member_values[left]) == target) {
         return map[left].callback(std::forward<F>(f));
     }
-    throw std::runtime_error("Invalid enum value");
+    throw cpptrace::runtime_error("Invalid enum value");
 }
 
 template <typename E, typename F>
@@ -82,6 +83,6 @@ auto dispatch(std::string_view e, F&& f) {
             return entry.callback(std::forward<F>(f));
         }
     }
-    throw std::runtime_error("Invalid enum name");
+    throw cpptrace::runtime_error("Invalid enum name");
 }
 }  // namespace catter

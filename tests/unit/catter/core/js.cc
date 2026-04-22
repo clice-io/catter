@@ -7,6 +7,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <vector>
+#include <cpptrace/exceptions.hpp>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 
@@ -33,7 +34,7 @@ void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
 
     std::ifstream ifs{full_path};
     if(!ifs.good()) {
-        throw std::runtime_error("js test file cannot be opened: " + full_path.string());
+        throw cpptrace::runtime_error("js test file cannot be opened: " + full_path.string());
     }
 
     std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
@@ -52,19 +53,19 @@ void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false
             std::error_code ec;
             manager.create("a/tmp.txt", ec, "Alpha!\nBeta!\nKid A;\nend;");
             if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: a/tmp.txt");
+                throw cpptrace::runtime_error("failed to prepare fs test file: a/tmp.txt");
             }
             manager.create("b/tmp2.txt", ec, "Ok computer!\n");
             if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: b/tmp2.txt");
+                throw cpptrace::runtime_error("failed to prepare fs test file: b/tmp2.txt");
             }
             manager.create("c/a.txt", ec);
             if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: c/a.txt");
+                throw cpptrace::runtime_error("failed to prepare fs test file: c/a.txt");
             }
             manager.create("c/b.txt", ec);
             if(ec) {
-                throw std::runtime_error("failed to prepare fs test file: c/b.txt");
+                throw cpptrace::runtime_error("failed to prepare fs test file: c/b.txt");
             }
 
             run_js_file_by_name(js_path, file_name);

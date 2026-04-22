@@ -24,6 +24,7 @@
 #include <kota/deco/deco.h>
 
 #include "hook.h"
+#include "util/exception.h"
 #include "util/crossplat.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -41,7 +42,7 @@ void CreateProcessA() {
     STARTUPINFOA si{.cb = sizeof(STARTUPINFOA)};
     if(!CreateProcessA(nullptr, cmdline, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa
-        throw std::system_error(GetLastError(), std::system_category(), "Failed to create process");
+        throw catter::system_error(GetLastError(), std::system_category(), "Failed to create process");
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);
@@ -54,7 +55,7 @@ void CreateProcessW() {
     STARTUPINFOW si{.cb = sizeof(STARTUPINFOW)};
     if(!CreateProcessW(nullptr, cmdline, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
-        throw std::system_error(GetLastError(), std::system_category(), "Failed to create process");
+        throw catter::system_error(GetLastError(), std::system_category(), "Failed to create process");
     }
     WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);
@@ -83,28 +84,28 @@ void execve() {
     char exec_name[] = "/bin/echo";
     auto argv = argvify(exec_name, "Hello, World!");
     if(::execve(exec_name, argv.data(), environ) != 0) {
-        throw std::system_error(errno, std::system_category(), "execve failed");
+        throw catter::system_error(errno, std::system_category(), "execve failed");
     }
 }
 
 void execv() {
     char exec_name[] = "/bin/echo";
     if(::execv(exec_name, argvify(exec_name, "Hello, World!").data()) != 0) {
-        throw std::system_error(errno, std::system_category(), "execv failed");
+        throw catter::system_error(errno, std::system_category(), "execv failed");
     }
 }
 
 void execvp() {
     char exec_name[] = "/bin/echo";
     if(::execvp(exec_name, argvify(exec_name, "Hello, World!").data()) != 0) {
-        throw std::system_error(errno, std::system_category(), "execvp failed");
+        throw catter::system_error(errno, std::system_category(), "execvp failed");
     }
 }
 
 void execl() {
     char exec_name[] = "/bin/echo";
     if(::execl(exec_name, exec_name, "Hello, World!", static_cast<char*>(nullptr)) != 0) {
-        throw std::system_error(errno, std::system_category(), "execl failed");
+        throw catter::system_error(errno, std::system_category(), "execl failed");
     }
 }
 
@@ -117,11 +118,11 @@ void posix_spawn() {
                      nullptr,
                      argvify(exec_name, "Hello, World!").data(),
                      environ) != 0) {
-        throw std::system_error(errno, std::system_category(), "posix_spawn failed");
+        throw catter::system_error(errno, std::system_category(), "posix_spawn failed");
     }
     int status;
     if(::waitpid(pid, &status, 0) < 0) {
-        throw std::system_error(errno, std::system_category(), "waitpid failed");
+        throw catter::system_error(errno, std::system_category(), "waitpid failed");
     }
 }
 
@@ -134,11 +135,11 @@ void posix_spawnp() {
                       nullptr,
                       argvify(exec_name, "Hello, World!").data(),
                       environ) != 0) {
-        throw std::system_error(errno, std::system_category(), "posix_spawnp failed");
+        throw catter::system_error(errno, std::system_category(), "posix_spawnp failed");
     }
     int status;
     if(::waitpid(pid, &status, 0) < 0) {
-        throw std::system_error(errno, std::system_category(), "waitpid failed");
+        throw catter::system_error(errno, std::system_category(), "waitpid failed");
     }
 }
 

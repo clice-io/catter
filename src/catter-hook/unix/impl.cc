@@ -8,7 +8,7 @@
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
+#include <cpptrace/exceptions.hpp>
 #include "hook.h"
 #include "unix/config.h"
 #include "util/crossplat.h"
@@ -29,7 +29,7 @@ kota::task<data::process_result> run(data::command command,
 
     // check hook_lib exists
     if(!std::filesystem::exists(lib_path)) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("Catter-Proxy Hook library not found at path: {}", lib_path.string()));
     }
 

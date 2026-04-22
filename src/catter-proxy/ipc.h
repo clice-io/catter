@@ -1,5 +1,6 @@
 #pragma once
 #include <print>
+#include <cpptrace/exceptions.hpp>
 #include <kota/async/io/loop.h>
 #include <kota/async/vocab/error.h>
 #include <kota/ipc/codec/bincode.h>
@@ -20,7 +21,7 @@ struct Peer {
     typename kota::task<typename Traits::Result>
         send_request(const typename Traits::Params& params) {
         if(auto ret = co_await this->peer.send_request<Tag>(params); !ret.has_value()) {
-            throw std::runtime_error(std::format("IPC request failed: {}", ret.error().message));
+            throw cpptrace::runtime_error(std::format("IPC request failed: {}", ret.error().message));
         } else {
             co_return *ret;
         }

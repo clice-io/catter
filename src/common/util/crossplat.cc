@@ -8,7 +8,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
-
+#include <cpptrace/exceptions.hpp>
 #if defined(CATTER_LINUX)
 #include <unistd.h>
 extern char** environ;
@@ -25,7 +25,7 @@ std::vector<std::string> get_environment() noexcept {
 std::filesystem::path get_catter_data_path() {
     const char* home = getenv("HOME");
     if(home == nullptr) {
-        throw std::runtime_error("HOME environment variable not set");
+        throw cpptrace::runtime_error("HOME environment variable not set");
     }
     std::filesystem::path path = home;
     return path / ".catter";
@@ -36,7 +36,7 @@ std::filesystem::path get_executable_path() {
     ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
     if(len <= 0) {
         auto err = std::error_code(errno, std::generic_category());
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     buf[len] = '\0';
@@ -63,7 +63,7 @@ std::vector<std::string> get_environment() noexcept {
 std::filesystem::path get_catter_data_path() {
     const char* home = getenv("HOME");
     if(home == nullptr) {
-        throw std::runtime_error("HOME environment variable not set");
+        throw cpptrace::runtime_error("HOME environment variable not set");
     }
     std::filesystem::path path = home;
     return path / ".catter";
@@ -74,7 +74,7 @@ std::filesystem::path get_executable_path() {
     uint32_t size = buf.size();
     if(_NSGetExecutablePath(buf.data(), &size) != 0) {
         auto err = std::error_code(ERANGE, std::generic_category());
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("readlink failed with code {}: {})", err.value(), err.message()));
     }
     return std::filesystem::path(buf.data());

@@ -64,11 +64,11 @@ struct object_trans;
  * It contains details about the JavaScript exception, including name, message, and stack trace.
  * Also You can use it in qjs::Function to throw exceptions back to JavaScript.
  */
-class Exception : public std::exception {
+class Exception : public cpptrace::runtime_error {
 public:
-    Exception(const std::string& details) : details(details) {}
+    Exception(const std::string& details) : cpptrace::runtime_error(std::string(details)) {}
 
-    Exception(std::string&& details) : details(std::move(details)) {}
+    Exception(std::string&& details) : cpptrace::runtime_error(std::move(details)) {}
 
     template <typename... Args>
     Exception(std::format_string<Args...> fmt, Args&&... args) :
