@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "shared/resolver.h"
+#include "shared/winapi.h"
 #include "win/env.h"
 
 namespace catter::win::payload {

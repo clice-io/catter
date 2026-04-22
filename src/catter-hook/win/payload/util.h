@@ -3,9 +3,10 @@
 #include <string>
 #include <string_view>
 
-#include "shared/winapi.h"
-
 namespace catter::win::payload {
+
+template <typename char_t>
+concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
 
 template <CharT char_t>
 std::basic_string<char_t> resolve_abspath(const char_t* application_name,
