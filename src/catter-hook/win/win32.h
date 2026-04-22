@@ -8,6 +8,9 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <cpptrace/exceptions.hpp>
+
+#include "util/exception.h"
 
 // clang-format off
 // Windows SDK headers are order-sensitive: <windows.h> defines the macros and
@@ -79,7 +82,7 @@ public:
                  DWORD flProtect) : process(hProcess) {
         space = VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
         if(!space)
-            throw std::runtime_error("VirtualAllocEx failed");
+            throw cpptrace::runtime_error("VirtualAllocEx failed");
     }
 
     RemoteMemory(const RemoteMemory&) = delete;
@@ -124,7 +127,7 @@ template <typename F>
 F* get_function_from_ntdll(const char* name) {
     HMODULE hNtDllModule = GetModuleHandleA("ntdll.dll");
     if(hNtDllModule == NULL) {
-        throw std::system_error(
+        throw catter::system_error(
             GetLastError(),
             std::system_category(),
             std::format("Failed to get handle of ntdll.dll when looking for function {}", name));
@@ -132,9 +135,9 @@ F* get_function_from_ntdll(const char* name) {
 
     auto* fn = reinterpret_cast<F*>(GetProcAddress(hNtDllModule, name));
     if(fn == nullptr) {
-        throw std::system_error(ERROR_PROC_NOT_FOUND,
-                                std::system_category(),
-                                std::format("Failed to find {} in ntdll.dll", name));
+        throw catter::system_error(ERROR_PROC_NOT_FOUND,
+                                   std::system_category(),
+                                   std::format("Failed to find {} in ntdll.dll", name));
     }
     return fn;
 }

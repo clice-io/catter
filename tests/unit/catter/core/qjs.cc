@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <cpptrace/exceptions.hpp>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 
@@ -358,7 +359,7 @@ TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
         throw qjs::Exception("custom boom");
     });
     auto std_thrower = qjs::Function<int64_t()>::from(ctx.js_context(), []() -> int64_t {
-        throw std::runtime_error("std boom");
+        throw cpptrace::runtime_error("std boom");
     });
 
     auto global = ctx.global_this();

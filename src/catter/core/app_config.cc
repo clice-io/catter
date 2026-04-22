@@ -5,6 +5,7 @@
 #include <iterator>
 #include <string_view>
 #include <unordered_map>
+#include <cpptrace/exceptions.hpp>
 
 namespace catter::app {
 
@@ -33,7 +34,7 @@ std::string load_script_content(const std::string& script_path) {
 
     std::ifstream ifs{script_path};
     if(!ifs.good()) {
-        throw std::runtime_error(std::format("Failed to open script file: {}", script_path));
+        throw cpptrace::runtime_error(std::format("Failed to open script file: {}", script_path));
     }
 
     return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());

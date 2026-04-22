@@ -15,6 +15,7 @@ using namespace catter;
 int main(int argc, char* argv[]) {
     auto args = kota::deco::util::argvify(argc, argv, 1);
     kota::deco::cli::text::set_default_renderer(kota::deco::cli::text::ModernRenderer());
+
     // -1 is continue, else return
     int ret = -1;
 

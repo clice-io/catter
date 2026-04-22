@@ -4,6 +4,7 @@
 #include <cstring>
 #include <format>
 #include <stdexcept>
+#include <cpptrace/exceptions.hpp>
 #include <kota/meta/enum.h>
 
 #include "apitool.h"
@@ -36,21 +37,21 @@ Self self{};
 
 CatterConfig on_start(CatterConfig config) {
     if(!self.on_start) {
-        throw std::runtime_error("service.onStart is not registered");
+        throw cpptrace::runtime_error("service.onStart is not registered");
     }
     return CatterConfig::make(self.on_start(config.to_object(self.on_start.context())));
 }
 
 void on_finish(ProcessResult result) {
     if(!self.on_finish) {
-        throw std::runtime_error("service.onFinish is not registered");
+        throw cpptrace::runtime_error("service.onFinish is not registered");
     }
     return self.on_finish(result.to_object(self.on_finish.context()));
 }
 
 Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
     if(!self.on_command) {
-        throw std::runtime_error("service.onCommand is not registered");
+        throw cpptrace::runtime_error("service.onCommand is not registered");
     }
     auto command_result = qjs::Object::empty_one(self.on_command.context());
     if(data.has_value()) {
@@ -65,7 +66,7 @@ Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
 
 void on_execution(uint32_t id, ProcessResult result) {
     if(!self.on_execution) {
-        throw std::runtime_error("service.onExecution is not registered");
+        throw cpptrace::runtime_error("service.onExecution is not registered");
     }
     return self.on_execution(id, result.to_object(self.on_execution.context()));
 }

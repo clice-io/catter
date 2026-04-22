@@ -6,6 +6,7 @@
 #include <span>
 #include <stdexcept>
 #include <string_view>
+#include <cpptrace/exceptions.hpp>
 
 namespace catter::util {
 
@@ -59,7 +60,7 @@ kota::task<void> PipeProxy::monitor() {
                 break;
             }
 
-            throw std::runtime_error(
+            throw cpptrace::runtime_error(
                 std::format("{} pipe read failed: {}", name, chunk.error().message()));
         }
 

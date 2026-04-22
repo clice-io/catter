@@ -6,6 +6,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 #include <kota/deco/deco.h>
 
@@ -38,7 +39,7 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
         }
     }
     if(path_env.empty()) {
-        throw std::runtime_error("PATH environment variable not found");
+        throw cpptrace::runtime_error("PATH environment variable not found");
     }
     auto resolved = catter::hook::shared::resolver::resolve_from_path_env(exe, path_env.c_str());
     if(!resolved.has_value()) {
@@ -115,11 +116,11 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                 }
 
                 if(!opt.args.has_value()) {
-                    throw std::runtime_error("missing command arguments after --");
+                    throw cpptrace::runtime_error("missing command arguments after --");
                 }
 
                 if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
-                    throw std::runtime_error(
+                    throw cpptrace::runtime_error(
                         "catter is not in inject mode, cannot handle the request");
                 }
 

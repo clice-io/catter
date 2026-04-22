@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <format>
 #include <stdexcept>
+#include <cpptrace/exceptions.hpp>
 #include <kota/support/functional.h>
 #include <kota/async/async.h>
 #include <kota/async/runtime/when.h>
@@ -37,7 +38,7 @@ inline process_event make_process_event(kota::process::options& opts) {
     return [opts = std::move(opts)](kota::event_loop& loop) -> process_info {
         auto spawn_ret = kota::process::spawn(opts, loop);
         if(!spawn_ret) {
-            throw std::runtime_error(
+            throw cpptrace::runtime_error(
                 std::format("process spawn failed: {}", spawn_ret.error().message()));
         }
 
@@ -69,7 +70,8 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
                                        stderr_proxy.monitor()};
 
     if(!ret) {
-        throw std::runtime_error(std::format("process wait failed: {}", ret.error().message()));
+        throw cpptrace::runtime_error(
+            std::format("process wait failed: {}", ret.error().message()));
     }
 
     auto [code, _1, _2] = *ret;

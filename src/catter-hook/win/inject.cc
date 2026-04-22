@@ -4,8 +4,10 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <cpptrace/exceptions.hpp>
 #include <kota/meta/enum.h>
 
+#include "util/exception.h"
 #include "util/log.h"
 #include "win/win32.h"
 
@@ -41,7 +43,7 @@ win::Handle RtlCreateUserThread(HANDLE hProcess,
                                                                                      &hRemoteThread,
                                                                                      NULL);
     if(status < 0) {
-        throw std::runtime_error(std::format(
+        throw cpptrace::runtime_error(std::format(
             "Failed to create remote thread with RtlCreateUserThread, NTSTATUS=0x{:08X}",
             static_cast<unsigned long>(status)));
     }
@@ -79,7 +81,7 @@ win::Handle NtCreateThreadEx(HANDLE hProcess,
                                                                                0,
                                                                                NULL);
     if(status < 0) {
-        throw std::runtime_error(
+        throw cpptrace::runtime_error(
             std::format("Failed to create remote thread with NtCreateThreadEx, NTSTATUS=0x{:08X}",
                         static_cast<unsigned long>(status)));
     }
@@ -111,22 +113,22 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
         win::RemoteMemory(hProcess, NULL, dll_path_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
     if(WriteProcessMemory(hProcess, Space.get(), dll_path_str.c_str(), dll_path_size, NULL) == 0) {
-        throw std::runtime_error("failed to write into process");
+        throw cpptrace::runtime_error("failed to write into process");
     }
 
     for(auto method: kota::meta::reflection<InjectMethod>::member_values) {
         try {
             auto thread = inject(hProcess, Space.get(), method);
             if(auto error = win::wait_for_object(thread.get(), 3s); error) {
-                throw std::system_error(error.value(),
-                                        std::system_category(),
-                                        "Failed to wait for remote thread");
+                throw catter::system_error(error.value(),
+                                           std::system_category(),
+                                           "Failed to wait for remote thread");
             }
             DWORD remote_exit_code = 0;
             if(!GetExitCodeThread(thread.get(), &remote_exit_code)) {
-                throw std::system_error(GetLastError(),
-                                        std::system_category(),
-                                        "Failed to get remote thread exit code");
+                throw catter::system_error(GetLastError(),
+                                           std::system_category(),
+                                           "Failed to get remote thread exit code");
             }
             if(remote_exit_code != 0) {
                 return true;
