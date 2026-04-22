@@ -1,7 +1,7 @@
-#include <cpptrace/exceptions.hpp>
 #include <iostream>
 #include <print>
 #include <string_view>
+#include <cpptrace/exceptions.hpp>
 #include <kota/deco/deco.h>
 
 #include "app_runner.h"
@@ -23,7 +23,6 @@ int main(int argc, char* argv[]) {
         std::println("Caught cpptrace exception: {}", ex.what());
         return 0;
     }
-
 
     // -1 is continue, else return
     int ret = -1;

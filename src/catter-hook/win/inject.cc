@@ -121,14 +121,14 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
             auto thread = inject(hProcess, Space.get(), method);
             if(auto error = win::wait_for_object(thread.get(), 3s); error) {
                 throw catter::system_error(error.value(),
-                                        std::system_category(),
-                                        "Failed to wait for remote thread");
+                                           std::system_category(),
+                                           "Failed to wait for remote thread");
             }
             DWORD remote_exit_code = 0;
             if(!GetExitCodeThread(thread.get(), &remote_exit_code)) {
                 throw catter::system_error(GetLastError(),
-                                        std::system_category(),
-                                        "Failed to get remote thread exit code");
+                                           std::system_category(),
+                                           "Failed to get remote thread exit code");
             }
             if(remote_exit_code != 0) {
                 return true;

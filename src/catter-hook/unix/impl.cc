@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cpptrace/exceptions.hpp>
+
 #include "hook.h"
 #include "unix/config.h"
 #include "util/crossplat.h"

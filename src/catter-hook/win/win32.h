@@ -8,9 +8,9 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <cpptrace/exceptions.hpp>
 
 #include "util/exception.h"
-#include <cpptrace/exceptions.hpp>
 
 // clang-format off
 // Windows SDK headers are order-sensitive: <windows.h> defines the macros and
@@ -136,8 +136,8 @@ F* get_function_from_ntdll(const char* name) {
     auto* fn = reinterpret_cast<F*>(GetProcAddress(hNtDllModule, name));
     if(fn == nullptr) {
         throw catter::system_error(ERROR_PROC_NOT_FOUND,
-                                std::system_category(),
-                                std::format("Failed to find {} in ntdll.dll", name));
+                                   std::system_category(),
+                                   std::format("Failed to find {} in ntdll.dll", name));
     }
     return fn;
 }

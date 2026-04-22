@@ -14,15 +14,15 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
-#include <cpptrace/exceptions.hpp>
 #include <io.h>
 #include <uv.h>
+#include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 #include <kota/meta/enum.h>
 
-#include "util/exception.h"
 #include "util/crossplat.h"
 #include "util/data.h"
+#include "util/exception.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
 #include "win/env.h"
@@ -93,8 +93,8 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
     HANDLE write = nullptr;
     if(!CreatePipe(&read, &write, &sa, 0)) {
         throw catter::system_error(GetLastError(),
-                                std::system_category(),
-                                std::format("Failed to create {} capture pipe", name));
+                                   std::system_category(),
+                                   std::format("Failed to create {} capture pipe", name));
     }
 
     if(!SetHandleInformation(read, HANDLE_FLAG_INHERIT, 0)) {
@@ -113,7 +113,8 @@ AnonymousPipe create_capture_pipe(std::string_view name) {
 kota::pipe open_capture_pipe(win::Handle pipe, std::string_view name, kota::event_loop& loop) {
     auto fd = uv_open_osfhandle(pipe.get());
     if(fd < 0) {
-        throw cpptrace::runtime_error(std::format("Failed to convert {} pipe handle to CRT fd", name));
+        throw cpptrace::runtime_error(
+            std::format("Failed to convert {} pipe handle to CRT fd", name));
     }
 
     auto opened = kota::pipe::open(fd, kota::pipe::options{}, loop);
@@ -289,7 +290,9 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
                        cmd.cwd.empty() ? nullptr : cmd.cwd.c_str(),
                        &si,
                        &pi)) {
-        throw catter::system_error(GetLastError(), std::system_category(), "Failed to create process");
+        throw catter::system_error(GetLastError(),
+                                   std::system_category(),
+                                   "Failed to create process");
     }
 
     RunningProcess process = {pi};
@@ -301,8 +304,8 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
 
     if(ResumeThread(process.thread_handle()) == static_cast<DWORD>(-1)) {
         throw catter::system_error(GetLastError(),
-                                std::system_category(),
-                                "Failed to resume target process");
+                                   std::system_category(),
+                                   "Failed to resume target process");
     }
 
     return StartedProcess{

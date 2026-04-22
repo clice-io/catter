@@ -73,7 +73,7 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
         }
     }
     if(!error_msg.empty()) {
-        throw cpptrace::runtime_error(error_msg);
+        throw cpptrace::runtime_error(std::move(error_msg));
     }
     co_return;
 }

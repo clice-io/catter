@@ -21,7 +21,8 @@ struct Peer {
     typename kota::task<typename Traits::Result>
         send_request(const typename Traits::Params& params) {
         if(auto ret = co_await this->peer.send_request<Tag>(params); !ret.has_value()) {
-            throw cpptrace::runtime_error(std::format("IPC request failed: {}", ret.error().message));
+            throw cpptrace::runtime_error(
+                std::format("IPC request failed: {}", ret.error().message));
         } else {
             co_return *ret;
         }

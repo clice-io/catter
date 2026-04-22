@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-
 #include <cpptrace/exceptions.hpp>
 
 #include "app_config.h"

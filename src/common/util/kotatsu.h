@@ -70,7 +70,8 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
                                        stderr_proxy.monitor()};
 
     if(!ret) {
-        throw cpptrace::runtime_error(std::format("process wait failed: {}", ret.error().message()));
+        throw cpptrace::runtime_error(
+            std::format("process wait failed: {}", ret.error().message()));
     }
 
     auto [code, _1, _2] = *ret;

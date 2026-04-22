@@ -73,13 +73,6 @@ public:
     template <typename... Args>
     Exception(std::format_string<Args...> fmt, Args&&... args) :
         Exception(std::format(fmt, std::forward<Args>(args)...)) {}
-
-    const char* what() const noexcept override {
-        return details.c_str();
-    }
-
-private:
-    std::string details;
 };
 
 class TypeException : public Exception {

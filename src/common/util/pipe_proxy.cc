@@ -1,11 +1,12 @@
 #include "pipe_proxy.h"
-#include <cpptrace/exceptions.hpp>
+
 #include <algorithm>
 #include <cstdio>
 #include <format>
 #include <span>
 #include <stdexcept>
 #include <string_view>
+#include <cpptrace/exceptions.hpp>
 
 namespace catter::util {
 
