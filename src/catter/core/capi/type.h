@@ -408,6 +408,50 @@ public:
     std::string msg;
 };
 
+struct OptionItem {
+    static OptionItem make(qjs::Object object) {
+        return detail::make_reflected_object<OptionItem>(std::move(object));
+    }
+
+    qjs::Object to_object(JSContext* ctx) const {
+        return detail::to_reflected_object(ctx, *this);
+    }
+
+    bool operator== (const OptionItem&) const = default;
+
+public:
+    std::vector<std::string> values;
+    std::string key;
+    uint32_t id;
+    std::optional<uint32_t> unalias;
+    uint32_t index;
+};
+
+struct OptionInfo {
+    static OptionInfo make(qjs::Object object) {
+        return detail::make_reflected_object<OptionInfo>(std::move(object));
+    }
+
+    qjs::Object to_object(JSContext* ctx) const {
+        return detail::to_reflected_object(ctx, *this);
+    }
+
+    bool operator== (const OptionInfo&) const = default;
+
+public:
+    uint32_t id;
+    std::string prefixedKey;
+    uint32_t kind;
+    uint32_t group;
+    uint32_t alias;
+    std::vector<std::string> aliasArgs;
+    uint32_t flags;
+    uint32_t visibility;
+    uint32_t param;
+    std::string help;
+    std::string meta_var;
+};
+
 using Action =
     TaggedUnion<ActionType::skip, ActionType::drop, ActionType::abort, ActionType::modify>;
 

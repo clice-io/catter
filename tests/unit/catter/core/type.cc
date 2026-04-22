@@ -82,6 +82,7 @@ TEST_CASE(process_result_and_config_conversion) {
             .scriptPath = "scripts/demo.js",
             .scriptArgs = {"--input", "compile_commands.json"},
             .buildSystemCommand = {"xmake", "build"},
+            .buildSystemCommandCwd = "/tmp/catter-build",
             .runtime = {.supportActions = {js::ActionType::drop, js::ActionType::abort},
                            .type = js::CatterRuntime::Type::inject,
                            .supportParentId = false},
@@ -91,6 +92,40 @@ TEST_CASE(process_result_and_config_conversion) {
 
         EXPECT_TRUE(is_roundtrip_equal(ctx, process_result));
         EXPECT_TRUE(is_roundtrip_equal(ctx, config));
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
+TEST_CASE(option_item_and_info_conversion) {
+    auto f = [&]() {
+        auto runtime = qjs::Runtime::create();
+        auto& ctx = runtime.context();
+
+        js::OptionItem option_item{
+            .values = {"include"},
+            .key = "-I",
+            .id = 12,
+            .unalias = 34,
+            .index = 1,
+        };
+
+        js::OptionInfo option_info{
+            .id = 12,
+            .prefixedKey = "-I",
+            .kind = 11,
+            .group = 0,
+            .alias = 0,
+            .aliasArgs = {"alias"},
+            .flags = 4,
+            .visibility = 0xffffffff,
+            .param = 1,
+            .help = "Add include directory",
+            .meta_var = "<dir>",
+        };
+
+        EXPECT_TRUE(is_roundtrip_equal(ctx, option_item));
+        EXPECT_TRUE(is_roundtrip_equal(ctx, option_info));
     };
 
     EXPECT_NOTHROWS(f());

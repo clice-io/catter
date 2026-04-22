@@ -103,6 +103,11 @@ export type CatterConfig = {
   buildSystemCommand: string[];
 
   /**
+   * Working directory used to launch the build-system command.
+   */
+  buildSystemCommandCwd: string;
+
+  /**
    * Runtime capabilities available for the current script execution.
    */
   runtime: CatterRuntime;
