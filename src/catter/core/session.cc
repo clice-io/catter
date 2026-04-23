@@ -18,7 +18,7 @@
 
 namespace catter {
 
-int64_t Session::run(RunPlan run_plan) {
+data::process_result Session::run(RunPlan run_plan) {
 #ifndef _WIN32
     if(std::filesystem::exists(config::ipc::pipe_name())) {
         std::filesystem::remove(config::ipc::pipe_name());
@@ -78,9 +78,9 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
     co_return;
 }
 
-kota::task<int64_t> Session::spawn(std::string executable,
-                                   std::vector<std::string> args,
-                                   std::string cwd) {
+kota::task<data::process_result> Session::spawn(std::string executable,
+                                                std::vector<std::string> args,
+                                                std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -98,9 +98,9 @@ kota::task<int64_t> Session::spawn(std::string executable,
         .args = args,
         .cwd = cwd,
         .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
-        .streams = {kota::process::stdio::ignore(),
-                     kota::process::stdio::ignore(),
-                     kota::process::stdio::ignore()}
+        .streams = {kota::process::stdio::inherit(),
+                     kota::process::stdio::pipe(false, true),
+                     kota::process::stdio::pipe(false, true)}
     };
 
     std::string args_str;
@@ -113,20 +113,7 @@ kota::task<int64_t> Session::spawn(std::string executable,
              cwd,
              args_str);
 
-    auto spawn_ret = kota::process::spawn(opts, kota::event_loop::current());
-    if(!spawn_ret) {
-        throw cpptrace::runtime_error(
-            std::format("process spawn failed: {}", spawn_ret.error().message()));
-    }
-
-    auto exit_status = co_await spawn_ret->proc.wait();
-    if(exit_status.has_error()) {
-        throw cpptrace::runtime_error(
-            std::format("process wait failed: {}", exit_status.error().message()));
-    }
-
-    auto [ret, signal] = *exit_status;
-    co_return ret;
+    co_return co_await capture_process_result(make_process_event(opts));
 }
 
 }  // namespace catter
