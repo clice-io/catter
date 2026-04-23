@@ -93,7 +93,7 @@ private:
     const js::CatterRuntime* runtime = nullptr;
 };
 
-int64_t inject(const js::CatterConfig& config) {
+data::process_result inject(const js::CatterConfig& config) {
     if(config.buildSystemCommand.empty()) {
         throw cpptrace::runtime_error("buildSystemCommand must not be empty");
     }
@@ -117,7 +117,7 @@ int64_t inject(const js::CatterConfig& config) {
     return session.run(std::move(session_plan));
 }
 
-int64_t execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
+data::process_result execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
     switch(mode) {
         case ipc::ServiceMode::INJECT: {
             return inject(config);
@@ -152,8 +152,12 @@ void run(const core::CatterConfig& config) {
         return;
     }
 
+    auto process_result = execute_service(config.mode->mode, js_config);
+
     js::on_finish(js::ProcessResult{
-        .code = execute_service(config.mode->mode, js_config),
+        .code = process_result.code,
+        .stdOut = std::move(process_result.std_out),
+        .stdErr = std::move(process_result.std_err),
     });
 }
 

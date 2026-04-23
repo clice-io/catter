@@ -112,9 +112,12 @@ int run_case(std::vector<std::string> args, std::string cwd = {}) {
         .args = std::move(args),
     };
     auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
-    auto ret = static_cast<int>(session.run(std::move(session_plan)));
-    LOG_INFO("Session finished with exit code {}", ret);
-    return ret;
+    auto process_result = session.run(std::move(session_plan));
+    LOG_INFO("Session finished with exit code {} and stdout: `{}` and stderr: `{}`",
+             process_result.code,
+             log::escape(process_result.std_out),
+             log::escape(process_result.std_err));
+    return process_result.code;
 }
 
 }  // namespace
