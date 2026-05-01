@@ -14,7 +14,7 @@
 #include <kota/meta/enum.h>
 #include <kota/meta/struct.h>
 
-#include "qjs.h"
+#include "../qjs.h"
 #include "util/enum.h"
 
 namespace catter::js {

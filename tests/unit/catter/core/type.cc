@@ -1,10 +1,10 @@
-#include "capi/type.h"
+#include "js/capi/type.h"
 
 #include <optional>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 
-#include "qjs.h"
+#include "js/qjs.h"
 
 using namespace catter;
 using namespace catter::js;

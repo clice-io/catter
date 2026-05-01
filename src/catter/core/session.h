@@ -74,7 +74,7 @@ public:
      * @return The result of the process execution, including exit status and captured
      * stdout/stderr.
      */
-    data::process_result run(RunPlan run_plan);
+    kota::task<data::process_result> run(RunPlan run_plan);
 
 private:
     kota::task<void> loop(ClientAcceptor acceptor);

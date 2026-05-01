@@ -1,21 +1,22 @@
 #include "app_runner.h"
 
 #include <cstdint>
+#include <exception>
 #include <format>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <cpptrace/exceptions.hpp>
+#include <kota/async/runtime/task.h>
 
 #include "app_config.h"
 #include "ipc.h"
-#include "js.h"
 #include "option.h"
-#include "qjs.h"
 #include "session.h"
-#include "capi/type.h"
 #include "config/catter-proxy.h"
+#include "js/async.h"
+#include "js/capi/type.h"
 #include "util/crossplat.h"
 #include "util/data.h"
 
@@ -93,7 +94,7 @@ private:
     const js::CatterRuntime* runtime = nullptr;
 };
 
-data::process_result inject(const js::CatterConfig& config) {
+kota::task<data::process_result> inject(const js::CatterConfig& config) {
     if(config.buildSystemCommand.empty()) {
         throw cpptrace::runtime_error("buildSystemCommand must not be empty");
     }
@@ -114,13 +115,14 @@ data::process_result inject(const js::CatterConfig& config) {
     auto session_plan = Session::make_run_plan(std::move(launch_plan),
                                                ServiceImpl::Factory{.runtime = &config.runtime});
 
-    return session.run(std::move(session_plan));
+    co_return co_await session.run(std::move(session_plan));
 }
 
-data::process_result execute_service(ipc::ServiceMode mode, const js::CatterConfig& config) {
+kota::task<data::process_result> execute_service(ipc::ServiceMode mode,
+                                                 const js::CatterConfig& config) {
     switch(mode) {
         case ipc::ServiceMode::INJECT: {
-            return inject(config);
+            co_return co_await inject(config);
         }
         default: {
             throw cpptrace::runtime_error(
@@ -132,33 +134,42 @@ data::process_result execute_service(ipc::ServiceMode mode, const js::CatterConf
 
 }  // namespace
 
-void run(const core::CatterConfig& config) {
+kota::task<> async_run(const core::CatterConfig& config) {
     auto script_content = load_script_content(config.script_path.value());
+    js::JsLoop js_loop;
+    js::JsLoopScope js_loop_scope(js_loop);
+    std::exception_ptr error;
 
-    js::init_qjs({.pwd = config.working_dir->path});
-    js::run_js_file(script_content, config.script_path.value());
+    try {
+        co_await js::async_init_qjs({.pwd = config.working_dir->path});
+        co_await js::async_run_js_file(script_content, config.script_path.value());
 
-    auto js_config = js::on_start({
-        .scriptPath = config.script_path.value(),
-        .scriptArgs = config.script_args,
-        .buildSystemCommand = config.command.value(),
-        .buildSystemCommandCwd = config.working_dir->path.string(),
-        .runtime = config.mode->runtime,
-        .options = {.log = config.log},
-        .execute = true,
-    });
+        auto js_config = js::on_start({
+            .scriptPath = config.script_path.value(),
+            .scriptArgs = config.script_args,
+            .buildSystemCommand = config.command.value(),
+            .buildSystemCommandCwd = config.working_dir->path.string(),
+            .runtime = config.mode->runtime,
+            .options = {.log = config.log},
+            .execute = true,
+        });
 
-    if(!js_config.execute) {
-        return;
+        if(js_config.execute) {
+            auto process_result = co_await execute_service(config.mode->mode, js_config);
+
+            js::on_finish(js::ProcessResult{
+                .code = process_result.code,
+                .stdOut = std::move(process_result.std_out),
+                .stdErr = std::move(process_result.std_err),
+            });
+        }
+    } catch(...) {
+        error = std::current_exception();
     }
 
-    auto process_result = execute_service(config.mode->mode, js_config);
-
-    js::on_finish(js::ProcessResult{
-        .code = process_result.code,
-        .stdOut = std::move(process_result.std_out),
-        .stdErr = std::move(process_result.std_err),
-    });
+    if(error) {
+        std::rethrow_exception(error);
+    }
 }
 
 }  // namespace catter::app

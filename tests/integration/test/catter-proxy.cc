@@ -29,7 +29,6 @@
 #include "config/ipc.h"
 #include "util/crossplat.h"
 #include "util/data.h"
-#include "util/kotatsu.h"
 #include "util/log.h"
 
 using namespace catter;
@@ -112,7 +111,11 @@ int run_case(std::vector<std::string> args, std::string cwd = {}) {
         .args = std::move(args),
     };
     auto session_plan = Session::make_run_plan(std::move(launch_plan), ServiceImpl::Factory{});
-    auto process_result = session.run(std::move(session_plan));
+    auto task = session.run(std::move(session_plan));
+    kota::event_loop loop;
+    loop.schedule(task);
+    loop.run();
+    auto process_result = task.result();
     LOG_INFO("Session finished with exit code {} and stdout: `{}` and stderr: `{}`",
              process_result.code,
              log::escape(process_result.std_out),

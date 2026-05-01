@@ -21,12 +21,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <kota/async/async.h>
 #include <kota/deco/deco.h>
 
 #include "hook.h"
 #include "util/crossplat.h"
 #include "util/exception.h"
-#include "util/kotatsu.h"
 #include "util/log.h"
 
 #ifdef CATTER_WINDOWS
@@ -174,7 +174,11 @@ int main(int argc, char* argv[]) {
                 .args = {executable, args[2]},
                 .env = catter::util::get_environment(),
             };
-            return static_cast<int>(catter::wait(catter::proxy::hook::run(cmd, 0)).code);
+            auto task = catter::proxy::hook::run(cmd, 0);
+            kota::event_loop loop;
+            loop.schedule(task);
+            loop.run();
+            return static_cast<int>(task.result().code);
         } else if(args.size() == 2) {
             if(auto it = test::funcs.find(args[1]); it != test::funcs.end()) {
                 std::invoke(it->second);

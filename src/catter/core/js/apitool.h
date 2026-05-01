@@ -126,6 +126,13 @@ struct hooked<V, R(JSContext*, Args...)> {
     catter::qjs::Function<catter::apitool::without_first_param_t<decltype(func)>>::from_raw<       \
         catter::apitool::hooked<func>::call>(ctx.js_context(), #func)
 
+#define TO_JS_ASYNC_FN(func)                                                                       \
+    catter::qjs::AsyncFunction<decltype(func)>::from_raw<func>(ctx.js_context(), #func)
+
+#define TO_JS_ASYNC_WITHOUT_CTX_FN(func)                                                           \
+    catter::qjs::AsyncFunction<catter::apitool::without_first_param_t<decltype(func)>>::from_raw<  \
+        func>(ctx.js_context(), #func)
+
 #define MERGE(x, y) x##y
 // CAPI(function sign)
 #define CAPI(NAME, OTHER)                                                                          \
@@ -133,6 +140,32 @@ struct hooked<V, R(JSContext*, Args...)> {
     static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
                                         const catter::qjs::Context& ctx) {                         \
         mod.export_functor(#NAME, TO_JS_FN(NAME));                                                 \
+    }                                                                                              \
+    static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
+        catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \
+        return 0;                                                                                  \
+    }();                                                                                           \
+    auto NAME OTHER
+
+// ASYNC_CAPI(function sign returning kota::task<...>)
+#define ASYNC_CAPI(NAME, OTHER)                                                                    \
+    auto NAME OTHER;                                                                               \
+    static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
+                                        const catter::qjs::Context& ctx) {                         \
+        mod.export_functor(#NAME, TO_JS_ASYNC_FN(NAME));                                           \
+    }                                                                                              \
+    static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
+        catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \
+        return 0;                                                                                  \
+    }();                                                                                           \
+    auto NAME OTHER
+
+// ASYNC_CAPI(function sign returning kota::task<...> without ctx)
+#define CTX_ASYNC_CAPI(NAME, OTHER)                                                                \
+    auto NAME OTHER;                                                                               \
+    static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
+                                        const catter::qjs::Context& ctx) {                         \
+        mod.export_functor(#NAME, TO_JS_ASYNC_WITHOUT_CTX_FN(NAME));                               \
     }                                                                                              \
     static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
         catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \

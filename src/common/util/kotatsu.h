@@ -14,18 +14,6 @@
 
 namespace catter {
 
-inline auto& default_loop() noexcept {
-    static kota::event_loop loop{};
-    return loop;
-}
-
-template <typename Task>
-auto wait(Task&& task) {
-    default_loop().schedule(task);
-    default_loop().run();
-    return task.result();
-}
-
 struct process_info {
     kota::task<int64_t, kota::error> wait_task;
     kota::pipe stdout_pipe;

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <format>
 #include <list>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -18,14 +19,15 @@
 
 namespace catter {
 
-data::process_result Session::run(RunPlan run_plan) {
+kota::task<data::process_result> Session::run(RunPlan run_plan) {
 #ifndef _WIN32
     if(std::filesystem::exists(config::ipc::pipe_name())) {
         std::filesystem::remove(config::ipc::pipe_name());
     }
 #endif
+    auto& current_loop = kota::event_loop::current();
     auto acc_ret =
-        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), default_loop());
+        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), current_loop);
 
     if(!acc_ret) {
         throw cpptrace::runtime_error(
@@ -39,13 +41,8 @@ data::process_result Session::run(RunPlan run_plan) {
                                   std::move(run_plan.launch_plan.args),
                                   std::move(run_plan.launch_plan.cwd));
 
-    default_loop().schedule(loop_task);
-    default_loop().schedule(spawn_task);
-
-    default_loop().run();
-
-    loop_task.result();  // Propagate exceptions from loop task
-    return spawn_task.result();
+    auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
+    co_return std::move(process_result);
 }
 
 kota::task<void> Session::loop(ClientAcceptor acceptor) {

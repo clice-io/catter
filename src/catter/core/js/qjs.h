@@ -20,6 +20,7 @@
 #include <cpptrace/cpptrace.hpp>
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
+#include <kota/async/runtime/task.h>
 #include <kota/meta/name.h>
 
 // namespace meta
@@ -27,6 +28,52 @@
 namespace catter::qjs {
 
 namespace refl = kota::meta;
+
+using AsyncWakeHook = void (*)();
+using AsyncScheduleHook = bool (*)(kota::task<>&&);
+
+inline AsyncWakeHook& async_wake_hook_slot() noexcept {
+    static AsyncWakeHook hook = nullptr;
+    return hook;
+}
+
+inline AsyncScheduleHook& async_schedule_hook_slot() noexcept {
+    static AsyncScheduleHook hook = nullptr;
+    return hook;
+}
+
+inline void set_async_wake_hook(AsyncWakeHook hook) noexcept {
+    async_wake_hook_slot() = hook;
+}
+
+inline void set_async_schedule_hook(AsyncScheduleHook hook) noexcept {
+    async_schedule_hook_slot() = hook;
+}
+
+inline void wake_async_jobs() noexcept {
+    if(auto hook = async_wake_hook_slot()) {
+        hook();
+    }
+}
+
+inline bool schedule_async_job(kota::task<>&& task) noexcept {
+    if(auto hook = async_schedule_hook_slot()) {
+        try {
+            return hook(std::move(task));
+        } catch(...) {
+            return false;
+        }
+    }
+
+    try {
+        kota::event_loop loop;
+        loop.schedule(std::move(task));
+        loop.run();
+        return true;
+    } catch(...) {
+        return false;
+    }
+}
 
 namespace detail {
 
@@ -57,6 +104,36 @@ struct value_trans;
 
 template <typename U>
 struct object_trans;
+
+template <typename T>
+struct task_traits {
+    constexpr static bool is_task = false;
+};
+
+template <typename T, typename E, typename C>
+struct task_traits<kota::task<T, E, C>> {
+    constexpr static bool is_task = true;
+    using value_type = T;
+    using error_type = E;
+    using cancel_type = C;
+};
+
+template <typename T>
+concept async_task = task_traits<std::remove_cvref_t<T>>::is_task;
+
+template <typename E>
+std::string async_error_message(E&& error) {
+    using U = std::remove_cvref_t<E>;
+    if constexpr(std::is_same_v<U, std::string>) {
+        return std::forward<E>(error);
+    } else if constexpr(std::constructible_from<std::string, E&&>) {
+        return std::string(std::forward<E>(error));
+    } else if constexpr(requires(const U& value) { std::string{value.message()}; }) {
+        return std::string{error.message()};
+    } else {
+        return "Async task failed.";
+    }
+}
 }  // namespace detail
 
 /**
@@ -81,6 +158,7 @@ public:
 };
 
 class Error;
+class Promise;
 
 class JSException : public Exception {
 public:
@@ -477,7 +555,8 @@ inline JSException JSException::dump(JSContext* ctx) {
  */
 template <typename Signature>
 class Function {
-    static_assert("Function must be instantiated with a function type");
+    static_assert(kota::dependent_false<Signature>,
+                  "Function must be instantiated with a function type");
 };
 
 /**
@@ -496,7 +575,7 @@ public:
     using AllowParamTypes =
         detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>;
     using AllowRetTypes =
-        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>;
+        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object, Promise>;
 
     static_assert((AllowParamTypes::contains_v<Args> && ...),
                   "Function parameter types must be one of the allowed types");
@@ -715,7 +794,7 @@ template <typename R>
 class Function<R(Parameters)> : protected Object {
 public:
     using AllowRetTypes =
-        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>;
+        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object, Promise>;
     static_assert(AllowRetTypes::contains_v<R> || std::is_void_v<R>,
                   "Function return type must be one of the allowed types");
 
@@ -1030,6 +1109,346 @@ public:
     }
 };
 
+struct PromiseCapability;
+
+class Promise : protected Object {
+public:
+    using Object::Object;
+    using Object::is_valid;
+    using Object::value;
+    using Object::context;
+    using Object::operator bool;
+    using Object::release;
+
+    using ThenCallback = Function<void(Parameters)>;
+
+    static PromiseCapability create(JSContext* ctx);
+
+    bool is_pending() const {
+        return JS_PromiseState(context(), value()) == JS_PROMISE_PENDING;
+    }
+
+    bool is_fulfilled() const {
+        return JS_PromiseState(context(), value()) == JS_PROMISE_FULFILLED;
+    }
+
+    bool is_rejected() const {
+        return JS_PromiseState(context(), value()) == JS_PROMISE_REJECTED;
+    }
+
+    Value result() const {
+        return Value{context(), JS_PromiseResult(context(), value())};
+    }
+
+    template <typename OnFulfilled>
+    Promise then(const qjs::Function<OnFulfilled>& on_fulfilled) const {
+        qjs::Parameters args;
+        args.push_back(Value::from(on_fulfilled));
+        return this->then_with_args(args);
+    }
+
+    template <typename OnFulfilled, typename OnRejected>
+    Promise then(const qjs::Function<OnFulfilled>& on_fulfilled,
+                 const qjs::Function<OnRejected>& on_rejected) const {
+        qjs::Parameters args;
+        args.push_back(Value::from(on_fulfilled));
+        args.push_back(Value::from(on_rejected));
+        return this->then_with_args(args);
+    }
+
+    template <typename OnRejected>
+    Promise when_err(const qjs::Function<OnRejected>& on_rejected) const {
+        qjs::Parameters args;
+        args.push_back(Value::from(on_rejected));
+        return this->call_promise_method("catch", args);
+    }
+
+private:
+    Promise then_with_args(const qjs::Parameters& args) const {
+        return this->call_promise_method("then", args);
+    }
+
+    Promise call_promise_method(const char* method_name, const qjs::Parameters& args) const {
+        using Method = qjs::Function<qjs::Promise(qjs::Parameters)>;
+        auto method = this->get_property(method_name).as<Method>();
+        auto next = method.invoke(Object{context(), value()}, args);
+        return next;
+    }
+};
+
+struct PromiseCapability {
+    PromiseCapability(Promise promise, Value resolve_func, Value reject_func) noexcept :
+        promise(std::move(promise)), resolve_func(std::move(resolve_func)),
+        reject_func(std::move(reject_func)) {}
+
+    Promise promise;
+
+    template <typename... Args>
+    void resolve(Args&&... args) const {
+        static_assert(sizeof...(Args) <= 1, "Promise resolve accepts at most one argument");
+        this->call(resolve_func, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void reject(Args&&... args) const {
+        static_assert(sizeof...(Args) <= 1, "Promise reject accepts at most one argument");
+        this->call(reject_func, std::forward<Args>(args)...);
+    }
+
+    const Value& resolve_function() const noexcept {
+        return resolve_func;
+    }
+
+    const Value& reject_function() const noexcept {
+        return reject_func;
+    }
+
+private:
+    template <typename... Args>
+    static Parameters make_parameters(JSContext* ctx, Args&&... args) {
+        Parameters params{};
+        params.reserve(sizeof...(Args));
+        (params.push_back(make_parameter(ctx, std::forward<Args>(args))), ...);
+        return params;
+    }
+
+    template <typename T>
+    static Value make_parameter(JSContext* ctx, T&& value) {
+        using ValueType = std::remove_cvref_t<T>;
+        if constexpr(std::is_same_v<ValueType, Value>) {
+            if constexpr(std::is_rvalue_reference_v<T&&>) {
+                auto value_ctx = value.context();
+                return Value{value_ctx, value.release()};
+            } else {
+                return Value{value.context(), value.value()};
+            }
+        } else if constexpr(std::is_same_v<ValueType, Object> || std::is_same_v<ValueType, Error> ||
+                            std::is_same_v<ValueType, Promise>) {
+            return Value::from(std::forward<T>(value));
+        } else if constexpr(std::is_same_v<ValueType, std::string>) {
+            return Value::from(ctx, std::forward<T>(value));
+        } else if constexpr(std::is_constructible_v<std::string_view, T&&>) {
+            return Value::from(ctx, std::string{std::string_view{std::forward<T>(value)}});
+        } else {
+            return Value::from(ctx, std::forward<T>(value));
+        }
+    }
+
+    template <typename... Args>
+    static void call(const Value& function, Args&&... args) {
+        auto fn = function.as<qjs::Function<void(qjs::Parameters)>>();
+        fn(make_parameters(function.context(), std::forward<Args>(args)...));
+    }
+
+    Value resolve_func;
+    Value reject_func;
+};
+
+inline PromiseCapability Promise::create(JSContext* ctx) {
+    JSValue funcs[2]{};
+    JSValue promise = JS_NewPromiseCapability(ctx, funcs);
+
+    if(JS_IsException(promise)) {
+        throw JSException::dump(ctx);
+    }
+
+    return PromiseCapability{
+        Promise{ctx, std::move(promise) },
+        Value{ctx, std::move(funcs[0])},
+        Value{ctx, std::move(funcs[1])}
+    };
+}
+
+/**
+ * @brief A typed wrapper for native C++ async callbacks.
+ *
+ * The wrapped C++ function returns kota::task<T> or kota::task<T, E>. JavaScript receives a
+ * Promise immediately; the task is scheduled on the current kota event loop and settles that
+ * Promise when it completes.
+ */
+template <typename Signature>
+class AsyncFunction {
+    static_assert(kota::dependent_false<Signature>,
+                  "AsyncFunction must be instantiated with a function type");
+};
+
+template <typename Task, typename... Args>
+class AsyncFunction<Task(Args...)> : protected Function<Promise(Args...)> {
+public:
+    using TaskType = std::remove_cvref_t<Task>;
+    using Traits = detail::task_traits<TaskType>;
+    static_assert(Traits::is_task, "AsyncFunction return type must be kota::task<...>");
+
+    using R = typename Traits::value_type;
+    using E = typename Traits::error_type;
+    using C = typename Traits::cancel_type;
+
+    using AllowParamTypes =
+        detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>;
+    using AllowRetTypes = detail::
+        type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object, Value, Promise>;
+
+    static_assert((AllowParamTypes::contains_v<Args> && ...),
+                  "AsyncFunction parameter types must be one of the allowed types");
+    static_assert(AllowRetTypes::contains_v<R> || std::is_void_v<R>,
+                  "AsyncFunction task value type must be one of the allowed types");
+    static_assert(std::is_void_v<C>, "AsyncFunction does not support cancellation tasks yet");
+
+    using Sign = Task(Args...);
+    using SignCtx = Task(JSContext*, Args...);
+    using Base = Function<Promise(Args...)>;
+
+    using Base::is_valid;
+    using Base::value;
+    using Base::context;
+    using Base::operator bool;
+    using Base::release;
+
+    AsyncFunction() = default;
+    AsyncFunction(const AsyncFunction&) = default;
+    AsyncFunction(AsyncFunction&& other) = default;
+    AsyncFunction& operator= (const AsyncFunction&) = default;
+    AsyncFunction& operator= (AsyncFunction&& other) = default;
+    ~AsyncFunction() = default;
+
+    AsyncFunction(JSContext* ctx, const JSValue& val) : Base(ctx, val) {}
+
+    AsyncFunction(JSContext* ctx, JSValue&& val) : Base(ctx, std::move(val)) {}
+
+    static AsyncFunction from(JSContext* ctx, Sign*) {
+        static_assert(
+            kota::dependent_false<Sign*>,
+            "Invocable type can't be function type, please use from_raw for function pointer");
+    }
+
+    template <typename Invocable>
+        requires std::is_invocable_r_v<Task, Invocable, Args...>
+    static AsyncFunction from(JSContext* ctx, Invocable&& invocable) noexcept {
+        if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+            auto wrapper = [ctx, &invocable](Args... args) -> Promise {
+                return make_promise(ctx,
+                                    [&]() -> TaskType { return invocable(std::move(args)...); });
+            };
+            return AsyncFunction{Base::from(ctx, std::move(wrapper))};
+        } else {
+            auto wrapper =
+                [ctx, fn = std::forward<Invocable>(invocable)](Args... args) mutable -> Promise {
+                return make_promise(ctx, [&]() -> TaskType { return fn(std::move(args)...); });
+            };
+            return AsyncFunction{Base::from(ctx, std::move(wrapper))};
+        }
+    }
+
+    template <SignCtx* FnPtr>
+    static AsyncFunction from_raw(JSContext* ctx, const char* name) noexcept {
+        return AsyncFunction{Base::template from_raw<raw_proxy_with_ctx<FnPtr>>(ctx, name)};
+    }
+
+    template <Sign* FnPtr>
+    static AsyncFunction from_raw(JSContext* ctx, const char* name) noexcept {
+        return AsyncFunction{Base::template from_raw<raw_proxy<FnPtr>>(ctx, name)};
+    }
+
+private:
+    explicit AsyncFunction(Base&& func) noexcept : Base(std::move(func)) {}
+
+    static void resolve_promise(PromiseCapability& cap) {
+        cap.resolve();
+        wake_async_jobs();
+    }
+
+    template <typename T>
+    static void resolve_promise(PromiseCapability& cap, T&& value) {
+        using ValueType = std::remove_cvref_t<T>;
+        if constexpr(std::is_same_v<ValueType, Object> || std::is_same_v<ValueType, Error> ||
+                     std::is_same_v<ValueType, Promise>) {
+            cap.resolve(Value::from(std::forward<T>(value)));
+        } else {
+            cap.resolve(std::forward<T>(value));
+        }
+        wake_async_jobs();
+    }
+
+    static void reject_promise(PromiseCapability& cap, std::string message) {
+        cap.reject(std::move(message));
+        wake_async_jobs();
+    }
+
+    static void reject_promise(PromiseCapability& cap, const qjs::Exception& ex) {
+        reject_promise(cap, ex.what());
+    }
+
+    static void reject_promise(PromiseCapability& cap, const std::exception& ex) {
+        reject_promise(cap, ex.what());
+    }
+
+    static void reject_unknown(PromiseCapability& cap) {
+        reject_promise(cap, "Unknown exception in async C++ function");
+    }
+
+    static kota::task<> run_task(PromiseCapability cap, TaskType task) {
+        try {
+            if constexpr(std::is_void_v<E>) {
+                if constexpr(std::is_void_v<R>) {
+                    co_await std::move(task);
+                    resolve_promise(cap);
+                } else {
+                    auto value = co_await std::move(task);
+                    resolve_promise(cap, std::move(value));
+                }
+            } else {
+                auto result = co_await std::move(task);
+                if(!result) {
+                    reject_promise(cap, detail::async_error_message(std::move(result).error()));
+                    co_return;
+                }
+
+                if constexpr(std::is_void_v<R>) {
+                    resolve_promise(cap);
+                } else {
+                    resolve_promise(cap, std::move(result).value());
+                }
+            }
+        } catch(const qjs::Exception& ex) {
+            reject_promise(cap, ex);
+        } catch(const std::exception& ex) {
+            reject_promise(cap, ex);
+        } catch(...) {
+            reject_unknown(cap);
+        }
+    }
+
+    template <typename MakeTask>
+    static Promise make_promise(JSContext* ctx, MakeTask&& make_task) {
+        auto cap = Promise::create(ctx);
+        auto promise = cap.promise;
+        try {
+            auto task = make_task();
+            auto completion = run_task(cap, std::move(task));
+            if(!schedule_async_job(std::move(completion))) {
+                reject_promise(cap, "Failed to schedule async C++ function");
+            }
+        } catch(const qjs::Exception& ex) {
+            reject_promise(cap, ex);
+        } catch(const std::exception& ex) {
+            reject_promise(cap, ex);
+        } catch(...) {
+            reject_unknown(cap);
+        }
+        return promise;
+    }
+
+    template <Sign* FnPtr>
+    static Promise raw_proxy(JSContext* ctx, Args... args) {
+        return make_promise(ctx, [&]() -> TaskType { return (*FnPtr)(std::move(args)...); });
+    }
+
+    template <SignCtx* FnPtr>
+    static Promise raw_proxy_with_ctx(JSContext* ctx, Args... args) {
+        return make_promise(ctx, [&]() -> TaskType { return (*FnPtr)(ctx, std::move(args)...); });
+    }
+};
+
 namespace detail {
 template <>
 struct value_trans<bool> {
@@ -1193,6 +1612,42 @@ struct value_trans<Error> {
     }
 };
 
+template <>
+struct value_trans<Promise> {
+    static Value from(JSContext*, const Promise& value) noexcept {
+        return from(value);
+    }
+
+    static Value from(JSContext*, Promise&& value) noexcept {
+        return from(std::move(value));
+    }
+
+    static Value from(const Promise& value) noexcept {
+        return Value{value.context(), value.value()};
+    }
+
+    static Value from(Promise&& value) noexcept {
+        auto ctx = value.context();
+        return Value{ctx, value.release()};
+    }
+
+    static Promise as(const Value& val) {
+        auto obj = val.as<Object>();
+        if(!JS_IsPromise(obj.value())) {
+            throw TypeException("Value is not a promise");
+        }
+        return Promise{obj.context(), obj.value()};
+    }
+
+    static std::optional<Promise> to(const Value& val) noexcept {
+        try {
+            return as(val);
+        } catch(const TypeException&) {
+            return std::nullopt;
+        }
+    }
+};
+
 template <typename T>
 struct value_trans<Array<T>> {
     static Value from(const Array<T>& value) noexcept {
@@ -1243,6 +1698,32 @@ struct value_trans<Function<R(Args...)>> {
     }
 };
 
+template <typename Task, typename... Args>
+struct value_trans<AsyncFunction<Task(Args...)>> {
+    using FuncType = AsyncFunction<Task(Args...)>;
+
+    static Value from(const FuncType& value) noexcept {
+        return Value{value.context(), value.value()};
+    }
+
+    static Value from(FuncType&& value) noexcept {
+        auto ctx = value.context();
+        return Value{ctx, value.release()};
+    }
+
+    static FuncType as(const Value& val) {
+        return val.as<Object>().as<FuncType>();
+    }
+
+    static std::optional<FuncType> to(const Value& val) noexcept {
+        try {
+            return as(val);
+        } catch(const TypeException&) {
+            return std::nullopt;
+        }
+    }
+};
+
 template <>
 struct object_trans<Error> {
     static Object from(const Error& value) noexcept {
@@ -1262,6 +1743,33 @@ struct object_trans<Error> {
     }
 
     static std::optional<Error> to(const Object& obj) noexcept {
+        try {
+            return as(obj);
+        } catch(const TypeException&) {
+            return std::nullopt;
+        }
+    }
+};
+
+template <>
+struct object_trans<Promise> {
+    static Object from(const Promise& value) noexcept {
+        return Object{value.context(), value.value()};
+    }
+
+    static Object from(Promise&& value) noexcept {
+        auto ctx = value.context();
+        return Object{ctx, value.release()};
+    }
+
+    static Promise as(const Object& obj) {
+        if(!JS_IsPromise(obj.value())) {
+            throw TypeException("Object is not a promise");
+        }
+        return Promise{obj.context(), obj.value()};
+    }
+
+    static std::optional<Promise> to(const Object& obj) noexcept {
         try {
             return as(obj);
         } catch(const TypeException&) {
@@ -1333,6 +1841,40 @@ struct object_trans<Function<R(Args...)>> {
     }
 };
 
+template <typename Task, typename... Args>
+struct object_trans<AsyncFunction<Task(Args...)>> {
+    using FuncType = AsyncFunction<Task(Args...)>;
+
+    static Object from(const FuncType& value) noexcept {
+        return Object{value.context(), value.value()};
+    }
+
+    static Object from(FuncType&& value) noexcept {
+        auto ctx = value.context();
+        return Object{ctx, value.release()};
+    }
+
+    static FuncType as(const Object& obj) {
+        if(!JS_IsFunction(obj.context(), obj.value())) {
+            throw TypeException("Object is not an async function");
+        }
+
+        if(obj.get_property("length").as<int64_t>() != sizeof...(Args)) {
+            throw TypeException("AsyncFunction has incorrect number of arguments");
+        }
+
+        return FuncType{obj.context(), obj.value()};
+    }
+
+    static std::optional<FuncType> to(const Object& val) noexcept {
+        try {
+            return as(val);
+        } catch(const TypeException&) {
+            return std::nullopt;
+        }
+    }
+};
+
 template <typename R>
 struct object_trans<Function<R(Parameters)>> {
     using FuncType = Function<R(Parameters)>;
@@ -1384,16 +1926,13 @@ public:
     template <typename Sign>
     const CModule& export_functor(const std::string& export_name,
                                   const Function<Sign>& func) const {
-        this->exports_list().push_back(kv{
-            export_name,
-            Value{this->ctx, func.value()}
-        });
-        if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
-            throw qjs::Exception("Failed to add export '{}' to module '{}'",
-                                 export_name,
-                                 this->name);
-        }
-        return *this;
+        return export_functor_value(export_name, func.value());
+    }
+
+    template <typename Sign>
+    const CModule& export_functor(const std::string& export_name,
+                                  const AsyncFunction<Sign>& func) const {
+        return export_functor_value(export_name, func.value());
     }
 
     const CModule& export_bare_functor(const std::string& export_name,
@@ -1412,6 +1951,19 @@ public:
     }
 
 private:
+    const CModule& export_functor_value(const std::string& export_name, JSValueConst value) const {
+        this->exports_list().push_back(kv{
+            export_name,
+            Value{this->ctx, value}
+        });
+        if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
+            throw qjs::Exception("Failed to add export '{}' to module '{}'",
+                                 export_name,
+                                 this->name);
+        }
+        return *this;
+    }
+
     CModule(JSContext* ctx, JSModuleDef* m, const std::string& name) noexcept :
         ctx(ctx), m(m), name(name) {}
 

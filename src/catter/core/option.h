@@ -10,7 +10,7 @@
 #include <kota/deco/deco.h>
 
 #include "ipc.h"
-#include "capi/type.h"
+#include "js/capi/type.h"
 
 namespace catter::core {
 namespace config {
@@ -87,7 +87,7 @@ struct CatterConfig {
            meta_var = "<Mode>",
            help = "mode of operation, e.g. 'inject'",
            required = true)
-    <config::RunMode> mode;
+    <config::RunMode> mode = config::mode_map.at("inject");
 
     DecoKV(names = {"-d", "--dir"},
            meta_var = "<Working Directory>",

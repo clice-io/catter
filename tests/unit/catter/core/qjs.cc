@@ -1,4 +1,4 @@
-#include "qjs.h"
+#include "js/qjs.h"
 
 #include <stdexcept>
 #include <string>
@@ -7,6 +7,7 @@
 #include <cpptrace/exceptions.hpp>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/async/async.h>
 
 using namespace catter;
 
@@ -44,6 +45,18 @@ int64_t count_args_with_ctx(JSContext* ctx, qjs::Parameters args) {
     return ctx ? static_cast<int64_t>(args.size()) : -1;
 }
 
+kota::task<std::string> async_greet(std::string name) {
+    co_return "hello " + name;
+}
+
+kota::task<int64_t, std::string> async_add_or_fail(int64_t value) {
+    if(value < 0) {
+        co_await kota::fail(std::string{"negative value"});
+    }
+
+    co_return value + 1;
+}
+
 struct IncrementFunctor {
     int64_t delta = 0;
 
@@ -66,6 +79,16 @@ JSValue forty_two_raw(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     (void)argc;
     (void)argv;
     return JS_NewInt64(ctx, 42);
+}
+
+void drain_jobs(JSRuntime* rt) {
+    JSContext* job_ctx = nullptr;
+    while(JS_IsJobPending(rt)) {
+        int ret = JS_ExecutePendingJob(rt, &job_ctx);
+        if(ret < 0) {
+            throw qjs::JSException::dump(job_ctx);
+        }
+    }
 }
 
 constexpr int eval_flags = JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT;
@@ -579,6 +602,118 @@ TEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
         auto global = ctx.global_this();
         EXPECT_TRUE(global.get_property("moduleConcat").as<std::string>() == "catter");
         EXPECT_TRUE(global.get_property("moduleValue").as<int64_t>() == 42);
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
+TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
+    auto f = [&]() {
+        auto runtime = qjs::Runtime::create();
+        auto& ctx = runtime.context();
+
+        auto fulfilled_cap = qjs::Promise::create(ctx.js_context());
+        auto fulfilled_promise_value = qjs::Value::from(fulfilled_cap.promise);
+        EXPECT_TRUE(fulfilled_promise_value.as<qjs::Promise>().is_pending());
+
+        auto fulfilled_object = qjs::Object::from(fulfilled_cap.promise);
+        EXPECT_TRUE(fulfilled_object.as<qjs::Promise>().is_pending());
+
+        std::string fulfilled_value;
+        auto on_fulfilled =
+            qjs::Function<void(std::string)>::from(ctx.js_context(), [&](std::string value) {
+                fulfilled_value = std::move(value);
+            });
+        auto fulfilled_next = fulfilled_cap.promise.then(on_fulfilled);
+
+        fulfilled_cap.resolve("resolved");
+        drain_jobs(runtime.js_runtime());
+
+        EXPECT_TRUE(fulfilled_cap.promise.is_fulfilled());
+        EXPECT_TRUE(fulfilled_next.is_fulfilled());
+        EXPECT_TRUE(fulfilled_value == "resolved");
+
+        auto rejected_cap = qjs::Promise::create(ctx.js_context());
+        std::string rejected_reason;
+        auto unexpected_fulfilled = qjs::Promise::ThenCallback::from(
+            ctx.js_context(),
+            []([[maybe_unused]] qjs::Parameters args) { throw qjs::Exception("unexpected"); });
+        auto on_rejected =
+            qjs::Function<std::string(std::string)>::from(ctx.js_context(),
+                                                          [&](std::string reason) {
+                                                              rejected_reason = std::move(reason);
+                                                              return std::string("handled");
+                                                          });
+        auto rejected_next = rejected_cap.promise.then(unexpected_fulfilled, on_rejected);
+
+        rejected_cap.reject("rejected");
+        drain_jobs(runtime.js_runtime());
+
+        EXPECT_TRUE(rejected_cap.promise.is_rejected());
+        EXPECT_TRUE(rejected_next.is_fulfilled());
+        EXPECT_TRUE(rejected_reason == "rejected");
+
+        auto caught_cap = qjs::Promise::create(ctx.js_context());
+        std::string caught_reason;
+        auto on_caught =
+            qjs::Function<std::string(std::string)>::from(ctx.js_context(),
+                                                          [&](std::string reason) {
+                                                              caught_reason = std::move(reason);
+                                                              return std::string("caught");
+                                                          });
+        auto caught_next = caught_cap.promise.when_err(on_caught);
+
+        caught_cap.reject("catch-path");
+        drain_jobs(runtime.js_runtime());
+
+        EXPECT_TRUE(caught_cap.promise.is_rejected());
+        EXPECT_TRUE(caught_next.is_fulfilled());
+        EXPECT_TRUE(caught_reason == "catch-path");
+    };
+
+    EXPECT_NOTHROWS(f());
+};
+
+TEST_CASE(async_function_wraps_tasks_as_promises) {
+    auto f = [&]() {
+        auto runtime = qjs::Runtime::create();
+        auto& ctx = runtime.context();
+        auto global = ctx.global_this();
+
+        global.set_property(
+            "asyncGreet",
+            qjs::AsyncFunction<decltype(async_greet)>::from_raw<async_greet>(ctx.js_context(),
+                                                                             "asyncGreet"));
+        global.set_property(
+            "asyncAddOrFail",
+            qjs::AsyncFunction<decltype(async_add_or_fail)>::from_raw<async_add_or_fail>(
+                ctx.js_context(),
+                "asyncAddOrFail"));
+
+        ctx.eval(R"(
+                globalThis.asyncGreetResult = undefined;
+                globalThis.asyncAddResult = undefined;
+                globalThis.asyncErrorResult = undefined;
+
+                asyncGreet('catter').then((value) => {
+                    globalThis.asyncGreetResult = value;
+                });
+
+                asyncAddOrFail(41).then((value) => {
+                    globalThis.asyncAddResult = value;
+                });
+
+                asyncAddOrFail(-1).catch((error) => {
+                    globalThis.asyncErrorResult = String(error);
+                });
+            )",
+                 "async-function-test.js",
+                 eval_flags);
+        drain_jobs(runtime.js_runtime());
+
+        EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
+        EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
+        EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains("negative value"));
     };
 
     EXPECT_NOTHROWS(f());

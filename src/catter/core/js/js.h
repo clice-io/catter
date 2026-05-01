@@ -1,6 +1,9 @@
 #pragma once
+#include <cstddef>
 #include <expected>
 #include <filesystem>
+#include <string>
+#include <string_view>
 
 #include "qjs.h"
 #include "capi/type.h"
@@ -13,22 +16,9 @@ struct RuntimeConfig {
 
 const RuntimeConfig& get_global_runtime_config();
 
-/**
- * Initialize QuickJS runtime and context, register C++ APIs, and load JS libraries.
- * You can re-init it to reset the runtime and set new config, like pwd.
- */
-void init_qjs(const RuntimeConfig& config);
-
-/**
- * Run a JavaScript file content in a new QuickJS runtime and context.
- *
- * @param content The JavaScript code to execute.
- * @param filename The name of the file (used for error reporting).
- * @throws qjs::Exception if there is an error during execution.
- */
-void run_js_file(std::string_view content, const std::string filepath);
-
 qjs::Object& js_mod_object();
+
+bool drain_jobs_with_budget(qjs::Runtime& runtime, std::size_t max_jobs = 64);
 
 void set_on_start(qjs::Object cb);
 void set_on_finish(qjs::Object cb);
@@ -39,5 +29,16 @@ CatterConfig on_start(CatterConfig config);
 void on_finish(ProcessResult result);
 Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
 void on_execution(uint32_t id, ProcessResult result);
+
+namespace detail {
+
+qjs::Runtime& runtime();
+void reset_runtime(const RuntimeConfig& config);
+void register_catter_module(const qjs::Context& ctx);
+std::string_view js_lib_source();
+std::string format_rejection(qjs::Parameters& args);
+qjs::Promise promise_from_eval_result(qjs::Value&& eval_result);
+
+}  // namespace detail
 
 };  // namespace catter::js

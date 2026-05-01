@@ -1,12 +1,14 @@
 #include <iostream>
 #include <print>
 #include <string_view>
+#include <kota/async/io/loop.h>
 #include <kota/deco/deco.h>
 
+#include "app_config.h"
 #include "app_runner.h"
 #include "option.h"
-#include "qjs.h"
 #include "config/catter.h"
+#include "js/qjs.h"
 #include "util/crossplat.h"
 #include "util/log.h"
 
@@ -46,7 +48,11 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         auto& options = res.value().options;
-        app::run(options);
+        auto task = app::async_run(options);
+        kota::event_loop loop;
+        loop.schedule(task);
+        loop.run();
+        task.result();
     } catch(const qjs::JSException& ex) {
         std::println("Eval JavaScript file failed: \n{}", ex.what());
         return 1;
