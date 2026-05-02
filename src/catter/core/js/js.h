@@ -26,7 +26,7 @@ void set_on_finish(qjs::Object cb);
 void set_on_command(qjs::Object cb);
 void set_on_execution(qjs::Object cb);
 
-kota::task<CatterConfig> on_start(CatterConfig config);
+kota::task<CatterConfig> on_start(const CatterConfig& config);
 kota::task<> on_finish(ProcessResult result);
 kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
 kota::task<> on_execution(uint32_t id, ProcessResult result);

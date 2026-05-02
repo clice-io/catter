@@ -26,6 +26,7 @@ export type {
   ActionType,
   CatterConfig,
   CatterErr,
+  CatterOutputMode,
   CatterRuntime,
   CommandCaptureResult,
   CommandData,

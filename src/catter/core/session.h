@@ -42,6 +42,7 @@ public:
         std::string cwd;
         std::string executable;
         std::vector<std::string> args;
+        data::output_mode output_mode = data::output_mode::inherit;
     };
 
     struct RunPlan {
@@ -81,7 +82,8 @@ private:
 
     kota::task<data::process_result> spawn(std::string executable,
                                            std::vector<std::string> args,
-                                           std::string cwd);
+                                           std::string cwd,
+                                           data::output_mode output_mode);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

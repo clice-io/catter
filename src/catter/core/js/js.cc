@@ -145,7 +145,7 @@ bool drain_jobs_with_budget(qjs::Runtime& runtime, std::size_t max_jobs) {
     return ran;
 }
 
-kota::task<CatterConfig> on_start(CatterConfig config) {
+kota::task<CatterConfig> on_start(const CatterConfig& config) {
     if(!self.on_start) {
         throw cpptrace::runtime_error("service.onStart is not registered");
     }

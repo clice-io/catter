@@ -39,7 +39,8 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
     auto loop_task = this->loop(std::move(run_plan.callback));
     auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
                                   std::move(run_plan.launch_plan.args),
-                                  std::move(run_plan.launch_plan.cwd));
+                                  std::move(run_plan.launch_plan.cwd),
+                                  run_plan.launch_plan.output_mode);
 
     auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
     co_return std::move(process_result);
@@ -77,7 +78,8 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
 
 kota::task<data::process_result> Session::spawn(std::string executable,
                                                 std::vector<std::string> args,
-                                                std::string cwd) {
+                                                std::string cwd,
+                                                data::output_mode output_mode) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -110,7 +112,7 @@ kota::task<data::process_result> Session::spawn(std::string executable,
              cwd,
              args_str);
 
-    co_return co_await capture_process_result(make_process_event(opts));
+    co_return co_await capture_process_result(make_process_event(opts), output_mode);
 }
 
 }  // namespace catter

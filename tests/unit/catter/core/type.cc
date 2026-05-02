@@ -86,7 +86,7 @@ TEST_CASE(process_result_and_config_conversion) {
             .runtime = {.supportActions = {js::ActionType::drop, js::ActionType::abort},
                            .type = js::CatterRuntime::Type::inject,
                            .supportParentId = false},
-            .options = {.log = true},
+            .options = {.log = true, .output = js::CatterOptions::OutputMode::inherit},
             .execute = true
         };
 

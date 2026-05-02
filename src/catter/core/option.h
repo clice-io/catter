@@ -9,38 +9,35 @@
 #include <vector>
 #include <kota/deco/deco.h>
 
-#include "ipc.h"
+#include "runtime_driver.h"
 #include "js/capi/type.h"
 
 namespace catter::core {
 namespace config {
 
 struct RunMode {
-    ipc::ServiceMode mode;
-    js::CatterRuntime runtime;
+    const RuntimeDriver* driver = nullptr;
+
+    const RuntimeDriver& value() const noexcept {
+        if(driver != nullptr) {
+            return *driver;
+        }
+        return default_runtime_driver();
+    }
+
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string>;
-};
-
-const inline static std::unordered_map<std::string_view, RunMode> mode_map = {
-    {"inject",
-     {.mode = ipc::ServiceMode::INJECT,
-      .runtime = {
-          .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
-          .type = js::CatterRuntime::Type::inject,
-          .supportParentId = true,
-      }}}
 };
 
 inline auto RunMode::into(std::string_view text, const kota::deco::decl::IntoContext& context)
     -> std::optional<std::string> {
 
-    auto it = mode_map.find(text);
-    if(it == mode_map.end()) {
+    auto* runtime_driver = find_runtime_driver(text);
+    if(runtime_driver == nullptr) {
         return context.format_error(std::format("Unsupported mode: {}", text));
     }
 
-    *this = it->second;
+    this->driver = runtime_driver;
     return std::nullopt;
 }
 
@@ -65,6 +62,7 @@ struct WorkingDirectory {
         return std::nullopt;
     }
 };
+
 }  // namespace config
 
 struct CatterConfig {
@@ -87,13 +85,21 @@ struct CatterConfig {
            meta_var = "<Mode>",
            help = "mode of operation, e.g. 'inject'",
            required = true)
-    <config::RunMode> mode = config::mode_map.at("inject");
+    <config::RunMode> mode = config::RunMode{};
 
     DecoKV(names = {"-d", "--dir"},
            meta_var = "<Working Directory>",
            help = "working directory for the target program, default to current directory",
            required = false)
     <config::WorkingDirectory> working_dir = config::WorkingDirectory{};
+
+    DecoKV(
+        names = {"--output"},
+        meta_var = "<inherit|capture>",
+        help =
+            "control target output forwarding: inherit prints in real time, capture only stores it",
+        required = false)
+    <js::CatterOptions::OutputMode> output = js::CatterOptions::OutputMode::inherit;
 
     DecoPack(
         meta_var = "<Args>",
@@ -110,6 +116,43 @@ struct CatterConfig {
     DECO_CFG_END()
 
     bool log = true;
+};
+
+struct RunContext {
+    const CatterConfig& config;
+    const RuntimeDriver& driver;
+
+    explicit RunContext(const CatterConfig& config) :
+        config(config), driver(config.mode->value()) {}
+
+    const std::filesystem::path& working_directory() const noexcept {
+        return config.working_dir->path;
+    }
+
+    js::CatterOptions option_defaults() const {
+        return js::CatterOptions{
+            .log = config.log,
+            .output = config.output.value(),
+        };
+    }
+
+    js::CatterConfig make_script_config() const {
+        return js::CatterConfig{
+            .scriptPath = config.script_path.value(),
+            .scriptArgs = config.script_args,
+            .buildSystemCommand = config.command.value(),
+            .buildSystemCommandCwd = config.working_dir->path.string(),
+            .runtime = driver.runtime(),
+            .options = option_defaults(),
+            .execute = true,
+        };
+    }
+
+    void apply_option_defaults(js::CatterConfig& script_config) const {
+        if(!script_config.options.output.has_value()) {
+            script_config.options.output = config.output.value();
+        }
+    }
 };
 
 }  // namespace catter::core
