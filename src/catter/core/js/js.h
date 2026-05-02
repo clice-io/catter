@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <kota/async/runtime/task.h>
 
 #include "qjs.h"
 #include "capi/type.h"
@@ -25,10 +26,10 @@ void set_on_finish(qjs::Object cb);
 void set_on_command(qjs::Object cb);
 void set_on_execution(qjs::Object cb);
 
-CatterConfig on_start(CatterConfig config);
-void on_finish(ProcessResult result);
-Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
-void on_execution(uint32_t id, ProcessResult result);
+kota::task<CatterConfig> on_start(CatterConfig config);
+kota::task<> on_finish(ProcessResult result);
+kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
+kota::task<> on_execution(uint32_t id, ProcessResult result);
 
 namespace detail {
 

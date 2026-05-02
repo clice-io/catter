@@ -28,32 +28,32 @@ public:
 
     ~ServiceImpl() override = default;
 
-    data::ipcid_t create(data::ipcid_t parent_id) override {
+    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) override {
         this->parent_id = parent_id;
-        return this->id;
+        co_return this->id;
     }
 
-    data::action make_decision(data::command cmd) override {
-        auto act = js::on_command(this->id,
-                                  js::CommandData{
-                                      .cwd = cmd.cwd,
-                                      .exe = cmd.executable,
-                                      .argv = cmd.args,
-                                      .env = cmd.env,
-                                      .runtime = *runtime,
-                                      .parent = this->parent_id,
-                                  });
+    kota::task<data::action> make_decision(data::command cmd) override {
+        auto act = co_await js::on_command(this->id,
+                                           js::CommandData{
+                                               .cwd = cmd.cwd,
+                                               .exe = cmd.executable,
+                                               .argv = cmd.args,
+                                               .env = cmd.env,
+                                               .runtime = *runtime,
+                                               .parent = this->parent_id,
+                                           });
 
         switch(act.type()) {
             case js::ActionType::drop: {
-                return data::action{.type = data::action::DROP, .cmd = {}};
+                co_return data::action{.type = data::action::DROP, .cmd = {}};
             }
             case js::ActionType::skip: {
-                return data::action{.type = data::action::INJECT, .cmd = cmd};
+                co_return data::action{.type = data::action::INJECT, .cmd = cmd};
             }
             case js::ActionType::modify: {
                 auto& tag = act.get<js::ActionType::modify>();
-                return data::action{
+                co_return data::action{
                     .type = data::action::INJECT,
                     .cmd = {
                             .cwd = std::move(tag.data.cwd),
@@ -67,17 +67,18 @@ public:
         }
     }
 
-    void finish(data::process_result result) override {
-        js::on_execution(this->id,
-                         js::ProcessResult{
-                             .code = result.code,
-                             .stdOut = std::move(result.std_out),
-                             .stdErr = std::move(result.std_err),
-                         });
+    kota::task<> finish(data::process_result result) override {
+        co_await js::on_execution(this->id,
+                                  js::ProcessResult{
+                                      .code = result.code,
+                                      .stdOut = std::move(result.std_out),
+                                      .stdErr = std::move(result.std_err),
+                                  });
     }
 
-    void report_error(data::ipcid_t parent_id, std::string error_msg) override {
-        js::on_command(id, std::unexpected(js::CatterErr{.msg = std::move(error_msg)}));
+    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) override {
+        (void)parent_id;
+        co_await js::on_command(id, std::unexpected(js::CatterErr{.msg = std::move(error_msg)}));
     }
 
     struct Factory {
@@ -144,7 +145,7 @@ kota::task<> async_run(const core::CatterConfig& config) {
         co_await js::async_init_qjs({.pwd = config.working_dir->path});
         co_await js::async_run_js_file(script_content, config.script_path.value());
 
-        auto js_config = js::on_start({
+        auto js_config = co_await js::on_start({
             .scriptPath = config.script_path.value(),
             .scriptArgs = config.script_args,
             .buildSystemCommand = config.command.value(),
@@ -157,7 +158,7 @@ kota::task<> async_run(const core::CatterConfig& config) {
         if(js_config.execute) {
             auto process_result = co_await execute_service(config.mode->mode, js_config);
 
-            js::on_finish(js::ProcessResult{
+            co_await js::on_finish(js::ProcessResult{
                 .code = process_result.code,
                 .stdOut = std::move(process_result.std_out),
                 .stdErr = std::move(process_result.std_err),

@@ -203,14 +203,16 @@ export type CommandCaptureResult =
     };
 
 export function service_on_start(
-  cb: (config: CatterConfig) => CatterConfig,
+  cb: (config: CatterConfig) => Promise<CatterConfig>,
 ): void;
-export function service_on_finish(cb: (result: ProcessResult) => void): void;
+export function service_on_finish(
+  cb: (result: ProcessResult) => Promise<void>,
+): void;
 export function service_on_command(
-  cb: (id: number, data: CommandCaptureResult) => Action,
+  cb: (id: number, data: CommandCaptureResult) => Promise<Action>,
 ): void;
 export function service_on_execution(
-  cb: (id: number, result: ProcessResult) => void,
+  cb: (id: number, result: ProcessResult) => Promise<void>,
 ): void;
 // io
 export function stdout_print(content: string): void;

@@ -1,18 +1,79 @@
 import * as data from "../data/index.js";
 import * as service from "../service.js";
 
+import * as cli from "../cli/index.js";
 import * as io from "../io.js";
 import * as fs from "../fs.js";
 import {
   CDBManager,
   type CDBCommand,
   type CDBEntry,
+  type CDBItem,
   CompilerAnalysis,
   analyze as analyzeCmd,
   cdbItemsOf,
 } from "../cmd/index.js";
 
 type Producer = CDBCommand;
+
+type CDBScriptOptions = {
+  outputPath: string;
+  append: boolean;
+  saveOnFailure: boolean;
+  abortOnCommandFailure: boolean;
+  abortOnCaptureError: boolean;
+  quiet: boolean;
+};
+
+const cdbCLI = cli.command({
+  name: "cdb",
+  description:
+    "Generate a compile_commands.json file from captured compiler commands.",
+  options: [
+    cli.string("output", {
+      short: "o",
+      valueName: "path",
+      description: "Write the compilation database to this path.",
+    }),
+    cli.flag("append", {
+      description: "Merge with an existing database. This is the default.",
+    }),
+    cli.flag("replace", {
+      description:
+        "Ignore existing database entries and replace the output file.",
+    }),
+    cli.flag("save-on-failure", {
+      description:
+        "Save collected entries even when the build exits with a non-zero code.",
+    }),
+    cli.flag("abort-on-command-failure", {
+      description:
+        "Abort when any captured command exits with a non-zero code.",
+    }),
+    cli.flag("abort-on-capture-error", {
+      description: "Abort when catter reports a command capture error.",
+    }),
+    cli.flag("quiet", {
+      short: "q",
+      description: "Suppress informational output.",
+    }),
+  ] as const,
+  positionals: [
+    cli.positional("path", {
+      required: false,
+      valueName: "path",
+      description: "Legacy output path; prefer --output for scripts.",
+    }),
+  ] as const,
+  examples: [
+    "cdb -o build/compile_commands.json",
+    {
+      command: "cdb --save-on-failure -o compile_commands.json",
+      description:
+        "Merge existing entries and still save partial results from a failed build.",
+    },
+  ],
+});
 
 function isSet<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -28,8 +89,25 @@ function pathOf(cwd: string, path: string): string | undefined {
   return fs.path.lexicalNormal(joined);
 }
 
+function defaultOptions(outputPath: string): CDBScriptOptions {
+  return {
+    outputPath,
+    append: true,
+    saveOnFailure: false,
+    abortOnCommandFailure: false,
+    abortOnCaptureError: false,
+    quiet: false,
+  };
+}
+
+function log(options: CDBScriptOptions, message: string): void {
+  if (!options.quiet) {
+    io.println(message);
+  }
+}
+
 /**
- * Service script that captures compiler leaf commands and writes a
+ * Creates a service script that captures compiler leaf commands and writes a
  * `compile_commands.json` file.
  *
  * Compiler commands contribute artifact links, and source leafs are turned into
@@ -42,7 +120,7 @@ function pathOf(cwd: string, path: string): string | undefined {
  * ```ts
  * import { scripts, service } from "catter";
  *
- * service.register(new scripts.CDB("build/compile_commands.json"));
+ * service.register(scripts.cdb("build/compile_commands.json"));
  * ```
  *
  * Example saved entry:
@@ -62,61 +140,31 @@ function pathOf(cwd: string, path: string): string | undefined {
  * CDB saved to /tmp/demo/build/compile_commands.json with 1 entries.
  * ```
  */
-export class CDB extends service.IgnorableService {
-  /** Destination path used when saving the compilation database. */
-  save_path: string;
-  private readonly commandTree = new data.FlatTree<string, string>();
-  private readonly producers = new Map<string, Producer[]>();
-  private readonly srcFiles = new Map<string, string>();
+export function cdb(
+  savePath = "build/compile_commands.json",
+): service.CatterContextService {
+  let options = defaultOptions(savePath);
+  const commandTree = new data.FlatTree<string, string>();
+  const producers = new Map<string, Producer[]>();
+  const srcFiles = new Map<string, string>();
+  const capturedCompilerCommandIds = new Set<number>();
 
-  /**
-   * Creates a CDB script service.
-   *
-   * @example
-   * ```ts
-   * const cdb = new scripts.CDB("build/compile_commands.json");
-   * ```
-   *
-   * Output path used when omitted:
-   * ```txt
-   * build/compile_commands.json
-   * ```
-   */
-  constructor(save_path?: string) {
-    super();
-    this.save_path = save_path ?? "build/compile_commands.json";
-  }
+  function generatedItems(): CDBItem[] {
+    commandTree.assemble();
 
-  override onStart(config: service.CatterConfig): service.CatterConfig {
-    if (config.scriptArgs.length > 0) {
-      this.save_path = config.scriptArgs[0];
-    }
-    return config;
-  }
-
-  override onFinish(result: service.ProcessResult) {
-    if (result.code !== 0) {
-      io.println(
-        `Build failed with exit code ${result.code}. CDB will not be saved.`,
-      );
-      return;
-    }
-
-    this.commandTree.assemble();
-
-    const generatedItems = [];
-    for (const node of this.commandTree.nodes()) {
+    const items: CDBItem[] = [];
+    for (const node of commandTree.nodes()) {
       if (node.children.length !== 0) {
         continue;
       }
 
-      const file = this.srcFiles.get(node.id);
+      const file = srcFiles.get(node.id);
       if (file === undefined) {
         continue;
       }
 
       for (const parent of node.parent) {
-        const parents = this.producers.get(parent);
+        const parents = producers.get(parent);
         if (parents === undefined) {
           continue;
         }
@@ -129,75 +177,137 @@ export class CDB extends service.IgnorableService {
         ];
 
         for (const producer of parents) {
-          generatedItems.push(...cdbItemsOf(producer, entries));
+          items.push(...cdbItemsOf(producer, entries));
         }
       }
     }
 
-    const manager = new CDBManager(this.save_path);
-    manager.merge(generatedItems);
+    return items;
+  }
+
+  function save(): void {
+    const manager = new CDBManager(options.outputPath, {
+      inherit: options.append,
+    });
+    manager.merge(generatedItems());
 
     const savedPath = manager.save();
-    io.println(
+    log(
+      options,
       `CDB saved to ${fs.path.absolute(savedPath)} with ${manager.items().length} entries.`,
     );
   }
 
-  override onCommand(
-    _id: number,
-    data: service.CommandCaptureResult,
-  ): service.IgnorableAction {
-    if (!data.success) {
-      io.println(`CDB received error: ${data.error.msg}`);
-      return { type: "skip" };
-    }
+  return service.create({
+    onStart(config) {
+      const parsed = cli.run(cdbCLI, config.scriptArgs);
+      if (parsed === undefined) {
+        config.execute = false;
+        return config;
+      }
+      if (parsed.append && parsed.replace) {
+        throw new Error("cdb: --append and --replace cannot be used together");
+      }
 
-    const command = data.data;
-    const analysis = CompilerAnalysis.from(analyzeCmd(command.argv));
-    if (analysis === undefined) {
-      return { type: "skip" };
-    }
+      options = {
+        outputPath: parsed.output ?? parsed.path ?? savePath,
+        append: parsed.replace ? false : true,
+        saveOnFailure: parsed["save-on-failure"],
+        abortOnCommandFailure: parsed["abort-on-command-failure"],
+        abortOnCaptureError: parsed["abort-on-capture-error"],
+        quiet: parsed.quiet,
+      };
 
-    for (const input of analysis.inputEntries()) {
-      if (input.kind === "source") {
-        const full = pathOf(command.cwd, input.path);
-        if (full !== undefined) {
-          this.srcFiles.set(full, input.path);
+      return config;
+    },
+
+    onFinish(result) {
+      if (result.code !== 0 && !options.saveOnFailure) {
+        log(
+          options,
+          `Build failed with exit code ${result.code}. CDB will not be saved.`,
+        );
+        return;
+      }
+
+      save();
+    },
+
+    onCommand(ctx) {
+      const data = ctx.capture;
+      if (!data.success) {
+        const message = `CDB received capture error: ${data.error.msg}`;
+        if (options.abortOnCaptureError) {
+          throw new Error(message);
+        }
+        log(options, message);
+        return;
+      }
+
+      const command = data.data;
+      const analysis = CompilerAnalysis.from(analyzeCmd(command.argv));
+      if (analysis === undefined) {
+        return;
+      }
+      capturedCompilerCommandIds.add(ctx.id);
+
+      for (const input of analysis.inputEntries()) {
+        if (input.kind === "source") {
+          const full = pathOf(command.cwd, input.path);
+          if (full !== undefined) {
+            srcFiles.set(full, input.path);
+          }
         }
       }
-    }
 
-    for (const edge of analysis.edges()) {
-      const output = pathOf(command.cwd, edge.output);
-      if (output === undefined) {
-        continue;
-      }
+      for (const edge of analysis.edges()) {
+        const output = pathOf(command.cwd, edge.output);
+        if (output === undefined) {
+          continue;
+        }
 
-      const inputs = edge.inputs
-        .map((input) => pathOf(command.cwd, input))
-        .filter(isSet);
+        const inputs = edge.inputs
+          .map((input) => pathOf(command.cwd, input))
+          .filter(isSet);
 
-      this.commandTree.justMergeNode({
-        id: output,
-        content: output,
-      });
-
-      for (const input of inputs) {
-        this.commandTree.justMergeNode({
-          id: input,
-          parent: [output],
-          content: input,
+        commandTree.justMergeNode({
+          id: output,
+          content: output,
         });
+
+        for (const input of inputs) {
+          commandTree.justMergeNode({
+            id: input,
+            parent: [output],
+            content: input,
+          });
+        }
+
+        const parents = producers.get(output) ?? [];
+        parents.push({
+          cwd: command.cwd,
+          argv: [...command.argv],
+        });
+        producers.set(output, parents);
       }
 
-      const parents = this.producers.get(output) ?? [];
-      parents.push({
-        cwd: command.cwd,
-        argv: [...command.argv],
-      });
-      this.producers.set(output, parents);
-    }
+      ctx.ignoreDescendants();
+    },
 
-    return { type: "ignore" };
-  }
+    onExecution(ctx) {
+      if (!options.abortOnCommandFailure || ctx.result.code === 0) {
+        return;
+      }
+
+      const compilerPrefix = capturedCompilerCommandIds.has(ctx.id)
+        ? "compiler "
+        : "";
+      if (options.saveOnFailure) {
+        save();
+      }
+      throw new Error(
+        `CDB aborting after ${compilerPrefix}command ${ctx.id} exited with code ${ctx.result.code}.`,
+      );
+    },
+  });
 }

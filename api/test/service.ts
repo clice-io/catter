@@ -6,7 +6,8 @@ let outputEventSeen = false;
 let commandErrorBranchSeen = false;
 
 service.register({
-  onStart(config) {
+  async onStart(config) {
+    await Promise.resolve();
     debug.assertThrow(config.scriptPath === "script.ts");
     debug.assertThrow(config.scriptArgs.length === 2);
     debug.assertThrow(config.options.log);
@@ -22,7 +23,8 @@ service.register({
     };
   },
 
-  onFinish(event) {
+  async onFinish(event) {
+    await Promise.resolve();
     debug.assertThrow(outputEventSeen);
     debug.assertThrow(commandErrorBranchSeen);
     debug.assertThrow(event.code === 0);
@@ -30,7 +32,8 @@ service.register({
     debug.assertThrow(event.stderr === "");
   },
 
-  onCommand(id, data) {
+  async onCommand(id, data) {
+    await Promise.resolve();
     debug.assertThrow(id === 7);
 
     if (!data.success) {
@@ -54,7 +57,8 @@ service.register({
     };
   },
 
-  onExecution(id, event) {
+  async onExecution(id, event) {
+    await Promise.resolve();
     debug.assertThrow(id === 7);
     debug.assertThrow(event.code === 0);
     debug.assertThrow(event.stdout === "hello from stdout");

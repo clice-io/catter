@@ -4,22 +4,24 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <quickjs.h>
 #include <cpptrace/exceptions.hpp>
 
 #include "apitool.h"
+#include "async.h"
 #include "config/js-lib.h"
 
 namespace catter::js {
 
-using OnStart = qjs::Function<qjs::Object(qjs::Object config)>;
+using OnStart = qjs::Function<qjs::Promise(qjs::Object config)>;
 
-using OnFinish = qjs::Function<void(qjs::Object event)>;
+using OnFinish = qjs::Function<qjs::Promise(qjs::Object event)>;
 
-using OnCommand = qjs::Function<qjs::Object(uint32_t id, qjs::Object data)>;
+using OnCommand = qjs::Function<qjs::Promise(uint32_t id, qjs::Object data)>;
 
-using OnExecution = qjs::Function<void(uint32_t id, qjs::Object data)>;
+using OnExecution = qjs::Function<qjs::Promise(uint32_t id, qjs::Object data)>;
 
 struct Self {
     RuntimeConfig global_config;
@@ -47,6 +49,18 @@ std::string format_rejection_value(qjs::Value& value) {
         return qjs::json::stringify(value);
     } catch(const qjs::Exception&) {
         return "<non-string rejection value>";
+    }
+}
+
+template <typename T = void>
+kota::task<T> wait_for_callback_promise(qjs::Promise promise) {
+    auto result = co_await async_wait_for_promise<T>(std::move(promise));
+    if(!result) {
+        throw std::move(result.error());
+    }
+
+    if constexpr(!std::is_void_v<T>) {
+        co_return std::move(result).value();
     }
 }
 }  // namespace
@@ -131,21 +145,23 @@ bool drain_jobs_with_budget(qjs::Runtime& runtime, std::size_t max_jobs) {
     return ran;
 }
 
-CatterConfig on_start(CatterConfig config) {
+kota::task<CatterConfig> on_start(CatterConfig config) {
     if(!self.on_start) {
         throw cpptrace::runtime_error("service.onStart is not registered");
     }
-    return CatterConfig::make(self.on_start(config.to_object(self.on_start.context())));
+    auto object = co_await wait_for_callback_promise<qjs::Object>(
+        self.on_start(config.to_object(self.on_start.context())));
+    co_return CatterConfig::make(std::move(object));
 }
 
-void on_finish(ProcessResult result) {
+kota::task<> on_finish(ProcessResult result) {
     if(!self.on_finish) {
         throw cpptrace::runtime_error("service.onFinish is not registered");
     }
-    return self.on_finish(result.to_object(self.on_finish.context()));
+    co_await wait_for_callback_promise(self.on_finish(result.to_object(self.on_finish.context())));
 }
 
-Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
+kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
     if(!self.on_command) {
         throw cpptrace::runtime_error("service.onCommand is not registered");
     }
@@ -157,14 +173,17 @@ Action on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
         command_result.set_property("success", false);
         command_result.set_property("error", data.error().to_object(self.on_command.context()));
     }
-    return Action::make(self.on_command(id, std::move(command_result)));
+    auto object = co_await wait_for_callback_promise<qjs::Object>(
+        self.on_command(id, std::move(command_result)));
+    co_return Action::make(std::move(object));
 }
 
-void on_execution(uint32_t id, ProcessResult result) {
+kota::task<> on_execution(uint32_t id, ProcessResult result) {
     if(!self.on_execution) {
         throw cpptrace::runtime_error("service.onExecution is not registered");
     }
-    return self.on_execution(id, result.to_object(self.on_execution.context()));
+    co_await wait_for_callback_promise(
+        self.on_execution(id, result.to_object(self.on_execution.context())));
 }
 
 void set_on_start(qjs::Object cb) {

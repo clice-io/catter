@@ -39,14 +39,10 @@ using namespace catter::js;
 namespace {
 
 void ensure_qjs_initialized(const fs::path& js_path) {
-    static bool initialized = false;
-    if(!initialized) {
-        js::init_qjs({.pwd = js_path});
-        initialized = true;
-    }
+    js::init_qjs({.pwd = js_path});
 }
 
-void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
+std::string load_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
     auto full_path = js_path / file_name;
 
     std::ifstream ifs{full_path};
@@ -54,8 +50,12 @@ void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
         throw cpptrace::runtime_error("js test file cannot be opened: " + full_path.string());
     }
 
-    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-    js::run_js_file(content, full_path.string());
+    return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+}
+
+void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
+    auto full_path = js_path / file_name;
+    js::run_js_file(load_js_file_by_name(js_path, file_name), full_path.string());
 }
 
 void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false) {
@@ -407,71 +407,82 @@ std::vector<kota::zest::TestCase> auto_js_test_cases() {
 TEST_SUITE(js_tests) {
 TEST_CASE(run_service_js_file_and_callbacks) {
     auto f = [&]() {
-        auto js_path = fs::path(config::data::js_test_path.data());
-        ensure_qjs_initialized(js_path);
-        run_js_file_by_name(js_path, "service.js");
+        auto task = []() -> kota::task<> {
+            auto js_path = fs::path(config::data::js_test_path.data());
+            js::JsLoop js_loop;
+            js::JsLoopScope js_loop_scope(js_loop);
 
-        js::CatterRuntime runtime{
-            .supportActions = {js::ActionType::skip,
-                               js::ActionType::drop,
-                               js::ActionType::abort,
-                               js::ActionType::modify},
-            .type = js::CatterRuntime::Type::inject,
-            .supportParentId = true,
-        };
+            co_await js::async_init_qjs({.pwd = js_path});
+            co_await js::async_run_js_file(load_js_file_by_name(js_path, "service.js"),
+                                           (js_path / "service.js").string());
 
-        js::CatterConfig config{
-            .scriptPath = "script.ts",
-            .scriptArgs = {"--input", "compile_commands.json"},
-            .buildSystemCommand = {"xmake", "build"},
-            .runtime = runtime,
-            .options = {.log = true},
-            .execute = true,
-        };
+            js::CatterRuntime runtime{
+                .supportActions = {js::ActionType::skip,
+                                   js::ActionType::drop,
+                                   js::ActionType::abort,
+                                   js::ActionType::modify},
+                .type = js::CatterRuntime::Type::inject,
+                .supportParentId = true,
+            };
 
-        auto updated_config = js::on_start(config);
-        EXPECT_TRUE(updated_config.scriptPath == config.scriptPath);
-        EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
-        EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
-        EXPECT_TRUE(updated_config.options.log == false);
-        EXPECT_TRUE(updated_config.execute == true);
+            js::CatterConfig config{
+                .scriptPath = "script.ts",
+                .scriptArgs = {"--input", "compile_commands.json"},
+                .buildSystemCommand = {"xmake", "build"},
+                .runtime = runtime,
+                .options = {.log = true},
+                .execute = true,
+            };
 
-        js::CommandData data{
-            .cwd = "/tmp",
-            .exe = "clang++",
-            .argv = {"clang++", "main.cc", "-c"},
-            .env = {"CC=clang++", "CATTER_LOG=1"},
-            .runtime = runtime,
-            .parent = 41,
-        };
+            auto updated_config = co_await js::on_start(config);
+            EXPECT_TRUE(updated_config.scriptPath == config.scriptPath);
+            EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
+            EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
+            EXPECT_TRUE(updated_config.options.log == false);
+            EXPECT_TRUE(updated_config.execute == true);
 
-        auto action = js::on_command(7, data);
-        action.visit([&]<auto E>(const Tag<E>& tag) {
-            if constexpr(E == js::ActionType::modify) {
-                EXPECT_TRUE(tag.data.argv.size() == 4);
-                EXPECT_TRUE(tag.data.argv.back() == "--from-service");
-                EXPECT_TRUE(tag.data.parent.has_value());
-                EXPECT_TRUE(tag.data.parent.value() == 41);
-            } else {
-                EXPECT_TRUE(E == js::ActionType::modify);
-            }
-        });
+            js::CommandData data{
+                .cwd = "/tmp",
+                .exe = "clang++",
+                .argv = {"clang++", "main.cc", "-c"},
+                .env = {"CC=clang++", "CATTER_LOG=1"},
+                .runtime = runtime,
+                .parent = 41,
+            };
 
-        js::CatterErr err{.msg = "spawn failed"};
-        auto error_action = js::on_command(7, std::unexpected(err));
-        EXPECT_TRUE(error_action.type() == js::ActionType::skip);
+            auto action = co_await js::on_command(7, data);
+            action.visit([&]<auto E>(const Tag<E>& tag) {
+                if constexpr(E == js::ActionType::modify) {
+                    EXPECT_TRUE(tag.data.argv.size() == 4);
+                    EXPECT_TRUE(tag.data.argv.back() == "--from-service");
+                    EXPECT_TRUE(tag.data.parent.has_value());
+                    EXPECT_TRUE(tag.data.parent.value() == 41);
+                } else {
+                    EXPECT_TRUE(E == js::ActionType::modify);
+                }
+            });
 
-        js::ProcessResult execution_result{
-            .code = 0,
-            .stdOut = "hello from stdout",
-            .stdErr = "hello from stderr",
-        };
-        js::on_execution(7, execution_result);
+            js::CatterErr err{.msg = "spawn failed"};
+            auto error_action = co_await js::on_command(7, std::unexpected(err));
+            EXPECT_TRUE(error_action.type() == js::ActionType::skip);
 
-        js::ProcessResult finish_result{
-            .code = 0,
-        };
-        js::on_finish(finish_result);
+            js::ProcessResult execution_result{
+                .code = 0,
+                .stdOut = "hello from stdout",
+                .stdErr = "hello from stderr",
+            };
+            co_await js::on_execution(7, execution_result);
+
+            js::ProcessResult finish_result{
+                .code = 0,
+            };
+            co_await js::on_finish(finish_result);
+        }();
+
+        kota::event_loop loop;
+        loop.schedule(task);
+        loop.run();
+        task.result();
     };
 
     EXPECT_NOTHROWS(f());
