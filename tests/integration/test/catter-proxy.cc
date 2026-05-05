@@ -43,13 +43,13 @@ public:
         last_error.reset();
     }
 
-    data::ipcid_t create(data::ipcid_t parent_id) override {
+    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) override {
         this->create_called = true;
         LOG_INFO("[{}] Creating service with parent id {}", this->id, parent_id);
-        return this->id;
+        co_return this->id;
     }
 
-    data::action make_decision(data::command cmd) override {
+    kota::task<data::action> make_decision(data::command cmd) override {
         this->make_decision_called = true;
         last_received_command = cmd;
         std::string args_str;
@@ -62,10 +62,10 @@ public:
                  cmd.cwd,
                  cmd.executable,
                  args_str);
-        return data::action{.type = data::action::WRAP, .cmd = cmd};
+        co_return data::action{.type = data::action::WRAP, .cmd = cmd};
     }
 
-    void finish(data::process_result result) override {
+    kota::task<> finish(data::process_result result) override {
         this->finish_called = true;
         LOG_INFO(
             "[{}] Command finished: \n    -> code = {}\n    -> stdout = `{}` \n    -> stderr = `{}`",
@@ -73,15 +73,17 @@ public:
             result.code,
             log::escape(result.std_out),
             log::escape(result.std_err));
+        co_return;
     }
 
-    void report_error(data::ipcid_t parent_id, std::string error_msg) override {
+    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) override {
         this->error_reported = true;
         last_error = error_msg;
         LOG_INFO("[{}] Error reported for command with parent id {} : {}",
                  this->id,
                  parent_id,
                  error_msg);
+        co_return;
     }
 
     struct Factory {
