@@ -103,6 +103,7 @@ kota::task<> run_async_js_source(std::string source, std::string file_name) {
 
     co_await js::async_init_qjs({.pwd = js_path});
     co_await js::async_run_js_file(source, std::move(file_name));
+    co_return;
 }
 
 void run_async_js_case(std::string source, std::string file_name) {

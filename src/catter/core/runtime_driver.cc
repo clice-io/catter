@@ -72,11 +72,13 @@ public:
 
     kota::task<> finish(data::process_result result) override {
         co_await js::on_execution(this->id, to_js_process_result(std::move(result)));
+        co_return;
     }
 
     kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) override {
         (void)parent_id;
         co_await js::on_command(id, std::unexpected(js::CatterErr{.msg = std::move(error_msg)}));
+        co_return;
     }
 
     struct Factory {

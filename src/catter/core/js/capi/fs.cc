@@ -20,7 +20,11 @@ using namespace catter::capi::util;
 namespace {
 constexpr int DEFAULT_DIR_MODE = 0777;
 constexpr int DEFAULT_FILE_MODE = 0666;
+constexpr int ACCESS_EXISTS = 0;
 constexpr std::size_t FILE_CHUNK_SIZE = 64 * 1024;
+constexpr std::uint64_t FILE_TYPE_MASK = 0170000;
+constexpr std::uint64_t REGULAR_FILE_MODE = 0100000;
+constexpr std::uint64_t DIRECTORY_MODE = 0040000;
 
 template <typename T>
 using JsTask = kota::task<T, std::string>;
@@ -32,11 +36,11 @@ bool is_missing(kota::error err) noexcept {
 }
 
 bool is_regular_file(kota::fs::file_stats stats) noexcept {
-    return S_ISREG(stats.mode);
+    return (stats.mode & FILE_TYPE_MASK) == REGULAR_FILE_MODE;
 }
 
 bool is_directory(kota::fs::file_stats stats) noexcept {
-    return S_ISDIR(stats.mode);
+    return (stats.mode & FILE_TYPE_MASK) == DIRECTORY_MODE;
 }
 
 std::string error_message(std::string_view action, std::string_view path, kota::error err) {
@@ -68,6 +72,7 @@ kota::task<void, kota::error> create_directories_async(fs::path path) {
             co_await kota::fail(made.error());
         }
     }
+    co_return;
 }
 
 kota::task<void, kota::error> remove_all_async(fs::path path) {
@@ -94,6 +99,7 @@ kota::task<void, kota::error> remove_all_async(fs::path path) {
     }
 
     co_await kota::fs::unlink(path.string()).or_fail();
+    co_return;
 }
 
 CAPI(fs_exists, (std::string path)->bool) {
@@ -249,7 +255,7 @@ CTX_CAPI(fs_list_dir, (JSContext * ctx, std::string path)->catter::qjs::Object) 
 
 ASYNC_CAPI(fs_async_exists, (std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
-    auto result = co_await kota::fs::access(abs_path, F_OK);
+    auto result = co_await kota::fs::access(abs_path, ACCESS_EXISTS);
     if(result) {
         co_return true;
     }
@@ -342,13 +348,14 @@ ASYNC_CAPI(fs_async_remove_recursively, (std::string path)->JsVoidTask) {
     if(!result) {
         co_await kota::fail(error_message("remove", abs_path, result.error()));
     }
+    co_return;
 }
 
 ASYNC_CAPI(fs_async_rename_if_exists,
            (std::string js_old_path, std::string js_new_path)->JsTask<bool>) {
     auto old_path = absolute_of(js_old_path).string();
     auto new_path = absolute_of(js_new_path).string();
-    auto exists = co_await kota::fs::access(old_path, F_OK);
+    auto exists = co_await kota::fs::access(old_path, ACCESS_EXISTS);
     if(!exists) {
         if(is_missing(exists.error())) {
             co_return false;
@@ -428,5 +435,6 @@ ASYNC_CAPI(fs_async_write_text, (std::string path, std::string content)->JsVoidT
     if(!closed) {
         co_await kota::fail(error_message("close", abs_path, closed.error()));
     }
+    co_return;
 }
 }  // namespace

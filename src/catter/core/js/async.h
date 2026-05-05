@@ -155,6 +155,7 @@ kota::task<> settle_promise_task(qjs::PromiseCapability cap, Task task) {
     } catch(...) {
         reject("Unknown exception in async C++ function");
     }
+    co_return;
 }
 }  // namespace detail
 

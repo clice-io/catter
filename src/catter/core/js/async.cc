@@ -22,6 +22,7 @@ kota::task<> run_loop_task(JsLoop& js_loop, qjs::Runtime& runtime, kota::event_l
     }
 
     loop_started = false;
+    co_return;
 }
 
 template <typename Fn>
@@ -76,6 +77,7 @@ kota::task<> JsLoop::run_impl() {
     }
 
     cleanup_for(loop);
+    co_return;
 }
 
 void JsLoop::wake() {
@@ -181,6 +183,7 @@ kota::task<> async_eval(std::string_view input, const char* filename, int eval_f
             throw std::move(result.error());
         }
     }
+    co_return;
 }
 
 kota::task<> async_init_qjs(const RuntimeConfig& config) {
@@ -206,10 +209,12 @@ kota::task<> async_init_qjs(const RuntimeConfig& config) {
                         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
 
     js_mod_object() = ctx.global_this()["__catter_mod"].as<qjs::Object>();
+    co_return;
 }
 
 kota::task<> async_run_js_file(std::string_view content, const std::string filepath) {
     co_await async_eval(content, filepath.data(), JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
+    co_return;
 }
 
 }  // namespace catter::js

@@ -37,6 +37,7 @@ kota::task<> async_run(const core::CatterConfig& config) {
     if(error) {
         std::rethrow_exception(error);
     }
+    co_return;
 }
 
 }  // namespace catter::app

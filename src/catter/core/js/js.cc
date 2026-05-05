@@ -125,6 +125,7 @@ kota::task<> on_finish(ProcessResult result) {
         throw cpptrace::runtime_error("service.onFinish is not registered");
     }
     co_await wait_for_callback_promise(self.on_finish(result.to_object(self.on_finish.context())));
+    co_return;
 }
 
 kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr> data) {
@@ -150,6 +151,7 @@ kota::task<> on_execution(uint32_t id, ProcessResult result) {
     }
     co_await wait_for_callback_promise(
         self.on_execution(id, result.to_object(self.on_execution.context())));
+    co_return;
 }
 
 void set_on_start(qjs::Object cb) {
