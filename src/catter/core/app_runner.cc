@@ -17,7 +17,6 @@ kota::task<> async_run(const core::CatterConfig& config) {
     auto script_content = load_script_content(script_config.scriptPath);
     js::JsLoop js_loop;
     js::JsLoopScope js_loop_scope(js_loop);
-    std::exception_ptr error;
 
     try {
         co_await js::async_init_qjs({.pwd = context.working_directory()});
@@ -31,12 +30,11 @@ kota::task<> async_run(const core::CatterConfig& config) {
             co_await js::on_finish(core::to_js_process_result(std::move(process_result)));
         }
     } catch(...) {
-        error = std::current_exception();
+        js_loop.request_stop();
+        throw;
     }
 
-    if(error) {
-        std::rethrow_exception(error);
-    }
+    js_loop.request_stop();
     co_return;
 }
 
