@@ -2,6 +2,8 @@
 
 #include <quickjs.h>
 
+#include "js/js.h"
+
 namespace catter::js {
 namespace {
 bool loop_started = false;
@@ -9,19 +11,6 @@ bool loop_started = false;
 JsLoop*& js_loop_ptr() {
     static JsLoop* loop = nullptr;
     return loop;
-}
-
-void wake_current_js_loop() noexcept {
-    if(auto* loop = js_loop_ptr()) {
-        try {
-            loop->wake();
-        } catch(...) {}
-    }
-}
-
-bool schedule_on_current_loop(kota::task<>&& task) {
-    kota::event_loop::current().schedule(std::move(task));
-    return true;
 }
 
 kota::task<> run_loop_task(JsLoop& js_loop, qjs::Runtime& runtime, kota::event_loop& event_loop) {
@@ -33,6 +22,12 @@ kota::task<> run_loop_task(JsLoop& js_loop, qjs::Runtime& runtime, kota::event_l
     }
 
     loop_started = false;
+}
+
+template <typename Fn>
+kota::task<> deferred(Fn fn) {
+    fn();
+    co_return;
 }
 }  // namespace
 
@@ -88,7 +83,7 @@ void JsLoop::wake() {
         return;
     }
 
-    loop->schedule(detail::defer([this] { wake_event.set(); }));
+    loop->schedule(deferred([this] { wake_event.set(); }));
 }
 
 void JsLoop::request_stop() {
@@ -96,7 +91,7 @@ void JsLoop::request_stop() {
         return;
     }
 
-    loop->schedule(detail::defer([this] {
+    loop->schedule(deferred([this] {
         running = false;
         wake_event.set();
     }));
@@ -134,22 +129,45 @@ JsLoop& js_loop() {
     return *loop;
 }
 
+JsLoop* current_js_loop() noexcept {
+    return js_loop_ptr();
+}
+
+namespace detail {
+
+void schedule_js_task(kota::task<>&& task) {
+    if(current_js_loop()) {
+        kota::event_loop::current().schedule(std::move(task));
+        return;
+    }
+
+    kota::event_loop loop;
+    loop.schedule(std::move(task));
+    loop.run();
+}
+
+void wake_js_loop() noexcept {
+    if(auto* loop = current_js_loop()) {
+        try {
+            loop->wake();
+        } catch(...) {}
+    }
+}
+
+}  // namespace detail
+
 JsLoopScope::JsLoopScope(JsLoop& loop) : loop(&loop) {
     auto*& current = js_loop_ptr();
     if(current && current != &loop) {
         throw qjs::Exception("QuickJS async loop is already installed.");
     }
     current = &loop;
-    qjs::set_async_wake_hook(wake_current_js_loop);
-    qjs::set_async_schedule_hook(schedule_on_current_loop);
 }
 
 JsLoopScope::~JsLoopScope() {
     auto*& current = js_loop_ptr();
     if(current == loop) {
         current = nullptr;
-        qjs::set_async_wake_hook(nullptr);
-        qjs::set_async_schedule_hook(nullptr);
     }
 }
 
@@ -158,8 +176,7 @@ kota::task<> async_eval(std::string_view input, const char* filename, int eval_f
     auto eval_result = ctx.eval(input, filename, eval_flags);
 
     if(JS_IsPromise(eval_result.value())) {
-        auto result = co_await async_wait_for_promise(
-            detail::promise_from_eval_result(std::move(eval_result)));
+        auto result = co_await promise_to_task(qjs::Promise::from_value(std::move(eval_result)));
         if(!result) {
             throw std::move(result.error());
         }

@@ -37,8 +37,6 @@ qjs::Runtime& runtime();
 void reset_runtime(const RuntimeConfig& config);
 void register_catter_module(const qjs::Context& ctx);
 std::string_view js_lib_source();
-std::string format_rejection(qjs::Parameters& args);
-qjs::Promise promise_from_eval_result(qjs::Value&& eval_result);
 
 }  // namespace detail
 

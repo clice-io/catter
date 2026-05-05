@@ -1,7 +1,6 @@
 #include "js.h"
 
 #include <cstddef>
-#include <format>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -36,25 +35,9 @@ struct Self {
 namespace {
 Self self{};
 
-std::string format_rejection_value(qjs::Value& value) {
-    try {
-        return value.as<qjs::Error>().format();
-    } catch(const qjs::Exception&) {}
-
-    try {
-        return value.as<std::string>();
-    } catch(const qjs::Exception&) {}
-
-    try {
-        return qjs::json::stringify(value);
-    } catch(const qjs::Exception&) {
-        return "<non-string rejection value>";
-    }
-}
-
 template <typename T = void>
 kota::task<T> wait_for_callback_promise(qjs::Promise promise) {
-    auto result = co_await async_wait_for_promise<T>(std::move(promise));
+    auto result = co_await promise_to_task<T>(std::move(promise));
     if(!result) {
         throw std::move(result.error());
     }
@@ -94,23 +77,6 @@ std::string_view js_lib_source() {
         return {};
     }
     return config::data::js_lib.substr(0, last + 1);
-}
-
-std::string format_rejection(qjs::Parameters& args) {
-    if(args.empty()) {
-        return "Promise rejected without a reason.\n";
-    }
-
-    std::string trace;
-    for(auto& arg: args) {
-        trace += format_rejection_value(arg) + "\n";
-    }
-    return trace;
-}
-
-qjs::Promise promise_from_eval_result(qjs::Value&& eval_result) {
-    auto ctx = eval_result.context();
-    return qjs::Promise{ctx, eval_result.release()};
 }
 
 }  // namespace detail

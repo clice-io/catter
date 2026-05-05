@@ -27,7 +27,7 @@ void wait_for_promise(qjs::Promise promise) {
         });
     auto reject = qjs::Promise::ThenCallback::from(js_ctx, [state](qjs::Parameters args) {
         state->state = EvalState::rejected;
-        state->error_trace = detail::format_rejection(args);
+        state->error_trace = qjs::format_rejection(args);
     });
 
     auto then_promise = promise.then(fulfill, reject);
@@ -49,7 +49,7 @@ void sync_eval(std::string_view input, const char* filename, int eval_flags) {
     auto eval_result = ctx.eval(input, filename, eval_flags);
 
     if(JS_IsPromise(eval_result.value())) {
-        wait_for_promise(detail::promise_from_eval_result(std::move(eval_result)));
+        wait_for_promise(qjs::Promise::from_value(std::move(eval_result)));
     }
 }
 

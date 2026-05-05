@@ -7,6 +7,7 @@
 #include "option.h"
 #include "runtime_driver.h"
 #include "js/async.h"
+#include "js/js.h"
 
 namespace catter::app {
 

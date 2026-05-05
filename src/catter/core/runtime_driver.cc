@@ -13,7 +13,7 @@
 #include "ipc.h"
 #include "session.h"
 #include "config/catter-proxy.h"
-#include "js/async.h"
+#include "js/js.h"
 #include "util/crossplat.h"
 
 namespace catter::core {

@@ -9,6 +9,8 @@
 #include <kota/zest/zest.h>
 #include <kota/async/async.h>
 
+#include "js/async.h"
+
 using namespace catter;
 
 namespace {
@@ -676,44 +678,67 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
 
 TEST_CASE(async_function_wraps_tasks_as_promises) {
     auto f = [&]() {
-        auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
-        auto global = ctx.global_this();
+        auto task = []() -> kota::task<> {
+            auto runtime = qjs::Runtime::create();
+            auto& ctx = runtime.context();
+            js::JsLoop js_loop;
+            js::JsLoopScope js_loop_scope(js_loop);
 
-        global.set_property(
-            "asyncGreet",
-            qjs::AsyncFunction<decltype(async_greet)>::from_raw<async_greet>(ctx.js_context(),
-                                                                             "asyncGreet"));
-        global.set_property(
-            "asyncAddOrFail",
-            qjs::AsyncFunction<decltype(async_add_or_fail)>::from_raw<async_add_or_fail>(
-                ctx.js_context(),
-                "asyncAddOrFail"));
+            auto& loop = kota::event_loop::current();
+            loop.schedule(js_loop.run(runtime, loop));
 
-        ctx.eval(R"(
-                globalThis.asyncGreetResult = undefined;
-                globalThis.asyncAddResult = undefined;
-                globalThis.asyncErrorResult = undefined;
+            auto global = ctx.global_this();
+            using AsyncGreet = qjs::Function<qjs::Promise(std::string)>;
+            using AsyncAddOrFail = qjs::Function<qjs::Promise(int64_t)>;
 
-                asyncGreet('catter').then((value) => {
-                    globalThis.asyncGreetResult = value;
-                });
+            global.set_property(
+                "asyncGreet",
+                AsyncGreet::from(ctx.js_context(), [ctx = ctx.js_context()](std::string name) {
+                    return js::task_to_promise(ctx, async_greet(std::move(name)));
+                }));
+            global.set_property(
+                "asyncAddOrFail",
+                AsyncAddOrFail::from(ctx.js_context(), [ctx = ctx.js_context()](int64_t value) {
+                    return js::task_to_promise(ctx, async_add_or_fail(value));
+                }));
 
-                asyncAddOrFail(41).then((value) => {
-                    globalThis.asyncAddResult = value;
-                });
+            auto bridged = co_await js::promise_to_task<std::string>(
+                js::task_to_promise(ctx.js_context(), async_greet("bridge")));
+            if(!bridged) {
+                throw std::move(bridged.error());
+            }
+            EXPECT_TRUE(bridged.value() == "hello bridge");
 
-                asyncAddOrFail(-1).catch((error) => {
-                    globalThis.asyncErrorResult = String(error);
-                });
-            )",
-                 "async-function-test.js",
-                 eval_flags);
-        drain_jobs(runtime.js_runtime());
+            auto eval_result = ctx.eval(R"(
+                    (async () => {
+                        globalThis.asyncGreetResult = await asyncGreet('catter');
+                        globalThis.asyncAddResult = await asyncAddOrFail(41);
 
-        EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
-        EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
-        EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains("negative value"));
+                        try {
+                            await asyncAddOrFail(-1);
+                        } catch (error) {
+                            globalThis.asyncErrorResult = String(error);
+                        }
+                    })();
+                )",
+                                        "async-function-test.js",
+                                        eval_flags);
+            auto result =
+                co_await js::promise_to_task(qjs::Promise::from_value(std::move(eval_result)));
+            js_loop.request_stop();
+            if(!result) {
+                throw std::move(result.error());
+            }
+
+            EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
+            EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
+            EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains("negative value"));
+        }();
+
+        kota::event_loop loop;
+        loop.schedule(task);
+        loop.run();
+        task.result();
     };
 
     EXPECT_NOTHROWS(f());
