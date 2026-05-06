@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <exception>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -31,22 +32,26 @@ kota::task<> async_run(ScriptRunConfig config, Function continuation) {
     js::JsLoop js_loop;
     js::JsLoopScope js_loop_scope(js_loop);
 
+    std::exception_ptr error;
     try {
         co_await js::async_init_qjs({.pwd = std::move(config.working_directory)});
         co_await js::async_run_js_file(config.script_content, config.script_path);
         co_await continuation();
     } catch(...) {
-        js_loop.request_stop();
-        throw;
+        error = std::current_exception();
     }
 
-    js_loop.request_stop();
+    co_await js_loop.stop();
+
+    if(error) {
+        std::rethrow_exception(error);
+    }
+
     co_return;
 }
 
 inline kota::task<> async_run(ScriptRunConfig config) {
-    co_await async_run(std::move(config), []() -> kota::task<> { co_return; });
-    co_return;
+    return async_run(std::move(config), []() -> kota::task<> { co_return; });
 }
 
 kota::task<> async_run(const core::CatterConfig& config);

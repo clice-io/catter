@@ -725,7 +725,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                                         eval_flags);
             auto result =
                 co_await js::promise_to_task(qjs::Promise::from_value(std::move(eval_result)));
-            js_loop.request_stop();
+            co_await js_loop.stop();
             if(!result) {
                 throw std::move(result.error());
             }

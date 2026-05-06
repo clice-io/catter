@@ -32,14 +32,18 @@ kota::task<> deferred(Fn fn) {
 }
 }  // namespace
 
-JsLoop::JsLoop(std::size_t job_budget) noexcept : job_budget(job_budget == 0 ? 1 : job_budget) {}
+JsLoop::JsLoop(std::size_t job_budget) :
+    stopped_event(std::make_shared<kota::event>(true)),
+    job_budget(job_budget == 0 ? 1 : job_budget) {}
 
 JsLoop::~JsLoop() {
+    auto stopped = stopped_event;
     if(loop) {
         running = false;
         wake_event.set();
     }
     cleanup_for(loop);
+    stopped->set();
 }
 
 kota::task<> JsLoop::run(qjs::Runtime& runtime, kota::event_loop& event_loop) {
@@ -48,6 +52,7 @@ kota::task<> JsLoop::run(qjs::Runtime& runtime, kota::event_loop& event_loop) {
     idle = kota::idle::create(event_loop);
     relay.emplace(event_loop.create_relay());
     wake_event.reset();
+    stopped_event->reset();
     running = true;
 
     return run_impl();
@@ -76,7 +81,9 @@ kota::task<> JsLoop::run_impl() {
         drain_jobs_with_budget(*rt, job_budget);
     }
 
+    auto stopped = stopped_event;
     cleanup_for(loop);
+    stopped->set();
     co_return;
 }
 
@@ -88,15 +95,18 @@ void JsLoop::wake() {
     loop->schedule(deferred([this] { wake_event.set(); }));
 }
 
-void JsLoop::request_stop() {
+kota::task<> JsLoop::stop() {
+    auto stopped = stopped_event;
     if(!loop) {
-        return;
+        co_return;
     }
 
     loop->schedule(deferred([this] {
         running = false;
         wake_event.set();
     }));
+    co_await stopped->wait();
+    co_return;
 }
 
 bool JsLoop::is_running() const noexcept {

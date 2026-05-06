@@ -40,7 +40,7 @@ concept async_task = task_traits<std::remove_cvref_t<T>>::is_task;
 
 class JsLoop {
 public:
-    explicit JsLoop(std::size_t job_budget = 64) noexcept;
+    explicit JsLoop(std::size_t job_budget = 64);
 
     JsLoop(const JsLoop&) = delete;
     JsLoop& operator= (const JsLoop&) = delete;
@@ -55,7 +55,7 @@ public:
 
     void wake();
 
-    void request_stop();
+    kota::task<> stop();
 
     bool is_running() const noexcept;
 
@@ -71,6 +71,7 @@ private:
     kota::idle idle;
     std::optional<kota::relay> relay;
     kota::event wake_event;
+    std::shared_ptr<kota::event> stopped_event;
     std::size_t job_budget = 32;
     bool running = false;
     bool idle_started = false;
