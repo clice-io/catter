@@ -389,7 +389,7 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("127", "bed9b1965654a35488fd305dcc5c8e5ceeb09279")
+    add_versions("136", "fda7c785a7a149af52e995f6ac3ebb961f37f0c5")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
