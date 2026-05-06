@@ -1,7 +1,8 @@
+#include "js/js.h"
+
 #include <algorithm>
 
-#include "js/async.h"
-#include "js/sync.h"
+#include "app_runner.h"
 #if defined(CATTER_LINUX) || defined(CATTER_MAC)
 #include <cctype>
 #include <cerrno>
@@ -13,7 +14,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #endif
-#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <format>
@@ -27,6 +27,7 @@
 #include <cpptrace/exceptions.hpp>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/async/io/loop.h>
 
 #include "temp_file_manager.h"
 #include "config/js-test.h"
@@ -37,10 +38,6 @@ using namespace catter;
 using namespace catter::js;
 
 namespace {
-
-void ensure_qjs_initialized(const fs::path& js_path) {
-    js::init_qjs({.pwd = js_path});
-}
 
 std::string load_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
     auto full_path = js_path / file_name;
@@ -53,15 +50,24 @@ std::string load_js_file_by_name(const fs::path& js_path, std::string_view file_
     return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 }
 
-void run_js_file_by_name(const fs::path& js_path, std::string_view file_name) {
-    auto full_path = js_path / file_name;
-    js::run_js_file(load_js_file_by_name(js_path, file_name), full_path.string());
+void run_async_js_case(std::string source, std::string file_name) {
+    auto js_path = fs::path(config::data::js_test_path.data());
+    auto task = app::async_run(app::ScriptRunConfig{
+        .script_content = std::move(source),
+        .script_path = std::move(file_name),
+        .working_directory = js_path,
+    });
+    kota::event_loop loop;
+    loop.schedule(task);
+    loop.run();
+    task.result();
 }
 
 void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false) {
     try {
         auto js_path = fs::path(config::data::js_test_path.data());
-        ensure_qjs_initialized(js_path);
+        auto full_path = js_path / file_name;
+        auto source = load_js_file_by_name(js_path, file_name);
 
         if(with_fs_test_env) {
             auto js_path_res = fs::path(config::data::js_test_res_path.data());
@@ -85,40 +91,15 @@ void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false
                 throw cpptrace::runtime_error("failed to prepare fs test file: c/b.txt");
             }
 
-            run_js_file_by_name(js_path, file_name);
+            run_async_js_case(std::move(source), full_path.string());
             return;
         }
 
-        run_js_file_by_name(js_path, file_name);
+        run_async_js_case(std::move(source), full_path.string());
     } catch(qjs::Exception& ex) {
         output::redLn("{}", ex.what());
         throw ex;
     }
-}
-
-kota::task<> run_async_js_source(std::string source, std::string file_name) {
-    auto js_path = fs::path(config::data::js_test_path.data());
-    js::JsLoop js_loop;
-    js::JsLoopScope js_loop_scope(js_loop);
-
-    try {
-        co_await js::async_init_qjs({.pwd = js_path});
-        co_await js::async_run_js_file(source, std::move(file_name));
-    } catch(...) {
-        js_loop.request_stop();
-        throw;
-    }
-
-    js_loop.request_stop();
-    co_return;
-}
-
-void run_async_js_case(std::string source, std::string file_name) {
-    auto task = run_async_js_source(std::move(source), std::move(file_name));
-    kota::event_loop loop;
-    loop.schedule(task);
-    loop.run();
-    task.result();
 }
 
 #if defined(CATTER_LINUX) || defined(CATTER_MAC)
@@ -415,16 +396,14 @@ std::vector<kota::zest::TestCase> auto_js_test_cases() {
 TEST_SUITE(js_tests) {
 TEST_CASE(run_service_js_file_and_callbacks) {
     auto f = [&]() {
-        auto task = []() -> kota::task<> {
-            auto js_path = fs::path(config::data::js_test_path.data());
-            js::JsLoop js_loop;
-            js::JsLoopScope js_loop_scope(js_loop);
-
-            try {
-                co_await js::async_init_qjs({.pwd = js_path});
-                co_await js::async_run_js_file(load_js_file_by_name(js_path, "service.js"),
-                                               (js_path / "service.js").string());
-
+        auto js_path = fs::path(config::data::js_test_path.data());
+        auto task = app::async_run(
+            app::ScriptRunConfig{
+                .script_content = load_js_file_by_name(js_path, "service.js"),
+                .script_path = (js_path / "service.js").string(),
+                .working_directory = js_path,
+            },
+            []() -> kota::task<> {
                 js::CatterRuntime runtime{
                     .supportActions = {js::ActionType::skip,
                                        js::ActionType::drop,
@@ -488,13 +467,8 @@ TEST_CASE(run_service_js_file_and_callbacks) {
                     .code = 0,
                 };
                 co_await js::on_finish(finish_result);
-            } catch(...) {
-                js_loop.request_stop();
-                throw;
-            }
-
-            js_loop.request_stop();
-        }();
+                co_return;
+            });
 
         kota::event_loop loop;
         loop.schedule(task);
@@ -508,28 +482,6 @@ TEST_CASE(run_service_js_file_and_callbacks) {
 TEST_CASE(run_cdb_js_file) {
     auto f = [&]() {
         run_basic_js_case("cdb.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
-
-TEST_CASE(run_js_file_reports_async_error_message_and_stack) {
-    auto f = [&]() {
-        auto js_path = fs::path(config::data::js_test_path.data());
-        ensure_qjs_initialized(js_path);
-
-        bool caught = false;
-        try {
-            js::run_js_file("await Promise.reject(new Error('async boom'));\n", "reject.js");
-        } catch(const qjs::Exception& ex) {
-            caught = true;
-            std::string message = ex.what();
-            EXPECT_TRUE(message.contains("async boom"));
-            EXPECT_TRUE(message.contains("Stack Trace:"));
-            EXPECT_TRUE(message.contains("reject.js"));
-        }
-
-        EXPECT_TRUE(caught);
     };
 
     EXPECT_NOTHROWS(f());

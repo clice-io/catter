@@ -276,7 +276,17 @@ public:
     class Register {
     public:
         static auto find(JSRuntime* rt) noexcept {
-            return class_ids.find(rt);
+            auto it = class_ids.find(rt);
+            if(it == class_ids.end()) {
+                return it;
+            }
+
+            if(JS_IsRegisteredClass(rt, it->second)) {
+                return it;
+            }
+
+            class_ids.erase(it);
+            return class_ids.end();
         }
 
         static auto end() noexcept {
@@ -284,7 +294,7 @@ public:
         }
 
         static JSClassID get(JSRuntime* rt) noexcept {
-            if(auto it = class_ids.find(rt); it != class_ids.end()) {
+            if(auto it = find(rt); it != end()) {
                 return it->second;
             } else {
                 return JS_INVALID_CLASS_ID;
