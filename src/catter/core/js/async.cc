@@ -7,11 +7,7 @@
 namespace catter::js {
 namespace {
 bool loop_started = false;
-
-JsLoop*& js_loop_ptr() {
-    static JsLoop* loop = nullptr;
-    return loop;
-}
+JsLoop* active_js_loop = nullptr;
 
 kota::task<> run_loop_task(JsLoop& js_loop, qjs::Runtime& runtime, kota::event_loop& event_loop) {
     try {
@@ -133,22 +129,10 @@ void JsLoop::stop_idle() noexcept {
     }
 }
 
-JsLoop& js_loop() {
-    auto* loop = js_loop_ptr();
-    if(!loop) {
-        throw qjs::Exception("QuickJS async loop is not installed.");
-    }
-    return *loop;
-}
-
-JsLoop* current_js_loop() noexcept {
-    return js_loop_ptr();
-}
-
 namespace detail {
 
 void schedule_js_task(kota::task<>&& task) {
-    if(current_js_loop()) {
+    if(active_js_loop) {
         kota::event_loop::current().schedule(std::move(task));
         return;
     }
@@ -158,28 +142,31 @@ void schedule_js_task(kota::task<>&& task) {
     loop.run();
 }
 
-void wake_js_loop() noexcept {
-    if(auto* loop = current_js_loop()) {
-        try {
-            loop->wake();
-        } catch(...) {}
+bool wake_js_loop() noexcept {
+    if(!active_js_loop) {
+        return false;
     }
+
+    try {
+        active_js_loop->wake();
+    } catch(...) {
+        return false;
+    }
+    return true;
 }
 
 }  // namespace detail
 
 JsLoopScope::JsLoopScope(JsLoop& loop) : loop(&loop) {
-    auto*& current = js_loop_ptr();
-    if(current && current != &loop) {
+    if(active_js_loop && active_js_loop != &loop) {
         throw qjs::Exception("QuickJS async loop is already installed.");
     }
-    current = &loop;
+    active_js_loop = &loop;
 }
 
 JsLoopScope::~JsLoopScope() {
-    auto*& current = js_loop_ptr();
-    if(current == loop) {
-        current = nullptr;
+    if(active_js_loop == loop) {
+        active_js_loop = nullptr;
     }
 }
 
@@ -204,9 +191,12 @@ kota::task<> async_init_qjs(const RuntimeConfig& config) {
     detail::reset_runtime(config);
 
     auto& loop = kota::event_loop::current();
-    auto& js = js_loop();
+    auto* js = active_js_loop;
+    if(!js) {
+        throw qjs::Exception("QuickJS async loop is not installed.");
+    }
     loop_started = true;
-    loop.schedule(run_loop_task(js, detail::runtime(), loop));
+    loop.schedule(run_loop_task(*js, detail::runtime(), loop));
 
     const qjs::Context& ctx = detail::runtime().context();
     detail::register_catter_module(ctx);

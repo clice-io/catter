@@ -77,13 +77,9 @@ private:
     bool idle_started = false;
 };
 
-JsLoop& js_loop();
-
-JsLoop* current_js_loop() noexcept;
-
 namespace detail {
 void schedule_js_task(kota::task<>&& task);
-void wake_js_loop() noexcept;
+bool wake_js_loop() noexcept;
 
 template <typename T>
 struct PromiseWaitResult {
@@ -207,7 +203,9 @@ kota::task<std::expected<T, qjs::Exception>> promise_to_task(qjs::Promise promis
     });
 
     promise.then(fulfill, reject);
-    js_loop().wake();
+    if(!detail::wake_js_loop()) {
+        throw qjs::Exception("QuickJS async loop is not installed.");
+    }
 
     co_await state->done.wait();
 
