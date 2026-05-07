@@ -148,34 +148,39 @@ export class Client {
   }
 }
 
-const defaultClient = new Client();
+let defaultClient: Client | undefined;
+
+function getDefaultClient(): Client {
+  defaultClient ??= new Client();
+  return defaultClient;
+}
 
 export async function request(
   url: string,
   options: RequestOptions = {},
 ): Promise<Response> {
-  return defaultClient.request(url, options);
+  return getDefaultClient().request(url, options);
 }
 
 export function get(
   url: string,
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<Response> {
-  return defaultClient.get(url, options);
+  return getDefaultClient().get(url, options);
 }
 
 export function head(
   url: string,
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<Response> {
-  return defaultClient.head(url, options);
+  return getDefaultClient().head(url, options);
 }
 
 export function del(
   url: string,
   options: Omit<RequestOptions, "method"> = {},
 ): Promise<Response> {
-  return defaultClient.del(url, options);
+  return getDefaultClient().del(url, options);
 }
 
 export function post(
@@ -183,7 +188,7 @@ export function post(
   body = "",
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<Response> {
-  return defaultClient.post(url, body, options);
+  return getDefaultClient().post(url, body, options);
 }
 
 export function put(
@@ -191,7 +196,7 @@ export function put(
   body = "",
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<Response> {
-  return defaultClient.put(url, body, options);
+  return getDefaultClient().put(url, body, options);
 }
 
 export function patch(
@@ -199,21 +204,21 @@ export function patch(
   body = "",
   options: Omit<RequestOptions, "method" | "body"> = {},
 ): Promise<Response> {
-  return defaultClient.patch(url, body, options);
+  return getDefaultClient().patch(url, body, options);
 }
 
 export async function text(
   url: string,
   options: RequestOptions = {},
 ): Promise<string> {
-  return defaultClient.text(url, options);
+  return getDefaultClient().text(url, options);
 }
 
 export async function json<T = unknown>(
   url: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  return defaultClient.json<T>(url, options);
+  return getDefaultClient().json<T>(url, options);
 }
 
 function flattenHeaders(headers: HeaderInit | undefined): string[] {

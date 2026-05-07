@@ -17,7 +17,11 @@ using JsTask = kota::task<T, std::string>;
 
 int64_t http_client_id_cnt = 1;
 std::unordered_map<int64_t, kota::http::client> http_clients;
-kota::http::client default_http_client;
+
+kota::http::client& default_http_client() {
+    static kota::http::client client;
+    return client;
+}
 
 kota::http::client& client_by_id(int64_t client_id) {
     auto it = http_clients.find(client_id);
@@ -161,7 +165,7 @@ CTX_ASYNC_CAPI(http_request,
                 std::string proxy_url)
                    ->JsTask<qjs::Object>) {
     co_return co_await send_request(ctx,
-                                    default_http_client,
+                                    default_http_client(),
                                     std::move(method),
                                     std::move(url),
                                     std::move(flat_headers),
