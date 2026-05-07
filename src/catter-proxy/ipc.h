@@ -50,6 +50,7 @@ struct Peer {
 
     kota::task<void> finish(data::process_result result) {
         co_await this->send_request<Request<RequestType::FINISH>>(result);
+        co_return;
     }
 
     kota::task<void> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept {

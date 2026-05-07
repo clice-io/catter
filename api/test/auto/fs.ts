@@ -91,3 +91,26 @@ debug.assertThrow(fs.exists(newFilePath) && fs.isFile(newFilePath));
 const newDirPath = fs.path.joinAll(testEnvPath, "x", "y", "z");
 debug.assertThrow(fs.mkdir(newDirPath));
 debug.assertThrow(fs.exists(newDirPath) && fs.isDir(newDirPath));
+
+const asyncRoot = fs.path.joinAll(testEnvPath, "async");
+const asyncTextPath = fs.path.joinAll(asyncRoot, "hello.txt");
+const asyncRenamedPath = fs.path.joinAll(asyncRoot, "renamed.txt");
+const asyncText = "Hello from async fs.\n" + "0123456789".repeat(8192);
+
+debug.assertThrow(await fs.async.mkdir(asyncRoot));
+await fs.async.writeText(asyncTextPath, asyncText);
+debug.assertThrow(await fs.async.exists(asyncTextPath));
+debug.assertThrow(await fs.async.isFile(asyncTextPath));
+debug.assertThrow((await fs.async.readText(asyncTextPath)) === asyncText);
+
+const asyncEntries = await fs.async.readDirs(asyncRoot);
+debug.assertThrow(
+  asyncEntries.map((entry) => fs.path.filename(entry)).includes("hello.txt"),
+);
+
+debug.assertThrow(await fs.async.rename(asyncTextPath, asyncRenamedPath));
+debug.assertThrow(!(await fs.async.exists(asyncTextPath)));
+debug.assertThrow(await fs.async.exists(asyncRenamedPath));
+
+await fs.async.removeAll(asyncRoot);
+debug.assertThrow(!(await fs.async.exists(asyncRoot)));

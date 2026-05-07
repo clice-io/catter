@@ -1,10 +1,10 @@
-#include "capi/type.h"
+#include "js/capi/type.h"
 
 #include <optional>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 
-#include "qjs.h"
+#include "js/qjs.h"
 
 using namespace catter;
 using namespace catter::js;
@@ -86,7 +86,7 @@ TEST_CASE(process_result_and_config_conversion) {
             .runtime = {.supportActions = {js::ActionType::drop, js::ActionType::abort},
                            .type = js::CatterRuntime::Type::inject,
                            .supportParentId = false},
-            .options = {.log = true},
+            .options = {.log = true, .output = js::CatterOptions::OutputMode::inherit},
             .execute = true
         };
 

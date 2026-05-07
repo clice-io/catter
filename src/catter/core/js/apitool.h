@@ -8,7 +8,7 @@
 #include <vector>
 #include <kota/support/function_traits.h>
 
-#include "qjs.h"
+#include "async.h"
 #include "util/log.h"
 
 namespace catter::capi::util {
@@ -115,6 +115,77 @@ struct hooked<V, R(JSContext*, Args...)> {
     }
 };
 
+template <typename Signature>
+struct async_function_adapter {
+    static_assert(kota::dependent_false<Signature>,
+                  "async_function adapter expects a function signature");
+};
+
+template <typename Task, typename... Args>
+struct async_function_adapter<Task(Args...)> {
+    using TaskType = std::remove_cvref_t<Task>;
+    using Traits = js::detail::task_traits<TaskType>;
+    static_assert(Traits::is_task, "async_function return type must be kota::task<...>");
+
+    using R = typename Traits::value_type;
+    using C = typename Traits::cancel_type;
+    using function_type = qjs::Function<qjs::Promise(Args...)>;
+
+    static_assert(qjs::detail::type_list<bool,
+                                         int32_t,
+                                         uint32_t,
+                                         int64_t,
+                                         uint64_t,
+                                         std::string,
+                                         qjs::Object,
+                                         qjs::Value,
+                                         qjs::Promise>::contains_v<R> ||
+                      std::is_void_v<R>,
+                  "async_function task value type must be one of the allowed types");
+    static_assert(std::is_void_v<C>, "async_function does not support cancellation tasks yet");
+
+    template <typename Invocable>
+        requires std::is_invocable_r_v<TaskType, Invocable, Args...>
+    static function_type from(JSContext* ctx, Invocable&& invocable) {
+        if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
+            auto wrapper = [ctx, &invocable](Args... args) -> qjs::Promise {
+                auto task = invocable(std::move(args)...);
+                return js::task_to_promise(ctx, std::move(task));
+            };
+            return function_type::from(ctx, std::move(wrapper));
+        } else {
+            auto wrapper = [ctx, fn = std::forward<Invocable>(invocable)](
+                               Args... args) mutable -> qjs::Promise {
+                auto task = fn(std::move(args)...);
+                return js::task_to_promise(ctx, std::move(task));
+            };
+            return function_type::from(ctx, std::move(wrapper));
+        }
+    }
+
+    template <Task (*FnPtr)(Args...)>
+    static function_type from(JSContext* ctx) {
+        return from(ctx, [](Args... args) -> Task { return (*FnPtr)(std::move(args)...); });
+    }
+
+    template <Task (*FnPtr)(JSContext*, Args...)>
+    static function_type from_with_ctx(JSContext* ctx) {
+        return from(ctx, [ctx](Args... args) -> Task { return (*FnPtr)(ctx, std::move(args)...); });
+    }
+};
+
+template <auto FnPtr, typename Signature = std::remove_pointer_t<decltype(FnPtr)>>
+auto to_js_async_function(JSContext* ctx) ->
+    typename async_function_adapter<Signature>::function_type {
+    return async_function_adapter<Signature>::template from<FnPtr>(ctx);
+}
+
+template <typename Signature, auto FnPtr>
+auto to_js_async_function_with_ctx(JSContext* ctx) ->
+    typename async_function_adapter<Signature>::function_type {
+    return async_function_adapter<Signature>::template from_with_ctx<FnPtr>(ctx);
+}
+
 }  // namespace catter::apitool
 
 #define TO_JS_FN(func)                                                                             \
@@ -126,6 +197,13 @@ struct hooked<V, R(JSContext*, Args...)> {
     catter::qjs::Function<catter::apitool::without_first_param_t<decltype(func)>>::from_raw<       \
         catter::apitool::hooked<func>::call>(ctx.js_context(), #func)
 
+#define TO_JS_ASYNC_FN(func) catter::apitool::to_js_async_function<func>(ctx.js_context())
+
+#define TO_JS_ASYNC_WITHOUT_CTX_FN(func)                                                           \
+    catter::apitool::to_js_async_function_with_ctx<                                                \
+        catter::apitool::without_first_param_t<decltype(func)>,                                    \
+        func>(ctx.js_context())
+
 #define MERGE(x, y) x##y
 // CAPI(function sign)
 #define CAPI(NAME, OTHER)                                                                          \
@@ -133,6 +211,32 @@ struct hooked<V, R(JSContext*, Args...)> {
     static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
                                         const catter::qjs::Context& ctx) {                         \
         mod.export_functor(#NAME, TO_JS_FN(NAME));                                                 \
+    }                                                                                              \
+    static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
+        catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \
+        return 0;                                                                                  \
+    }();                                                                                           \
+    auto NAME OTHER
+
+// ASYNC_CAPI(function sign returning kota::task<...>)
+#define ASYNC_CAPI(NAME, OTHER)                                                                    \
+    auto NAME OTHER;                                                                               \
+    static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
+                                        const catter::qjs::Context& ctx) {                         \
+        mod.export_functor(#NAME, TO_JS_ASYNC_FN(NAME));                                           \
+    }                                                                                              \
+    static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
+        catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \
+        return 0;                                                                                  \
+    }();                                                                                           \
+    auto NAME OTHER
+
+// ASYNC_CAPI(function sign returning kota::task<...> without ctx)
+#define CTX_ASYNC_CAPI(NAME, OTHER)                                                                \
+    auto NAME OTHER;                                                                               \
+    static void MERGE(__capi_reg, NAME)(const catter::qjs::CModule& mod,                           \
+                                        const catter::qjs::Context& ctx) {                         \
+        mod.export_functor(#NAME, TO_JS_ASYNC_WITHOUT_CTX_FN(NAME));                               \
     }                                                                                              \
     static auto MERGE(__capi_reg_instance, NAME) = [] {                                            \
         catter::apitool::api_registers().push_back(MERGE(__capi_reg, NAME));                       \

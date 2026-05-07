@@ -42,6 +42,7 @@ public:
         std::string cwd;
         std::string executable;
         std::vector<std::string> args;
+        data::output_mode output_mode = data::output_mode::inherit;
     };
 
     struct RunPlan {
@@ -74,14 +75,15 @@ public:
      * @return The result of the process execution, including exit status and captured
      * stdout/stderr.
      */
-    data::process_result run(RunPlan run_plan);
+    kota::task<data::process_result> run(RunPlan run_plan);
 
 private:
     kota::task<void> loop(ClientAcceptor acceptor);
 
     kota::task<data::process_result> spawn(std::string executable,
                                            std::vector<std::string> args,
-                                           std::string cwd);
+                                           std::string cwd,
+                                           data::output_mode output_mode);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

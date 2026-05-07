@@ -23,6 +23,11 @@ struct process_result {
     std::string std_err{};
 };
 
+enum class output_mode : uint8_t {
+    inherit,
+    capture,
+};
+
 struct action {
     enum : uint8_t {
         DROP,    // Do not execute the command

@@ -14,18 +14,6 @@
 
 namespace catter {
 
-inline auto& default_loop() noexcept {
-    static kota::event_loop loop{};
-    return loop;
-}
-
-template <typename Task>
-auto wait(Task&& task) {
-    default_loop().schedule(task);
-    default_loop().run();
-    return task.result();
-}
-
 struct process_info {
     kota::task<int64_t, kota::error> wait_task;
     kota::pipe stdout_pipe;
@@ -81,6 +69,14 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
         .std_out = stdout_proxy.output(),
         .std_err = stderr_proxy.output(),
     };
+}
+
+inline kota::task<data::process_result> capture_process_result(process_event proc_event,
+                                                               data::output_mode output_mode) {
+    const bool forward_output = output_mode == data::output_mode::inherit;
+    co_return co_await capture_process_result(std::move(proc_event),
+                                              forward_output ? stdout : nullptr,
+                                              forward_output ? stderr : nullptr);
 }
 
 }  // namespace catter

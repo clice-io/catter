@@ -84,6 +84,14 @@ export type CatterRuntime = {
 };
 
 /**
+ * Controls how catter handles target stdout/stderr in real time.
+ *
+ * - `"inherit"`: capture output and forward it to catter's stdout/stderr.
+ * - `"capture"`: capture output without printing it in real time.
+ */
+export type CatterOutputMode = "inherit" | "capture";
+
+/**
  * Configuration passed to the script before command capture begins.
  */
 export type CatterConfig = {
@@ -120,6 +128,11 @@ export type CatterConfig = {
      * Enables runtime logging.
      */
     log: boolean;
+
+    /**
+     * Controls whether target stdout/stderr is printed by catter while it is captured.
+     */
+    output?: CatterOutputMode;
   };
 
   /**
@@ -203,14 +216,16 @@ export type CommandCaptureResult =
     };
 
 export function service_on_start(
-  cb: (config: CatterConfig) => CatterConfig,
+  cb: (config: CatterConfig) => Promise<CatterConfig>,
 ): void;
-export function service_on_finish(cb: (result: ProcessResult) => void): void;
+export function service_on_finish(
+  cb: (result: ProcessResult) => Promise<void>,
+): void;
 export function service_on_command(
-  cb: (id: number, data: CommandCaptureResult) => Action,
+  cb: (id: number, data: CommandCaptureResult) => Promise<Action>,
 ): void;
 export function service_on_execution(
-  cb: (id: number, result: ProcessResult) => void,
+  cb: (id: number, result: ProcessResult) => Promise<void>,
 ): void;
 // io
 export function stdout_print(content: string): void;
@@ -222,6 +237,50 @@ export function stdout_print_green(content: string): void;
 // os
 export function os_name(): "linux" | "windows" | "macos";
 export function os_arch(): "x86" | "x64" | "arm" | "arm64";
+
+// time
+export function time_unix_ms(): number;
+export function time_unix_us(): number;
+export function time_unix_seconds(): number;
+export function time_monotonic_ms(): number;
+export function time_monotonic_us(): number;
+
+// http
+export type RawHttpResponse = {
+  status: number;
+  ok: boolean;
+  url: string;
+  body: string;
+  rawHeaders: string[];
+};
+
+export function http_client_create(): number;
+export function http_client_close(clientId: number): void;
+
+export function http_client_request(
+  clientId: number,
+  method: string,
+  url: string,
+  headers: string[],
+  body: string,
+  timeoutMs: number,
+  maxRedirects: number,
+  dangerAcceptInvalidCerts: boolean,
+  dangerAcceptInvalidHostnames: boolean,
+  proxyUrl: string,
+): Promise<RawHttpResponse>;
+
+export function http_request(
+  method: string,
+  url: string,
+  headers: string[],
+  body: string,
+  timeoutMs: number,
+  maxRedirects: number,
+  dangerAcceptInvalidCerts: boolean,
+  dangerAcceptInvalidHostnames: boolean,
+  proxyUrl: string,
+): Promise<RawHttpResponse>;
 
 // fs
 export function fs_exists(path: string): boolean;
@@ -246,6 +305,25 @@ export function fs_rename_if_exists(
 ): boolean;
 
 export function fs_list_dir(path: string): string[];
+
+export function fs_async_exists(path: string): Promise<boolean>;
+export function fs_async_is_file(path: string): Promise<boolean>;
+export function fs_async_is_dir(path: string): Promise<boolean>;
+export function fs_async_list_dir(path: string): Promise<string[]>;
+export function fs_async_create_dir_recursively(path: string): Promise<boolean>;
+export function fs_async_create_empty_file_recursively(
+  path: string,
+): Promise<boolean>;
+export function fs_async_remove_recursively(path: string): Promise<void>;
+export function fs_async_rename_if_exists(
+  old_path: string,
+  new_path: string,
+): Promise<boolean>;
+export function fs_async_read_text(path: string): Promise<string>;
+export function fs_async_write_text(
+  path: string,
+  content: string,
+): Promise<void>;
 
 // io read/write raw binary stream
 export function file_open(path: string): number;
