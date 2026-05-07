@@ -1,8 +1,19 @@
 #include "qjs.h"
 
+#include <atomic>
+#include <cstdint>
 #include <utility>
 
 namespace catter::qjs {
+
+namespace {
+
+void* next_runtime_token() noexcept {
+    static std::atomic_uintptr_t next{1};
+    return reinterpret_cast<void*>(next.fetch_add(1, std::memory_order_relaxed));
+}
+
+}  // namespace
 
 Exception::Exception(const std::string& details) : cpptrace::runtime_error(std::string(details)) {}
 
@@ -604,7 +615,9 @@ Context::Context(JSContext* js_ctx) noexcept : raw(std::make_unique<Raw>(js_ctx)
     this->set_opaque();
 }
 
-Runtime::Raw::Raw(JSRuntime* rt) noexcept : rt(rt) {}
+Runtime::Raw::Raw(JSRuntime* rt) noexcept : rt(rt) {
+    JS_SetRuntimeOpaque(rt, next_runtime_token());
+}
 
 void Runtime::Raw::JSRuntimeDeleter::operator() (JSRuntime* rt) const noexcept {
     JS_FreeRuntime(rt);

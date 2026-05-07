@@ -281,7 +281,10 @@ public:
                 return it;
             }
 
-            if(JS_IsRegisteredClass(rt, it->second)) {
+            // JSRuntime addresses can be reused after destruction, so the pointer alone is
+            // not enough to prove a cached class id belongs to the current runtime.
+            if(it->second.runtime_token == JS_GetRuntimeOpaque(rt) &&
+               JS_IsRegisteredClass(rt, it->second.id)) {
                 return it;
             }
 
@@ -295,7 +298,7 @@ public:
 
         static JSClassID get(JSRuntime* rt) noexcept {
             if(auto it = find(rt); it != end()) {
-                return it->second;
+                return it->second.id;
             } else {
                 return JS_INVALID_CLASS_ID;
             }
@@ -305,12 +308,20 @@ public:
             JSClassID id = 0;
             JS_NewClassID(rt, &id);
             JS_NewClass(rt, id, def);
-            class_ids[rt] = id;
+            class_ids[rt] = Entry{
+                .id = id,
+                .runtime_token = JS_GetRuntimeOpaque(rt),
+            };
             return id;
         }
 
     private:
-        inline static std::unordered_map<JSRuntime*, JSClassID> class_ids{};
+        struct Entry {
+            JSClassID id = JS_INVALID_CLASS_ID;
+            void* runtime_token = nullptr;
+        };
+
+        inline static std::unordered_map<JSRuntime*, Entry> class_ids{};
     };
 
     static Object empty_one(JSContext* ctx) noexcept;
@@ -448,7 +459,7 @@ public:
         auto rt = JS_GetRuntime(ctx);
         JSClassID id = 0;
         if(auto it = Register::find(rt); it != Register::end()) {
-            id = it->second;
+            id = it->second.id;
         } else {
             auto class_name =
                 std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
@@ -654,7 +665,7 @@ public:
         auto rt = JS_GetRuntime(ctx);
         JSClassID id = 0;
         if(auto it = Register::find(rt); it != Register::end()) {
-            id = it->second;
+            id = it->second.id;
         } else {
             auto class_name =
                 std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
