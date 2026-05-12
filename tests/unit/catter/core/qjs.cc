@@ -682,57 +682,74 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
             js::JsLoop js_loop;
-            js::JsLoopScope js_loop_scope(js_loop);
+            auto bridge = js::promise_task_bridge(js_loop);
 
             auto& loop = kota::event_loop::current();
             loop.schedule(js_loop.run(runtime, loop));
 
-            auto global = ctx.global_this();
-            using AsyncGreet = qjs::Function<qjs::Promise(std::string)>;
-            using AsyncAddOrFail = qjs::Function<qjs::Promise(int64_t)>;
+            std::exception_ptr error;
+            try {
+                auto global = ctx.global_this();
+                using AsyncGreet = qjs::Function<qjs::Promise(std::string)>;
+                using AsyncAddOrFail = qjs::Function<qjs::Promise(int64_t)>;
 
-            global.set_property(
-                "asyncGreet",
-                AsyncGreet::from(ctx.js_context(), [ctx = ctx.js_context()](std::string name) {
-                    return js::task_to_promise(ctx, async_greet(std::move(name)));
-                }));
-            global.set_property(
-                "asyncAddOrFail",
-                AsyncAddOrFail::from(ctx.js_context(), [ctx = ctx.js_context()](int64_t value) {
-                    return js::task_to_promise(ctx, async_add_or_fail(value));
-                }));
+                global.set_property(
+                    "asyncGreet",
+                    AsyncGreet::from(
+                        ctx.js_context(),
+                        [ctx = ctx.js_context(), bridge](std::string name) {
+                            return qjs::task_to_promise(ctx, bridge, async_greet(std::move(name)));
+                        }));
+                global.set_property(
+                    "asyncAddOrFail",
+                    AsyncAddOrFail::from(
+                        ctx.js_context(),
+                        [ctx = ctx.js_context(), bridge](int64_t value) {
+                            return qjs::task_to_promise(ctx, bridge, async_add_or_fail(value));
+                        }));
 
-            auto bridged = co_await js::promise_to_task<std::string>(
-                js::task_to_promise(ctx.js_context(), async_greet("bridge")));
-            if(!bridged) {
-                throw std::move(bridged.error());
+                auto bridged = co_await qjs::promise_to_task<std::string>(
+                    qjs::task_to_promise(ctx.js_context(), bridge, async_greet("bridge")),
+                    bridge);
+                if(!bridged) {
+                    throw std::move(bridged.error());
+                }
+                EXPECT_TRUE(bridged.value() == "hello bridge");
+
+                auto eval_result = ctx.eval(R"(
+                        (async () => {
+                            globalThis.asyncGreetResult = await asyncGreet('catter');
+                            globalThis.asyncAddResult = await asyncAddOrFail(41);
+
+                            try {
+                                await asyncAddOrFail(-1);
+                            } catch (error) {
+                                globalThis.asyncErrorResult = String(error);
+                            }
+                        })();
+                    )",
+                                            "async-function-test.js",
+                                            eval_flags);
+                auto result =
+                    co_await qjs::promise_to_task(qjs::Promise::from_value(std::move(eval_result)),
+                                                  bridge);
+                if(!result) {
+                    throw std::move(result.error());
+                }
+
+                EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
+                EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
+                EXPECT_TRUE(
+                    global["asyncErrorResult"].as<std::string>().contains("negative value"));
+            } catch(...) {
+                error = std::current_exception();
             }
-            EXPECT_TRUE(bridged.value() == "hello bridge");
 
-            auto eval_result = ctx.eval(R"(
-                    (async () => {
-                        globalThis.asyncGreetResult = await asyncGreet('catter');
-                        globalThis.asyncAddResult = await asyncAddOrFail(41);
-
-                        try {
-                            await asyncAddOrFail(-1);
-                        } catch (error) {
-                            globalThis.asyncErrorResult = String(error);
-                        }
-                    })();
-                )",
-                                        "async-function-test.js",
-                                        eval_flags);
-            auto result =
-                co_await js::promise_to_task(qjs::Promise::from_value(std::move(eval_result)));
             co_await js_loop.stop();
-            if(!result) {
-                throw std::move(result.error());
-            }
 
-            EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
-            EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
-            EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains("negative value"));
+            if(error) {
+                std::rethrow_exception(error);
+            }
         }();
 
         kota::event_loop loop;

@@ -1,5 +1,6 @@
 #include "app_runner.h"
 
+#include <exception>
 #include <utility>
 
 #include "app_config.h"
@@ -9,27 +10,53 @@
 
 namespace catter::app {
 
+kota::task<> async_run(ScriptRunConfig config) {
+    js::RuntimeScope runtime;
+
+    std::exception_ptr error;
+    try {
+        co_await runtime.start({.pwd = std::move(config.working_directory)});
+        co_await js::run_script(config.script_content, config.script_path);
+    } catch(...) {
+        error = std::current_exception();
+    }
+
+    co_await runtime.stop();
+
+    if(error) {
+        std::rethrow_exception(error);
+    }
+    co_return;
+}
+
 kota::task<> async_run(const core::CatterConfig& config) {
     auto context = core::RunContext(config);
     auto script_config = context.make_script_config();
     auto script_content = load_script_content(script_config.scriptPath);
 
-    co_await async_run(
-        ScriptRunConfig{
-            .script_content = std::move(script_content),
-            .script_path = script_config.scriptPath,
-            .working_directory = context.working_directory(),
-        },
-        [&]() -> kota::task<> {
-            script_config = co_await js::on_start(script_config);
-            context.apply_option_defaults(script_config);
+    js::RuntimeScope runtime;
 
-            if(script_config.execute) {
-                auto process_result = co_await context.driver.execute(script_config);
-                co_await js::on_finish(core::to_js_process_result(std::move(process_result)));
-            }
-            co_return;
-        });
+    std::exception_ptr error;
+    try {
+        co_await runtime.start({.pwd = context.working_directory()});
+        co_await js::run_script(script_content, script_config.scriptPath);
+
+        script_config = co_await js::on_start(script_config);
+        context.apply_option_defaults(script_config);
+
+        if(script_config.execute) {
+            auto process_result = co_await context.driver.execute(script_config);
+            co_await js::on_finish(core::to_js_process_result(std::move(process_result)));
+        }
+    } catch(...) {
+        error = std::current_exception();
+    }
+
+    co_await runtime.stop();
+
+    if(error) {
+        std::rethrow_exception(error);
+    }
     co_return;
 }
 

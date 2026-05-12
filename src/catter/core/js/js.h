@@ -1,8 +1,7 @@
 #pragma once
-#include <cstddef>
+
 #include <expected>
 #include <filesystem>
-#include <string>
 #include <string_view>
 #include <kota/async/runtime/task.h>
 
@@ -17,9 +16,26 @@ struct RuntimeConfig {
 
 const RuntimeConfig& get_global_runtime_config();
 
-qjs::Object& js_mod_object();
+qjs::PromiseTaskBridge promise_task_bridge() noexcept;
 
-bool drain_jobs_with_budget(qjs::Runtime& runtime, std::size_t max_jobs = 64);
+class RuntimeScope {
+public:
+    RuntimeScope() = default;
+
+    RuntimeScope(const RuntimeScope&) = delete;
+    RuntimeScope& operator= (const RuntimeScope&) = delete;
+
+    RuntimeScope(RuntimeScope&&) = delete;
+    RuntimeScope& operator= (RuntimeScope&&) = delete;
+
+    kota::task<> start(RuntimeConfig config);
+    kota::task<> stop();
+
+private:
+    bool started = false;
+};
+
+kota::task<> run_script(std::string_view content, std::string_view filepath);
 
 void set_on_start(qjs::Object cb);
 void set_on_finish(qjs::Object cb);
@@ -31,13 +47,4 @@ kota::task<> on_finish(ProcessResult result);
 kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr> data);
 kota::task<> on_execution(uint32_t id, ProcessResult result);
 
-namespace detail {
-
-qjs::Runtime& runtime();
-void reset_runtime(const RuntimeConfig& config);
-void register_catter_module(const qjs::Context& ctx);
-std::string_view js_lib_source();
-
-}  // namespace detail
-
-};  // namespace catter::js
+}  // namespace catter::js

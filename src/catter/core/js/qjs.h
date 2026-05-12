@@ -1,8 +1,10 @@
 #pragma once
+#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <expected>
 #include <format>
 #include <memory>
 #include <optional>
@@ -17,6 +19,7 @@
 #include <cpptrace/cpptrace.hpp>
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
+#include <kota/async/async.h>
 #include <kota/meta/name.h>
 
 // namespace meta
@@ -1016,6 +1019,176 @@ private:
 };
 
 std::string format_rejection(Parameters& args);
+
+struct PromiseTaskBridge {
+    void* data = nullptr;
+    void (*schedule_task_fn)(void*, kota::task<>&&) = nullptr;
+    bool (*wake_jobs_fn)(void*) noexcept = nullptr;
+
+    void schedule_task(kota::task<>&& task) const {
+        assert(schedule_task_fn && "QuickJS async bridge is not installed.");
+        schedule_task_fn(data, std::move(task));
+    }
+
+    bool wake_jobs() const noexcept {
+        assert(wake_jobs_fn && "QuickJS async bridge is not installed.");
+        return wake_jobs_fn(data);
+    }
+};
+
+template <typename T>
+concept async_task = kota::is_specialization_of<kota::task, std::remove_cvref_t<T>>;
+
+namespace detail {
+
+template <typename E>
+std::string task_error_message(E&& error) {
+    using U = std::remove_cvref_t<E>;
+    if constexpr(std::is_same_v<U, std::string>) {
+        return std::forward<E>(error);
+    } else if constexpr(std::constructible_from<std::string, E&&>) {
+        return std::string(std::forward<E>(error));
+    } else if constexpr(requires(const U& value) { std::string{value.message()}; }) {
+        return std::string{error.message()};
+    } else if constexpr(requires(const U& value) { value.what(); }) {
+        return std::string{error.what()};
+    } else {
+        return "Async task failed.";
+    }
+}
+
+template <async_task Task>
+kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBridge bridge) {
+    using TaskType = std::remove_cvref_t<Task>;
+    using R = typename TaskType::value_type;
+    using E = typename TaskType::error_type;
+    using C = typename TaskType::cancel_type;
+    static_assert(std::is_void_v<C>, "task_to_promise does not support cancellation tasks yet");
+
+    auto resolve = [&cap, bridge]<typename... Args>(Args&&... args) {
+        cap.resolve(std::forward<Args>(args)...);
+        bridge.wake_jobs();
+    };
+    auto reject = [&cap, bridge](std::string message) {
+        cap.reject(std::move(message));
+        bridge.wake_jobs();
+    };
+
+    try {
+        if constexpr(std::is_void_v<E>) {
+            if constexpr(std::is_void_v<R>) {
+                co_await std::move(task);
+                resolve();
+            } else {
+                auto value = co_await std::move(task);
+                resolve(std::move(value));
+            }
+        } else {
+            auto result = co_await std::move(task);
+            if(!result) {
+                reject(task_error_message(std::move(result).error()));
+                co_return;
+            }
+
+            if constexpr(std::is_void_v<R>) {
+                resolve();
+            } else {
+                resolve(std::move(result).value());
+            }
+        }
+    } catch(const Exception& ex) {
+        reject(ex.what());
+    } catch(const std::exception& ex) {
+        reject(ex.what());
+    } catch(...) {
+        reject("Unknown exception in async C++ function");
+    }
+    co_return;
+}
+
+}  // namespace detail
+
+template <typename T = void>
+kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, PromiseTaskBridge bridge) {
+    struct WaitState {
+        kota::event done;
+        std::optional<std::expected<T, Exception>> result;
+    };
+
+    auto state = std::make_shared<WaitState>();
+    auto js_ctx = promise.context();
+    auto* loop = &kota::event_loop::current();
+
+    auto signal_done = [](std::shared_ptr<WaitState> state) -> kota::task<> {
+        state->done.set();
+        co_return;
+    };
+    auto notify = [state, loop, signal_done] {
+        loop->schedule(signal_done(state));
+    };
+
+    auto fulfill = Promise::ThenCallback::from(js_ctx, [state, notify](Parameters args) {
+        if(state->result) {
+            return;
+        }
+        try {
+            if constexpr(std::is_void_v<T>) {
+                state->result.emplace();
+            } else {
+                if(args.empty()) {
+                    state->result.emplace(
+                        std::unexpected(Exception("Promise fulfilled without a value.")));
+                } else {
+                    state->result.emplace(args[0].as<T>());
+                }
+            }
+        } catch(const Exception& ex) {
+            state->result.emplace(std::unexpected(ex));
+        } catch(const std::exception& ex) {
+            state->result.emplace(std::unexpected(Exception(ex.what())));
+        }
+        notify();
+    });
+    auto reject = Promise::ThenCallback::from(js_ctx, [state, notify](Parameters args) {
+        if(state->result) {
+            return;
+        }
+        state->result.emplace(std::unexpected(Exception(format_rejection(args))));
+        notify();
+    });
+
+    promise.then(fulfill, reject);
+    [[maybe_unused]] const bool woke = bridge.wake_jobs();
+    assert(woke && "QuickJS async loop is not running.");
+
+    co_await state->done.wait();
+
+    if(!state->result) {
+        throw Exception("Promise wait was resumed before the promise settled.");
+    }
+    co_return std::move(*state->result);
+}
+
+template <async_task Task>
+Promise task_to_promise(JSContext* ctx, PromiseTaskBridge bridge, Task task) {
+    auto cap = Promise::create(ctx);
+    auto promise = cap.promise;
+
+    try {
+        bridge.schedule_task(detail::settle_promise_task(cap, std::move(task), bridge));
+    } catch(const Exception& ex) {
+        cap.reject(ex.what());
+        bridge.wake_jobs();
+    } catch(const std::exception& ex) {
+        cap.reject(ex.what());
+        bridge.wake_jobs();
+    } catch(...) {
+        cap.reject("Unknown exception in async C++ function");
+        bridge.wake_jobs();
+    }
+
+    return promise;
+}
 
 namespace detail {
 template <>

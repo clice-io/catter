@@ -391,84 +391,96 @@ std::vector<kota::zest::TestCase> auto_js_test_cases() {
     return cases;
 }
 
+kota::task<> run_service_js_callbacks(fs::path js_path) {
+    js::RuntimeScope runtime_scope;
+
+    std::exception_ptr error;
+    try {
+        co_await runtime_scope.start({.pwd = js_path});
+        co_await js::run_script(load_js_file_by_name(js_path, "service.js"),
+                                (js_path / "service.js").string());
+
+        js::CatterRuntime runtime{
+            .supportActions = {js::ActionType::skip,
+                               js::ActionType::drop,
+                               js::ActionType::abort,
+                               js::ActionType::modify},
+            .type = js::CatterRuntime::Type::inject,
+            .supportParentId = true,
+        };
+
+        js::CatterConfig config{
+            .scriptPath = "script.ts",
+            .scriptArgs = {"--input",   "compile_commands.json"                         },
+            .buildSystemCommand = {"xmake",     "build"                                         },
+            .runtime = runtime,
+            .options = {.log = true, .output = js::CatterOptions::OutputMode::inherit},
+            .execute = true,
+        };
+
+        auto updated_config = co_await js::on_start(config);
+        EXPECT_TRUE(updated_config.scriptPath == config.scriptPath);
+        EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
+        EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
+        EXPECT_TRUE(updated_config.options.log == false);
+        EXPECT_TRUE(updated_config.options.output == js::CatterOptions::OutputMode::capture);
+        EXPECT_TRUE(updated_config.execute == true);
+
+        js::CommandData data{
+            .cwd = "/tmp",
+            .exe = "clang++",
+            .argv = {"clang++", "main.cc", "-c"},
+            .env = {"CC=clang++", "CATTER_LOG=1"},
+            .runtime = runtime,
+            .parent = 41,
+        };
+
+        auto action = co_await js::on_command(7, data);
+        action.visit([&]<auto E>(const Tag<E>& tag) {
+            if constexpr(E == js::ActionType::modify) {
+                EXPECT_TRUE(tag.data.argv.size() == 4);
+                EXPECT_TRUE(tag.data.argv.back() == "--from-service");
+                EXPECT_TRUE(tag.data.parent.has_value());
+                EXPECT_TRUE(tag.data.parent.value() == 41);
+            } else {
+                EXPECT_TRUE(E == js::ActionType::modify);
+            }
+        });
+
+        js::CatterErr err{.msg = "spawn failed"};
+        auto error_action = co_await js::on_command(7, std::unexpected(err));
+        EXPECT_TRUE(error_action.type() == js::ActionType::skip);
+
+        js::ProcessResult execution_result{
+            .code = 0,
+            .stdOut = "hello from stdout",
+            .stdErr = "hello from stderr",
+        };
+        co_await js::on_execution(7, execution_result);
+
+        js::ProcessResult finish_result{
+            .code = 0,
+        };
+        co_await js::on_finish(finish_result);
+    } catch(...) {
+        error = std::current_exception();
+    }
+
+    co_await runtime_scope.stop();
+
+    if(error) {
+        std::rethrow_exception(error);
+    }
+    co_return;
+}
+
 }  // namespace
 
 TEST_SUITE(js_tests) {
 TEST_CASE(run_service_js_file_and_callbacks) {
     auto f = [&]() {
         auto js_path = fs::path(config::data::js_test_path.data());
-        auto task = app::async_run(
-            app::ScriptRunConfig{
-                .script_content = load_js_file_by_name(js_path, "service.js"),
-                .script_path = (js_path / "service.js").string(),
-                .working_directory = js_path,
-            },
-            []() -> kota::task<> {
-                js::CatterRuntime runtime{
-                    .supportActions = {js::ActionType::skip,
-                                       js::ActionType::drop,
-                                       js::ActionType::abort,
-                                       js::ActionType::modify},
-                    .type = js::CatterRuntime::Type::inject,
-                    .supportParentId = true,
-                };
-
-                js::CatterConfig config{
-                    .scriptPath = "script.ts",
-                    .scriptArgs = {"--input",   "compile_commands.json"                         },
-                    .buildSystemCommand = {"xmake",     "build"                                         },
-                    .runtime = runtime,
-                    .options = {.log = true, .output = js::CatterOptions::OutputMode::inherit},
-                    .execute = true,
-                };
-
-                auto updated_config = co_await js::on_start(config);
-                EXPECT_TRUE(updated_config.scriptPath == config.scriptPath);
-                EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
-                EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
-                EXPECT_TRUE(updated_config.options.log == false);
-                EXPECT_TRUE(updated_config.options.output ==
-                            js::CatterOptions::OutputMode::capture);
-                EXPECT_TRUE(updated_config.execute == true);
-
-                js::CommandData data{
-                    .cwd = "/tmp",
-                    .exe = "clang++",
-                    .argv = {"clang++", "main.cc", "-c"},
-                    .env = {"CC=clang++", "CATTER_LOG=1"},
-                    .runtime = runtime,
-                    .parent = 41,
-                };
-
-                auto action = co_await js::on_command(7, data);
-                action.visit([&]<auto E>(const Tag<E>& tag) {
-                    if constexpr(E == js::ActionType::modify) {
-                        EXPECT_TRUE(tag.data.argv.size() == 4);
-                        EXPECT_TRUE(tag.data.argv.back() == "--from-service");
-                        EXPECT_TRUE(tag.data.parent.has_value());
-                        EXPECT_TRUE(tag.data.parent.value() == 41);
-                    } else {
-                        EXPECT_TRUE(E == js::ActionType::modify);
-                    }
-                });
-
-                js::CatterErr err{.msg = "spawn failed"};
-                auto error_action = co_await js::on_command(7, std::unexpected(err));
-                EXPECT_TRUE(error_action.type() == js::ActionType::skip);
-
-                js::ProcessResult execution_result{
-                    .code = 0,
-                    .stdOut = "hello from stdout",
-                    .stdErr = "hello from stderr",
-                };
-                co_await js::on_execution(7, execution_result);
-
-                js::ProcessResult finish_result{
-                    .code = 0,
-                };
-                co_await js::on_finish(finish_result);
-                co_return;
-            });
+        auto task = run_service_js_callbacks(std::move(js_path));
 
         kota::event_loop loop;
         loop.schedule(task);

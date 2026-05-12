@@ -8,7 +8,7 @@
 #include <vector>
 #include <kota/support/function_traits.h>
 
-#include "async.h"
+#include "js.h"
 #include "util/log.h"
 
 namespace catter::capi::util {
@@ -124,11 +124,10 @@ struct async_function_adapter {
 template <typename Task, typename... Args>
 struct async_function_adapter<Task(Args...)> {
     using TaskType = std::remove_cvref_t<Task>;
-    using Traits = js::detail::task_traits<TaskType>;
-    static_assert(Traits::is_task, "async_function return type must be kota::task<...>");
+    static_assert(qjs::async_task<TaskType>, "async_function return type must be kota::task<...>");
 
-    using R = typename Traits::value_type;
-    using C = typename Traits::cancel_type;
+    using R = typename TaskType::value_type;
+    using C = typename TaskType::cancel_type;
     using function_type = qjs::Function<qjs::Promise(Args...)>;
 
     static_assert(qjs::detail::type_list<bool,
@@ -150,14 +149,14 @@ struct async_function_adapter<Task(Args...)> {
         if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
             auto wrapper = [ctx, &invocable](Args... args) -> qjs::Promise {
                 auto task = invocable(std::move(args)...);
-                return js::task_to_promise(ctx, std::move(task));
+                return qjs::task_to_promise(ctx, js::promise_task_bridge(), std::move(task));
             };
             return function_type::from(ctx, std::move(wrapper));
         } else {
             auto wrapper = [ctx, fn = std::forward<Invocable>(invocable)](
                                Args... args) mutable -> qjs::Promise {
                 auto task = fn(std::move(args)...);
-                return js::task_to_promise(ctx, std::move(task));
+                return qjs::task_to_promise(ctx, js::promise_task_bridge(), std::move(task));
             };
             return function_type::from(ctx, std::move(wrapper));
         }
