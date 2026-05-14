@@ -1064,22 +1064,6 @@ concept async_task = kota::is_specialization_of<kota::task, std::remove_cvref_t<
 
 namespace detail {
 
-template <typename E>
-std::string task_error_message(E&& error) {
-    using U = std::remove_cvref_t<E>;
-    if constexpr(std::is_same_v<U, std::string>) {
-        return std::forward<E>(error);
-    } else if constexpr(std::constructible_from<std::string, E&&>) {
-        return std::string(std::forward<E>(error));
-    } else if constexpr(requires(const U& value) { std::string{value.message()}; }) {
-        return std::string{error.message()};
-    } else if constexpr(requires(const U& value) { value.what(); }) {
-        return std::string{error.what()};
-    } else {
-        return "Async task failed.";
-    }
-}
-
 template <async_task Task>
 kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBridge bridge) {
     using TaskType = std::remove_cvref_t<Task>;
@@ -1092,8 +1076,8 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
         cap.executor.resolve(std::forward<Args>(args)...);
         bridge.wake_jobs();
     };
-    auto reject = [&cap, bridge](std::string message) {
-        cap.executor.reject(std::move(message));
+    auto reject = [&cap, bridge](Error err) {
+        cap.executor.reject(err);
         bridge.wake_jobs();
     };
 
@@ -1109,7 +1093,8 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
         } else {
             auto result = co_await std::move(task);
             if(!result) {
-                reject(task_error_message(std::move(result).error()));
+                // TODO
+                reject(Error::internal_error(cap.promise.context(), "Async task failed."));
                 co_return;
             }
 
