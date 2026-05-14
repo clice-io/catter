@@ -203,10 +203,6 @@ Object Object::empty_one(JSContext* ctx) noexcept {
     return Object{ctx, JS_NewObject(ctx)};
 }
 
-Error::Error(JSContext* ctx, const JSValue& val) : Object(ctx, val) {}
-
-Error::Error(JSContext* ctx, JSValue&& val) : Object(ctx, std::move(val)) {}
-
 std::string Error::message() const {
     return this->get_property("message").as<std::string>();
 }
@@ -239,21 +235,6 @@ std::vector<JSValueConst> make_argv_view(const Parameters& params) {
 
 }  // namespace detail
 
-PromiseCapability Promise::create(JSContext* ctx) {
-    JSValue funcs[2]{};
-    JSValue promise = JS_NewPromiseCapability(ctx, funcs);
-
-    if(JS_IsException(promise)) {
-        throw JSException::dump(ctx);
-    }
-
-    return PromiseCapability{
-        Promise{ctx, std::move(promise) },
-        Value{ctx, std::move(funcs[0])},
-        Value{ctx, std::move(funcs[1])}
-    };
-}
-
 Promise Promise::from_value(Value&& value) {
     if(!JS_IsPromise(value.value())) {
         throw TypeException("Value is not a promise");
@@ -277,20 +258,6 @@ bool Promise::is_rejected() const {
 
 Value Promise::result() const {
     return Value{context(), JS_PromiseResult(context(), value())};
-}
-
-PromiseCapability::PromiseCapability(Promise promise,
-                                     Value resolve_func,
-                                     Value reject_func) noexcept :
-    promise(std::move(promise)), resolve_func(std::move(resolve_func)),
-    reject_func(std::move(reject_func)) {}
-
-const Value& PromiseCapability::resolve_function() const noexcept {
-    return resolve_func;
-}
-
-const Value& PromiseCapability::reject_function() const noexcept {
-    return reject_func;
 }
 
 std::string format_rejection(Parameters& args) {
@@ -417,14 +384,6 @@ std::optional<Error> value_trans<Error>::to(const Value& val) noexcept {
     } catch(const TypeException&) {
         return std::nullopt;
     }
-}
-
-Value value_trans<Promise>::from(JSContext*, const Promise& value) noexcept {
-    return from(value);
-}
-
-Value value_trans<Promise>::from(JSContext*, Promise&& value) noexcept {
-    return from(std::move(value));
 }
 
 Value value_trans<Promise>::from(const Promise& value) noexcept {

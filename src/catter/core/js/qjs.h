@@ -100,7 +100,14 @@ public:
 
     template <typename T>
     static Value from(JSContext* ctx, T&& value) noexcept {
-        return detail::value_trans<std::remove_cvref_t<T>>::from(ctx, std::forward<T>(value));
+        if constexpr(requires() {
+                         detail::value_trans<std::remove_cvref_t<T>>::from(ctx,
+                                                                           std::forward<T>(value));
+                     }) {
+            return detail::value_trans<std::remove_cvref_t<T>>::from(ctx, std::forward<T>(value));
+        } else {
+            return from(std::forward<T>(value));
+        }
     }
 
     template <typename T>
@@ -341,15 +348,17 @@ public:
     using Object::operator bool;
     using Object::release;
 
-    Error(JSContext* ctx, const JSValue& val);
-
-    Error(JSContext* ctx, JSValue&& val);
-
     Error(const Error&) = default;
     Error(Error&& other) = default;
     Error& operator= (const Error&) = default;
     Error& operator= (Error&& other) = default;
     ~Error() = default;
+
+    template <typename... Args>
+    static Error internal_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
+        auto error_message = std::format(fmt, std::forward<Args>(args)...);
+        return Error{ctx, JS_ThrowInternalError(ctx, error_message.c_str())};
+    }
 
     std::string message() const;
 
@@ -949,7 +958,6 @@ public:
     using Then = Function<Promise(Parameters)>;
     using Catch = Function<Promise(Parameters)>;
 
-    static PromiseCapability create(JSContext* ctx);
     static Promise from_value(Value&& value);
 
     JSPromiseStateEnum state() const {
@@ -991,35 +999,46 @@ private:
 };
 
 struct PromiseCapability {
-    PromiseCapability(Promise promise, Value resolve_func, Value reject_func) noexcept;
+    struct Executor {
+        void resolve() {
+            this->raw_resolve({});
+        }
+
+        template <typename T>
+        void resolve(T&& value) {
+            this->raw_resolve({Value::from(this->raw_resolve.context(), std::forward<T>(value))});
+        }
+
+        void reject() {
+            this->raw_reject({});
+        }
+
+        template <typename T>
+        void reject(T&& reason) {
+            this->raw_reject({Value::from(this->raw_reject.context(), std::forward<T>(reason))});
+        }
+
+        Function<void(Parameters)> raw_resolve;
+        Function<void(Parameters)> raw_reject;
+    };
+
+    static PromiseCapability create(JSContext* ctx) {
+        JSValue funcs[2]{};
+        JSValue promise = JS_NewPromiseCapability(ctx, funcs);
+
+        if(JS_IsException(promise)) {
+            throw JSException::dump(ctx);
+        }
+
+        return PromiseCapability{
+            Promise{ctx,                                       std::move(promise)},
+            Executor{.raw_resolve = {ctx, std::move(funcs[0])},
+                    .raw_reject = {ctx, std::move(funcs[1])}                     }
+        };
+    }
 
     Promise promise;
-
-    template <typename... Args>
-    void resolve(Args&&... args) const {
-        static_assert(sizeof...(Args) <= 1, "Promise resolve accepts at most one argument");
-        this->call(resolve_func, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    void reject(Args&&... args) const {
-        static_assert(sizeof...(Args) <= 1, "Promise reject accepts at most one argument");
-        this->call(reject_func, std::forward<Args>(args)...);
-    }
-
-    const Value& resolve_function() const noexcept;
-
-    const Value& reject_function() const noexcept;
-
-private:
-    template <typename... Args>
-    static void call(const Value& function, Args&&... args) {
-        auto fn = function.as<qjs::Function<void(qjs::Parameters)>>();
-        fn(detail::make_parameters(function.context(), std::forward<Args>(args)...));
-    }
-
-    Value resolve_func;
-    Value reject_func;
+    Executor executor;
 };
 
 std::string format_rejection(Parameters& args);
@@ -1070,11 +1089,11 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
     static_assert(std::is_void_v<C>, "task_to_promise does not support cancellation tasks yet");
 
     auto resolve = [&cap, bridge]<typename... Args>(Args&&... args) {
-        cap.resolve(std::forward<Args>(args)...);
+        cap.executor.resolve(std::forward<Args>(args)...);
         bridge.wake_jobs();
     };
     auto reject = [&cap, bridge](std::string message) {
-        cap.reject(std::move(message));
+        cap.executor.reject(std::move(message));
         bridge.wake_jobs();
     };
 
@@ -1100,12 +1119,13 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
                 resolve(std::move(result).value());
             }
         }
-    } catch(const Exception& ex) {
-        reject(ex.what());
     } catch(const std::exception& ex) {
-        reject(ex.what());
+        reject(Error::internal_error(cap.promise.context(),
+                                     "Exception in async C++ function: {}",
+                                     ex.what()));
     } catch(...) {
-        reject("Unknown exception in async C++ function");
+        reject(Error::internal_error(cap.promise.context(),
+                                     "Unknown exception in async C++ function"));
     }
     co_return;
 }
@@ -1178,19 +1198,17 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
 
 template <async_task Task>
 Promise task_to_promise(JSContext* ctx, PromiseTaskBridge bridge, Task task) {
-    auto cap = Promise::create(ctx);
+    auto cap = PromiseCapability::create(ctx);
     auto promise = cap.promise;
 
     try {
         bridge.schedule_task(detail::settle_promise_task(cap, std::move(task), bridge));
-    } catch(const Exception& ex) {
-        cap.reject(ex.what());
-        bridge.wake_jobs();
     } catch(const std::exception& ex) {
-        cap.reject(ex.what());
+        cap.executor.reject(
+            Error::internal_error(ctx, "Exception in async C++ function: {}", ex.what()));
         bridge.wake_jobs();
     } catch(...) {
-        cap.reject("Unknown exception in async C++ function");
+        cap.executor.reject(Error::internal_error(ctx, "Unknown exception in async C++ function"));
         bridge.wake_jobs();
     }
 
@@ -1300,10 +1318,6 @@ struct value_trans<Error> {
 
 template <>
 struct value_trans<Promise> {
-    static Value from(JSContext*, const Promise& value) noexcept;
-
-    static Value from(JSContext*, Promise&& value) noexcept;
-
     static Value from(const Promise& value) noexcept;
 
     static Value from(Promise&& value) noexcept;

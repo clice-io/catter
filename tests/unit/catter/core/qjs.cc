@@ -614,7 +614,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         auto runtime = qjs::Runtime::create();
         auto& ctx = runtime.context();
 
-        auto fulfilled_cap = qjs::Promise::create(ctx.js_context());
+        auto fulfilled_cap = qjs::PromiseCapability::create(ctx.js_context());
         auto fulfilled_promise_value = qjs::Value::from(fulfilled_cap.promise);
         EXPECT_TRUE(fulfilled_promise_value.as<qjs::Promise>().is_pending());
 
@@ -628,14 +628,14 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
             });
         auto fulfilled_next = fulfilled_cap.promise.then(on_fulfilled);
 
-        fulfilled_cap.resolve("resolved");
+        fulfilled_cap.executor.resolve(std::string{"resolved"});
         drain_jobs(runtime.js_runtime());
 
         EXPECT_TRUE(fulfilled_cap.promise.is_fulfilled());
         EXPECT_TRUE(fulfilled_next.is_fulfilled());
         EXPECT_TRUE(fulfilled_value == "resolved");
 
-        auto rejected_cap = qjs::Promise::create(ctx.js_context());
+        auto rejected_cap = qjs::PromiseCapability::create(ctx.js_context());
         std::string rejected_reason;
         auto unexpected_fulfilled = qjs::Function<void(qjs::Parameters)>::from(
             ctx.js_context(),
@@ -648,14 +648,14 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
                                                           });
         auto rejected_next = rejected_cap.promise.then(unexpected_fulfilled, on_rejected);
 
-        rejected_cap.reject("rejected");
+        rejected_cap.executor.reject(std::string{"rejected"});
         drain_jobs(runtime.js_runtime());
 
         EXPECT_TRUE(rejected_cap.promise.is_rejected());
         EXPECT_TRUE(rejected_next.is_fulfilled());
         EXPECT_TRUE(rejected_reason == "rejected");
 
-        auto caught_cap = qjs::Promise::create(ctx.js_context());
+        auto caught_cap = qjs::PromiseCapability::create(ctx.js_context());
         std::string caught_reason;
         auto on_caught =
             qjs::Function<std::string(std::string)>::from(ctx.js_context(),
@@ -665,7 +665,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
                                                           });
         auto caught_next = caught_cap.promise.when_err(on_caught);
 
-        caught_cap.reject("catch-path");
+        caught_cap.executor.reject(std::string{"catch-path"});
         drain_jobs(runtime.js_runtime());
 
         EXPECT_TRUE(caught_cap.promise.is_rejected());
