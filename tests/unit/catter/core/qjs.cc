@@ -637,7 +637,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
 
         auto rejected_cap = qjs::Promise::create(ctx.js_context());
         std::string rejected_reason;
-        auto unexpected_fulfilled = qjs::Promise::ThenCallback::from(
+        auto unexpected_fulfilled = qjs::Function<void(qjs::Parameters)>::from(
             ctx.js_context(),
             []([[maybe_unused]] qjs::Parameters args) { throw qjs::Exception("unexpected"); });
         auto on_rejected =

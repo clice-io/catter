@@ -70,18 +70,13 @@ kota::task<> run_loop_task(kota::task<> loop_task) {
 }
 
 kota::task<> eval_module(std::string_view input, const char* filename) {
-    constexpr int flags = JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT;
+    constexpr int flags = JS_EVAL_FLAG_STRICT;
 
     auto& ctx = state.runtime.context();
-    auto eval_result = ctx.eval(input, filename, flags);
-
-    if(JS_IsPromise(eval_result.value())) {
-        auto result =
-            co_await qjs::promise_to_task(qjs::Promise::from_value(std::move(eval_result)),
-                                          promise_task_bridge());
-        if(!result) {
-            throw std::move(result.error());
-        }
+    auto result = co_await qjs::promise_to_task(ctx.eval_module(input, filename, flags),
+                                                promise_task_bridge());
+    if(!result) {
+        throw std::move(result.error());
     }
     co_return;
 }

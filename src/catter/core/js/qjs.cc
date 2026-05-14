@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <utility>
+#include <quickjs.h>
 
 namespace catter::qjs {
 
@@ -72,6 +73,10 @@ Value Value::undefined(JSContext* ctx) noexcept {
 
 Value Value::null(JSContext* ctx) noexcept {
     return Value{ctx, JS_NULL};
+}
+
+bool Value::is_promise() const noexcept {
+    return JS_IsPromise(this->val);
 }
 
 bool Value::is_object() const noexcept {
@@ -259,30 +264,19 @@ Promise Promise::from_value(Value&& value) {
 }
 
 bool Promise::is_pending() const {
-    return JS_PromiseState(context(), value()) == JS_PROMISE_PENDING;
+    return this->state() == JS_PROMISE_PENDING;
 }
 
 bool Promise::is_fulfilled() const {
-    return JS_PromiseState(context(), value()) == JS_PROMISE_FULFILLED;
+    return this->state() == JS_PROMISE_FULFILLED;
 }
 
 bool Promise::is_rejected() const {
-    return JS_PromiseState(context(), value()) == JS_PROMISE_REJECTED;
+    return this->state() == JS_PROMISE_REJECTED;
 }
 
 Value Promise::result() const {
     return Value{context(), JS_PromiseResult(context(), value())};
-}
-
-Promise Promise::then_with_args(const qjs::Parameters& args) const {
-    return this->call_promise_method("then", args);
-}
-
-Promise Promise::call_promise_method(const char* method_name, const qjs::Parameters& args) const {
-    using Method = qjs::Function<qjs::Promise(qjs::Parameters)>;
-    auto method = this->get_property(method_name).as<Method>();
-    auto next = method.invoke(Object{context(), value()}, args);
-    return next;
 }
 
 PromiseCapability::PromiseCapability(Promise promise,
@@ -585,6 +579,18 @@ Value
 
 Value Context::eval(std::string_view input, const char* filename, int eval_flags) const {
     return this->eval(input.data(), input.size(), filename, eval_flags);
+}
+
+Promise Context::eval_module(const char* input,
+                             size_t input_len,
+                             const char* filename,
+                             int eval_flags) const {
+    return this->eval(input, input_len, filename, eval_flags | JS_EVAL_TYPE_MODULE).as<Promise>();
+}
+
+Promise Context::eval_module(std::string_view input, const char* filename, int eval_flags) const {
+    return this->eval(input.data(), input.size(), filename, eval_flags | JS_EVAL_TYPE_MODULE)
+        .as<Promise>();
 }
 
 Object Context::global_this() const noexcept {

@@ -122,6 +122,8 @@ public:
         return detail::value_trans<T>::as(*this);
     }
 
+    bool is_promise() const noexcept;
+
     bool is_object() const noexcept;
 
     bool is_function() const noexcept;
@@ -944,10 +946,15 @@ public:
     using Object::operator bool;
     using Object::release;
 
-    using ThenCallback = Function<void(Parameters)>;
+    using Then = Function<Promise(Parameters)>;
+    using Catch = Function<Promise(Parameters)>;
 
     static PromiseCapability create(JSContext* ctx);
     static Promise from_value(Value&& value);
+
+    JSPromiseStateEnum state() const {
+        return JS_PromiseState(this->context(), this->value());
+    }
 
     bool is_pending() const;
 
@@ -959,31 +966,28 @@ public:
 
     template <typename OnFulfilled>
     Promise then(const qjs::Function<OnFulfilled>& on_fulfilled) const {
-        qjs::Parameters args;
-        args.push_back(Value::from(on_fulfilled));
-        return this->then_with_args(args);
+        return this->then(qjs::Parameters{Value::from(on_fulfilled)});
     }
 
     template <typename OnFulfilled, typename OnRejected>
     Promise then(const qjs::Function<OnFulfilled>& on_fulfilled,
                  const qjs::Function<OnRejected>& on_rejected) const {
-        qjs::Parameters args;
-        args.push_back(Value::from(on_fulfilled));
-        args.push_back(Value::from(on_rejected));
-        return this->then_with_args(args);
+        return this->then(qjs::Parameters{Value::from(on_fulfilled), Value::from(on_rejected)});
     }
 
     template <typename OnRejected>
     Promise when_err(const qjs::Function<OnRejected>& on_rejected) const {
-        qjs::Parameters args;
-        args.push_back(Value::from(on_rejected));
-        return this->call_promise_method("catch", args);
+        return this->when_err(qjs::Parameters{Value::from(on_rejected)});
     }
 
 private:
-    Promise then_with_args(const qjs::Parameters& args) const;
+    Promise then(const qjs::Parameters& args) const {
+        return this->get_property("then").as<Then>().invoke(*this, args);
+    }
 
-    Promise call_promise_method(const char* method_name, const qjs::Parameters& args) const;
+    Promise when_err(const qjs::Parameters& args) const {
+        return this->get_property("catch").as<Catch>().invoke(*this, args);
+    }
 };
 
 struct PromiseCapability {
@@ -1127,7 +1131,9 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
         loop->schedule(signal_done(state));
     };
 
-    auto fulfill = Promise::ThenCallback::from(js_ctx, [state, notify](Parameters args) {
+    using Callback = Function<void(Parameters)>;
+
+    auto fulfill = Callback::from(js_ctx, [state, notify](Parameters args) {
         if(state->result) {
             return;
         }
@@ -1149,7 +1155,8 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
         }
         notify();
     });
-    auto reject = Promise::ThenCallback::from(js_ctx, [state, notify](Parameters args) {
+
+    auto reject = Callback::from(js_ctx, [state, notify](Parameters args) {
         if(state->result) {
             return;
         }
@@ -1545,6 +1552,17 @@ public:
     Value eval(const char* input, size_t input_len, const char* filename, int eval_flags) const;
 
     Value eval(std::string_view input, const char* filename, int eval_flags) const;
+
+    /**
+     * Evaluate a JavaScript module, it will automatically add flag JS_EVAL_TYPE_MODULE to
+     * eval_flags.
+     */
+    Promise eval_module(const char* input,
+                        size_t input_len,
+                        const char* filename,
+                        int eval_flags) const;
+
+    Promise eval_module(std::string_view input, const char* filename, int eval_flags) const;
 
     Object global_this() const noexcept;
 
