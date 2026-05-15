@@ -129,9 +129,11 @@ public:
         return detail::value_trans<T>::as(*this);
     }
 
+    bool is_object() const noexcept;
+
     bool is_promise() const noexcept;
 
-    bool is_object() const noexcept;
+    bool is_error() const noexcept;
 
     bool is_function() const noexcept;
 
@@ -377,35 +379,6 @@ public:
 
 namespace detail {
 
-template <typename... Args>
-Parameters make_parameters(JSContext* ctx, Args&&... args) {
-    auto make_parameter = [ctx]<typename T>(T&& value) -> Value {
-        using ValueType = std::remove_cvref_t<T>;
-        if constexpr(std::is_same_v<ValueType, Value>) {
-            if constexpr(std::is_rvalue_reference_v<T&&>) {
-                auto value_ctx = value.context();
-                return Value{value_ctx, value.release()};
-            } else {
-                return Value{value.context(), value.value()};
-            }
-        } else if constexpr(std::is_same_v<ValueType, Object> || std::is_same_v<ValueType, Error> ||
-                            std::is_same_v<ValueType, Promise>) {
-            return Value::from(std::forward<T>(value));
-        } else if constexpr(std::is_same_v<ValueType, std::string>) {
-            return Value::from(ctx, std::forward<T>(value));
-        } else if constexpr(std::is_constructible_v<std::string_view, T&&>) {
-            return Value::from(ctx, std::string{std::string_view{std::forward<T>(value)}});
-        } else {
-            return Value::from(ctx, std::forward<T>(value));
-        }
-    };
-
-    Parameters params{};
-    params.reserve(sizeof...(Args));
-    (params.push_back(make_parameter(std::forward<Args>(args))), ...);
-    return params;
-}
-
 std::vector<JSValueConst> make_argv_view(const Parameters& params);
 
 }  // namespace detail
@@ -434,7 +407,7 @@ template <typename R, typename... Args>
 class Function<R(Args...)> : protected Object {
 public:
     static_assert(
-        (detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Object>::
+        (detail::type_list<bool, int32_t, uint32_t, int64_t, uint64_t, std::string, Value, Object>::
              contains_v<Args> &&
          ...),
         "Function parameter types must be one of the allowed types");
@@ -545,7 +518,7 @@ public:
     }
 
     R invoke(const Object& this_obj, Args... args) const {
-        auto params = detail::make_parameters(this->context(), std::move(args)...);
+        Parameters params = {Value::from(this->context(), std::forward<Args>(args))...};
         auto argv = detail::make_argv_view(params);
         auto value = qjs::Value{
             this->context(),
@@ -583,13 +556,8 @@ private:
                     fn(transformer(std::in_place_index<Is>)...);
                     return JS_UNDEFINED;
                 } else {
-                    auto res = fn(transformer(std::in_place_index<Is>)...);
-
-                    if constexpr(std::is_same_v<R, Object>) {
-                        return res.release();
-                    } else {
-                        return qjs::Value::from(ctx, res).release();
-                    }
+                    return qjs::Value::from(ctx, fn(transformer(std::in_place_index<Is>)...))
+                        .release();
                 }
             } catch(const qjs::Exception& e) {
                 return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
@@ -978,14 +946,19 @@ public:
 
     Value result() const;
 
-    template <typename OnFulfilled>
-    Promise then(const qjs::Function<OnFulfilled>& on_fulfilled) const {
+    template <typename Ret>
+    using OnFulfilled = Function<Ret(Value value)>;
+
+    template <typename Ret>
+    using OnRejected = Function<Ret(Value reason)>;
+
+    template <typename Ret>
+    Promise then(const OnFulfilled<Ret>& on_fulfilled) const {
         return this->then(qjs::Parameters{Value::from(on_fulfilled)});
     }
 
-    template <typename OnFulfilled, typename OnRejected>
-    Promise then(const qjs::Function<OnFulfilled>& on_fulfilled,
-                 const qjs::Function<OnRejected>& on_rejected) const {
+    template <typename Ret1, typename Ret2>
+    Promise then(const OnFulfilled<Ret1>& on_fulfilled, const OnRejected<Ret2>& on_rejected) const {
         return this->then(qjs::Parameters{Value::from(on_fulfilled), Value::from(on_rejected)});
     }
 
@@ -1046,8 +1019,6 @@ struct PromiseCapability {
     Promise promise;
     Executor executor;
 };
-
-std::string format_rejection(Parameters& args);
 
 struct PromiseTaskBridge {
     void* data = nullptr;
@@ -1121,6 +1092,8 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
     co_return;
 }
 
+std::string format_reject_reason(Value reason);
+
 }  // namespace detail
 
 // TODO
@@ -1145,7 +1118,7 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
 
     using Callback = Function<void(Parameters)>;
 
-    auto fulfill = Callback::from(js_ctx, [state, notify](Parameters args) {
+    auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [state, notify](Value value) {
         if(state->result) {
             return;
         }
@@ -1153,11 +1126,11 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
             if constexpr(std::is_void_v<T>) {
                 state->result.emplace();
             } else {
-                if(args.empty()) {
+                if(value.is_undefined()) {
                     state->result.emplace(
                         std::unexpected(Exception("Promise fulfilled without a value.")));
                 } else {
-                    state->result.emplace(args[0].as<T>());
+                    state->result.emplace(value.as<T>());
                 }
             }
         } catch(const Exception& ex) {
@@ -1168,11 +1141,11 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
         notify();
     });
 
-    auto reject = Callback::from(js_ctx, [state, notify](Parameters args) {
+    auto reject = Promise::OnRejected<void>::from(js_ctx, [state, notify](Value reason) {
         if(state->result) {
             return;
         }
-        state->result.emplace(std::unexpected(Exception(format_rejection(args))));
+        state->result.emplace(std::unexpected(Exception(detail::format_reject_reason(reason))));
         notify();
     });
 
@@ -1284,6 +1257,25 @@ struct value_trans<std::string> {
     static std::string as(const Value& val);
 
     static std::optional<std::string> to(const Value& val) noexcept;
+};
+
+template <>
+struct value_trans<Value> {
+    static Value from(const Value& value) noexcept {
+        return Value{value};
+    }
+
+    static Value from(Value&& value) noexcept {
+        return Value{std::move(value)};
+    }
+
+    static Value as(const Value& val) {
+        return Value{val};
+    }
+
+    static std::optional<Value> to(const Value& val) noexcept {
+        return as(val);
+    }
 };
 
 template <>

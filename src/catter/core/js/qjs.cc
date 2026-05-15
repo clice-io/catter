@@ -75,12 +75,16 @@ Value Value::null(JSContext* ctx) noexcept {
     return Value{ctx, JS_NULL};
 }
 
-bool Value::is_promise() const noexcept {
-    return JS_IsPromise(this->val);
-}
-
 bool Value::is_object() const noexcept {
     return JS_IsObject(this->val);
+}
+
+bool Value::is_error() const noexcept {
+    return JS_IsError(this->val);
+}
+
+bool Value::is_promise() const noexcept {
+    return JS_IsPromise(this->val);
 }
 
 bool Value::is_function() const noexcept {
@@ -233,6 +237,20 @@ std::vector<JSValueConst> make_argv_view(const Parameters& params) {
     return argv;
 }
 
+std::string format_reject_reason(Value reason) {
+    if(reason.is_undefined()) {
+        return "Promise rejected without a reason.";
+    } else if(reason.is_error()) {
+        return reason.as<Error>().format();
+    } else {
+        try {
+            return json::stringify(reason);
+        } catch(const Exception& e) {
+            return e.what();
+        }
+    }
+}
+
 }  // namespace detail
 
 Promise Promise::from_value(Value&& value) {
@@ -258,34 +276,6 @@ bool Promise::is_rejected() const {
 
 Value Promise::result() const {
     return Value{context(), JS_PromiseResult(context(), value())};
-}
-
-std::string format_rejection(Parameters& args) {
-    if(args.empty()) {
-        return "Promise rejected without a reason.\n";
-    }
-
-    auto format_value = [](Value& value) -> std::string {
-        try {
-            return value.as<Error>().format();
-        } catch(const Exception&) {}
-
-        try {
-            return value.as<std::string>();
-        } catch(const Exception&) {}
-
-        try {
-            return json::stringify(value);
-        } catch(const Exception& e) {
-            return e.what();
-        }
-    };
-
-    std::string trace;
-    for(auto& arg: args) {
-        trace += format_value(arg) + "\n";
-    }
-    return trace;
 }
 
 namespace detail {

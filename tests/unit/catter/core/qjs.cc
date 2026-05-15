@@ -623,8 +623,8 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
 
         std::string fulfilled_value;
         auto on_fulfilled =
-            qjs::Function<void(std::string)>::from(ctx.js_context(), [&](std::string value) {
-                fulfilled_value = std::move(value);
+            qjs::Promise::OnFulfilled<void>::from(ctx.js_context(), [&](qjs::Value value) {
+                fulfilled_value = value.as<std::string>();
             });
         auto fulfilled_next = fulfilled_cap.promise.then(on_fulfilled);
 
@@ -637,15 +637,15 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
 
         auto rejected_cap = qjs::PromiseCapability::create(ctx.js_context());
         std::string rejected_reason;
-        auto unexpected_fulfilled = qjs::Function<void(qjs::Parameters)>::from(
-            ctx.js_context(),
-            []([[maybe_unused]] qjs::Parameters args) { throw qjs::Exception("unexpected"); });
+        auto unexpected_fulfilled =
+            qjs::Promise::OnFulfilled<void>::from(ctx.js_context(), [&](qjs::Value value) {
+                throw qjs::Exception("unexpected");
+            });
         auto on_rejected =
-            qjs::Function<std::string(std::string)>::from(ctx.js_context(),
-                                                          [&](std::string reason) {
-                                                              rejected_reason = std::move(reason);
-                                                              return std::string("handled");
-                                                          });
+            qjs::Promise::OnRejected<std::string>::from(ctx.js_context(), [&](qjs::Value reason) {
+                rejected_reason = reason.as<std::string>();
+                return std::string("handled");
+            });
         auto rejected_next = rejected_cap.promise.then(unexpected_fulfilled, on_rejected);
 
         rejected_cap.executor.reject(std::string{"rejected"});
