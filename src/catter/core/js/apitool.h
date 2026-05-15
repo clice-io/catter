@@ -22,21 +22,6 @@ using api_register = void (*)(const catter::qjs::CModule&, const catter::qjs::Co
 
 std::vector<api_register>& api_registers();
 
-template <typename Tuple, typename Ret>
-struct remove_first_param_signature {
-    static_assert(kota::dependent_false<Tuple>, "Function must have at least one parameter");
-};
-
-template <typename First, typename... Args, typename Ret>
-struct remove_first_param_signature<std::tuple<First, Args...>, Ret> {
-    using type = Ret(Args...);
-};
-
-template <typename Fn>
-using without_first_param_t =
-    typename remove_first_param_signature<kota::function_args_t<Fn>,
-                                          kota::function_return_t<Fn>>::type;
-
 template <typename T>
 std::string serialize_value(const T& value) {
     using U = std::remove_cvref_t<T>;
@@ -118,42 +103,51 @@ struct hooked<V, R(JSContext*, Args...)> {
 };
 
 template <auto FnPtr>
-auto to_js_async_function(JSContext* ctx) {
-
+auto to_js_async_function(JSContext* ctx, const char* name) {
     return [&]<typename R, typename... Args>(kota::task<R, std::string> (*)(Args...)) {
-        return qjs::Function<qjs::Promise(Args...)>::from(ctx, [ctx](Args... args) -> qjs::Promise {
+        constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
             return qjs::task_to_promise(ctx, js::promise_task_bridge(), FnPtr(std::move(args)...));
-        });
+        };
+        return qjs::Function<qjs::Promise(Args...)>::template from_raw<wrapped_fn>(ctx, name);
     }(FnPtr);
 }
 
 template <auto FnPtr>
-auto to_js_async_function_with_ctx(JSContext* ctx) {
-
-    return [&]<typename R, typename... Args>(
-               kota::task<R, std::string> (*)(JSContext* ctx, Args...)) {
-        return qjs::Function<qjs::Promise(Args...)>::from(ctx, [ctx](Args... args) -> qjs::Promise {
+auto to_js_async_function_with_ctx(JSContext* ctx, const char* name) {
+    return [&]<typename R, typename... Args>(kota::task<R, std::string> (*)(JSContext*, Args...)) {
+        constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
             return qjs::task_to_promise(ctx,
                                         js::promise_task_bridge(),
                                         FnPtr(ctx, std::move(args)...));
-        });
+        };
+        return qjs::Function<qjs::Promise(Args...)>::template from_raw<wrapped_fn>(ctx, name);
+    }(FnPtr);
+}
+
+template <auto FnPtr>
+auto to_js_function(JSContext* ctx, const char* name) {
+    return [&]<typename R, typename... Args>(R (*)(Args...)) {
+        return qjs::Function<R(Args...)>::template from_raw<hooked<FnPtr>::call>(ctx, name);
+    }(FnPtr);
+}
+
+template <auto FnPtr>
+auto to_js_function_with_ctx(JSContext* ctx, const char* name) {
+    return [&]<typename R, typename... Args>(R (*)(JSContext*, Args...)) {
+        return qjs::Function<R(Args...)>::template from_raw<hooked<FnPtr>::call>(ctx, name);
     }(FnPtr);
 }
 }  // namespace catter::apitool
 
-#define TO_JS_FN(func)                                                                             \
-    catter::qjs::Function<decltype(func)>::from_raw<catter::apitool::hooked<func>::call>(          \
-        ctx.js_context(),                                                                          \
-        #func)
+#define TO_JS_FN(func) catter::apitool::to_js_function<func>(ctx.js_context(), #func)
 
 #define TO_JS_WITHOUT_CTX_FN(func)                                                                 \
-    catter::qjs::Function<catter::apitool::without_first_param_t<decltype(func)>>::from_raw<       \
-        catter::apitool::hooked<func>::call>(ctx.js_context(), #func)
+    catter::apitool::to_js_function_with_ctx<func>(ctx.js_context(), #func)
 
-#define TO_JS_ASYNC_FN(func) catter::apitool::to_js_async_function<func>(ctx.js_context())
+#define TO_JS_ASYNC_FN(func) catter::apitool::to_js_async_function<func>(ctx.js_context(), #func)
 
 #define TO_JS_ASYNC_WITHOUT_CTX_FN(func)                                                           \
-    catter::apitool::to_js_async_function_with_ctx<func>(ctx.js_context())
+    catter::apitool::to_js_async_function_with_ctx<func>(ctx.js_context(), #func)
 
 #define MERGE(x, y) x##y
 // CAPI(function sign)
