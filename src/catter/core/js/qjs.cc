@@ -181,7 +181,7 @@ std::string Atom::to_string() const noexcept {
 Value Object::get_property(const std::string& prop_name) const {
     auto ret = Value{this->context(),
                      JS_GetPropertyStr(this->context(), this->value(), prop_name.c_str())};
-    if(ret.is_exception()) {
+    if(JS_HasException(this->context())) {
         throw qjs::JSException::dump(this->context());
     }
     return ret;
@@ -275,15 +275,9 @@ std::string format_rejection(Parameters& args) {
         } catch(const Exception&) {}
 
         try {
-            auto ctx = value.context();
-            auto json =
-                Value{ctx, JS_JSONStringify(ctx, value.value(), JS_UNDEFINED, JS_UNDEFINED)};
-            if(json.is_exception()) {
-                throw JSException::dump(ctx);
-            }
-            return json.as<std::string>();
-        } catch(const Exception&) {
-            return "<non-string rejection value>";
+            return json::stringify(value);
+        } catch(const Exception& e) {
+            return e.what();
         }
     };
 
@@ -625,7 +619,7 @@ qjs::Value parse(const std::string& json_str, const Context& ctx) {
         ctx.js_context(),
         JS_ParseJSON(ctx.js_context(), json_str.data(), json_str.size(), "<json input>")};
 
-    if(ret.is_exception()) {
+    if(ctx.has_exception()) {
         throw qjs::JSException::dump(ctx.js_context());
     }
     return ret;

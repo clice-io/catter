@@ -357,7 +357,13 @@ public:
     template <typename... Args>
     static Error internal_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
         auto error_message = std::format(fmt, std::forward<Args>(args)...);
-        return Error{ctx, JS_ThrowInternalError(ctx, error_message.c_str())};
+        return Error{ctx, JS_NewInternalError(ctx, error_message.c_str())};
+    }
+
+    template <typename... Args>
+    static Error type_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
+        auto error_message = std::format(fmt, std::forward<Args>(args)...);
+        return Error{ctx, JS_NewTypeError(ctx, error_message.c_str())};
     }
 
     std::string message() const;
@@ -545,7 +551,7 @@ public:
             this->context(),
             JS_Call(this->context(), this->value(), this_obj.value(), argv.size(), argv.data())};
 
-        if(value.is_exception()) {
+        if(JS_HasException(this->context())) {
             throw qjs::JSException::dump(this->context());
         }
 
@@ -750,7 +756,7 @@ public:
             this->context(),
             JS_Call(this->context(), this->value(), this_obj.value(), argv.size(), argv.data())};
 
-        if(value.is_exception()) {
+        if(JS_HasException(this->context())) {
             throw qjs::JSException::dump(this->context());
         }
 
@@ -855,7 +861,7 @@ public:
 
     uint32_t length() const {
         qjs::Value len_val = this->get_property("length");
-        if(len_val.is_exception()) {
+        if(JS_HasException(this->context())) {
             throw qjs::JSException::dump(this->context());
         }
         return len_val.as<uint32_t>();
@@ -864,7 +870,7 @@ public:
     T operator[] (uint32_t index) const {
         auto elem = catter::qjs::Value{this->context(),
                                        JS_GetPropertyUint32(this->context(), this->value(), index)};
-        if(elem.is_exception()) {
+        if(JS_HasException(this->context())) {
             throw qjs::JSException::dump(this->context());
         }
         return elem.as<T>();
@@ -1117,6 +1123,7 @@ kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBr
 
 }  // namespace detail
 
+// TODO
 template <typename T = void>
 kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, PromiseTaskBridge bridge) {
     struct WaitState {
@@ -1666,7 +1673,7 @@ std::string stringify(T&& v) {
     auto ctx = v.context();
     auto val = v.value();
     auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
-    if(json_str_val.is_exception()) {
+    if(JS_HasException(ctx)) {
         throw qjs::JSException::dump(ctx);
     }
 
