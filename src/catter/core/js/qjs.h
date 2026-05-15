@@ -1116,8 +1116,6 @@ kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, Promise
         loop->schedule(signal_done(state));
     };
 
-    using Callback = Function<void(Parameters)>;
-
     auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [state, notify](Value value) {
         if(state->result) {
             return;

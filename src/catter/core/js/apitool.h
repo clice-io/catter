@@ -7,8 +7,10 @@
 #include <utility>
 #include <vector>
 #include <kota/support/function_traits.h>
+#include <kota/async/runtime/task.h>
 
 #include "js.h"
+#include "js/qjs.h"
 #include "util/log.h"
 
 namespace catter::capi::util {
@@ -115,76 +117,28 @@ struct hooked<V, R(JSContext*, Args...)> {
     }
 };
 
-template <typename Signature>
-struct async_function_adapter {
-    static_assert(kota::dependent_false<Signature>,
-                  "async_function adapter expects a function signature");
-};
+template <auto FnPtr>
+auto to_js_async_function(JSContext* ctx) {
 
-template <typename Task, typename... Args>
-struct async_function_adapter<Task(Args...)> {
-    using TaskType = std::remove_cvref_t<Task>;
-    static_assert(qjs::async_task<TaskType>, "async_function return type must be kota::task<...>");
-
-    using R = typename TaskType::value_type;
-    using C = typename TaskType::cancel_type;
-    using function_type = qjs::Function<qjs::Promise(Args...)>;
-
-    static_assert(qjs::detail::type_list<bool,
-                                         int32_t,
-                                         uint32_t,
-                                         int64_t,
-                                         uint64_t,
-                                         std::string,
-                                         qjs::Object,
-                                         qjs::Value,
-                                         qjs::Promise>::contains_v<R> ||
-                      std::is_void_v<R>,
-                  "async_function task value type must be one of the allowed types");
-    static_assert(std::is_void_v<C>, "async_function does not support cancellation tasks yet");
-
-    template <typename Invocable>
-        requires std::is_invocable_r_v<TaskType, Invocable, Args...>
-    static function_type from(JSContext* ctx, Invocable&& invocable) {
-        if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
-            auto wrapper = [ctx, &invocable](Args... args) -> qjs::Promise {
-                auto task = invocable(std::move(args)...);
-                return qjs::task_to_promise(ctx, js::promise_task_bridge(), std::move(task));
-            };
-            return function_type::from(ctx, std::move(wrapper));
-        } else {
-            auto wrapper = [ctx, fn = std::forward<Invocable>(invocable)](
-                               Args... args) mutable -> qjs::Promise {
-                auto task = fn(std::move(args)...);
-                return qjs::task_to_promise(ctx, js::promise_task_bridge(), std::move(task));
-            };
-            return function_type::from(ctx, std::move(wrapper));
-        }
-    }
-
-    template <Task (*FnPtr)(Args...)>
-    static function_type from(JSContext* ctx) {
-        return from(ctx, [](Args... args) -> Task { return (*FnPtr)(std::move(args)...); });
-    }
-
-    template <Task (*FnPtr)(JSContext*, Args...)>
-    static function_type from_with_ctx(JSContext* ctx) {
-        return from(ctx, [ctx](Args... args) -> Task { return (*FnPtr)(ctx, std::move(args)...); });
-    }
-};
-
-template <auto FnPtr, typename Signature = std::remove_pointer_t<decltype(FnPtr)>>
-auto to_js_async_function(JSContext* ctx) ->
-    typename async_function_adapter<Signature>::function_type {
-    return async_function_adapter<Signature>::template from<FnPtr>(ctx);
+    return [&]<typename R, typename... Args>(kota::task<R, std::string> (*)(Args...)) {
+        return qjs::Function<qjs::Promise(Args...)>::from(ctx, [ctx](Args... args) -> qjs::Promise {
+            return qjs::task_to_promise(ctx, js::promise_task_bridge(), FnPtr(std::move(args)...));
+        });
+    }(FnPtr);
 }
 
-template <typename Signature, auto FnPtr>
-auto to_js_async_function_with_ctx(JSContext* ctx) ->
-    typename async_function_adapter<Signature>::function_type {
-    return async_function_adapter<Signature>::template from_with_ctx<FnPtr>(ctx);
-}
+template <auto FnPtr>
+auto to_js_async_function_with_ctx(JSContext* ctx) {
 
+    return [&]<typename R, typename... Args>(
+               kota::task<R, std::string> (*)(JSContext* ctx, Args...)) {
+        return qjs::Function<qjs::Promise(Args...)>::from(ctx, [ctx](Args... args) -> qjs::Promise {
+            return qjs::task_to_promise(ctx,
+                                        js::promise_task_bridge(),
+                                        FnPtr(ctx, std::move(args)...));
+        });
+    }(FnPtr);
+}
 }  // namespace catter::apitool
 
 #define TO_JS_FN(func)                                                                             \
@@ -199,9 +153,7 @@ auto to_js_async_function_with_ctx(JSContext* ctx) ->
 #define TO_JS_ASYNC_FN(func) catter::apitool::to_js_async_function<func>(ctx.js_context())
 
 #define TO_JS_ASYNC_WITHOUT_CTX_FN(func)                                                           \
-    catter::apitool::to_js_async_function_with_ctx<                                                \
-        catter::apitool::without_first_param_t<decltype(func)>,                                    \
-        func>(ctx.js_context())
+    catter::apitool::to_js_async_function_with_ctx<func>(ctx.js_context())
 
 #define MERGE(x, y) x##y
 // CAPI(function sign)
