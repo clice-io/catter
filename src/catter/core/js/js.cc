@@ -76,7 +76,7 @@ kota::task<> eval_module(std::string_view input, const char* filename) {
     auto result = co_await qjs::promise_to_task(ctx.eval_module(input, filename, flags),
                                                 promise_task_bridge());
     if(!result) {
-        throw std::move(result.error());
+        throw result.error().to_exception();
     }
     co_return;
 }
@@ -85,7 +85,7 @@ template <typename T = void>
 kota::task<T> wait_for_callback_promise(qjs::Promise promise) {
     auto result = co_await qjs::promise_to_task<T>(std::move(promise), promise_task_bridge());
     if(!result) {
-        throw std::move(result.error());
+        throw result.error().to_exception();
     }
 
     if constexpr(!std::is_void_v<T>) {

@@ -734,7 +734,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     co_await qjs::promise_to_task(qjs::Promise::from_value(std::move(eval_result)),
                                                   bridge);
                 if(!result) {
-                    throw std::move(result.error());
+                    throw result.error().to_exception();
                 }
 
                 EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");

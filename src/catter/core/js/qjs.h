@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <concepts>
+#include <coroutine>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -8,6 +9,7 @@
 #include <format>
 #include <memory>
 #include <optional>
+#include <print>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -20,6 +22,10 @@
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
 #include <kota/async/async.h>
+#include <kota/async/io/loop.h>
+#include <kota/async/runtime/frame.h>
+#include <kota/async/runtime/sync.h>
+#include <kota/async/runtime/task.h>
 #include <kota/meta/name.h>
 
 // namespace meta
@@ -366,6 +372,10 @@ public:
     static Error type_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
         auto error_message = std::format(fmt, std::forward<Args>(args)...);
         return Error{ctx, JS_NewTypeError(ctx, error_message.c_str())};
+    }
+
+    JSException to_exception() const {
+        return JSException(*this);
     }
 
     std::string message() const;
@@ -1098,65 +1108,69 @@ std::string format_reject_reason(Value reason);
 
 // TODO
 template <typename T = void>
-kota::task<std::expected<T, Exception>> promise_to_task(Promise promise, PromiseTaskBridge bridge) {
+kota::task<T, Error> promise_to_task(Promise promise, PromiseTaskBridge bridge) {
+
     struct WaitState {
-        kota::event done;
-        std::optional<std::expected<T, Exception>> result;
+        kota::event done_event{};
+        std::optional<std::expected<T, Error>> result{};
     };
+
+    auto js_ctx = promise.context();
 
     auto state = std::make_shared<WaitState>();
-    auto js_ctx = promise.context();
-    auto* loop = &kota::event_loop::current();
 
-    auto signal_done = [](std::shared_ptr<WaitState> state) -> kota::task<> {
-        state->done.set();
-        co_return;
-    };
-    auto notify = [state, loop, signal_done] {
-        loop->schedule(signal_done(state));
-    };
-
-    auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [state, notify](Value value) {
-        if(state->result) {
+    auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [state, js_ctx](Value value) {
+        if(state->result.has_value()) {
             return;
         }
         try {
             if constexpr(std::is_void_v<T>) {
                 state->result.emplace();
             } else {
-                if(value.is_undefined()) {
-                    state->result.emplace(
-                        std::unexpected(Exception("Promise fulfilled without a value.")));
-                } else {
-                    state->result.emplace(value.as<T>());
-                }
+                state->result.emplace(value.as<T>());
             }
-        } catch(const Exception& ex) {
-            state->result.emplace(std::unexpected(ex));
         } catch(const std::exception& ex) {
-            state->result.emplace(std::unexpected(Exception(ex.what())));
+            state->result.emplace(std::unexpected(
+                Error::internal_error(js_ctx,
+                                      "Exception in promise fulfillment handler: {}",
+                                      ex.what())));
+        } catch(...) {
+            state->result.emplace(std::unexpected(
+                Error::internal_error(js_ctx, "Unknown exception in promise fulfillment handler")));
         }
-        notify();
+        state->done_event.set();
+        return;
     });
 
-    auto reject = Promise::OnRejected<void>::from(js_ctx, [state, notify](Value reason) {
-        if(state->result) {
+    auto reject = Promise::OnRejected<void>::from(js_ctx, [state, js_ctx](Value reason) {
+        if(state->result.has_value()) {
             return;
         }
-        state->result.emplace(std::unexpected(Exception(detail::format_reject_reason(reason))));
-        notify();
+        state->result.emplace(
+            std::unexpected(Error::internal_error(js_ctx,
+                                                  "Promise rejected: {}",
+                                                  detail::format_reject_reason(reason))));
+        state->done_event.set();
+        return;
     });
-
+    // NOTE:
+    // 1. When we call then on a promise, if the promise is already fulfilled or rejected
+    // the corresponding callback will be called immediately. But since we haven't suspended the
+    // current task yet.
+    // 2. When this coroutine is destroyed, the capture data of the callbacks will also be
+    // destroyed, but the callbacks may still be called by the promise, so we need to make sure the
+    // callbacks can handle this situation.
     promise.then(fulfill, reject);
     [[maybe_unused]] const bool woke = bridge.wake_jobs();
     assert(woke && "QuickJS async loop is not running.");
 
-    co_await state->done.wait();
+    co_await state->done_event.wait();
+    assert(state->result.has_value() && "Promise callbacks did not set the result.");
 
-    if(!state->result) {
-        throw Exception("Promise wait was resumed before the promise settled.");
+    if(!state->result->has_value()) {
+        co_await kota::fail(state->result->error());
     }
-    co_return std::move(*state->result);
+    co_return state->result->value();
 }
 
 template <async_task Task>
