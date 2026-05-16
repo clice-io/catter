@@ -1106,7 +1106,6 @@ std::string format_reject_reason(Value reason);
 
 }  // namespace detail
 
-// TODO
 template <typename T = void>
 kota::task<T, Error> promise_to_task(Promise promise, PromiseTaskBridge bridge) {
 
@@ -1115,48 +1114,53 @@ kota::task<T, Error> promise_to_task(Promise promise, PromiseTaskBridge bridge) 
         std::optional<std::expected<T, Error>> result{};
     };
 
+    // NOTE:
+    // When `done_event.set()` is called, the state object is at risk of being destroyed
+    // immediately, because the coroutine may complete and release the state. In other words,
+    // `set()` triggers a self-destruction *during* its own execution, before the `set()` call
+    // returns. To handle this safely, we use a shared_ptr to manage the state, ensuring that it
+    // remains alive until the event is fully processed and the result is set, even if that means it
+    // outlives the coroutine's current scope.
+    auto state = std::make_shared<WaitState>();
+    auto notify = [state](std::expected<T, Error>&& result) {
+        assert(!state->done_event.is_set() &&
+               "Promise settled after task completion, this should not happen.");
+        state->result.emplace(std::move(result));
+        state->done_event.set();
+    };
+
     auto js_ctx = promise.context();
 
-    auto state = std::make_shared<WaitState>();
-
-    auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [state, js_ctx](Value value) {
-        if(state->result.has_value()) {
-            return;
-        }
+    auto fulfill = Promise::OnFulfilled<void>::from(js_ctx, [js_ctx, notify](Value value) {
         try {
             if constexpr(std::is_void_v<T>) {
-                state->result.emplace();
+                notify({});
             } else {
-                state->result.emplace(value.as<T>());
+                notify({value.as<T>()});
             }
         } catch(const std::exception& ex) {
-            state->result.emplace(std::unexpected(
+            notify(std::unexpected(
                 Error::internal_error(js_ctx,
                                       "Exception in promise fulfillment handler: {}",
                                       ex.what())));
         } catch(...) {
-            state->result.emplace(std::unexpected(
+            notify(std::unexpected(
                 Error::internal_error(js_ctx, "Unknown exception in promise fulfillment handler")));
         }
-        state->done_event.set();
         return;
     });
 
-    auto reject = Promise::OnRejected<void>::from(js_ctx, [state, js_ctx](Value reason) {
-        if(state->result.has_value()) {
-            return;
-        }
-        state->result.emplace(
-            std::unexpected(Error::internal_error(js_ctx,
-                                                  "Promise rejected: {}",
-                                                  detail::format_reject_reason(reason))));
-        state->done_event.set();
+    auto reject = Promise::OnRejected<void>::from(js_ctx, [js_ctx, notify](Value reason) {
+        notify(std::unexpected(Error::internal_error(js_ctx,
+                                                     "Promise rejected: {}",
+                                                     detail::format_reject_reason(reason))));
         return;
     });
     // NOTE:
     // 1. When we call then on a promise, if the promise is already fulfilled or rejected
-    // the corresponding callback will be called immediately. But since we haven't suspended the
-    // current task yet.
+    // the corresponding callback will be called immediately. But the
+    // current coroutine is not yet suspended at that time. Make sure the callbacks can handle this
+    // situation.
     // 2. When this coroutine is destroyed, the capture data of the callbacks will also be
     // destroyed, but the callbacks may still be called by the promise, so we need to make sure the
     // callbacks can handle this situation.
