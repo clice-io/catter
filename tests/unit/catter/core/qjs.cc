@@ -731,9 +731,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     )",
                                             "async-function-test.js",
                                             eval_flags);
-                auto result =
-                    co_await qjs::promise_to_task(qjs::Promise::from_value(std::move(eval_result)),
-                                                  bridge);
+                auto result = co_await qjs::promise_to_task(eval_result.as<qjs::Promise>(), bridge);
                 if(!result) {
                     throw result.error().to_exception();
                 }

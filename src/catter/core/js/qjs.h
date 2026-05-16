@@ -953,8 +953,6 @@ public:
     using Then = Function<Promise(Parameters)>;
     using Catch = Function<Promise(Parameters)>;
 
-    static Promise from_value(Value&& value);
-
     JSPromiseStateEnum state() const {
         return JS_PromiseState(this->context(), this->value());
     }
@@ -1031,9 +1029,9 @@ struct PromiseCapability {
         }
 
         return PromiseCapability{
-            Promise{ctx,                                       std::move(promise)},
-            Executor{.raw_resolve = {ctx, std::move(funcs[0])},
-                    .raw_reject = {ctx, std::move(funcs[1])}                     }
+            .promise = {ctx,                                       std::move(promise)},
+            .executor = {.raw_resolve = {ctx, std::move(funcs[0])},
+                        .raw_reject = {ctx, std::move(funcs[1])}                     }
         };
     }
 

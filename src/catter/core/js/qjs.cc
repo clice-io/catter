@@ -239,15 +239,6 @@ std::vector<JSValueConst> make_argv_view(const Parameters& params) {
 
 }  // namespace detail
 
-Promise Promise::from_value(Value&& value) {
-    if(!JS_IsPromise(value.value())) {
-        throw TypeException("Value is not a promise");
-    }
-
-    auto ctx = value.context();
-    return Promise{ctx, value.release()};
-}
-
 bool Promise::is_pending() const {
     return this->state() == JS_PROMISE_PENDING;
 }
