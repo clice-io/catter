@@ -1,4 +1,4 @@
 import { scripts, service } from "catter";
 
-const targetTree = new scripts.TargetTree();
+const targetTree = scripts.targetTree();
 service.register(targetTree);

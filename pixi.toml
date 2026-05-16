@@ -94,7 +94,7 @@ build = "xmake --verbose --diagnosis"
 
 [tasks.cfg]
 args = [
-  { arg = "mode", choices = ["debug", "release"] },
+  { arg = "mode", choices = ["debug", "release", "releasedbg"] },
   { arg = "toolchain", choices = ["msvc", "clang", "gcc", "default"], default = "default" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
@@ -102,7 +102,7 @@ cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 
 [tasks.ci-build]
 args = [
-  { "arg" = "mode", "choices" = ["debug", "release"] },
+  { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
 ]
 depends-on = [
   { task = "npm-install" },

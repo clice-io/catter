@@ -97,7 +97,7 @@ function formatCommand(
  * ```ts
  * import { scripts, service } from "catter";
  *
- * service.register(new scripts.CmdTree());
+ * service.register(scripts.cmdTree());
  * ```
  *
  * Output:
@@ -107,81 +107,75 @@ function formatCommand(
  *     └── ld main.o -o app
  * ```
  */
-export class CmdTree extends service.IgnorableService {
-  private readonly commandTree = new data.FlatTree<
-    number,
-    service.CommandCaptureResult
-  >();
-  private maxDepth?: number;
-  private visibleArgCount = -1;
-  private maxArgWidth = 10;
+export function cmdTree(): service.CatterContextService {
+  const commandTree = new data.FlatTree<number, service.CommandCaptureResult>();
+  let maxDepth: number | undefined;
+  let visibleArgCount = -1;
+  let maxArgWidth = 10;
 
-  override onCommand(
-    id: number,
-    capture: service.CommandCaptureResult,
-  ): service.Action {
-    this.commandTree.justMergeNode({
-      id,
-      parent:
-        capture.success && capture.data.parent !== undefined
-          ? [capture.data.parent]
-          : [],
-      content: capture,
-    });
-    return {
-      type: "skip",
-    };
-  }
+  return service.create({
+    onCommand(ctx) {
+      const capture = ctx.capture;
+      commandTree.justMergeNode({
+        id: ctx.id,
+        parent:
+          capture.success && capture.data.parent !== undefined
+            ? [capture.data.parent]
+            : [],
+        content: capture,
+      });
+    },
 
-  override onStart(config: service.CatterConfig): service.CatterConfig {
-    const res = cli.run(cmdTreeCLI, config.scriptArgs);
-    if (res === undefined) {
-      config.execute = false;
+    onStart(config) {
+      const res = cli.run(cmdTreeCLI, config.scriptArgs);
+      if (res === undefined) {
+        config.execute = false;
+        return config;
+      }
+
+      maxDepth = res.depth;
+      visibleArgCount = res.args ?? -1;
+      maxArgWidth = res.argWidth ?? 10;
       return config;
-    }
+    },
 
-    this.maxDepth = res.depth;
-    this.visibleArgCount = res.args ?? -1;
-    this.maxArgWidth = res.argWidth ?? 10;
-    return config;
-  }
+    onFinish(result) {
+      if (result.code !== 0) {
+        io.println(
+          `Build failed with exit code ${result.code}. Printing partial command tree.`,
+        );
+      }
 
-  override onFinish(result: service.ProcessResult): void {
-    if (result.code !== 0) {
-      io.println(
-        `Build failed with exit code ${result.code}. Printing partial command tree.`,
+      if (commandTree.size() === 0) {
+        io.println("No commands found.");
+        return;
+      }
+      commandTree.assemble();
+
+      const walker = commandTree.walk();
+      const renderer = new view.TreeRenderer({
+        first: walker.first,
+        children: walker.children,
+        content: (id) => commandTree.node(id)?.content,
+      });
+
+      io.print(
+        renderer.output({
+          type: "cli",
+          maxDepth,
+          text: (capture) => {
+            if (!capture.success) {
+              return `[capture error] ${capture.error.msg}`;
+            }
+
+            return formatCommand(
+              capture.data.argv,
+              visibleArgCount,
+              maxArgWidth,
+            );
+          },
+        }),
       );
-    }
-
-    if (this.commandTree.size() === 0) {
-      io.println("No commands found.");
-      return;
-    }
-    this.commandTree.assemble();
-
-    const walker = this.commandTree.walk();
-    const renderer = new view.TreeRenderer({
-      first: walker.first,
-      children: walker.children,
-      content: (id) => this.commandTree.node(id)?.content,
-    });
-
-    io.print(
-      renderer.output({
-        type: "cli",
-        maxDepth: this.maxDepth,
-        text: (capture) => {
-          if (!capture.success) {
-            return `[capture error] ${capture.error.msg}`;
-          }
-
-          return formatCommand(
-            capture.data.argv,
-            this.visibleArgCount,
-            this.maxArgWidth,
-          );
-        },
-      }),
-    );
-  }
+    },
+  });
 }

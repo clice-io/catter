@@ -5,8 +5,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "qjs.h"
 #include "../apitool.h"
+#include "../qjs.h"
 #include "util/output.h"
 
 namespace {

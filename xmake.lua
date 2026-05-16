@@ -389,10 +389,11 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("118", "0d361e7969f28b373abfa0182e84ad48dcec2296")
+    add_versions("136", "fda7c785a7a149af52e995f6ac3ebb961f37f0c5")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
+    add_deps("libcurl 8.11.0")
 
     on_install(function (package)
         if package:has_tool("cxx", "cl", "clang_cl") then
@@ -410,6 +411,7 @@ package("kotatsu")
         configs.option = true
         configs.deco = true
         configs.ztest = true
+        configs.http = true
         if package:is_plat("macosx") then
             local conda_prefix = os.getenv("CONDA_PREFIX")
             if conda_prefix then
@@ -441,7 +443,8 @@ package("kotatsu")
                     "--async=true",
                     "--option=true",
                     "--deco=true",
-                    "--ztest=true"
+                    "--ztest=true",
+                    "--http=true"
                 }
                 if package:config("asan") then
                     table.insert(argv, "--policies=build.sanitizer.address")

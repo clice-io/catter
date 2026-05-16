@@ -1,9 +1,11 @@
 {
   "name": "catter",
   "version": "1.0.0",
+  "private": true,
   "description": "",
   "type": "module",
   "scripts": {
+    "bench:http": "node bench/http/benchmark.mjs",
     "eslint-all": "eslint -c eslint.config.js ./api/src/**/*.ts ./scripts/**/*.ts",
     "eslint": "eslint -c eslint.config.js",
     "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",

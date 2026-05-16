@@ -1,6 +1,6 @@
-#include "apitool.h"
-#include "js.h"
-#include "qjs.h"
+#include "../apitool.h"
+#include "../js.h"
+#include "../qjs.h"
 
 using namespace catter;
 

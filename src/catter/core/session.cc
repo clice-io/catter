@@ -3,6 +3,7 @@
 #include <cassert>
 #include <format>
 #include <list>
+#include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -18,14 +19,15 @@
 
 namespace catter {
 
-data::process_result Session::run(RunPlan run_plan) {
+kota::task<data::process_result> Session::run(RunPlan run_plan) {
 #ifndef _WIN32
     if(std::filesystem::exists(config::ipc::pipe_name())) {
         std::filesystem::remove(config::ipc::pipe_name());
     }
 #endif
+    auto& current_loop = kota::event_loop::current();
     auto acc_ret =
-        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), default_loop());
+        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), current_loop);
 
     if(!acc_ret) {
         throw cpptrace::runtime_error(
@@ -37,15 +39,11 @@ data::process_result Session::run(RunPlan run_plan) {
     auto loop_task = this->loop(std::move(run_plan.callback));
     auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
                                   std::move(run_plan.launch_plan.args),
-                                  std::move(run_plan.launch_plan.cwd));
+                                  std::move(run_plan.launch_plan.cwd),
+                                  run_plan.launch_plan.output_mode);
 
-    default_loop().schedule(loop_task);
-    default_loop().schedule(spawn_task);
-
-    default_loop().run();
-
-    loop_task.result();  // Propagate exceptions from loop task
-    return spawn_task.result();
+    auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
+    co_return std::move(process_result);
 }
 
 kota::task<void> Session::loop(ClientAcceptor acceptor) {
@@ -80,7 +78,8 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
 
 kota::task<data::process_result> Session::spawn(std::string executable,
                                                 std::vector<std::string> args,
-                                                std::string cwd) {
+                                                std::string cwd,
+                                                data::output_mode output_mode) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -113,7 +112,7 @@ kota::task<data::process_result> Session::spawn(std::string executable,
              cwd,
              args_str);
 
-    co_return co_await capture_process_result(make_process_event(opts));
+    co_return co_await capture_process_result(make_process_event(opts), output_mode);
 }
 
 }  // namespace catter

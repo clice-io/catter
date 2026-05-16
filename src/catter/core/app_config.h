@@ -6,7 +6,7 @@
 
 #include "ipc.h"
 #include "./option.h"
-#include "capi/type.h"
+#include "js/capi/type.h"
 
 namespace catter::app {
 

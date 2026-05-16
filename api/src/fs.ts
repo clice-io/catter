@@ -1,6 +1,16 @@
 import {
   fs_create_dir_recursively,
   fs_create_empty_file_recursively,
+  fs_async_create_dir_recursively,
+  fs_async_create_empty_file_recursively,
+  fs_async_exists,
+  fs_async_is_dir,
+  fs_async_is_file,
+  fs_async_list_dir,
+  fs_async_read_text,
+  fs_async_remove_recursively,
+  fs_async_rename_if_exists,
+  fs_async_write_text,
   fs_exists,
   fs_is_dir,
   fs_is_file,
@@ -227,6 +237,96 @@ export function removeAll(pathStr: string): void {
 export function rename(oldPath: string, newPath: string): boolean {
   return fs_rename_if_exists(oldPath, newPath);
 }
+
+const asyncFs = {
+  /**
+   * Asynchronously checks whether a path exists.
+   */
+  exists(pathStr: string): Promise<boolean> {
+    return fs_async_exists(pathStr);
+  },
+
+  /**
+   * Asynchronously checks whether a path points to a regular file.
+   */
+  isFile(pathStr: string): Promise<boolean> {
+    return fs_async_is_file(pathStr);
+  },
+
+  /**
+   * Asynchronously checks whether a path points to a directory.
+   */
+  isDir(pathStr: string): Promise<boolean> {
+    return fs_async_is_dir(pathStr);
+  },
+
+  /**
+   * Asynchronously lists all entries in a directory.
+   */
+  readDirs(pathStr: string): Promise<string[]> {
+    return fs_async_list_dir(pathStr);
+  },
+
+  /**
+   * Asynchronously creates a directory.
+   */
+  async mkdir(pathStr: string, recursively = true): Promise<boolean> {
+    if (recursively) {
+      await fs_async_create_dir_recursively(pathStr);
+      return true;
+    }
+    if (await asyncFs.isDir(path.toAncestor(pathStr))) {
+      await fs_async_create_dir_recursively(pathStr);
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * Asynchronously creates an empty file.
+   */
+  async createFile(pathStr: string, recursively = true): Promise<boolean> {
+    if (recursively) {
+      await fs_async_create_empty_file_recursively(pathStr);
+      return true;
+    }
+    if (await asyncFs.isDir(path.toAncestor(pathStr))) {
+      await fs_async_create_empty_file_recursively(pathStr);
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * Asynchronously removes a file or directory tree.
+   */
+  removeAll(pathStr: string): Promise<void> {
+    return fs_async_remove_recursively(pathStr);
+  },
+
+  /**
+   * Asynchronously renames or moves a file or directory.
+   */
+  rename(oldPath: string, newPath: string): Promise<boolean> {
+    return fs_async_rename_if_exists(oldPath, newPath);
+  },
+
+  /**
+   * Asynchronously reads a text file as a string.
+   */
+  readText(pathStr: string): Promise<string> {
+    return fs_async_read_text(pathStr);
+  },
+
+  /**
+   * Asynchronously writes a string to a text file.
+   */
+  writeText(pathStr: string, content: string): Promise<void> {
+    return fs_async_write_text(pathStr, content);
+  },
+};
+
+export { asyncFs as async };
 
 /**
  * Utilities for filesystem path manipulation.

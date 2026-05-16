@@ -37,26 +37,26 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     peer.on_request<Request<RequestType::CREATE>>(
         [&](const Context& ctx, Request<RequestType::CREATE>::Params params)
             -> kota::ipc::RequestResult<Request<RequestType::CREATE>> {
-            co_return service->create(params);
+            co_return co_await service->create(params);
         });
 
     peer.on_request<Request<RequestType::MAKE_DECISION>>(
         [&](const Context& ctx, const Request<RequestType::MAKE_DECISION>::Params& params)
             -> kota::ipc::RequestResult<Request<RequestType::MAKE_DECISION>> {
-            co_return service->make_decision(params);
+            co_return co_await service->make_decision(params);
         });
 
     peer.on_request<Request<RequestType::FINISH>>(
         [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
             -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
-            service->finish(params);
+            co_await service->finish(params);
             co_return nullptr;
         });
 
     peer.on_request<Request<RequestType::REPORT_ERROR>>(
         [&](const Context& ctx, const Request<RequestType::REPORT_ERROR>::Params& params)
             -> kota::ipc::RequestResult<Request<RequestType::REPORT_ERROR>> {
-            service->report_error(params.parent_id, params.error_msg);
+            co_await service->report_error(params.parent_id, params.error_msg);
             co_return nullptr;
         });
 

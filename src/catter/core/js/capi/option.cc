@@ -9,9 +9,9 @@
 #include <quickjs.h>
 #include <kota/option/option.h>
 
-#include "qjs.h"
 #include "type.h"
 #include "../apitool.h"
+#include "../qjs.h"
 #include "opt/external/clang.h"
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"

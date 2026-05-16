@@ -188,7 +188,13 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
     cli.match(catter::proxy::Option::Cate::help,
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
-               [&](const auto& opt) { ret = catter::wait(proxy_main(opt.proxy_opt)); })
+               [&](const auto& opt) {
+                   auto task = proxy_main(opt.proxy_opt);
+                   kota::event_loop loop;
+                   loop.schedule(task);
+                   loop.run();
+                   ret = task.result();
+               })
         .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
             ret = -1;

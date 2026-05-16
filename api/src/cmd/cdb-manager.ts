@@ -17,6 +17,16 @@ export type CDBItem = {
   [key: string]: unknown;
 };
 
+export type CDBManagerOptions = {
+  /**
+   * Whether to load and merge entries from the existing database file.
+   *
+   * Defaults to `true` for direct manager usage. Script frontends can set this
+   * to `false` when they want a fresh output file.
+   */
+  inherit?: boolean;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -164,11 +174,16 @@ export class CDBManager {
   private readonly inheritedItems = new Map<string, Map<string, CDBItem>>();
   private readonly pendingItems = new Map<string, Map<string, CDBItem>>();
 
-  constructor(savePath: string = "compile_commands.json") {
+  constructor(
+    savePath: string = "compile_commands.json",
+    options: CDBManagerOptions = {},
+  ) {
     this.savePath = savePath;
 
-    for (const item of readItemsFromPath(savePath)) {
-      addTo(this.inheritedItems, item);
+    if (options.inherit ?? true) {
+      for (const item of readItemsFromPath(savePath)) {
+        addTo(this.inheritedItems, item);
+      }
     }
   }
 

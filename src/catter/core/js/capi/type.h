@@ -14,7 +14,7 @@
 #include <kota/meta/enum.h>
 #include <kota/meta/struct.h>
 
-#include "qjs.h"
+#include "../qjs.h"
 #include "util/enum.h"
 
 namespace catter::js {
@@ -303,6 +303,8 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 enum class ActionType { skip, drop, abort, modify };
 
 struct CatterOptions {
+    enum class OutputMode { inherit, capture };
+
     static CatterOptions make(qjs::Object object) {
         return detail::make_reflected_object<CatterOptions>(std::move(object));
     }
@@ -315,6 +317,7 @@ struct CatterOptions {
 
 public:
     bool log;
+    std::optional<OutputMode> output;
 };
 
 struct CatterRuntime {

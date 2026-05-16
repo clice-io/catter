@@ -25,10 +25,10 @@ public:
     InjectService() = default;
     virtual ~InjectService() override = default;
 
-    virtual ipcid_t create(ipcid_t parent_id) = 0;
-    virtual data::action make_decision(data::command cmd) = 0;
-    virtual void finish(data::process_result result) = 0;
-    virtual void report_error(ipcid_t parent_id, std::string error_msg) = 0;
+    virtual kota::task<ipcid_t> create(ipcid_t parent_id) = 0;
+    virtual kota::task<data::action> make_decision(data::command cmd) = 0;
+    virtual kota::task<> finish(data::process_result result) = 0;
+    virtual kota::task<> report_error(ipcid_t parent_id, std::string error_msg) = 0;
 };
 
 kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe client);

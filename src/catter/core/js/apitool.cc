@@ -1,5 +1,3 @@
-
-
 #include "apitool.h"
 
 #include "js.h"
@@ -19,8 +17,7 @@ std::filesystem::path absolute_of(std::string js_path) {
     if(js_fs_path.is_absolute()) {
         return js_fs_path;
     }
-    // base is js's base
-    auto abs_path = (js::get_global_runtime_config().pwd / js_fs_path).lexically_normal();
-    return abs_path;
-};
+
+    return (js::get_global_runtime_config().pwd / js_fs_path).lexically_normal();
+}
 }  // namespace catter::capi::util
