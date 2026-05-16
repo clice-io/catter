@@ -365,13 +365,13 @@ public:
     template <typename... Args>
     static Error internal_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
         auto error_message = std::format(fmt, std::forward<Args>(args)...);
-        return Error{ctx, JS_NewInternalError(ctx, error_message.c_str())};
+        return Error{ctx, JS_NewInternalError(ctx, "%s", error_message.c_str())};
     }
 
     template <typename... Args>
     static Error type_error(JSContext* ctx, std::format_string<Args...> fmt, Args&&... args) {
         auto error_message = std::format(fmt, std::forward<Args>(args)...);
-        return Error{ctx, JS_NewTypeError(ctx, error_message.c_str())};
+        return Error{ctx, JS_NewTypeError(ctx, "%s", error_message.c_str())};
     }
 
     JSException to_exception() const {
