@@ -34,6 +34,17 @@ namespace catter::qjs {
 
 namespace refl = kota::meta;
 
+namespace json {
+
+template <typename T>
+    requires requires(T&& t) {
+        { t.value() } -> std::convertible_to<JSValue>;
+        { t.context() } -> std::convertible_to<JSContext*>;
+    }
+std::string stringify(T&& v);
+
+}  // namespace json
+
 namespace detail {
 
 template <typename... Args>
@@ -1076,8 +1087,6 @@ kota::task<> settle_promise_task(PromiseCapability cap,
     co_return;
 }
 
-std::string format_reject_reason(Value reason);
-
 }  // namespace detail
 
 template <typename T = void>
@@ -1125,9 +1134,26 @@ kota::task<T, Error> promise_to_task(Promise promise, PromiseTaskBridge bridge) 
     });
 
     auto reject = Promise::OnRejected<void>::from(js_ctx, [js_ctx, notify](Value reason) {
-        notify(std::unexpected(Error::internal_error(js_ctx,
-                                                     "Promise rejected: {}",
-                                                     detail::format_reject_reason(reason))));
+        try {
+            if(reason.is_undefined()) {
+                notify(std::unexpected(
+                    Error::internal_error(js_ctx, "Promise rejected with undefined")));
+            } else if(reason.is_error()) {
+                notify(std::unexpected(reason.as<Error>()));
+            } else {
+                notify(std::unexpected(Error::internal_error(js_ctx,
+                                                             "Promise rejected with value: {}",
+                                                             json::stringify(reason))));
+            }
+        } catch(const std::exception& e) {
+            notify(
+                std::unexpected(Error::internal_error(js_ctx,
+                                                      "Exception in promise rejection handler: {}",
+                                                      e.what())));
+        } catch(...) {
+            notify(std::unexpected(
+                Error::internal_error(js_ctx, "Unknown exception in promise rejection handler")));
+        }
         return;
     });
     // NOTE:
@@ -1666,7 +1692,7 @@ std::string stringify(T&& v) {
         return result;
     }
     throw qjs::TypeException("Failed to convert value to JSON string");
-};  // namespace json
+};
 
 qjs::Value parse(const std::string& json_str, const Context& ctx);
 }  // namespace json

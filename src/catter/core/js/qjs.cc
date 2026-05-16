@@ -237,20 +237,6 @@ std::vector<JSValueConst> make_argv_view(const Parameters& params) {
     return argv;
 }
 
-std::string format_reject_reason(Value reason) {
-    if(reason.is_undefined()) {
-        return "Promise rejected without a reason.";
-    } else if(reason.is_error()) {
-        return reason.as<Error>().format();
-    } else {
-        try {
-            return json::stringify(reason);
-        } catch(const Exception& e) {
-            return e.what();
-        }
-    }
-}
-
 }  // namespace detail
 
 Promise Promise::from_value(Value&& value) {
