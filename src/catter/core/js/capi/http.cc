@@ -13,7 +13,7 @@ namespace qjs = catter::qjs;
 namespace {
 
 template <typename T>
-using JsTask = kota::task<T, std::string>;
+using JsTask = kota::task<T, qjs::Error>;
 
 int64_t http_client_id_cnt = 1;
 std::unordered_map<int64_t, kota::http::client> http_clients;
@@ -106,7 +106,8 @@ JsTask<qjs::Object> send_request(JSContext* ctx,
 
     auto response = co_await std::move(request).send();
     if(!response) {
-        co_await kota::fail(kota::http::message(response.error()));
+        co_await kota::fail(
+            qjs::Error::internal_error(ctx, "{}", kota::http::message(response.error())));
     }
 
     co_return response_to_object(ctx, *response);

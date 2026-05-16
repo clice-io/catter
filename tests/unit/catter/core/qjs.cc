@@ -47,13 +47,14 @@ int64_t count_args_with_ctx(JSContext* ctx, qjs::Parameters args) {
     return ctx ? static_cast<int64_t>(args.size()) : -1;
 }
 
-kota::task<std::string> async_greet(std::string name) {
+kota::task<std::string, qjs::Error> async_greet(std::string name) {
     co_return "hello " + name;
 }
 
-kota::task<int64_t, std::string> async_add_or_fail(int64_t value) {
+kota::task<int64_t, qjs::Error> async_add_or_fail(JSContext* ctx, int64_t value) {
     if(value < 0) {
-        co_await kota::fail(std::string{"negative value"});
+        co_await kota::fail(
+            qjs::Error::internal_error(ctx, "Negative value not allowed: {}", value));
     }
 
     co_return value + 1;
@@ -705,7 +706,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     AsyncAddOrFail::from(
                         ctx.js_context(),
                         [ctx = ctx.js_context(), bridge](int64_t value) {
-                            return qjs::task_to_promise(ctx, bridge, async_add_or_fail(value));
+                            return qjs::task_to_promise(ctx, bridge, async_add_or_fail(ctx, value));
                         }));
 
                 auto bridged = co_await qjs::promise_to_task<std::string>(
@@ -739,9 +740,8 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
 
                 EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
                 EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
-                // TODO
-                //  EXPECT_TRUE(
-                //      global["asyncErrorResult"].as<std::string>().contains("negative value"));
+                EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains(
+                    "Negative value not allowed"));
             } catch(...) {
                 error = std::current_exception();
             }

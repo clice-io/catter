@@ -104,7 +104,7 @@ struct hooked<V, R(JSContext*, Args...)> {
 
 template <auto FnPtr>
 auto to_js_async_function(JSContext* ctx, const char* name) {
-    return [&]<typename R, typename... Args>(kota::task<R, std::string> (*)(Args...)) {
+    return [&]<typename R, typename... Args>(kota::task<R, qjs::Error> (*)(Args...)) {
         constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
             return qjs::task_to_promise(ctx, js::promise_task_bridge(), FnPtr(std::move(args)...));
         };
@@ -114,7 +114,7 @@ auto to_js_async_function(JSContext* ctx, const char* name) {
 
 template <auto FnPtr>
 auto to_js_async_function_with_ctx(JSContext* ctx, const char* name) {
-    return [&]<typename R, typename... Args>(kota::task<R, std::string> (*)(JSContext*, Args...)) {
+    return [&]<typename R, typename... Args>(kota::task<R, qjs::Error> (*)(JSContext*, Args...)) {
         constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
             return qjs::task_to_promise(ctx,
                                         js::promise_task_bridge(),

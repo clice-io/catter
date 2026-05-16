@@ -1,6 +1,5 @@
 #include <cstdint>
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <span>
 #include <string>
@@ -27,9 +26,9 @@ constexpr std::uint64_t REGULAR_FILE_MODE = 0100000;
 constexpr std::uint64_t DIRECTORY_MODE = 0040000;
 
 template <typename T>
-using JsTask = kota::task<T, std::string>;
+using JsTask = kota::task<T, qjs::Error>;
 
-using JsVoidTask = kota::task<void, std::string>;
+using JsVoidTask = kota::task<void, qjs::Error>;
 
 bool is_missing(kota::error err) noexcept {
     return err == kota::error::no_such_file_or_directory || err == kota::error::not_a_directory;
@@ -41,10 +40,6 @@ bool is_regular_file(kota::fs::file_stats stats) noexcept {
 
 bool is_directory(kota::fs::file_stats stats) noexcept {
     return (stats.mode & FILE_TYPE_MASK) == DIRECTORY_MODE;
-}
-
-std::string error_message(std::string_view action, std::string_view path, kota::error err) {
-    return std::format("Failed to {} `{}`: {}", action, path, err.message());
 }
 
 kota::task<void, kota::error> create_directories_async(fs::path path) {
@@ -253,7 +248,7 @@ CTX_CAPI(fs_list_dir, (JSContext * ctx, std::string path)->catter::qjs::Object) 
     return catter::qjs::Object::from(std::move(res_arr));
 }
 
-ASYNC_CAPI(fs_async_exists, (std::string path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_exists, (JSContext * ctx, std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
     auto result = co_await kota::fs::access(abs_path, ACCESS_EXISTS);
     if(result) {
@@ -264,10 +259,13 @@ ASYNC_CAPI(fs_async_exists, (std::string path)->JsTask<bool>) {
         co_return false;
     }
 
-    co_await kota::fail(error_message("check existence of", abs_path, result.error()));
+    co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                   "Failed to check existence of `{}`: {}",
+                                                   abs_path,
+                                                   result.error().message()));
 }
 
-ASYNC_CAPI(fs_async_is_file, (std::string path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_is_file, (JSContext * ctx, std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
     auto result = co_await kota::fs::stat(abs_path);
     if(result) {
@@ -278,10 +276,13 @@ ASYNC_CAPI(fs_async_is_file, (std::string path)->JsTask<bool>) {
         co_return false;
     }
 
-    co_await kota::fail(error_message("stat", abs_path, result.error()));
+    co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                   "Failed to stat `{}`: {}",
+                                                   abs_path,
+                                                   result.error().message()));
 }
 
-ASYNC_CAPI(fs_async_is_dir, (std::string path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_is_dir, (JSContext * ctx, std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
     auto result = co_await kota::fs::stat(abs_path);
     if(result) {
@@ -292,7 +293,10 @@ ASYNC_CAPI(fs_async_is_dir, (std::string path)->JsTask<bool>) {
         co_return false;
     }
 
-    co_await kota::fail(error_message("stat", abs_path, result.error()));
+    co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                   "Failed to stat `{}`: {}",
+                                                   abs_path,
+                                                   result.error().message()));
 }
 
 CTX_ASYNC_CAPI(fs_async_list_dir,
@@ -300,7 +304,10 @@ CTX_ASYNC_CAPI(fs_async_list_dir,
     auto abs_path = absolute_of(path).string();
     auto entries = co_await kota::fs::scandir(abs_path);
     if(!entries) {
-        co_await kota::fail(error_message("list directory", abs_path, entries.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to list directory `{}`: {}",
+                                                       abs_path,
+                                                       entries.error().message()));
     }
 
     auto result = qjs::Array<std::string>::empty_one(ctx);
@@ -310,49 +317,65 @@ CTX_ASYNC_CAPI(fs_async_list_dir,
     co_return qjs::Object::from(std::move(result));
 }
 
-ASYNC_CAPI(fs_async_create_dir_recursively, (std::string path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_create_dir_recursively, (JSContext * ctx, std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
     auto result = co_await create_directories_async(abs_path);
     if(!result) {
-        co_await kota::fail(error_message("create directory", abs_path, result.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to create directory `{}`: {}",
+                                                       abs_path,
+                                                       result.error().message()));
     }
 
     co_return true;
 }
 
-ASYNC_CAPI(fs_async_create_empty_file_recursively, (std::string path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_create_empty_file_recursively,
+               (JSContext * ctx, std::string path)->JsTask<bool>) {
     auto abs_path = absolute_of(path).string();
     auto parent_result = co_await create_directories_async(fs::path(abs_path).parent_path());
     if(!parent_result) {
         co_await kota::fail(
-            error_message("create parent directories for", abs_path, parent_result.error()));
+            qjs::Error::internal_error(ctx,
+                                       "Failed to create parent directories for `{}`: {}",
+                                       abs_path,
+                                       parent_result.error().message()));
     }
 
     auto opened =
         co_await kota::fs::open(abs_path, UV_FS_O_CREAT | UV_FS_O_WRONLY, DEFAULT_FILE_MODE);
     if(!opened) {
-        co_await kota::fail(error_message("create file", abs_path, opened.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to create file `{}`: {}",
+                                                       abs_path,
+                                                       opened.error().message()));
     }
 
     auto closed = co_await kota::fs::close(*opened);
     if(!closed) {
-        co_await kota::fail(error_message("close file", abs_path, closed.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to close file `{}`: {}",
+                                                       abs_path,
+                                                       closed.error().message()));
     }
 
     co_return true;
 }
 
-ASYNC_CAPI(fs_async_remove_recursively, (std::string path)->JsVoidTask) {
+CTX_ASYNC_CAPI(fs_async_remove_recursively, (JSContext * ctx, std::string path)->JsVoidTask) {
     auto abs_path = absolute_of(path).string();
     auto result = co_await remove_all_async(abs_path);
     if(!result) {
-        co_await kota::fail(error_message("remove", abs_path, result.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to remove `{}`: {}",
+                                                       abs_path,
+                                                       result.error().message()));
     }
     co_return;
 }
 
-ASYNC_CAPI(fs_async_rename_if_exists,
-           (std::string js_old_path, std::string js_new_path)->JsTask<bool>) {
+CTX_ASYNC_CAPI(fs_async_rename_if_exists,
+               (JSContext * ctx, std::string js_old_path, std::string js_new_path)->JsTask<bool>) {
     auto old_path = absolute_of(js_old_path).string();
     auto new_path = absolute_of(js_new_path).string();
     auto exists = co_await kota::fs::access(old_path, ACCESS_EXISTS);
@@ -360,25 +383,32 @@ ASYNC_CAPI(fs_async_rename_if_exists,
         if(is_missing(exists.error())) {
             co_return false;
         }
-        co_await kota::fail(error_message("check existence of", old_path, exists.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to check existence of `{}`: {}",
+                                                       old_path,
+                                                       exists.error().message()));
     }
 
     auto result = co_await kota::fs::rename(old_path, new_path);
     if(!result) {
-        co_await kota::fail(std::format("Failed to rename `{}` to `{}`: {}",
-                                        old_path,
-                                        new_path,
-                                        result.error().message()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to rename `{}` to `{}`: {}",
+                                                       old_path,
+                                                       new_path,
+                                                       result.error().message()));
     }
 
     co_return true;
 }
 
-ASYNC_CAPI(fs_async_read_text, (std::string path)->JsTask<std::string>) {
+CTX_ASYNC_CAPI(fs_async_read_text, (JSContext * ctx, std::string path)->JsTask<std::string>) {
     auto abs_path = absolute_of(path).string();
     auto opened = co_await kota::fs::open(abs_path, UV_FS_O_RDONLY);
     if(!opened) {
-        co_await kota::fail(error_message("open", abs_path, opened.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to open `{}`: {}",
+                                                       abs_path,
+                                                       opened.error().message()));
     }
 
     int fd = *opened;
@@ -389,7 +419,10 @@ ASYNC_CAPI(fs_async_read_text, (std::string path)->JsTask<std::string>) {
         auto read = co_await kota::fs::read(fd, std::span<char>(buffer));
         if(!read) {
             co_await kota::fs::close(fd);
-            co_await kota::fail(error_message("read", abs_path, read.error()));
+            co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                           "Failed to read `{}`: {}",
+                                                           abs_path,
+                                                           read.error().message()));
         }
 
         if(*read == 0) {
@@ -400,19 +433,26 @@ ASYNC_CAPI(fs_async_read_text, (std::string path)->JsTask<std::string>) {
 
     auto closed = co_await kota::fs::close(fd);
     if(!closed) {
-        co_await kota::fail(error_message("close", abs_path, closed.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to close `{}`: {}",
+                                                       abs_path,
+                                                       closed.error().message()));
     }
 
     co_return content;
 }
 
-ASYNC_CAPI(fs_async_write_text, (std::string path, std::string content)->JsVoidTask) {
+CTX_ASYNC_CAPI(fs_async_write_text,
+               (JSContext * ctx, std::string path, std::string content)->JsVoidTask) {
     auto abs_path = absolute_of(path).string();
     auto opened = co_await kota::fs::open(abs_path,
                                           UV_FS_O_CREAT | UV_FS_O_TRUNC | UV_FS_O_WRONLY,
                                           DEFAULT_FILE_MODE);
     if(!opened) {
-        co_await kota::fail(error_message("open", abs_path, opened.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to open `{}`: {}",
+                                                       abs_path,
+                                                       opened.error().message()));
     }
 
     int fd = *opened;
@@ -422,18 +462,26 @@ ASYNC_CAPI(fs_async_write_text, (std::string path, std::string content)->JsVoidT
         auto result = co_await kota::fs::write(fd, remaining);
         if(!result) {
             co_await kota::fs::close(fd);
-            co_await kota::fail(error_message("write", abs_path, result.error()));
+            co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                           "Failed to write `{}`: {}",
+                                                           abs_path,
+                                                           result.error().message()));
         }
         if(*result == 0) {
             co_await kota::fs::close(fd);
-            co_await kota::fail("Failed to write `" + abs_path + "`: wrote zero bytes");
+            co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                           "Failed to write `{}`: wrote zero bytes",
+                                                           abs_path));
         }
         written += *result;
     }
 
     auto closed = co_await kota::fs::close(fd);
     if(!closed) {
-        co_await kota::fail(error_message("close", abs_path, closed.error()));
+        co_await kota::fail(qjs::Error::internal_error(ctx,
+                                                       "Failed to close `{}`: {}",
+                                                       abs_path,
+                                                       closed.error().message()));
     }
     co_return;
 }

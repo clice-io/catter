@@ -1046,59 +1046,33 @@ struct PromiseTaskBridge {
     }
 };
 
-template <typename T>
-concept async_task = kota::is_specialization_of<kota::task, std::remove_cvref_t<T>>;
-
 namespace detail {
 
-template <async_task Task>
-kota::task<> settle_promise_task(PromiseCapability cap, Task task, PromiseTaskBridge bridge) {
-    using TaskType = std::remove_cvref_t<Task>;
-    using R = typename TaskType::value_type;
-    using E = typename TaskType::error_type;
-    using C = typename TaskType::cancel_type;
-    static_assert(std::is_void_v<C>, "task_to_promise does not support cancellation tasks yet");
-
-    auto resolve = [&cap, bridge]<typename... Args>(Args&&... args) {
-        cap.executor.resolve(std::forward<Args>(args)...);
-        bridge.wake_jobs();
-    };
-    auto reject = [&cap, bridge](Error err) {
-        cap.executor.reject(err);
-        bridge.wake_jobs();
-    };
+template <typename T>
+kota::task<> settle_promise_task(PromiseCapability cap,
+                                 kota::task<T, Error> task,
+                                 PromiseTaskBridge bridge) {
 
     try {
-        if constexpr(std::is_void_v<E>) {
-            if constexpr(std::is_void_v<R>) {
-                co_await std::move(task);
-                resolve();
+        auto result = co_await std::move(task);
+        if(result.has_value()) {
+            if constexpr(std::is_void_v<T>) {
+                cap.executor.resolve();
             } else {
-                auto value = co_await std::move(task);
-                resolve(std::move(value));
+                cap.executor.resolve(std::move(result).value());
             }
         } else {
-            auto result = co_await std::move(task);
-            if(!result) {
-                // TODO
-                reject(Error::internal_error(cap.promise.context(), "Async task failed."));
-                co_return;
-            }
-
-            if constexpr(std::is_void_v<R>) {
-                resolve();
-            } else {
-                resolve(std::move(result).value());
-            }
+            cap.executor.reject(std::move(result).error());
         }
     } catch(const std::exception& ex) {
-        reject(Error::internal_error(cap.promise.context(),
-                                     "Exception in async C++ function: {}",
-                                     ex.what()));
+        cap.executor.reject(Error::internal_error(cap.promise.context(),
+                                                  "Exception in async C++ function: {}",
+                                                  ex.what()));
     } catch(...) {
-        reject(Error::internal_error(cap.promise.context(),
-                                     "Unknown exception in async C++ function"));
+        cap.executor.reject(Error::internal_error(cap.promise.context(),
+                                                  "Unknown exception in async C++ function"));
     }
+    bridge.wake_jobs();
     co_return;
 }
 
@@ -1177,8 +1151,8 @@ kota::task<T, Error> promise_to_task(Promise promise, PromiseTaskBridge bridge) 
     co_return state->result->value();
 }
 
-template <async_task Task>
-Promise task_to_promise(JSContext* ctx, PromiseTaskBridge bridge, Task task) {
+template <typename T>
+Promise task_to_promise(JSContext* ctx, PromiseTaskBridge bridge, kota::task<T, Error> task) {
     auto cap = PromiseCapability::create(ctx);
     auto promise = cap.promise;
 
