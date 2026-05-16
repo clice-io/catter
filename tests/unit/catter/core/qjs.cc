@@ -84,12 +84,15 @@ JSValue forty_two_raw(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_NewInt64(ctx, 42);
 }
 
-void drain_jobs(JSRuntime* rt) {
-    JSContext* job_ctx = nullptr;
-    while(JS_IsJobPending(rt)) {
-        int ret = JS_ExecutePendingJob(rt, &job_ctx);
-        if(ret < 0) {
-            throw qjs::JSException::dump(job_ctx);
+void drain_jobs(qjs::Runtime& rt) {
+    while(rt.has_job_pending()) {
+        auto ret = rt.execute_pending_job();
+        if(!ret.has_value()) {
+            if(ret.error().is_error()) {
+                throw ret.error().as<qjs::Error>().to_exception();
+            } else {
+                throw qjs::Exception("Unknown error while executing pending JS job.");
+            }
         }
     }
 }
@@ -630,7 +633,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         auto fulfilled_next = fulfilled_cap.promise.then(on_fulfilled);
 
         fulfilled_cap.executor.resolve(std::string{"resolved"});
-        drain_jobs(runtime.js_runtime());
+        drain_jobs(runtime);
 
         EXPECT_TRUE(fulfilled_cap.promise.is_fulfilled());
         EXPECT_TRUE(fulfilled_next.is_fulfilled());
@@ -650,7 +653,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         auto rejected_next = rejected_cap.promise.then(unexpected_fulfilled, on_rejected);
 
         rejected_cap.executor.reject(std::string{"rejected"});
-        drain_jobs(runtime.js_runtime());
+        drain_jobs(runtime);
 
         EXPECT_TRUE(rejected_cap.promise.is_rejected());
         EXPECT_TRUE(rejected_next.is_fulfilled());
@@ -667,7 +670,7 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         auto caught_next = caught_cap.promise.when_err(on_caught);
 
         caught_cap.executor.reject(std::string{"catch-path"});
-        drain_jobs(runtime.js_runtime());
+        drain_jobs(runtime);
 
         EXPECT_TRUE(caught_cap.promise.is_rejected());
         EXPECT_TRUE(caught_next.is_fulfilled());

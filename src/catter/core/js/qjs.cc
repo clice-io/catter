@@ -26,7 +26,13 @@ TypeException::TypeException(const std::string& details) :
 JSException::JSException(const Error& error) : Exception(error.format()) {}
 
 JSException JSException::dump(JSContext* ctx) {
-    return JSException(Error(ctx, JS_GetException(ctx)));
+    auto exception = Value{ctx, JS_GetException(ctx)};
+    if(exception.is_error()) {
+        return JSException(Error(ctx, exception.value()));
+    } else {
+        return JSException(
+            Error::internal_error(ctx, "Non-error exception: {}", json::stringify(exception)));
+    }
 }
 
 Value::Value(const Value& other) noexcept :

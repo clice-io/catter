@@ -4,6 +4,7 @@
 #include <utility>
 #include <quickjs.h>
 
+#include "js/qjs.h"
 #include "util/guard.h"
 
 namespace catter::js {
@@ -114,19 +115,17 @@ qjs::PromiseTaskBridge promise_task_bridge(JsLoop& js_loop) noexcept {
 }
 
 bool drain_jobs_with_budget(qjs::Runtime& runtime, std::size_t max_jobs) {
-    JSRuntime* js_rt = runtime.js_runtime();
     bool ran = false;
-    JSContext* job_ctx = nullptr;
-
-    for(std::size_t i = 0; i < max_jobs && JS_IsJobPending(js_rt); ++i) {
-        int ret = JS_ExecutePendingJob(js_rt, &job_ctx);
-        if(ret < 0) {
-            if(job_ctx) {
-                throw qjs::JSException::dump(job_ctx);
+    for(std::size_t i = 0; i < max_jobs && runtime.has_job_pending(); ++i) {
+        auto ret = runtime.execute_pending_job();
+        if(!ret.has_value()) {
+            if(ret.error().is_error()) {
+                throw ret.error().as<qjs::Error>().to_exception();
+            } else {
+                throw qjs::Exception("Unknown error while executing pending JS job.");
             }
-            throw qjs::Exception("Error while executing pending JS job.");
         }
-        if(ret == 0) {
+        if(ret.value() == false) {
             break;
         }
         ran = true;

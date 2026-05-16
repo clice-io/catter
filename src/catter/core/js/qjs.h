@@ -1638,6 +1638,30 @@ public:
 
     JSRuntime* js_runtime() const noexcept;
 
+    bool has_job_pending() const noexcept {
+        return JS_IsJobPending(this->js_runtime());
+    }
+
+    /**
+     * @brief Execute a pending job in the JS runtime.
+     * @return std::expected<bool, Value> Returns true if a job was executed, false if no jobs were
+     * pending, or std::unexpected(Value) if an exception occurred.
+     */
+    std::expected<bool, Value> execute_pending_job() const noexcept {
+        JSContext* ctx = nullptr;
+        switch(JS_ExecutePendingJob(this->js_runtime(), &ctx)) {
+            case 1: return true;
+            case 0: return false;
+            case -1:
+                if(ctx) {
+                    return std::unexpected(Value{ctx, JS_GetException(ctx)});
+                } else {
+                    return std::unexpected(Value{});
+                }
+            default: return std::unexpected(Value{});
+        }
+    }
+
     operator bool() const noexcept;
 
 private:
