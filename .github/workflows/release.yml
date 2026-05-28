@@ -31,7 +31,7 @@ jobs:
             arch: arm64
 
     concurrency:
-      group: release-${{ github.ref }}-${{ matrix.os }}
+      group: release-${{ github.event.inputs.tag || github.ref_name }}-${{ matrix.os }}
       cancel-in-progress: false
 
     runs-on: ${{ matrix.os }}
@@ -92,6 +92,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           draft: true
           files: release-artifacts/**
           fail_on_unmatched_files: true
