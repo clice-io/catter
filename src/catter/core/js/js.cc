@@ -12,7 +12,6 @@
 #include "apitool.h"
 #include "async.h"
 #include "config/js-lib.h"
-#include "util/guard.h"
 
 namespace catter::js {
 
@@ -30,7 +29,6 @@ struct RuntimeState {
     RuntimeConfig config;
     qjs::Runtime runtime;
     JsLoop js_loop{64};
-    bool loop_started = false;
     OnStart on_start;
     OnFinish on_finish;
     OnCommand on_command;
@@ -63,18 +61,12 @@ std::string_view js_lib_source() {
     return config::data::js_lib.substr(0, last + 1);
 }
 
-kota::task<> run_loop_task(kota::task<> loop_task) {
-    auto clear_loop_started = util::make_guard([]() noexcept { state.loop_started = false; });
-    co_await std::move(loop_task);
-    co_return;
-}
-
 kota::task<> eval_module(std::string_view input, const char* filename) {
     constexpr int flags = JS_EVAL_FLAG_STRICT;
 
     auto& ctx = state.runtime.context();
-    auto result = co_await qjs::promise_to_task(ctx.eval_module(input, filename, flags),
-                                                promise_task_bridge());
+    auto result =
+        co_await state.js_loop.promise_to_task<void>(ctx.eval_module(input, filename, flags));
     if(!result) {
         throw result.error().to_exception();
     }
@@ -83,7 +75,7 @@ kota::task<> eval_module(std::string_view input, const char* filename) {
 
 template <typename T = void>
 kota::task<T> wait_for_callback_promise(qjs::Promise promise) {
-    auto result = co_await qjs::promise_to_task<T>(std::move(promise), promise_task_bridge());
+    auto result = co_await state.js_loop.promise_to_task<T>(std::move(promise));
     if(!result) {
         throw result.error().to_exception();
     }
@@ -93,29 +85,7 @@ kota::task<T> wait_for_callback_promise(qjs::Promise promise) {
     }
 }
 
-void schedule_default_js_task(kota::task<>&& task) {
-    if(!state.loop_started) {
-        throw qjs::Exception("QuickJS async loop is not running.");
-    }
-    state.js_loop.schedule(std::move(task));
-}
-
-bool wake_default_js_loop() noexcept {
-    assert(state.loop_started && "QuickJS async loop is not running.");
-    state.js_loop.wake();
-    return true;
-}
-
 }  // namespace
-
-qjs::PromiseTaskBridge promise_task_bridge() noexcept {
-    return qjs::PromiseTaskBridge{
-        .data = nullptr,
-        .schedule_task_fn = [](void*,
-                               kota::task<>&& task) { schedule_default_js_task(std::move(task)); },
-        .wake_jobs_fn = [](void*) noexcept { return wake_default_js_loop(); },
-    };
-}
 
 const RuntimeConfig& get_global_runtime_config() {
     return state.config;
@@ -125,7 +95,7 @@ kota::task<> RuntimeScope::start(RuntimeConfig config) {
     if(started) {
         throw qjs::Exception("QuickJS runtime scope is already started.");
     }
-    if(state.loop_started || state.js_loop.is_running()) {
+    if(!state.js_loop.is_stopped()) {
         throw qjs::Exception("QuickJS async loop is already running.");
     }
 
@@ -133,8 +103,7 @@ kota::task<> RuntimeScope::start(RuntimeConfig config) {
 
     auto& loop = kota::event_loop::current();
     auto loop_task = state.js_loop.run(state.runtime, loop);
-    state.loop_started = true;
-    loop.schedule(run_loop_task(std::move(loop_task)));
+    loop.schedule(std::move(loop_task));
 
     std::exception_ptr error;
     try {
@@ -169,6 +138,10 @@ kota::task<> run_script(std::string_view content, std::string_view filepath) {
     auto filename = std::string(filepath);
     co_await eval_module(content, filename.c_str());
     co_return;
+}
+
+JsLoop& loop() {
+    return state.js_loop;
 }
 
 kota::task<CatterConfig> on_start(const CatterConfig& config) {

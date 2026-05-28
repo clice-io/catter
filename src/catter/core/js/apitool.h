@@ -106,7 +106,7 @@ template <auto FnPtr>
 auto to_js_async_function(JSContext* ctx, const char* name) {
     return [&]<typename R, typename... Args>(kota::task<R, qjs::Error> (*)(Args...)) {
         constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
-            return qjs::task_to_promise(ctx, js::promise_task_bridge(), FnPtr(std::move(args)...));
+            return js::loop().task_to_promise(ctx, FnPtr(std::move(args)...));
         };
         return qjs::Function<qjs::Promise(Args...)>::template from_raw<wrapped_fn>(ctx, name);
     }(FnPtr);
@@ -116,9 +116,7 @@ template <auto FnPtr>
 auto to_js_async_function_with_ctx(JSContext* ctx, const char* name) {
     return [&]<typename R, typename... Args>(kota::task<R, qjs::Error> (*)(JSContext*, Args...)) {
         constexpr auto wrapped_fn = +[](JSContext* ctx, Args... args) -> qjs::Promise {
-            return qjs::task_to_promise(ctx,
-                                        js::promise_task_bridge(),
-                                        FnPtr(ctx, std::move(args)...));
+            return js::loop().task_to_promise(ctx, FnPtr(ctx, std::move(args)...));
         };
         return qjs::Function<qjs::Promise(Args...)>::template from_raw<wrapped_fn>(ctx, name);
     }(FnPtr);

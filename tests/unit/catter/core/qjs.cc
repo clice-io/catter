@@ -686,7 +686,6 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
             auto runtime = qjs::Runtime::create();
             auto& ctx = runtime.context();
             js::JsLoop js_loop;
-            auto bridge = js::promise_task_bridge(js_loop);
 
             auto& loop = kota::event_loop::current();
             loop.schedule(js_loop.run(runtime, loop));
@@ -701,20 +700,19 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     "asyncGreet",
                     AsyncGreet::from(
                         ctx.js_context(),
-                        [ctx = ctx.js_context(), bridge](std::string name) {
-                            return qjs::task_to_promise(ctx, bridge, async_greet(std::move(name)));
+                        [ctx = ctx.js_context(), &js_loop](std::string name) {
+                            return js_loop.task_to_promise(ctx, async_greet(std::move(name)));
                         }));
                 global.set_property(
                     "asyncAddOrFail",
                     AsyncAddOrFail::from(
                         ctx.js_context(),
-                        [ctx = ctx.js_context(), bridge](int64_t value) {
-                            return qjs::task_to_promise(ctx, bridge, async_add_or_fail(ctx, value));
+                        [ctx = ctx.js_context(), &js_loop](int64_t value) {
+                            return js_loop.task_to_promise(ctx, async_add_or_fail(ctx, value));
                         }));
 
-                auto bridged = co_await qjs::promise_to_task<std::string>(
-                    qjs::task_to_promise(ctx.js_context(), bridge, async_greet("bridge")),
-                    bridge);
+                auto bridged = co_await js_loop.promise_to_task<std::string>(
+                    js_loop.task_to_promise(ctx.js_context(), async_greet("bridge")));
                 if(!bridged) {
                     throw std::move(bridged.error());
                 }
@@ -734,7 +732,8 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     )",
                                             "async-function-test.js",
                                             eval_flags);
-                auto result = co_await qjs::promise_to_task(eval_result.as<qjs::Promise>(), bridge);
+                auto result =
+                    co_await js_loop.promise_to_task<void>(eval_result.as<qjs::Promise>());
                 if(!result) {
                     throw result.error().to_exception();
                 }

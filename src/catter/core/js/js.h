@@ -5,6 +5,7 @@
 #include <string_view>
 #include <kota/async/runtime/task.h>
 
+#include "async.h"
 #include "qjs.h"
 #include "capi/type.h"
 
@@ -15,8 +16,6 @@ struct RuntimeConfig {
 };
 
 const RuntimeConfig& get_global_runtime_config();
-
-qjs::PromiseTaskBridge promise_task_bridge() noexcept;
 
 class RuntimeScope {
 public:
@@ -36,6 +35,8 @@ private:
 };
 
 kota::task<> run_script(std::string_view content, std::string_view filepath);
+
+JsLoop& loop();
 
 void set_on_start(qjs::Object cb);
 void set_on_finish(qjs::Object cb);
