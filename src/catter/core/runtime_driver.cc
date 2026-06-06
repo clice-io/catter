@@ -18,10 +18,10 @@
 
 namespace catter::core {
 namespace {
-data::output_mode to_process_output_mode(js::CatterOptions::OutputMode output_mode) {
+Session::output_mode to_process_output_mode(js::CatterOptions::OutputMode output_mode) {
     switch(output_mode) {
-        case js::CatterOptions::OutputMode::inherit: return data::output_mode::inherit;
-        case js::CatterOptions::OutputMode::capture: return data::output_mode::capture;
+        case js::CatterOptions::OutputMode::inherit: return Session::output_mode::inherit;
+        case js::CatterOptions::OutputMode::capture: return Session::output_mode::capture;
     }
 
     throw cpptrace::runtime_error("Unhandled catter output mode");

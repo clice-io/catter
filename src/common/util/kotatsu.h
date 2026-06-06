@@ -70,13 +70,4 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
         .std_err = stderr_proxy.output(),
     };
 }
-
-inline kota::task<data::process_result> capture_process_result(process_event proc_event,
-                                                               data::output_mode output_mode) {
-    const bool forward_output = output_mode == data::output_mode::inherit;
-    co_return co_await capture_process_result(std::move(proc_event),
-                                              forward_output ? stdout : nullptr,
-                                              forward_output ? stderr : nullptr);
-}
-
 }  // namespace catter

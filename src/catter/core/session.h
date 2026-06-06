@@ -38,11 +38,16 @@ public:
     using PipeAcceptor = kota::acceptor<kota::pipe>;
     using ClientAcceptor = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
 
+    enum class output_mode : uint8_t {
+        inherit,
+        capture,
+    };
+
     struct ProcessLaunchPlan {
         std::string cwd;
         std::string executable;
         std::vector<std::string> args;
-        data::output_mode output_mode = data::output_mode::inherit;
+        output_mode output_mode;
     };
 
     struct RunPlan {
@@ -83,7 +88,7 @@ private:
     kota::task<data::process_result> spawn(std::string executable,
                                            std::vector<std::string> args,
                                            std::string cwd,
-                                           data::output_mode output_mode);
+                                           output_mode output_mode);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };
