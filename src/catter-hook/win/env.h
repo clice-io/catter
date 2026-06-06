@@ -7,7 +7,6 @@
 
 namespace catter::win {
 
-constexpr static char EXE_NAME[] = "catter-proxy.exe";
 constexpr static char DLL_NAME[] = "catter-hook-win64.dll";
 
 template <CharT char_t>

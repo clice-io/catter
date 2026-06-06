@@ -11,7 +11,11 @@
 
 #include "apitool.h"
 #include "async.h"
-#include "config/js-lib.h"
+
+extern "C" {
+    extern const char _binary_lib_js_start[];
+    extern const char _binary_lib_js_end[];
+}
 
 namespace catter::js {
 
@@ -54,11 +58,12 @@ void register_catter_module(const qjs::Context& ctx) {
 }
 
 std::string_view js_lib_source() {
-    auto last = config::data::js_lib.find_last_not_of('\0');
+    const std::string_view js_lib{_binary_lib_js_start, _binary_lib_js_end};
+    auto last = js_lib.find_last_not_of('\0');
     if(last == std::string_view::npos) {
         return {};
     }
-    return config::data::js_lib.substr(0, last + 1);
+    return js_lib.substr(0, last + 1);
 }
 
 kota::task<> eval_module(std::string_view input, const char* filename) {

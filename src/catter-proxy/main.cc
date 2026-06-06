@@ -12,8 +12,8 @@
 
 #include "hook.h"
 #include "ipc.h"
+#include "option.h"
 #include "config/catter-proxy.h"
-#include "opt/proxy/option.h"
 #include "shared/resolver.h"
 #include "util/crossplat.h"
 #include "util/guard.h"
