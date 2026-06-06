@@ -10,25 +10,6 @@
 
 namespace catter::app {
 
-kota::task<> async_run(ScriptRunConfig config) {
-    js::RuntimeScope runtime;
-
-    std::exception_ptr error;
-    try {
-        co_await runtime.start({.pwd = std::move(config.working_directory)});
-        co_await js::run_script(config.script_content, config.script_path);
-    } catch(...) {
-        error = std::current_exception();
-    }
-
-    co_await runtime.stop();
-
-    if(error) {
-        std::rethrow_exception(error);
-    }
-    co_return;
-}
-
 kota::task<> async_run(const core::CatterConfig& config) {
     auto context = core::RunContext(config);
     auto script_config = context.make_script_config();

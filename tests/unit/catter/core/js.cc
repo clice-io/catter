@@ -50,9 +50,34 @@ std::string load_js_file_by_name(const fs::path& js_path, std::string_view file_
     return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 }
 
+struct ScriptRunConfig {
+    std::string script_content;
+    std::string script_path;
+    std::filesystem::path working_directory;
+};
+
+kota::task<> async_run(ScriptRunConfig config) {
+    js::RuntimeScope runtime;
+
+    std::exception_ptr error;
+    try {
+        co_await runtime.start({.pwd = std::move(config.working_directory)});
+        co_await js::run_script(config.script_content, config.script_path);
+    } catch(...) {
+        error = std::current_exception();
+    }
+
+    co_await runtime.stop();
+
+    if(error) {
+        std::rethrow_exception(error);
+    }
+    co_return;
+}
+
 void run_async_js_case(std::string source, std::string file_name) {
     auto js_path = fs::path(config::data::js_test_path.data());
-    auto task = app::async_run(app::ScriptRunConfig{
+    auto task = async_run(ScriptRunConfig{
         .script_content = std::move(source),
         .script_path = std::move(file_name),
         .working_directory = js_path,
