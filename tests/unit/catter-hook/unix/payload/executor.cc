@@ -4,10 +4,10 @@
 #include <kota/zest/zest.h>
 #include <kota/deco/deco.h>
 
+#include "option.h"
 #include "session.h"
 #include "mock/mock_linker.h"
 #include "mock/mock_resolver.h"
-#include "option.h"
 
 namespace ct = catter;
 namespace fs = std::filesystem;

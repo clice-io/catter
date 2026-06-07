@@ -438,8 +438,8 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
 
         js::CatterConfig config{
             .scriptPath = "script.ts",
-            .scriptArgs = {"--input",   "compile_commands.json"                         },
-            .buildSystemCommand = {"xmake",     "build"                                         },
+            .scriptArgs = {"--input",   "compile_commands.json"                        },
+            .buildSystemCommand = {"xmake",     "build"                                        },
             .runtime = runtime,
             .options = {.log = true, .output = js::CatterOptions::StdioMode::inherit},
             .execute = true,
