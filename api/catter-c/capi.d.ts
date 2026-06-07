@@ -89,7 +89,7 @@ export type CatterRuntime = {
  * - `"inherit"`: capture output and forward it to catter's stdout/stderr.
  * - `"capture"`: capture output without printing it in real time.
  */
-export type CatterOutputMode = "inherit" | "capture";
+export type CatterStdioMode = "inherit" | "capture";
 
 /**
  * Configuration passed to the script before command capture begins.
@@ -132,7 +132,7 @@ export type CatterConfig = {
     /**
      * Controls whether target stdout/stderr is printed by catter while it is captured.
      */
-    output?: CatterOutputMode;
+    output?: CatterStdioMode;
   };
 
   /**

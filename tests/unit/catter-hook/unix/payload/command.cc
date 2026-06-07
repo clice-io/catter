@@ -10,7 +10,7 @@
 #include <kota/deco/deco.h>
 
 #include "session.h"
-#include "opt/proxy/option.h"
+#include "option.h"
 
 namespace ct = catter;
 

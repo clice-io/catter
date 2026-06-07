@@ -303,7 +303,7 @@ qjs::Object to_reflected_object(JSContext* ctx, const T& value) {
 enum class ActionType { skip, drop, abort, modify };
 
 struct CatterOptions {
-    enum class OutputMode { inherit, capture };
+    enum class StdioMode { inherit, capture };
 
     static CatterOptions make(qjs::Object object) {
         return detail::make_reflected_object<CatterOptions>(std::move(object));
@@ -317,7 +317,7 @@ struct CatterOptions {
 
 public:
     bool log;
-    std::optional<OutputMode> output;
+    std::optional<StdioMode> output;
 };
 
 struct CatterRuntime {

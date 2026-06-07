@@ -35,32 +35,6 @@ void va_copy_n(va_list& args, char* argv[], const size_t argc) {
 
 }  // namespace
 
-/// function type we need hook
-using execve_t = int (*)(const char* path, char* const argv[], char* const envp[]);
-using execv_t = int (*)(const char* path, char* const argv[]);
-using execvpe_t = int (*)(const char* file, char* const argv[], char* const envp[]);
-using execvp_t = int (*)(const char* file, char* const argv[]);
-
-using execvP_t = int (*)(const char* file, const char* search_path, char* const argv[]);
-
-using execl_t = int (*)(const char* path, const char* arg, ...);
-using execlp_t = int (*)(const char* file, const char* arg, ...);
-/// int execle(const char *path, const char *arg, ..., char * const envp[]);
-using execle_t = int (*)(const char* path, const char* arg, ...);
-
-using posix_spawn_t = int (*)(pid_t* pid,
-                              const char* path,
-                              const posix_spawn_file_actions_t* file_actions,
-                              const posix_spawnattr_t* attrp,
-                              char* const argv[],
-                              char* const envp[]);
-using posix_spawnp_t = int (*)(pid_t* pid,
-                               const char* file,
-                               const posix_spawn_file_actions_t* file_actions,
-                               const posix_spawnattr_t* attrp,
-                               char* const argv[],
-                               char* const envp[]);
-
 /**
  * Library static data
  *

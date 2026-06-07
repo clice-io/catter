@@ -99,7 +99,7 @@ struct CatterConfig {
         help =
             "control target output forwarding: inherit prints in real time, capture only stores it",
         required = false)
-    <js::CatterOptions::OutputMode> output = js::CatterOptions::OutputMode::inherit;
+    <js::CatterOptions::StdioMode> output = js::CatterOptions::StdioMode::inherit;
 
     DecoPack(
         meta_var = "<Args>",

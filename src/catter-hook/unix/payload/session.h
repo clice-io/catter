@@ -4,8 +4,6 @@
 
 namespace catter {
 
-class Buffer;
-
 /**
  * Represents an intercept session parameter set.
  *

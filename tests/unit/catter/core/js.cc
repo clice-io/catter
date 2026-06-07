@@ -441,7 +441,7 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
             .scriptArgs = {"--input",   "compile_commands.json"                         },
             .buildSystemCommand = {"xmake",     "build"                                         },
             .runtime = runtime,
-            .options = {.log = true, .output = js::CatterOptions::OutputMode::inherit},
+            .options = {.log = true, .output = js::CatterOptions::StdioMode::inherit},
             .execute = true,
         };
 
@@ -450,7 +450,7 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
         EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
         EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
         EXPECT_TRUE(updated_config.options.log == false);
-        EXPECT_TRUE(updated_config.options.output == js::CatterOptions::OutputMode::capture);
+        EXPECT_TRUE(updated_config.options.output == js::CatterOptions::StdioMode::capture);
         EXPECT_TRUE(updated_config.execute == true);
 
         js::CommandData data{

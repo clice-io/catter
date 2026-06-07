@@ -37,7 +37,6 @@ public:
     CmdBuilder& operator= (const CmdBuilder&) = delete;
     CmdBuilder(CmdBuilder&&) noexcept = delete;
     CmdBuilder& operator= (CmdBuilder&&) noexcept = delete;
-    ;
 
     /**
      * Build the proxy command string.
