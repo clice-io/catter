@@ -171,6 +171,11 @@ kota::task<Action> on_command(uint32_t id, std::expected<CommandData, CatterErr>
     if(!state.on_command) {
         throw cpptrace::runtime_error("service.onCommand is not registered");
     }
+
+    // TODO
+    // Add a helper function to convert std::expected to a JS object in a more generic way, and
+    // reuse it in other places.
+
     auto command_result = qjs::Object::empty_one(state.on_command.context());
     if(data.has_value()) {
         command_result.set_property("success", true);

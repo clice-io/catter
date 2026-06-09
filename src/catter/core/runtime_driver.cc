@@ -18,7 +18,7 @@
 
 namespace catter::core {
 namespace {
-Session::StdioMode to_process_output_mode(js::CatterOptions::StdioMode mode) {
+Session::StdioMode to_process_stdio_mode(js::CatterOptions::StdioMode mode) {
     switch(mode) {
         case js::CatterOptions::StdioMode::inherit: return Session::StdioMode::inherit;
         case js::CatterOptions::StdioMode::capture: return Session::StdioMode::capture;
@@ -124,7 +124,7 @@ public:
                        proxy_path.string(),
                        "-p", "0",
                        "--", },
-            .mode = to_process_output_mode(
+            .mode = to_process_stdio_mode(
                 config.options.output.value_or(js::CatterOptions::StdioMode::inherit)),
         };
         util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);

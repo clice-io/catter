@@ -18,20 +18,12 @@ constexpr static auto KEYS_TO_INJECT =
 #if defined(CATTER_LINUX)
 constexpr static char KEY_PRELOAD[] = "LD_PRELOAD";
 constexpr static char LD_PRELOAD_INIT_ENTRY[] = "LD_PRELOAD=";
+constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.so";
+constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.so";
 #elif defined(CATTER_MAC)
 constexpr static char KEY_PRELOAD[] = "DYLD_INSERT_LIBRARIES";
 constexpr static char LD_PRELOAD_INIT_ENTRY[] = "DYLD_INSERT_LIBRARIES=";
-#endif
-
-#ifdef CATTER_LINUX
-constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.so";
-#elif defined(CATTER_MAC)
 constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.dylib";
-#endif
-
-#ifdef CATTER_LINUX
-constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.so";
-#elif defined(CATTER_MAC)
 constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.dylib";
 #endif
 
