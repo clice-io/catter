@@ -119,7 +119,7 @@ match platform.system():
             compiler = hook_config["compilers"][0]["program"]
             if "g++" in compiler and "clang" not in compiler:
                 asan_path = run(f"{compiler} -print-file-name=libasan.so").strip()
-                hook_path = f"LD_PRELOAD={asan_path} {hook_path}"
+                hook_path = f"env LD_PRELOAD={asan_path} {hook_path}"
 
 config.substitutions.append(("%it_catter_hook", hook_path))
 config.substitutions.append(("%it_catter_proxy", it_proxy_path))
