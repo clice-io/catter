@@ -86,7 +86,7 @@ def find_windows_asan_dir(compiler: str) -> str | None:
 llvm_config = cfg.LLVMConfig(lit_config, config)
 
 config.name = "Catter Integration Test"
-config.test_format = lit.formats.ShTest(True)
+config.test_format = lit.formats.ShTest(False)
 config.suffixes = [".test", ".cc"]
 
 project_config = run_with_json("xmake show --json")
@@ -100,12 +100,15 @@ config.test_exec_root = os.path.normpath(f"{project_root}/build/lit-tests")
 hook_config = run_with_json("xmake show -t it-catter-hook --json")
 hook_path = os.path.join(project_root, hook_config["targetfile"])
 
-proxy_config = run_with_json("xmake show -t it-catter-proxy --json")
+it_proxy_config = run_with_json("xmake show -t it-catter-proxy --json")
+it_proxy_path = os.path.join(project_root, it_proxy_config["targetfile"])
+prepend_path(os.path.dirname(it_proxy_path))
+
+proxy_config = run_with_json("xmake show -t catter-proxy --json")
 proxy_path = os.path.join(project_root, proxy_config["targetfile"])
 
 match platform.system():
     case "Windows":
-        config.test_format = lit.formats.ShTest(False)
         if project_mode == "debug":
             compiler = hook_config["compilers"][0]["program"]
             asan_dir = find_windows_asan_dir(compiler)
@@ -119,4 +122,5 @@ match platform.system():
                 hook_path = f"LD_PRELOAD={asan_path} {hook_path}"
 
 config.substitutions.append(("%it_catter_hook", hook_path))
-config.substitutions.append(("%it_catter_proxy", proxy_path))
+config.substitutions.append(("%it_catter_proxy", it_proxy_path))
+config.substitutions.append(("%catter_proxy", proxy_path))

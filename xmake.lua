@@ -330,7 +330,7 @@ target("it-catter-proxy")
     set_default(has_config("test"))
     set_kind("binary")
     add_files("tests/integration/test/catter-proxy.cc")
-    add_deps("common", "catter-core")
+    add_deps("common", "catter-core", "catter-proxy")
 
 rule("build.js")
     set_extensions(".ts", ".d.ts", ".js", ".txt")
