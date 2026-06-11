@@ -125,7 +125,7 @@ public:
                        "-p", "0",
                        "--", },
             .mode = to_process_stdio_mode(
-                config.options.output.value_or(js::CatterOptions::StdioMode::inherit)),
+                config.options.stdioMode.value_or(js::CatterOptions::StdioMode::inherit)),
         };
         util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 

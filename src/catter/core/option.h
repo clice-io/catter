@@ -94,12 +94,12 @@ struct CatterConfig {
     <config::WorkingDirectory> working_dir = config::WorkingDirectory{};
 
     DecoKV(
-        names = {"--output"},
+        names = {"--stdio-mode"},
         meta_var = "<inherit|capture>",
         help =
-            "control target output forwarding: inherit prints in real time, capture only stores it",
+            "control target stdio behavior when it is captured by catter; 'inherit' prints in real time, 'capture' only stores it; default to 'inherit'",
         required = false)
-    <js::CatterOptions::StdioMode> output = js::CatterOptions::StdioMode::inherit;
+    <js::CatterOptions::StdioMode> stdio_mode = js::CatterOptions::StdioMode::inherit;
 
     DecoPack(
         meta_var = "<Args>",
@@ -132,7 +132,7 @@ struct RunContext {
     js::CatterOptions option_defaults() const {
         return js::CatterOptions{
             .log = config.log,
-            .output = config.output.value(),
+            .stdioMode = config.stdio_mode.value(),
         };
     }
 
@@ -149,8 +149,8 @@ struct RunContext {
     }
 
     void apply_option_defaults(js::CatterConfig& script_config) const {
-        if(!script_config.options.output.has_value()) {
-            script_config.options.output = config.output.value();
+        if(!script_config.options.stdioMode.has_value()) {
+            script_config.options.stdioMode = config.stdio_mode.value();
         }
     }
 };

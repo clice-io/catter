@@ -317,7 +317,7 @@ struct CatterOptions {
 
 public:
     bool log;
-    std::optional<StdioMode> output;
+    std::optional<StdioMode> stdioMode;
 };
 
 struct CatterRuntime {

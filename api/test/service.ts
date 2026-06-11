@@ -11,7 +11,7 @@ service.register({
     debug.assertThrow(config.scriptPath === "script.ts");
     debug.assertThrow(config.scriptArgs.length === 2);
     debug.assertThrow(config.options.log);
-    debug.assertThrow(config.options.output === "inherit");
+    debug.assertThrow(config.options.stdioMode === "inherit");
 
     return {
       ...config,
@@ -19,7 +19,7 @@ service.register({
       options: {
         ...config.options,
         log: false,
-        output: "capture",
+        stdioMode: "capture",
       },
       execute: true,
     };

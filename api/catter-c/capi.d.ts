@@ -132,7 +132,7 @@ export type CatterConfig = {
     /**
      * Controls whether target stdout/stderr is printed by catter while it is captured.
      */
-    output?: CatterStdioMode;
+    stdioMode?: CatterStdioMode;
   };
 
   /**
