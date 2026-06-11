@@ -1,27 +1,30 @@
 // clang-format off
-// RUN: %it_catter_proxy %catter_proxy -p 0 --exec it-catter-proxy -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT
-// RUN: %it_catter_proxy %catter_proxy -p 0 -- it-catter-proxy --child | FileCheck %s --check-prefix=IMPLICIT
-// RUN: not %it_catter_proxy %catter_proxy -p 0 | FileCheck %s --check-prefix=MISSING
-// RUN: not %it_catter_proxy %catter_proxy -p 0 -- nonexistent-executable-catter-proxy-test | FileCheck %s --check-prefix=NONEXISTENT
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec it-catter-proxy -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- it-catter-proxy --child | FileCheck %s --check-prefix=IMPLICIT
+// RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 | FileCheck %s --check-prefix=MISSING
+// RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 -- nonexistent-executable-catter-proxy-test | FileCheck %s --check-prefix=NONEXISTENT
 //
 // EXPLICIT: event=create service=1 parent=0
 // EXPLICIT-NEXT: event=decision executable="it-catter-proxy" cwd="{{.*}}" argc=2
 // EXPLICIT-NEXT: event=argument index=0 value="it-catter-proxy"
 // EXPLICIT-NEXT: event=argument index=1 value="--child"
-// EXPLICIT-NEXT: event=finish code=0 stdout="child output\n" stderr=""
-// EXPLICIT-NEXT: proxy=exit code=0 stdout="child output\n" stderr=""
+// EXPLICIT-NEXT: event=finish code=0 stdout="child output" stderr=""
+// EXPLICIT-NEXT: proxy=exit code=0 stdout="child output" stderr=""
 //
 // IMPLICIT: event=create service=1 parent=0
 // IMPLICIT-NEXT: event=decision executable="{{.*[/\\]}}it-catter-proxy{{(.exe)?}}" cwd="{{.*}}" argc=2
 // IMPLICIT-NEXT: event=argument index=0 value="it-catter-proxy"
 // IMPLICIT-NEXT: event=argument index=1 value="--child"
-// IMPLICIT-NEXT: event=finish code=0 stdout="child output\n" stderr=""
-// IMPLICIT-NEXT: proxy=exit code=0 stdout="child output\n" stderr=""
+// IMPLICIT-NEXT: event=finish code=0 stdout="child output" stderr=""
+// IMPLICIT-NEXT: proxy=exit code=0 stdout="child output" stderr=""
 //
 // MISSING-NOT: event=create
 // MISSING-NOT: event=decision
 // MISSING-NOT: event=finish
 // MISSING: event=error parent=0 message="missing command arguments after --{{.*}}"
+// MISSING-NOT: event=create
+// MISSING-NOT: event=decision
+// MISSING-NOT: event=finish
 // MISSING-NEXT: proxy=exit code={{(-1|255|4294967295)}} stdout="" stderr=""
 //
 // NONEXISTENT: event=create service=1 parent=0
@@ -127,7 +130,7 @@ int run_proxy(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     if(argc == 2 && std::string_view(argv[1]) == "--child") {
-        std::println("child output");
+        std::print("child output");
         return 0;
     }
 
