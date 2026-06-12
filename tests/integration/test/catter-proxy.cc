@@ -1,6 +1,6 @@
 // clang-format off
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT -DIT_PROXY="%it_catter_proxy"
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT -DIT_PROXY="%it_catter_proxy"
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT -DIT_PROXY="%{it_catter_proxy_escaped}"
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT -DIT_PROXY="%{it_catter_proxy_escaped}"
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 | FileCheck %s --check-prefix=MISSING
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 -- nonexistent-executable-catter-proxy-test | FileCheck %s --check-prefix=NONEXISTENT
 //
