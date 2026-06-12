@@ -1,6 +1,6 @@
 // clang-format off
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT -DIT_PROXY="%{it_catter_proxy_escaped}"
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT -DIT_PROXY="%{it_catter_proxy_escaped}"
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT -DIT_PROXY="%it_catter_proxy"
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT -DIT_PROXY="%it_catter_proxy"
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 | FileCheck %s --check-prefix=MISSING
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 -- nonexistent-executable-catter-proxy-test | FileCheck %s --check-prefix=NONEXISTENT
 //
@@ -62,13 +62,11 @@ public:
 
     kota::task<data::action> make_decision(data::command cmd) override {
         std::println(R"(event=decision executable="{}" cwd="{}" argc={})",
-                     log::escape(cmd.executable),
-                     log::escape(cmd.cwd),
+                     cmd.executable,
+                     cmd.cwd,
                      cmd.args.size());
         for(size_t index = 0; index < cmd.args.size(); ++index) {
-            std::println(R"(event=argument index={} value="{}")",
-                         index,
-                         log::escape(cmd.args[index]));
+            std::println(R"(event=argument index={} value="{}")", index, cmd.args[index]);
         }
         co_return data::action{.type = data::action::WRAP, .cmd = std::move(cmd)};
     }

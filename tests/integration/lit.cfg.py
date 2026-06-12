@@ -23,29 +23,6 @@ def run_with_json(cmd: str) -> dict:
     return json.loads(run(cmd))
 
 
-def escape_protocol_string(value: str) -> str:
-    escapes = {
-        "\\": "\\\\",
-        '"': '\\"',
-        "'": "\\'",
-        "\n": "\\n",
-        "\r": "\\r",
-        "\t": "\\t",
-        "\b": "\\b",
-        "\f": "\\f",
-        "\v": "\\v",
-        "\0": "\\0",
-    }
-    return "".join(
-        escapes.get(char, char if " " <= char <= "~" else f"\\x{ord(char):02x}")
-        for char in value
-    )
-
-
-def escape_double_quoted_arg(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
 def prepend_path(dir_path: str) -> None:
     current_path = config.environment.get("PATH", os.environ.get("PATH", ""))
     config.environment["PATH"] = os.pathsep.join(filter(None, [dir_path, current_path]))
@@ -145,10 +122,4 @@ match platform.system():
 
 config.substitutions.append(("%it_catter_hook", hook_path))
 config.substitutions.append(("%it_catter_proxy", it_proxy_path))
-config.substitutions.append(
-    (
-        "%{it_catter_proxy_escaped}",
-        escape_double_quoted_arg(escape_protocol_string(it_proxy_path)),
-    )
-)
 config.substitutions.append(("%catter_proxy", proxy_path))
