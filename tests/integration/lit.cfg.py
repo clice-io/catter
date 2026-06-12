@@ -102,7 +102,6 @@ hook_path = os.path.join(project_root, hook_config["targetfile"])
 
 it_proxy_config = run_with_json("xmake show -t it-catter-proxy --json")
 it_proxy_path = os.path.join(project_root, it_proxy_config["targetfile"])
-prepend_path(os.path.dirname(it_proxy_path))
 
 proxy_config = run_with_json("xmake show -t catter-proxy --json")
 proxy_path = os.path.join(project_root, proxy_config["targetfile"])
