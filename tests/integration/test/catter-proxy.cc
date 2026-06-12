@@ -1,19 +1,19 @@
 // clang-format off
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT
-// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 --exec "%it_catter_proxy" -- it-catter-proxy --child | FileCheck %s --check-prefix=EXPLICIT -DIT_PROXY="%it_catter_proxy"
+// RUN: "%it_catter_proxy" "%catter_proxy" -p 0 -- "%it_catter_proxy" --child | FileCheck %s --check-prefix=IMPLICIT -DIT_PROXY="%it_catter_proxy"
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 | FileCheck %s --check-prefix=MISSING
 // RUN: not "%it_catter_proxy" "%catter_proxy" -p 0 -- nonexistent-executable-catter-proxy-test | FileCheck %s --check-prefix=NONEXISTENT
 //
 // EXPLICIT: event=create service=1 parent=0
-// EXPLICIT-NEXT: event=decision executable="{{.*[/\\]}}it-catter-proxy{{(.exe)?}}" cwd="{{.*}}" argc=2
+// EXPLICIT-NEXT: event=decision executable="[[IT_PROXY]]" cwd="{{.*}}" argc=2
 // EXPLICIT-NEXT: event=argument index=0 value="it-catter-proxy"
 // EXPLICIT-NEXT: event=argument index=1 value="--child"
 // EXPLICIT-NEXT: event=finish code=0 stdout="child output" stderr=""
 // EXPLICIT-NEXT: proxy=exit code=0 stdout="child output" stderr=""
 //
 // IMPLICIT: event=create service=1 parent=0
-// IMPLICIT-NEXT: event=decision executable="{{.*[/\\]}}it-catter-proxy{{(.exe)?}}" cwd="{{.*}}" argc=2
-// IMPLICIT-NEXT: event=argument index=0 value="{{.*[/\\]}}it-catter-proxy{{(.exe)?}}"
+// IMPLICIT-NEXT: event=decision executable="[[IT_PROXY]]" cwd="{{.*}}" argc=2
+// IMPLICIT-NEXT: event=argument index=0 value="[[IT_PROXY]]"
 // IMPLICIT-NEXT: event=argument index=1 value="--child"
 // IMPLICIT-NEXT: event=finish code=0 stdout="child output" stderr=""
 // IMPLICIT-NEXT: proxy=exit code=0 stdout="child output" stderr=""
