@@ -42,6 +42,10 @@ def escape_protocol_string(value: str) -> str:
     )
 
 
+def escape_double_quoted_arg(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def prepend_path(dir_path: str) -> None:
     current_path = config.environment.get("PATH", os.environ.get("PATH", ""))
     config.environment["PATH"] = os.pathsep.join(filter(None, [dir_path, current_path]))
@@ -142,6 +146,9 @@ match platform.system():
 config.substitutions.append(("%it_catter_hook", hook_path))
 config.substitutions.append(("%it_catter_proxy", it_proxy_path))
 config.substitutions.append(
-    ("%{it_catter_proxy_escaped}", escape_protocol_string(it_proxy_path))
+    (
+        "%{it_catter_proxy_escaped}",
+        escape_double_quoted_arg(escape_protocol_string(it_proxy_path)),
+    )
 )
 config.substitutions.append(("%catter_proxy", proxy_path))
