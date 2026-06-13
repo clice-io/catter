@@ -179,6 +179,7 @@ target("catter-js-runtime")
             "api/package.json",
             "api/rollup.config.js",
             "api/tsconfig.rollup.json",
+            "api/tsconfig.app.json",
             "tsconfig.base.json"
         },
         js_output = "api/output/lib/lib.js"
