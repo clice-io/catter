@@ -136,6 +136,54 @@ target("common")
     add_packages("spdlog", {public = true})
     add_packages("kotatsu", {public = true})
 
+target("catter-js-types")
+    set_kind("phony")
+    set_default(false)
+    add_rules("build.js", {
+        js_target = "build:types",
+        js_inputs = {
+            "api/src/**.ts",
+            "api/catter-c/**.d.ts",
+            "api/package.json",
+            "api/tsconfig.app.json",
+            "api/api-extractor.json",
+            "tsconfig.base.json"
+        },
+        js_output = "api/output/types/index.d.ts"
+    })
+
+target("catter-js-tests")
+    set_kind("phony")
+    set_default(false)
+    add_deps("catter-js-types")
+    add_rules("build.js", {
+        js_target = "build:tests",
+        js_inputs = {
+            "api/test/**.ts",
+            "api/output/types/index.d.ts",
+            "api/package.json",
+            "api/tsconfig.test.json",
+            "tsconfig.base.json"
+        },
+        js_output = "api/output/test"
+    })
+
+target("catter-js-runtime")
+    set_kind("object")
+    set_default(false)
+    add_rules("build.js", {
+        js_target = "build:runtime",
+        js_inputs = {
+            "api/src/**.ts",
+            "api/catter-c/**.d.ts",
+            "api/package.json",
+            "api/rollup.config.js",
+            "api/tsconfig.rollup.json",
+            "tsconfig.base.json"
+        },
+        js_output = "api/output/lib/lib.js"
+    })
+
 target("catter-core")
     -- use object, avoid register invalid
     set_kind("object")
@@ -143,12 +191,9 @@ target("catter-core")
     add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
 
-    add_deps("common")
+    add_deps("common", "catter-js-runtime")
 
     add_files("src/catter/core/**.cc")
-
-    add_files("api/src/**.ts", {always_added = true})
-    add_rules("build.js", {js_target = "build-js-lib", js_file = "api/output/lib/lib.js"})
 
 target("catter")
     set_kind("binary")
@@ -273,12 +318,10 @@ target("ut-catter")
     add_rules("ut-base")
 
     add_files("tests/unit/catter/**.cc")
-    add_deps("catter-core", "common")
+    add_deps("catter-core", "catter-js-tests", "common")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/"))))
     add_defines(format([[JS_TEST_RES_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/output/test/res"))))
-    add_rules("build.js", {js_target = "build-js-test"})
-    add_files("api/src/**.ts", "api/test/**.ts")
 
     add_tests("default")
 
@@ -333,53 +376,74 @@ target("it-catter-proxy")
     add_deps("common", "catter-core", "catter-proxy")
 
 rule("build.js")
-    set_extensions(".ts", ".d.ts", ".js", ".txt")
+    on_load(function (target)
+        if target:kind() == "object" then
+            local js_output = target:extraconf("rules", "build.js", "js_output")
+            table.insert(target:objectfiles(), target:objectfile(js_output))
+        end
+    end)
 
-    on_build_files(function (target, sourcebatch, opt)
-        -- ref xmake/rules/utils/bin2obj/utils.lua
+    on_build(function (target, opt)
         import("utils.binary.bin2obj")
         import("lib.detect.find_tool")
         import("core.project.depend")
         import("utils.progress")
 
         local js_target = target:extraconf("rules", "build.js", "js_target")
-        local js_file = target:extraconf("rules", "build.js", "js_file")
+        local js_inputs = target:extraconf("rules", "build.js", "js_inputs")
+        local js_output = target:extraconf("rules", "build.js", "js_output")
 
         local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
+        local stampfile = target:autogenfile(path.join("rules", "build.js", target:name() .. ".stamp"))
+        os.mkdir(path.directory(stampfile))
 
-        local format
-        if target:is_plat("windows", "mingw", "msys", "cygwin") then
-            format = "coff"
-        elseif target:is_plat("macosx", "iphoneos", "watchos", "appletvos") then
-            format = "macho"
-        else
-            format = "elf"
+        local inputfiles = {}
+        for _, pattern in ipairs(js_inputs) do
+            table.join2(inputfiles, os.files(pattern))
+        end
+        table.sort(inputfiles)
+
+        local dependvalues = {js_target, js_output}
+        for _, pattern in ipairs(js_inputs) do
+            table.insert(dependvalues, "input:" .. pattern)
         end
 
         local objectfile
-        if js_file then
-            objectfile = target:objectfile(js_file)
+        if target:kind() == "object" then
+            objectfile = target:objectfile(js_output)
             os.mkdir(path.directory(objectfile))
-            table.insert(target:objectfiles(), objectfile)
         end
 
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Building js target %s", js_target)
-            os.vrunv(pnpm.program, {"run", js_target})
+            os.vrunv(pnpm.program, {"--dir", "api", "run", js_target})
 
-            if js_file then
-                progress.show(opt.progress or 0, "${color.build.object}generating.bin2obj %s", js_file)
-                bin2obj(js_file, objectfile, {
+            if objectfile then
+                local format
+                if target:is_plat("windows", "mingw", "msys", "cygwin") then
+                    format = "coff"
+                elseif target:is_plat("macosx", "iphoneos", "watchos", "appletvos") then
+                    format = "macho"
+                else
+                    format = "elf"
+                end
+                progress.show(opt.progress or 0, "${color.build.object}generating.bin2obj %s", js_output)
+                bin2obj(js_output, objectfile, {
                     format = format,
                     arch = target:arch(),
                     plat = target:plat(),
                     zeroend = true
                 })
             end
+            io.writefile(stampfile, os.date("%Y-%m-%dT%H:%M:%S"))
         end, {
-            files = sourcebatch.sourcefiles,
-            dependfile = target:dependfile(objectfile),
-            changed = target:is_rebuilt(),
+            files = inputfiles,
+            values = dependvalues,
+            dependfile = target:dependfile(stampfile),
+            changed = target:is_rebuilt()
+                or not os.isfile(stampfile)
+                or not os.exists(js_output)
+                or (objectfile and not os.isfile(objectfile)),
         })
     end)
 
@@ -474,6 +538,12 @@ xpack("catter")
     set_homepage("https://clice.io")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
+    add_installfiles("api/output/types/index.d.ts", {prefixdir = "types"})
+
+    before_package(function ()
+        assert(os.isfile("api/output/types/index.d.ts"),
+            "Type declarations are missing; run `pixi run -e dev build-js-types` before packaging.")
+    end)
 
     add_targets("catter", "catter-proxy")
     if is_plat("windows") then

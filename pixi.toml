@@ -88,7 +88,8 @@ clang = { features = ["dev", "clang"] }
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
   "pnpm-lock.yaml",
-  "package.json"
+  "package.json",
+  "api/package.json"
 ] }
 build = "xmake --verbose --diagnosis"
 
@@ -117,17 +118,25 @@ depends-on = [
   { task = "format" },
 ]
 
-[tasks.build-js-lib]
-cmd = "rm -rf ./api/output && run-p bundle-dts bundle-js"
-cwd = "api"
+[tasks.build-js]
+cmd = "pnpm --dir api run build"
 
-[tasks.build-js-test]
-cmd = "tsc --project tsconfig.test.json"
-cwd = "api"
-depends-on = "build-js-lib"
+[tasks.build-js-runtime]
+cmd = "pnpm --dir api run build:runtime"
+
+[tasks.build-js-types]
+cmd = "pnpm --dir api run build:types"
+
+[tasks.build-js-tests]
+cmd = "pnpm --dir api run build:tests"
+depends-on = "build-js-types"
+
+[tasks.clean-js]
+cmd = "pnpm --dir api run clean"
 
 [tasks.package]
 args = [
   { arg = "outputdir", default = "release-assets" }
 ]
 cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"
+depends-on = "build-js-types"

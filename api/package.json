@@ -9,13 +9,13 @@
     "output/types/index.d.ts"
   ],
   "scripts": {
-    "cleanup": "xmake l os.tryrm ./output",
-    "prebuild": "pnpm run cleanup",
-    "bundle-js": "rollup -c ./rollup.config.js",
-    "bundle-dts": "tsc --project tsconfig.app.json && api-extractor run",
-    "build": "run-s bundle-dts bundle-js",
-    "test-file": "pnpm run bundle-dts && tsc --project tsconfig.test.json",
-    "prepack": "pnpm run test-file",
+    "clean": "xmake l os.tryrm ./output ./build",
+    "build:runtime": "rollup -c ./rollup.config.js",
+    "build:types": "tsc --project tsconfig.app.json && api-extractor run",
+    "build:tests": "xmake l os.tryrm ./output/test && tsc --project tsconfig.test.json",
+    "build": "run-p build:runtime build:types",
+    "test": "run-s build:types build:tests",
+    "prepack": "pnpm run test",
     "pack:dry": "npm pack --dry-run"
   },
   "keywords": [],
