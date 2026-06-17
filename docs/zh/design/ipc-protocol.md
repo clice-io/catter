@@ -15,13 +15,13 @@ Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catt
 
 ## 序列化
 
-所有消息使用 [Bincode](https://github.com/bincode-org/bincode) 编码，这是一种紧凑的二进制序列化格式。实现使用 `kota::ipc::BincodePeer`，它在流传输（`kota::ipc::StreamTransport`）之上提供了请求-响应抽象。
+所有消息使用 [Bincode](https://github.com/bincode-org/bincode) 编码，这是一种紧凑的二进制序列化格式。实现使用 `kota::ipc::BincodePeer`，它在流传输（`kota::ipc::StreamTransport`）之上提供了请求 - 响应抽象。
 
 选择 Bincode 是因为其高效性 -- 消息体积小、编解码速度快。这一点很重要，因为每个被拦截的构建命令都会导致多次 IPC 往返。
 
-## 请求-响应模型
+## 请求 - 响应模型
 
-通信遵循严格的请求-响应模式。客户端（代理）发送请求并等待服务端（守护进程）响应后才继续执行。每种请求类型都有明确定义的参数类型和结果类型。
+通信遵循严格的请求 - 响应模式。客户端（代理）发送请求并等待服务端（守护进程）响应后才继续执行。每种请求类型都有明确定义的参数类型和结果类型。
 
 协议在 `src/common/util/data.h` 中使用 C++ 模板特化定义：
 
