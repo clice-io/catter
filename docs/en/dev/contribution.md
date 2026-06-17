@@ -6,13 +6,13 @@ Three ways to run tests:
 
 ```bash
 # Run everything (build + unit tests + integration tests)
-pixi run test
+pixi run -e dev test
 
 # Unit tests only
-pixi run unit-test
+pixi run -e dev unit-test
 
 # Integration tests only
-pixi run integration-test
+pixi run -e dev integration-test
 ```
 
 ### Unit Tests

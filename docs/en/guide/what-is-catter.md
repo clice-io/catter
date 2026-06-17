@@ -46,4 +46,4 @@ Catter is a three-part system:
 - **PROXY** (`catter-proxy`) -- Manages hook injection and acts as a compiler wrapper. Relays intercepted commands to the decision daemon.
 - **DECISION** (`catter`) -- The main daemon. Runs the JS runtime, receives intercepted commands from the proxy, and decides how to handle each one.
 
-For a detailed walkthrough of the architecture and IPC flow, see the [design documentation](../design/).
+For a detailed walkthrough of the architecture and IPC flow, see the [design documentation](../design/architecture).

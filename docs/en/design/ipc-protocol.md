@@ -134,7 +134,7 @@ Daemon -> Proxy:  true
 [Proxy exits when build finishes]
 ```
 
-The injector does not send `CREATE`, `MAKE_DECISION`, or `FINISH` -- it simply launches the build and waits.
+The injector proxy also sends `CREATE`, `MAKE_DECISION`, and `FINISH` for the top-level build command, so the build system command itself passes through `onCommand`/`onExecution` like any other intercepted command.
 
 ### Wrapper Mode (intercepted command)
 

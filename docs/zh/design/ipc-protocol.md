@@ -134,7 +134,7 @@ enum class RequestType : uint8_t {
 [构建完成后代理退出]
 ```
 
-注入模式的代理不发送 `CREATE`、`MAKE_DECISION` 或 `FINISH` -- 它只是启动构建并等待。
+注入模式的代理同样会为顶层构建命令发送 `CREATE`、`MAKE_DECISION` 和 `FINISH`，因此构建系统命令本身也会像其他被拦截的命令一样经过 `onCommand`/`onExecution`。
 
 ### 包装模式（被拦截的命令）
 

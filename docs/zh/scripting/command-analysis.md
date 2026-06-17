@@ -7,7 +7,7 @@
 分析编译器命令行（GCC、Clang），提取结构化信息。
 
 ```js
-import { cmd } from "catter";
+import { cmd, io, service } from "catter";
 
 service.onCommand((ctx) => {
   if (!ctx.capture.success) return;
@@ -127,16 +127,16 @@ if (analysis) {
 
 ### 支持的操作
 
+分析器目前支持以下操作：
+
 | 操作 | 值 | 描述 |
 |------|-----|------|
-| `ArchiverOperation.Delete` | `"d"` | 删除成员 |
-| `ArchiverOperation.Move` | `"m"` | 移动成员 |
 | `ArchiverOperation.Print` | `"p"` | 打印成员 |
 | `ArchiverOperation.QuickAppend` | `"q"` | 快速追加 |
 | `ArchiverOperation.ReplaceOrInsert` | `"r"` | 替换或插入成员 |
-| `ArchiverOperation.SymbolTable` | `"s"` | 仅符号表 |
 | `ArchiverOperation.Table` | `"t"` | 列出内容 |
-| `ArchiverOperation.Extract` | `"x"` | 提取成员 |
+
+其他 `ar` 操作（`d`、`m`、`s`、`x`）在枚举中已定义，但 `ArchiverAnalysis.analyze()` 对它们会返回 `undefined`。
 
 ## Registry
 

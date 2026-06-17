@@ -7,13 +7,13 @@ The `cmd` module provides structured analysis of compiler and archiver command l
 Analyzes compiler command lines (GCC, Clang) to extract structured information.
 
 ```js
-import { cmd } from "catter";
+import { cmd, io, service } from "catter";
 
 service.onCommand((ctx) => {
   if (!ctx.capture.success) return;
 
   const argv = ctx.capture.data.argv;
-  const analysis = CompilerAnalysis.analyze(argv);
+  const analysis = cmd.CompilerAnalysis.analyze(argv);
 
   if (analysis) {
     io.println(`Phase: ${analysis.phase}`);
@@ -127,16 +127,16 @@ if (analysis) {
 
 ### Supported Operations
 
+The analyzer currently models these operations:
+
 | Operation | Value | Description |
 |-----------|-------|-------------|
-| `ArchiverOperation.Delete` | `"d"` | Delete members |
-| `ArchiverOperation.Move` | `"m"` | Move members |
 | `ArchiverOperation.Print` | `"p"` | Print members |
 | `ArchiverOperation.QuickAppend` | `"q"` | Quick append |
 | `ArchiverOperation.ReplaceOrInsert` | `"r"` | Replace or insert members |
-| `ArchiverOperation.SymbolTable` | `"s"` | Symbol table only |
 | `ArchiverOperation.Table` | `"t"` | List contents |
-| `ArchiverOperation.Extract` | `"x"` | Extract members |
+
+Other `ar` operations (`d`, `m`, `s`, `x`) are recognized by the enum but `ArchiverAnalysis.analyze()` returns `undefined` for them.
 
 ## Registry
 

@@ -3,6 +3,7 @@
 ## 前置要求
 
 - [pixi](https://pixi.sh) -- 环境与依赖管理
+- [XMake](https://xmake.io/) -- 构建系统（pixi 不会安装，需单独安装）
 - Git
 
 ## 支持的平台
@@ -18,21 +19,20 @@
 所有构建通过 pixi 任务管理：
 
 ```bash
-# 配置构建
-pixi run cfg
+# 配置构建（mode 可选：debug、release、releasedbg）
+pixi run cfg debug
 
 # 构建项目
 pixi run build
 
-# 以 debug 模式构建
-pixi run cfg-debug
-pixi run build
+# 以 release 模式配置
+pixi run cfg release
 
 # 构建 JavaScript/TypeScript API
 pixi run build-js
 
 # 安装 npm 依赖
-pixi run pnpm-install
+pixi run npm-install
 ```
 
 ## 构建系统

@@ -203,11 +203,11 @@ io.println(clangArgs.join(" ")); // 两个表中都有效的选项
 ```js
 import { option } from "catter";
 
-// 使用默认可见性解析（适合当前平台）
+// 使用默认可见性解析（所有选项可见）
 const items = option.collect("clang", args);
 
-// 使用显式可见性掩码解析
-const allItems = option.collect("clang", args, 0xFFFFFFFF);
+// 使用显式可见性掩码过滤平台特定选项
+const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 ```
 
 每个选项表导出自己的可见性常量（如 `ClangVisibility.DefaultVis`、`ClangVisibility.CLOption`）。

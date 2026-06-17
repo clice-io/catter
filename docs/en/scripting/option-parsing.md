@@ -203,11 +203,11 @@ Options can be filtered by platform visibility when parsing. This is useful for 
 ```js
 import { option } from "catter";
 
-// Parse with default visibility (platform-appropriate)
+// Parse with default visibility (all options visible)
 const items = option.collect("clang", args);
 
-// Parse with explicit visibility mask
-const allItems = option.collect("clang", args, 0xFFFFFFFF);
+// Parse with explicit visibility mask to filter platform-specific options
+const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 ```
 
 Each option table exports its own visibility constants (e.g., `ClangVisibility.DefaultVis`, `ClangVisibility.CLOption`).

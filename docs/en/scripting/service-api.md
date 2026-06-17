@@ -181,6 +181,7 @@ service.register({
   onCommand(ctx) {
     if (ctx.capture.success && ctx.capture.data.argv[0].endsWith("ccache")) {
       ctx.ignoreDescendants();
+      ctx.stopPropagation();
     }
   }
 });
@@ -188,7 +189,7 @@ service.register({
 // Second service: analyze remaining commands
 service.register({
   onCommand(ctx) {
-    // This won't see commands whose propagation was stopped
+    // This won't see the ccache command itself
   }
 });
 ```

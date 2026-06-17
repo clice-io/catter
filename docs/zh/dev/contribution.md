@@ -6,13 +6,13 @@
 
 ```bash
 # 运行全部（构建 + 单元测试 + 集成测试）
-pixi run test
+pixi run -e dev test
 
 # 仅单元测试
-pixi run unit-test
+pixi run -e dev unit-test
 
 # 仅集成测试
-pixi run integration-test
+pixi run -e dev integration-test
 ```
 
 ### 单元测试

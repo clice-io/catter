@@ -3,6 +3,7 @@
 ## Prerequisites
 
 - [pixi](https://pixi.sh) -- Environment and dependency management
+- [XMake](https://xmake.io/) -- Build system (not installed by pixi; install separately)
 - Git
 
 ## Supported Platforms
@@ -18,21 +19,20 @@
 All builds are managed through pixi tasks:
 
 ```bash
-# Configure the build
-pixi run cfg
+# Configure the build (mode: debug, release, or releasedbg)
+pixi run cfg debug
 
 # Build the project
 pixi run build
 
-# Build in debug mode
-pixi run cfg-debug
-pixi run build
+# Configure in release mode
+pixi run cfg release
 
 # Build JavaScript/TypeScript API
 pixi run build-js
 
 # Install npm dependencies
-pixi run pnpm-install
+pixi run npm-install
 ```
 
 ## Build System

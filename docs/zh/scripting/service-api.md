@@ -181,6 +181,7 @@ service.register({
   onCommand(ctx) {
     if (ctx.capture.success && ctx.capture.data.argv[0].endsWith("ccache")) {
       ctx.ignoreDescendants();
+      ctx.stopPropagation();
     }
   }
 });
@@ -188,7 +189,7 @@ service.register({
 // 第二个服务：分析剩余命令
 service.register({
   onCommand(ctx) {
-    // 不会看到传播已被停止的命令
+    // 不会看到 ccache 命令本身
   }
 });
 ```
