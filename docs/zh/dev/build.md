@@ -60,7 +60,7 @@ pixi run build-js
 
 ## 主要依赖
 
-- [QuickJS-ng](https://github.com/nicedoc/nicedoc.io) (v0.11.0) -- 内嵌 JavaScript 引擎
+- [QuickJS-ng](https://github.com/quickjs-ng/quickjs) (v0.11.0) -- 内嵌 JavaScript 引擎
 - [spdlog](https://github.com/gabime/spdlog) (1.15.3) -- 日志
 - [kotatsu](https://github.com/clice-io/kotatsu) -- 异步运行时、测试框架、选项解析
 - [MinHook](https://github.com/TsudaKageworyo/MinHook) (v1.3.4) -- Windows API 钩子（仅 Windows）

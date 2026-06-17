@@ -96,7 +96,6 @@ onCommand(ctx: CommandContext) => Action | void
 |------|------|
 | `ctx.skip()` | 让命令正常执行，但在 catter 中忽略它 |
 | `ctx.drop()` | 阻止命令执行 |
-| `ctx.abort()` | 中止整个构建 |
 | `ctx.modify(data)` | 执行修改后的命令 |
 | `ctx.ignoreDescendants()` | 不拦截该命令的子进程 |
 | `ctx.stopPropagation()` | 停止调用后续的服务处理器 |

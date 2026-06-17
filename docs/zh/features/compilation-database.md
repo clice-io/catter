@@ -14,7 +14,7 @@ catter script::cdb [options] -- <build-command>
 
 | 选项 | 说明 |
 |------|------|
-| `-o, --output <path>` | `compile_commands.json` 的输出路径。默认为当前目录下的 `compile_commands.json`。 |
+| `-o, --output <path>` | `compile_commands.json` 的输出路径。默认为 `build/compile_commands.json`。 |
 | `--abort-on-command-failure` | 任一被拦截的命令失败时，中止整个构建。 |
 | `--save-on-failure` | 即使构建失败，也保存已收集的部分 CDB。 |
 
@@ -47,10 +47,8 @@ catter script::cdb [options] -- <build-command>
 ## 支持的编译器
 
 - **C/C++**：GCC、Clang
-- **Fortran**：Flang、Intel Fortran (ifort/ifx)、Cray Fortran
-- **CUDA**：NVCC
 
-编译器包装器如 `ccache`、`distcc`、`sccache` 可被正确识别和透明处理。
+编译器包装器如 `ccache`、`distcc`、`sccache` 可被正确识别和透明处理。Catter 也能识别其他编译器（Flang、ifort、NVCC 等），但 `CompilerAnalysis` 目前仅为 GCC 和 Clang 命令生成 CDB 条目。
 
 ## 示例
 

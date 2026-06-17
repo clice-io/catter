@@ -96,7 +96,6 @@ The `capture` field is a tagged result. On success:
 |--------|--------|
 | `ctx.skip()` | Let the command execute normally but ignore it in catter |
 | `ctx.drop()` | Prevent the command from executing |
-| `ctx.abort()` | Abort the entire build |
 | `ctx.modify(data)` | Execute a modified command instead |
 | `ctx.ignoreDescendants()` | Don't intercept child processes of this command |
 | `ctx.stopPropagation()` | Stop calling remaining service handlers |

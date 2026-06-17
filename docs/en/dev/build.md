@@ -60,7 +60,7 @@ This runs rollup to bundle the TypeScript, and the resulting JS is compiled into
 
 ## Key Dependencies
 
-- [QuickJS-ng](https://github.com/nicedoc/nicedoc.io) (v0.11.0) -- Embedded JavaScript engine
+- [QuickJS-ng](https://github.com/quickjs-ng/quickjs) (v0.11.0) -- Embedded JavaScript engine
 - [spdlog](https://github.com/gabime/spdlog) (1.15.3) -- Logging
 - [kotatsu](https://github.com/clice-io/kotatsu) -- Async runtime, testing framework, option parsing
 - [MinHook](https://github.com/TsudaKageworyo/MinHook) (v1.3.4) -- Windows API hooking (Windows only)

@@ -14,7 +14,7 @@ catter script::cdb [options] -- <build-command>
 
 | Option | Description |
 |--------|-------------|
-| `-o, --output <path>` | Output path for `compile_commands.json`. Defaults to `compile_commands.json` in the current directory. |
+| `-o, --output <path>` | Output path for `compile_commands.json`. Defaults to `build/compile_commands.json`. |
 | `--abort-on-command-failure` | Abort the entire build if any intercepted command fails. |
 | `--save-on-failure` | Save partial CDB even if the build fails. |
 
@@ -47,10 +47,8 @@ The output follows the standard clang JSON compilation database format:
 ## Supported Compilers
 
 - **C/C++**: GCC, Clang
-- **Fortran**: Flang, Intel Fortran (ifort/ifx), Cray Fortran
-- **CUDA**: NVCC
 
-Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and handled transparently.
+Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and handled transparently. Catter can also identify other compilers (Flang, ifort, NVCC, etc.) but `CompilerAnalysis` currently only generates CDB entries for GCC and Clang commands.
 
 ## Examples
 

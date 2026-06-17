@@ -16,7 +16,7 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 钩子替换了所有用于创建新进程的标准 POSIX 函数：
 
 **exec 系列**:
-- `execve()`、`execv()`、`exect()`
+- `execve()`、`execv()`
 - `execvpe()`、`execvp()`、`execvP()`
 - `execl()`、`execlp()`、`execle()`
 
@@ -139,9 +139,9 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 4. **写入 DLL 路径**。代理调用 `WriteProcessMemory()` 将 `catter-hook-win64.dll` 的完整路径写入分配的内存。
 
 5. **创建远程线程加载 DLL**。代理按顺序尝试三种方法：
-   - `NtCreateThreadEx()` -- 未公开的 NT API。首选方法，在现代 Windows（Vista+）上可靠运行。
-   - `RtlCreateUserThread()` -- 另一个未公开的 NT API。当 `NtCreateThreadEx` 不可用时的备选方案。
-   - `CreateRemoteThread()` -- 已公开的 Win32 API。最后手段，在某些配置下可能失败（例如跨会话边界）。
+   - `CreateRemoteThread()` -- 已公开的 Win32 API。首先尝试，因为它是最广泛支持的方法。
+   - `NtCreateThreadEx()` -- 未公开的 NT API。备选方案，在现代 Windows（Vista+）上可靠运行。
+   - `RtlCreateUserThread()` -- 另一个未公开的 NT API。最后的备选方案。
 
    远程线程的入口点是 `LoadLibraryA`，其参数是步骤 4 中写入的 DLL 路径字符串的指针。当线程运行时，它将 `catter-hook-win64.dll` 加载到目标进程中。
 

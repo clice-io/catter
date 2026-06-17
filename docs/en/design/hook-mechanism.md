@@ -16,7 +16,7 @@ The Unix hook is a shared library loaded via the dynamic linker's preload mechan
 The hook replaces all standard POSIX functions for creating new processes:
 
 **exec family**:
-- `execve()`, `execv()`, `exect()`
+- `execve()`, `execv()`
 - `execvpe()`, `execvp()`, `execvP()`
 - `execl()`, `execlp()`, `execle()`
 
@@ -139,9 +139,9 @@ When `catter-proxy` (in injector mode) needs to start a build command with the h
 4. **Write the DLL path**. The proxy calls `WriteProcessMemory()` to write the full path of `catter-hook-win64.dll` into the allocated memory.
 
 5. **Create a remote thread to load the DLL**. The proxy tries three methods in order:
-   - `NtCreateThreadEx()` -- Undocumented NT API. Preferred because it works reliably on modern Windows (Vista+).
-   - `RtlCreateUserThread()` -- Another undocumented NT API. Fallback for systems where `NtCreateThreadEx` is unavailable.
-   - `CreateRemoteThread()` -- Documented Win32 API. Last resort; may fail on certain configurations (e.g., across session boundaries).
+   - `CreateRemoteThread()` -- Documented Win32 API. Tried first as it is the most widely supported.
+   - `NtCreateThreadEx()` -- Undocumented NT API. Fallback that works reliably on modern Windows (Vista+).
+   - `RtlCreateUserThread()` -- Another undocumented NT API. Last resort fallback.
 
    The remote thread's entry point is `LoadLibraryA`, and its argument is the pointer to the DLL path string written in step 4. When the thread runs, it loads `catter-hook-win64.dll` into the target process.
 
