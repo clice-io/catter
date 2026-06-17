@@ -1,0 +1,38 @@
+guide:
+  label: Guide
+  items:
+    - what-is-catter
+    - quick-start
+    - configuration
+
+features:
+  label: Features
+  items:
+    - compilation-database
+    - command-tree
+    - target-tree
+    - fake-compilation
+    - build-profiling
+
+scripting:
+  label: Scripting
+  items:
+    - overview
+    - service-api
+    - command-analysis
+    - option-parsing
+    - builtin-modules
+
+design:
+  label: Design
+  items:
+    - architecture
+    - hook-mechanism
+    - ipc-protocol
+
+dev:
+  label: Development
+  collapsed: true
+  items:
+    - build
+    - contribution
