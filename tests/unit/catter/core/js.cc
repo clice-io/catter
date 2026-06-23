@@ -124,7 +124,7 @@ void run_basic_js_case(std::string_view file_name, bool with_fs_test_env = false
 
         run_async_js_case(std::move(source), full_path.string());
     } catch(qjs::Exception& ex) {
-        output::redLn("{}", ex.what());
+        output::redln("{}", ex.what());
         throw ex;
     }
 }
@@ -391,10 +391,10 @@ kota::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
         run_auto_js_case(relative_path);
         return kota::zest::TestState::Passed;
     } catch(const std::exception& ex) {
-        output::redLn("auto js test failed: {}: {}", relative_path.string(), ex.what());
+        output::redln("auto js test failed: {}: {}", relative_path.string(), ex.what());
         return kota::zest::TestState::Failed;
     } catch(...) {
-        output::redLn("auto js test failed: {}: unknown exception", relative_path.string());
+        output::redln("auto js test failed: {}: unknown exception", relative_path.string());
         return kota::zest::TestState::Fatal;
     }
 }
