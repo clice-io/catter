@@ -24,11 +24,11 @@ namespace fs = std::filesystem;
 
 namespace catter {
 
-std::vector<char*> Command::c_argv() const {
+std::vector<char*> Command::c_argv() {
     std::vector<char*> res;
     res.reserve(argv.size() + 1);
-    for(const auto& arg: argv) {
-        res.push_back(const_cast<char*>(arg.c_str()));
+    for(auto& arg: argv) {
+        res.push_back(arg.data());
     }
     res.push_back(nullptr);
     return res;

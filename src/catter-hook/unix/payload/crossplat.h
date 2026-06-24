@@ -31,11 +31,11 @@ extern char** environ;
 #include <crt_externs.h>
 #endif
 
-inline const char** environment() noexcept {
+inline char** environment() noexcept {
 #if defined(CATTER_MAC)
-    return const_cast<const char**>(*_NSGetEnviron());
+    return *_NSGetEnviron();
 #elif defined(CATTER_LINUX)
-    return const_cast<const char**>(environ);
+    return environ;
 #else
 #error "Unsupported platform"
 #endif

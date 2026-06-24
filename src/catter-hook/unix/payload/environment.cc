@@ -12,11 +12,11 @@ bool is_entry_of(const char* entry, std::string_view key) noexcept {
     return sv.starts_with(key) && sv.size() > key.size() && sv[key.size()] == '=';
 }
 
-const char* get_env_value(const char** envp, std::string_view key) noexcept {
+const char* get_env_value(const char* const envp[], std::string_view key) noexcept {
     const std::size_t key_size = key.size();
     INFO("getting env value for key: {}", key);
 
-    for(const char** it = envp; *it != nullptr; ++it) {
+    for(const char* const* it = envp; *it != nullptr; ++it) {
         if(!is_entry_of(*it, key))
             continue;
         // It must be the one! Calculate the address of the value.
@@ -27,11 +27,11 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept {
     return nullptr;
 }
 
-const char* get_env_entry(const char** envp, std::string_view key) noexcept {
+const char* get_env_entry(const char* const envp[], std::string_view key) noexcept {
 
     INFO("getting env entry for key: {}", key);
 
-    for(const char** it = envp; *it != nullptr; ++it) {
+    for(const char* const* it = envp; *it != nullptr; ++it) {
         if(!is_entry_of(*it, key))
             continue;
         return *it;

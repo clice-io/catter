@@ -19,16 +19,16 @@ const char* safe_cstr(const char* value) noexcept {
     return value == nullptr ? "" : value;
 }
 
-const char* safe_argv0(char* const argv[]) noexcept {
+const char* safe_argv0(const char* const argv[]) noexcept {
     return argv == nullptr ? "" : safe_cstr(argv[0]);
 }
 
-std::vector<char*> collect_variadic_argv(const char* first_arg, va_list& args) {
-    std::vector<char*> argv;
+std::vector<const char*> collect_variadic_argv(const char* first_arg, va_list& args) {
+    std::vector<const char*> argv;
     if(first_arg != nullptr) {
-        argv.push_back(const_cast<char*>(first_arg));
+        argv.push_back(first_arg);
         while(auto* arg = va_arg(args, const char*)) {
-            argv.push_back(const_cast<char*>(arg));
+            argv.push_back(arg);
         }
     }
     argv.push_back(nullptr);
@@ -101,9 +101,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execve)(const char* path,
 INJECT_FUNCTION(execve);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execv)(const char* path, char* const argv[]) {
-    auto envp = const_cast<char* const*>(environment());
     INFO("hooked execv called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv));
-    return EXECUTOR.execv(path, argv, envp);
+    return EXECUTOR.execv(path, argv);
 }
 
 INJECT_FUNCTION(execv);
@@ -119,9 +118,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execvpe)(const char* file,
 // INJECT_FUNCTION(execvpe);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvp)(const char* file, char* const argv[]) {
-    auto envp = const_cast<char* const*>(environment());
     INFO("hooked execvp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
-    return EXECUTOR.execvp(file, argv, envp);
+    return EXECUTOR.execvp(file, argv);
 }
 
 INJECT_FUNCTION(execvp);
@@ -129,7 +127,7 @@ INJECT_FUNCTION(execvp);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvP)(const char* file,
                                                const char* search_path,
                                                char* const argv[]) {
-    auto envp = const_cast<char* const*>(environment());
+    auto envp = environment();
     INFO("hooked execvP called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
     return EXECUTOR.execvP(file, search_path, argv, envp);
 }
@@ -151,9 +149,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execl)(const char* path, const char* arg,
     auto argv = collect_variadic_argv(arg, ap);
     va_end(ap);
 
-    auto envp = const_cast<char* const*>(environment());
     INFO("hooked execl called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv.data()));
-    return EXECUTOR.execl(path, argv.data(), envp);
+    return EXECUTOR.execl(path, argv.data());
 }
 
 INJECT_FUNCTION(execl);
@@ -164,9 +161,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execlp)(const char* file, const char* arg
     auto argv = collect_variadic_argv(arg, ap);
     va_end(ap);
 
-    auto envp = const_cast<char* const*>(environment());
     INFO("hooked execlp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv.data()));
-    return EXECUTOR.execlp(file, argv.data(), envp);
+    return EXECUTOR.execlp(file, argv.data());
 }
 
 INJECT_FUNCTION(execlp);

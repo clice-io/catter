@@ -13,7 +13,7 @@ struct Session {
     std::string_view proxy_path{};
     std::string_view self_id{};
 
-    static Session make(const char** environment) noexcept;
+    static Session make(const char* const envp[]) noexcept;
 
     bool is_valid() noexcept {
         return (!proxy_path.empty() && !self_id.empty());

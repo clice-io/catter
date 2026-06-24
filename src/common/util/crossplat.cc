@@ -53,7 +53,7 @@ std::filesystem::path get_executable_path() {
 namespace catter::util {
 std::vector<std::string> get_environment() noexcept {
     std::vector<std::string> env_vars;
-    auto envp = const_cast<const char**>(*_NSGetEnviron());
+    auto envp = *_NSGetEnviron();
     for(int i = 0; envp[i] != nullptr; ++i) {
         env_vars.emplace_back(envp[i]);
     }

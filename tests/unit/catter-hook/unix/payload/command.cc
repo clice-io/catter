@@ -22,15 +22,12 @@ TEST_SUITE(cmd_builder) {
 TEST_CASE(proxy_cmd_constructs_correct_arguments) {
     std::filesystem::path target_path = "/usr/bin/gcc";
 
-    std::vector<char*> original_argv = {const_cast<char*>("gcc"),
-                                        const_cast<char*>("-c"),
-                                        const_cast<char*>("main.c"),
-                                        nullptr};
+    std::vector<const char*> original_argv = {"gcc", "-c", "main.c", nullptr};
 
     auto cmd = ct::build_proxy_command(
         session,
         target_path,
-        std::span<char* const>{original_argv.data(), original_argv.size() - 1});
+        std::span<const char* const>{original_argv.data(), original_argv.size() - 1});
 
     // 1. Verify basic properties
     EXPECT_TRUE(cmd.path == session.proxy_path);
@@ -54,16 +51,14 @@ TEST_CASE(proxy_cmd_constructs_correct_arguments) {
 TEST_CASE(error_cmd_formats_message_correctly_without_separator) {
     std::filesystem::path target_path = "/usr/bin/invalid";
 
-    std::vector<char*> original_argv = {const_cast<char*>("invalid"),
-                                        const_cast<char*>("--help"),
-                                        nullptr};
+    std::vector<const char*> original_argv = {"invalid", "--help", nullptr};
     const char* error_msg = "File not found";
 
     auto cmd = ct::build_error_command(
         session,
         error_msg,
         target_path,
-        std::span<char* const>{original_argv.data(), original_argv.size() - 1});
+        std::span<const char* const>{original_argv.data(), original_argv.size() - 1});
 
     bool found_separator = false;
     for(const auto& arg: cmd.argv) {

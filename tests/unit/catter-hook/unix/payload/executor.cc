@@ -1,7 +1,10 @@
 #include "executor.h"
 
 #include <cerrno>
+#include <cstdlib>
 #include <filesystem>
+#include <initializer_list>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -39,6 +42,51 @@ CapturedCall exec_call;
 CapturedCall spawn_call;
 
 ct::Session valid_session{.proxy_path = "/tmp/catter-proxy", .self_id = "7"};
+
+class ScopedEnv {
+public:
+    ScopedEnv(std::string key, std::string value) : m_key(std::move(key)) {
+        if(auto* old_value = std::getenv(m_key.c_str()); old_value != nullptr) {
+            m_old_value = old_value;
+        }
+        EXPECT_TRUE(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
+    }
+
+    ~ScopedEnv() {
+        if(m_old_value.has_value()) {
+            ::setenv(m_key.c_str(), m_old_value->c_str(), 1);
+            return;
+        }
+        ::unsetenv(m_key.c_str());
+    }
+
+private:
+    std::string m_key;
+    std::optional<std::string> m_old_value;
+};
+
+class MutableCStrings {
+public:
+    MutableCStrings(std::initializer_list<std::string_view> values) {
+        m_values.reserve(values.size());
+        m_ptrs.reserve(values.size() + 1);
+        for(auto value: values) {
+            m_values.emplace_back(value);
+        }
+        for(auto& value: m_values) {
+            m_ptrs.push_back(value.data());
+        }
+        m_ptrs.push_back(nullptr);
+    }
+
+    char* const* data() noexcept {
+        return m_ptrs.data();
+    }
+
+private:
+    std::vector<std::string> m_values;
+    std::vector<char*> m_ptrs;
+};
 
 std::vector<std::string> collect_values(char* const values[]) {
     std::vector<std::string> result;
@@ -111,27 +159,19 @@ TEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
     spawn_call.reset();
 
     auto executable = create_executable("execve-tool");
-    std::vector<char*> argv = {const_cast<char*>("execve-tool"),
-                               const_cast<char*>("-c"),
-                               const_cast<char*>("main.cc"),
-                               nullptr};
+    MutableCStrings argv = {"execve-tool", "-c", "main.cc"};
 
     std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=99";
     std::string proxy_path = std::string(cfg::KEY_CATTER_PROXY_PATH) + "=/tmp/ignored-proxy";
     std::string preload =
         std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so:/tmp/" + cfg::HOOK_LIB_NAME;
     std::string lang = "LANG=C";
-    const char* raw_env[] = {command_id.data(),
-                             proxy_path.data(),
-                             preload.data(),
-                             lang.data(),
-                             nullptr};
-    auto envp = const_cast<char* const*>(raw_env);
+    MutableCStrings envp = {command_id, proxy_path, preload, lang};
 
     ct::Executor executor;
     executor.init(valid_session, fake_execve, fake_posix_spawn);
 
-    auto result = executor.execve(executable.c_str(), argv.data(), envp);
+    auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
 
     EXPECT_TRUE(result == 42);
     EXPECT_TRUE(exec_call.calls == 1);
@@ -146,22 +186,20 @@ TEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
                 exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so");
 }
 
-TEST_CASE(execvp_resolves_with_original_path_environment_before_sanitizing) {
+TEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
     exec_call.reset(51);
 
     auto executable = create_executable("path-tool");
     auto search_path = fs::absolute(manager.root).string();
-    std::string path_env = "PATH=" + search_path;
-    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=11";
-    const char* raw_env[] = {path_env.data(), command_id.data(), nullptr};
-    auto envp = const_cast<char* const*>(raw_env);
+    ScopedEnv path_env("PATH", search_path);
+    ScopedEnv command_id(std::string(cfg::KEY_CATTER_COMMAND_ID), "11");
 
-    std::vector<char*> argv = {const_cast<char*>("path-tool"), nullptr};
+    MutableCStrings argv = {"path-tool"};
 
     ct::Executor executor;
     executor.init(valid_session, fake_execve, fake_posix_spawn);
 
-    auto result = executor.execvp("path-tool", argv.data(), envp);
+    auto result = executor.execvp("path-tool", argv.data());
 
     EXPECT_TRUE(result == 51);
     EXPECT_TRUE(exec_call.calls == 1);
@@ -170,29 +208,26 @@ TEST_CASE(execvp_resolves_with_original_path_environment_before_sanitizing) {
     EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
 }
 
-TEST_CASE(execve_invalid_session_builds_error_command_without_resolving_target) {
+TEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_missing) {
     exec_call.reset(60);
 
     ct::Session invalid_session{};
-    std::vector<char*> argv = {const_cast<char*>("missing-tool"), nullptr};
+    MutableCStrings argv = {"missing-tool"};
 
     ct::Executor executor;
     executor.init(invalid_session, fake_execve, fake_posix_spawn);
 
+    errno = 0;
     auto result = executor.execve("/definitely/missing/tool", argv.data(), nullptr);
 
-    EXPECT_TRUE(result == 60);
-    EXPECT_TRUE(exec_call.calls == 1);
-    EXPECT_TRUE(exec_call.path.empty());
-    EXPECT_TRUE(exec_call.argv.size() == 6);
-    EXPECT_TRUE(exec_call.argv.at(4) == "/definitely/missing/tool");
-    EXPECT_TRUE(exec_call.argv.at(5).find("Catter Proxy Error: invalid environment") !=
-                std::string::npos);
+    EXPECT_TRUE(result == -1);
+    EXPECT_TRUE(errno == ENOENT);
+    EXPECT_TRUE(exec_call.calls == 0);
 }
 
 TEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
     exec_call.reset();
-    std::vector<char*> argv = {const_cast<char*>("tool"), nullptr};
+    MutableCStrings argv = {"tool"};
 
     ct::Executor executor;
     executor.init(valid_session, fake_execve, fake_posix_spawn);
@@ -209,7 +244,7 @@ TEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
     spawn_call.reset(17);
 
     auto executable = create_executable("spawn-tool");
-    std::vector<char*> argv = {const_cast<char*>("spawn-tool"), nullptr};
+    MutableCStrings argv = {"spawn-tool"};
 
     ct::Executor executor;
     executor.init(valid_session, fake_execve, fake_posix_spawn);
@@ -225,7 +260,7 @@ TEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
 
 TEST_CASE(spawn_boundary_returns_error_code) {
     spawn_call.reset();
-    std::vector<char*> argv = {const_cast<char*>("tool"), nullptr};
+    MutableCStrings argv = {"tool"};
 
     ct::Executor executor;
     executor.init(valid_session, fake_execve, fake_posix_spawn);

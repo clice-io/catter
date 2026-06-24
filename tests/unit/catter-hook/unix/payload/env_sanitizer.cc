@@ -1,4 +1,4 @@
-#include "env_guard.h"
+#include "env_sanitizer.h"
 
 #include <cstddef>
 #include <string>
@@ -13,7 +13,7 @@ namespace cfg = catter::config::hook;
 
 namespace {
 
-const char* find_entry(const char** envp, std::string_view key) {
+const char* find_entry(char* const* envp, std::string_view key) {
     for(std::size_t i = 0; envp[i] != nullptr; ++i) {
         if(ct::env::is_entry_of(envp[i], key)) {
             return envp[i];
@@ -22,7 +22,7 @@ const char* find_entry(const char** envp, std::string_view key) {
     return nullptr;
 }
 
-TEST_SUITE(env_guard) {
+TEST_SUITE(env_sanitizer) {
 TEST_CASE(removes_injected_keys_and_filters_hook_preload) {
     std::string keep_lib_1 = "/tmp/libkeep-1.so";
     std::string keep_lib_2 = "/tmp/libkeep-2.so";
@@ -35,15 +35,9 @@ TEST_CASE(removes_injected_keys_and_filters_hook_preload) {
         std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + hook_lib + ":" + keep_lib_2;
     std::string lang = "LANG=en_US.UTF-8";
 
-    const char* raw_env[] = {command_id.data(),
-                             proxy_path.data(),
-                             preload.data(),
-                             lang.data(),
-                             nullptr};
-    auto envp = const_cast<char* const*>(raw_env);
-
-    auto sanitized = ct::sanitize_environment(envp);
-    auto clean_envp = const_cast<const char**>(sanitized.data());
+    char* raw_env[] = {command_id.data(), proxy_path.data(), preload.data(), lang.data(), nullptr};
+    auto sanitized = ct::sanitize_environment(raw_env);
+    auto clean_envp = sanitized.data();
 
     EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
     EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
@@ -62,15 +56,13 @@ TEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     hook_lib += cfg::RELATIVE_PATH_OF_HOOK_LIB;
     std::string preload = std::string(cfg::KEY_PRELOAD) + "=" + hook_lib;
 
-    const char* raw_env[] = {preload.data(), nullptr};
-    auto envp = const_cast<char* const*>(raw_env);
-
-    auto sanitized = ct::sanitize_environment(envp);
-    auto clean_envp = const_cast<const char**>(sanitized.data());
+    char* raw_env[] = {preload.data(), nullptr};
+    auto sanitized = ct::sanitize_environment(raw_env);
+    auto clean_envp = sanitized.data();
 
     auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
     EXPECT_TRUE(cleaned_preload == nullptr);
 };
-};  // TEST_SUITE(env_guard)
+};  // TEST_SUITE(env_sanitizer)
 
 }  // namespace

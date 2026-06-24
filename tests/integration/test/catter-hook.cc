@@ -4,9 +4,10 @@
 // RUN: %if system-windows %{ %it_catter_hook --test CreateProcessW | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 
 // ## Unix Specific Tests
-// RUN: %if !system-windows %{ %it_catter_hook --test execve | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execv | FileCheck %s --check-prefix=CHECK-OUTPUT %}
+// RUN: %if !system-windows %{ %it_catter_hook --test execve | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execvp | FileCheck %s --check-prefix=CHECK-OUTPUT %}
+// RUN: %if system-linux    %{ %it_catter_hook --test execvpe | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execl | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execlp | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execle | FileCheck %s --check-prefix=CHECK-OUTPUT %}
@@ -22,6 +23,7 @@
 #include <ranges>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 #include <kota/async/async.h>
 #include <kota/deco/deco.h>
@@ -81,9 +83,36 @@ extern char** environ;
 
 namespace test {
 
+class Argv {
+public:
+    template <typename... Args>
+    explicit Argv(Args&&... args) : m_values{std::forward<Args>(args)...} {
+        m_ptrs.reserve(m_values.size() + 1);
+        for(auto& value: m_values) {
+            m_ptrs.push_back(value.data());
+        }
+        m_ptrs.push_back(nullptr);
+    }
+
+    char* const* data() noexcept {
+        return m_ptrs.data();
+    }
+
+private:
+    std::vector<std::string> m_values;
+    std::vector<char*> m_ptrs;
+};
+
 template <typename... Args>
-std::vector<char*> argvify(Args&&... args) {
-    return {const_cast<char*>(args)..., nullptr};
+Argv argvify(Args&&... args) {
+    return Argv(std::forward<Args>(args)...);
+}
+
+void execv() {
+    char exec_name[] = "/bin/echo";
+    if(::execv(exec_name, argvify(exec_name, "Hello, World!").data()) != 0) {
+        throw catter::system_error(errno, std::system_category(), "execv failed");
+    }
 }
 
 void execve() {
@@ -94,20 +123,20 @@ void execve() {
     }
 }
 
-void execv() {
-    char exec_name[] = "/bin/echo";
-    if(::execv(exec_name, argvify(exec_name, "Hello, World!").data()) != 0) {
-        throw catter::system_error(errno, std::system_category(), "execv failed");
-    }
-}
-
 void execvp() {
     char exec_name[] = "/bin/echo";
     if(::execvp(exec_name, argvify(exec_name, "Hello, World!").data()) != 0) {
         throw catter::system_error(errno, std::system_category(), "execvp failed");
     }
 }
-
+#ifdef CATTER_LINUX
+void execvpe() {
+    char exec_name[] = "/bin/echo";
+    if(::execvpe(exec_name, argvify(exec_name, "Hello, World!").data(), environ) != 0) {
+        throw catter::system_error(errno, std::system_category(), "execvpe failed");
+    }
+}
+#endif
 void execl() {
     char exec_name[] = "/bin/echo";
     if(::execl(exec_name, exec_name, "Hello, World!", static_cast<char*>(nullptr)) != 0) {
@@ -164,9 +193,12 @@ void posix_spawnp() {
 }
 
 std::unordered_map<std::string, std::function<void()>> funcs = {
-    {"execve",       execve      },
     {"execv",        execv       },
+    {"execve",       execve      },
     {"execvp",       execvp      },
+#ifdef CATTER_LINUX
+    {"execvpe",      execvpe     },
+#endif
     {"execl",        execl       },
     {"execlp",       execlp      },
     {"execle",       execle      },

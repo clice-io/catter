@@ -9,14 +9,14 @@
 
 namespace catter {
 
-using ArgvRef = std::span<char* const>;
+using ArgvRef = std::span<const char* const>;
 
 struct Command {
     std::string path;
     std::vector<std::string> argv;
 
     [[nodiscard]]
-    std::vector<char*> c_argv() const;
+    std::vector<char*> c_argv();
 };
 
 /**

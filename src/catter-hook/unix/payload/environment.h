@@ -16,7 +16,7 @@ bool is_entry_of(const char* entry, std::string_view key) noexcept;
  * @param key the name of the environment.
  * @return the value of the environment.
  */
-const char* get_env_value(const char** envp, std::string_view key) noexcept;
+const char* get_env_value(const char* const envp[], std::string_view key) noexcept;
 
 /**
  * Returns the entry for the given environment name, from the given
@@ -28,6 +28,6 @@ const char* get_env_value(const char** envp, std::string_view key) noexcept;
  * @param key the name of the environment.
  * @return the entry of the environment.
  */
-const char* get_env_entry(const char** envp, std::string_view key) noexcept;
+const char* get_env_entry(const char* const envp[], std::string_view key) noexcept;
 
 }  // namespace catter::env
