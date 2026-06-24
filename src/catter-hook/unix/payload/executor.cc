@@ -1,11 +1,13 @@
 #include "executor.h"
 
 #include <cerrno>
+#include <cstdarg>
 #include <exception>
 #include <filesystem>
 #include <format>
 #include <span>
 #include <string_view>
+#include <vector>
 
 #include "command.h"
 #include "crossplat.h"
@@ -34,6 +36,28 @@ void require_path_arg(const char* value, std::string_view name) {
     if(value == nullptr) {
         throw catter::PayloadError(EFAULT, std::format("{} must not be null", name));
     }
+}
+
+void require_va_list(va_list* ap) {
+    if(ap == nullptr) {
+        throw catter::PayloadError(EFAULT, "va_list must not be null");
+    }
+}
+
+std::vector<const char*> collect_variadic_argv(const char* first_arg, va_list* ap) {
+    std::vector<const char*> argv;
+    if(first_arg != nullptr) {
+        argv.push_back(first_arg);
+        while(auto* arg = va_arg(*ap, const char*)) {
+            argv.push_back(arg);
+        }
+    }
+    argv.push_back(nullptr);
+    return argv;
+}
+
+char** collect_variadic_envp(va_list* ap) {
+    return va_arg(*ap, char**);
 }
 
 std::filesystem::path resolve_path_like(const char* path) {
@@ -180,25 +204,32 @@ int Executor::execvpe(const char* file, char* const argv[], char* const envp[]) 
     });
 }
 
-int Executor::execl(const char* path, const char* const argv[]) noexcept {
+int Executor::execl(const char* path, const char* arg, va_list* ap) noexcept {
     CATTER_EXEC_BOUNDARY("execl", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, environment());
+        require_va_list(ap);
+        auto argv = collect_variadic_argv(arg, ap);
+        return this->run_execve(resolve_path_like(path).c_str(), argv.data(), environment());
     });
 }
 
-int Executor::execle(const char* path, const char* const argv[], char* const envp[]) noexcept {
+int Executor::execle(const char* path, const char* arg, va_list* ap) noexcept {
     CATTER_EXEC_BOUNDARY("execle", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, envp);
+        require_va_list(ap);
+        auto argv = collect_variadic_argv(arg, ap);
+        auto envp = collect_variadic_envp(ap);
+        return this->run_execve(resolve_path_like(path).c_str(), argv.data(), envp);
     });
 }
 
-int Executor::execlp(const char* file, const char* const argv[]) noexcept {
+int Executor::execlp(const char* file, const char* arg, va_list* ap) noexcept {
     CATTER_EXEC_BOUNDARY("execlp", {
         require_path_arg(file, "file");
+        require_va_list(ap);
+        auto argv = collect_variadic_argv(arg, ap);
         auto envp = environment();
-        return this->run_execve(resolve_from_path(file, envp).c_str(), argv, envp);
+        return this->run_execve(resolve_from_path(file, envp).c_str(), argv.data(), envp);
     });
 }
 

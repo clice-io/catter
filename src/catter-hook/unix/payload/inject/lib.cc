@@ -2,7 +2,6 @@
 #include <cerrno>
 #include <cstdarg>
 #include <cstdlib>
-#include <vector>
 #include <spawn.h>
 #include <unistd.h>
 
@@ -21,18 +20,6 @@ const char* safe_cstr(const char* value) noexcept {
 
 const char* safe_argv0(const char* const argv[]) noexcept {
     return argv == nullptr ? "" : safe_cstr(argv[0]);
-}
-
-std::vector<const char*> collect_variadic_argv(const char* first_arg, va_list& args) {
-    std::vector<const char*> argv;
-    if(first_arg != nullptr) {
-        argv.push_back(first_arg);
-        while(auto* arg = va_arg(args, const char*)) {
-            argv.push_back(arg);
-        }
-    }
-    argv.push_back(nullptr);
-    return argv;
 }
 
 }  // namespace
@@ -146,11 +133,10 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(exect)(const char* path,
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execl)(const char* path, const char* arg, ...) {
     va_list ap;
     va_start(ap, arg);
-    auto argv = collect_variadic_argv(arg, ap);
+    INFO("hooked execl called: path={}, argv[0]={}", safe_cstr(path), safe_cstr(arg));
+    auto result = EXECUTOR.execl(path, arg, &ap);
     va_end(ap);
-
-    INFO("hooked execl called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv.data()));
-    return EXECUTOR.execl(path, argv.data());
+    return result;
 }
 
 INJECT_FUNCTION(execl);
@@ -158,11 +144,10 @@ INJECT_FUNCTION(execl);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execlp)(const char* file, const char* arg, ...) {
     va_list ap;
     va_start(ap, arg);
-    auto argv = collect_variadic_argv(arg, ap);
+    INFO("hooked execlp called: file={}, argv[0]={}", safe_cstr(file), safe_cstr(arg));
+    auto result = EXECUTOR.execlp(file, arg, &ap);
     va_end(ap);
-
-    INFO("hooked execlp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv.data()));
-    return EXECUTOR.execlp(file, argv.data());
+    return result;
 }
 
 INJECT_FUNCTION(execlp);
@@ -171,11 +156,10 @@ INJECT_FUNCTION(execlp);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execle)(const char* path, const char* arg, ...) {
     va_list ap;
     va_start(ap, arg);
-    auto argv = collect_variadic_argv(arg, ap);
-    char** envp = va_arg(ap, char**);
+    INFO("hooked execle called: path={}, argv[0]={}", safe_cstr(path), safe_cstr(arg));
+    auto result = EXECUTOR.execle(path, arg, &ap);
     va_end(ap);
-    INFO("hooked execle called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv.data()));
-    return EXECUTOR.execle(path, argv.data(), envp);
+    return result;
 }
 
 INJECT_FUNCTION(execle);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdarg>
 #include <spawn.h>
 
 #include "session.h"
@@ -28,11 +29,11 @@ public:
     // GNU extension
     int execvpe(const char* file, char* const argv[], char* const envp[]) noexcept;
 
-    int execl(const char* path, const char* const argv[]) noexcept;
+    int execl(const char* path, const char* arg, va_list* ap) noexcept;
 
-    int execle(const char* path, const char* const argv[], char* const envp[]) noexcept;
+    int execle(const char* path, const char* arg, va_list* ap) noexcept;
 
-    int execlp(const char* file, const char* const argv[]) noexcept;
+    int execlp(const char* file, const char* arg, va_list* ap) noexcept;
 
     // FreeBSD specific extension
     int execvP(const char* file,
