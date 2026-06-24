@@ -7,21 +7,21 @@ namespace catter {
 
 class PayloadError : public std::exception {
 public:
-    PayloadError(int code, std::string message) : code_(code), message_(std::move(message)) {}
+    PayloadError(int code, std::string message) : m_code(code), m_message(std::move(message)) {}
 
     [[nodiscard]]
     int code() const noexcept {
-        return code_;
+        return m_code;
     }
 
     [[nodiscard]]
     const char* what() const noexcept override {
-        return message_.c_str();
+        return m_message.c_str();
     }
 
 private:
-    int code_;
-    std::string message_;
+    int m_code;
+    std::string m_message;
 };
 
 }  // namespace catter
