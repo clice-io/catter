@@ -247,7 +247,7 @@ int Executor::execvP(const char* file,
 int Executor::exect(const char* path, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("exect", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, environment());
+        return this->run_execve(resolve_path_like(path).c_str(), argv, envp);
     });
 }
 
@@ -277,7 +277,7 @@ int Executor::posix_spawnp(pid_t* pid,
     CATTER_SPAWN_BOUNDARY("posix_spawnp", {
         require_path_arg(file, "file");
         return this->run_posix_spawn(pid,
-                                     resolve_from_path(file, envp).c_str(),
+                                     resolve_from_path(file, environment()).c_str(),
                                      file_actions,
                                      attrp,
                                      argv,
