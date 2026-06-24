@@ -93,6 +93,6 @@ inline std::string get_executable_path() {
 #define INJECT_FUNCTION(fn) DYLD_INTERPOSE(HOOK_NAME(fn), fn)
 
 template <typename T>
-T dynamic_linker(const char* const name) {
+T dynamic_linker(const char* const name) noexcept {
     return reinterpret_cast<T>(dlsym(RTLD_NEXT, name));
 }

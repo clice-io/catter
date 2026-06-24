@@ -16,7 +16,6 @@ namespace ct = catter;
 
 namespace {
 ct::Session session{.proxy_path = "/usr/local/bin/catter-proxy", .self_id = "99"};
-ct::CmdBuilder builder(session);
 
 TEST_SUITE(cmd_builder) {
 
@@ -28,9 +27,10 @@ TEST_CASE(proxy_cmd_constructs_correct_arguments) {
                                         const_cast<char*>("main.c"),
                                         nullptr};
 
-    auto cmd =
-        builder.proxy_cmd(target_path,
-                          std::span<char* const>{original_argv.data(), original_argv.size() - 1});
+    auto cmd = ct::build_proxy_command(
+        session,
+        target_path,
+        std::span<char* const>{original_argv.data(), original_argv.size() - 1});
 
     // 1. Verify basic properties
     EXPECT_TRUE(cmd.path == session.proxy_path);
@@ -59,10 +59,11 @@ TEST_CASE(error_cmd_formats_message_correctly_without_separator) {
                                         nullptr};
     const char* error_msg = "File not found";
 
-    auto cmd =
-        builder.error_cmd(error_msg,
-                          target_path,
-                          std::span<char* const>{original_argv.data(), original_argv.size() - 1});
+    auto cmd = ct::build_error_command(
+        session,
+        error_msg,
+        target_path,
+        std::span<char* const>{original_argv.data(), original_argv.size() - 1});
 
     bool found_separator = false;
     for(const auto& arg: cmd.argv) {

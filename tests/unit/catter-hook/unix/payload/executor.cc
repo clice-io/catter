@@ -1,104 +1,244 @@
 #include "executor.h"
 
+#include <cerrno>
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
+#include <spawn.h>
 #include <kota/zest/zest.h>
-#include <kota/deco/deco.h>
 
-#include "option.h"
-#include "session.h"
-#include "mock/mock_linker.h"
-#include "mock/mock_resolver.h"
+#include "temp_file_manager.h"
+#include "unix/config.h"
 
 namespace ct = catter;
+namespace cfg = catter::config::hook;
 namespace fs = std::filesystem;
 
 namespace {
 
-MockLinker linker;
-MockResolver resolver;
-ct::Session session{.proxy_path = "/usr/local/bin/catter-proxy", .self_id = "123"};
-ct::Executor executor(linker, session, resolver);
+struct CapturedCall {
+    int calls = 0;
+    int result = 0;
+    std::string path;
+    std::vector<std::string> argv;
+    std::vector<std::string> envp;
 
-char* const empty_envp[] = {nullptr};
+    void reset(int new_result = 0) {
+        calls = 0;
+        result = new_result;
+        path.clear();
+        argv.clear();
+        envp.clear();
+    }
+};
+
+ct::TempFileManager manager("./tmp-executor");
+CapturedCall exec_call;
+CapturedCall spawn_call;
+
+ct::Session valid_session{.proxy_path = "/tmp/catter-proxy", .self_id = "7"};
+
+std::vector<std::string> collect_values(char* const values[]) {
+    std::vector<std::string> result;
+    if(values == nullptr) {
+        return result;
+    }
+    for(std::size_t i = 0; values[i] != nullptr; ++i) {
+        result.emplace_back(values[i]);
+    }
+    return result;
+}
+
+bool has_env_entry(const std::vector<std::string>& envp, std::string_view key) {
+    auto prefix = std::string(key) + "=";
+    for(const auto& entry: envp) {
+        if(entry.starts_with(prefix)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int fake_execve(const char* path, char* const argv[], char* const envp[]) {
+    ++exec_call.calls;
+    exec_call.path = path == nullptr ? "" : path;
+    exec_call.argv = collect_values(argv);
+    exec_call.envp = collect_values(envp);
+    return exec_call.result;
+}
+
+int fake_posix_spawn(pid_t*,
+                     const char* path,
+                     const posix_spawn_file_actions_t*,
+                     const posix_spawnattr_t*,
+                     char* const argv[],
+                     char* const envp[]) {
+    ++spawn_call.calls;
+    spawn_call.path = path == nullptr ? "" : path;
+    spawn_call.argv = collect_values(argv);
+    spawn_call.envp = collect_values(envp);
+    return spawn_call.result;
+}
+
+fs::path create_executable(std::string_view name) {
+    std::error_code ec;
+    manager.create(std::string(name), ec);
+    EXPECT_TRUE(!ec);
+    return manager.root / name;
+}
+
+void expect_proxy_command(const CapturedCall& call,
+                          const ct::Session& session,
+                          const fs::path& executable,
+                          std::string_view argv0) {
+    EXPECT_TRUE(call.path == session.proxy_path);
+    EXPECT_TRUE(call.argv.size() >= 7);
+    EXPECT_TRUE(call.argv.at(0) == session.proxy_path);
+    EXPECT_TRUE(call.argv.at(1) == "-p");
+    EXPECT_TRUE(call.argv.at(2) == session.self_id);
+    EXPECT_TRUE(call.argv.at(3) == "--exec");
+    EXPECT_TRUE(call.argv.at(4) == executable.string());
+    EXPECT_TRUE(call.argv.at(5) == "--");
+    EXPECT_TRUE(call.argv.at(6) == argv0);
+}
 
 TEST_SUITE(executor) {
-TEST_CASE(execve_success_flow) {
-    linker.reset();
-    resolver.add_file("/bin/ls", "/bin/ls");
 
-    char* const argv[] = {(char*)"ls", (char*)"-la", nullptr};
+TEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
+    exec_call.reset(42);
+    spawn_call.reset();
 
-    // Act
-    int res = executor.execve("/bin/ls", argv, empty_envp);
+    auto executable = create_executable("execve-tool");
+    std::vector<char*> argv = {const_cast<char*>("execve-tool"),
+                               const_cast<char*>("-c"),
+                               const_cast<char*>("main.cc"),
+                               nullptr};
 
-    // Assert
-    EXPECT_TRUE(res == 0);
-    EXPECT_TRUE(linker.last_path ==
-                session.proxy_path);  // << "Should intercept and execute proxy";
+    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=99";
+    std::string proxy_path = std::string(cfg::KEY_CATTER_PROXY_PATH) + "=/tmp/ignored-proxy";
+    std::string preload =
+        std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so:/tmp/" + cfg::HOOK_LIB_NAME;
+    std::string lang = "LANG=C";
+    const char* raw_env[] = {command_id.data(),
+                             proxy_path.data(),
+                             preload.data(),
+                             lang.data(),
+                             nullptr};
+    auto envp = const_cast<char* const*>(raw_env);
 
-    // Verify the proxy received the correct intercepted instructions
-    auto f = [&]() {
-        auto parse_res =
-            kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv)->options;
-        EXPECT_TRUE(std::to_string(*parse_res.parent_id) == session.self_id);
-        EXPECT_TRUE(*parse_res.exec == "/bin/ls");
-        EXPECT_TRUE(parse_res.args.has_value());
-        auto& raw_args = *parse_res.args;
-        EXPECT_TRUE(raw_args.size() == 2);
-        EXPECT_TRUE(raw_args[0] == "ls");
-        EXPECT_TRUE(raw_args[1] == "-la");
-    };
-    EXPECT_NOTHROWS(f());
-};
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
 
-TEST_CASE(execvpe_success_using_mock_PATH_resolution) {
-    linker.reset();
-    resolver.add_file("python", "/usr/bin/python");
+    auto result = executor.execve(executable.c_str(), argv.data(), envp);
 
-    char* const argv[] = {(char*)"python", (char*)"script.py", nullptr};
+    EXPECT_TRUE(result == 42);
+    EXPECT_TRUE(exec_call.calls == 1);
+    expect_proxy_command(exec_call, valid_session, executable, "execve-tool");
+    EXPECT_TRUE(exec_call.argv.at(7) == "-c");
+    EXPECT_TRUE(exec_call.argv.at(8) == "main.cc");
+    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
+    EXPECT_TRUE(has_env_entry(exec_call.envp, "LANG"));
+    EXPECT_TRUE(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
+    EXPECT_TRUE(exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
+                exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so");
+}
 
-    int res = executor.execvpe("python", argv, empty_envp);
+TEST_CASE(execvp_resolves_with_original_path_environment_before_sanitizing) {
+    exec_call.reset(51);
 
-    EXPECT_TRUE(res == 0);
-    EXPECT_TRUE(linker.last_path == session.proxy_path);
-    // Verify translation of relative 'python' to absolute path
-    auto f = [&]() {
-        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
-        EXPECT_TRUE(*parse_res->options.exec == "/usr/bin/python");
-    };
-    EXPECT_NOTHROWS(f());
-};
+    auto executable = create_executable("path-tool");
+    auto search_path = fs::absolute(manager.root).string();
+    std::string path_env = "PATH=" + search_path;
+    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=11";
+    const char* raw_env[] = {path_env.data(), command_id.data(), nullptr};
+    auto envp = const_cast<char* const*>(raw_env);
 
-TEST_CASE(posix_spawn_success_flow) {
-    linker.reset();
-    resolver.add_file("/app/run", "/app/run");
+    std::vector<char*> argv = {const_cast<char*>("path-tool"), nullptr};
 
-    char* const argv[] = {(char*)"run", (char*)"--arg1", nullptr};
-    pid_t pid;
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
 
-    int res = executor.posix_spawn(&pid, "/app/run", nullptr, nullptr, argv, empty_envp);
+    auto result = executor.execvp("path-tool", argv.data(), envp);
 
-    EXPECT_TRUE(res == 0);
-    EXPECT_TRUE(linker.last_path == session.proxy_path);
+    EXPECT_TRUE(result == 51);
+    EXPECT_TRUE(exec_call.calls == 1);
+    expect_proxy_command(exec_call, valid_session, fs::absolute(executable), "path-tool");
+    EXPECT_TRUE(has_env_entry(exec_call.envp, "PATH"));
+    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+}
 
-    auto f = [&]() {
-        auto parse_res = kota::deco::cli::parse<catter::proxy::ProxyOption>(linker.last_argv);
-        EXPECT_TRUE(*parse_res->options.exec == "/app/run");
-        EXPECT_TRUE(parse_res->options.args->at(1) == "--arg1");
-    };
-    EXPECT_NOTHROWS(f());
-};
+TEST_CASE(execve_invalid_session_builds_error_command_without_resolving_target) {
+    exec_call.reset(60);
 
-TEST_CASE(executor_handles_linker_failure) {
-    linker.reset();
-    resolver.add_file("/bin/true", "/bin/true");
-    linker.should_fail = true;
+    ct::Session invalid_session{};
+    std::vector<char*> argv = {const_cast<char*>("missing-tool"), nullptr};
 
-    char* const argv[] = {(char*)"true", nullptr};
-    int res = executor.execve("/bin/true", argv, empty_envp);
+    ct::Executor executor;
+    executor.init(invalid_session, fake_execve, fake_posix_spawn);
 
-    EXPECT_TRUE(res == -1);
-    EXPECT_TRUE(errno == ENOSYS);
-};
+    auto result = executor.execve("/definitely/missing/tool", argv.data(), nullptr);
+
+    EXPECT_TRUE(result == 60);
+    EXPECT_TRUE(exec_call.calls == 1);
+    EXPECT_TRUE(exec_call.path.empty());
+    EXPECT_TRUE(exec_call.argv.size() == 6);
+    EXPECT_TRUE(exec_call.argv.at(4) == "/definitely/missing/tool");
+    EXPECT_TRUE(exec_call.argv.at(5).find("Catter Proxy Error: invalid environment") !=
+                std::string::npos);
+}
+
+TEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
+    exec_call.reset();
+    std::vector<char*> argv = {const_cast<char*>("tool"), nullptr};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    errno = 0;
+    auto result = executor.execve(nullptr, argv.data(), nullptr);
+
+    EXPECT_TRUE(result == -1);
+    EXPECT_TRUE(errno == EFAULT);
+    EXPECT_TRUE(exec_call.calls == 0);
+}
+
+TEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
+    spawn_call.reset(17);
+
+    auto executable = create_executable("spawn-tool");
+    std::vector<char*> argv = {const_cast<char*>("spawn-tool"), nullptr};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    pid_t pid = 0;
+    auto result =
+        executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), nullptr);
+
+    EXPECT_TRUE(result == 17);
+    EXPECT_TRUE(spawn_call.calls == 1);
+    expect_proxy_command(spawn_call, valid_session, executable, "spawn-tool");
+}
+
+TEST_CASE(spawn_boundary_returns_error_code) {
+    spawn_call.reset();
+    std::vector<char*> argv = {const_cast<char*>("tool"), nullptr};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    pid_t pid = 0;
+    errno = 0;
+    auto result = executor.posix_spawn(&pid, nullptr, nullptr, nullptr, argv.data(), nullptr);
+
+    EXPECT_TRUE(result == EFAULT);
+    EXPECT_TRUE(errno == EFAULT);
+    EXPECT_TRUE(spawn_call.calls == 0);
+}
+
 };  // TEST_SUITE(executor)
+
 }  // namespace

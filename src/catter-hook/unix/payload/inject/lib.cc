@@ -1,36 +1,38 @@
 #include <atomic>
 #include <cerrno>
-#include <climits>
 #include <cstdarg>
-#include <cstdio>
 #include <cstdlib>
-#include <dlfcn.h>
+#include <vector>
 #include <spawn.h>
 #include <unistd.h>
 
 #include "crossplat.h"
 #include "debug.h"
 #include "executor.h"
-#include "linker.h"
-#include "session.h"
 #include "unix/config.h"
 
 #define EXPORT_SYMBOL __attribute__((visibility("default")))
 
 namespace {
 
-/// helper for hook c function with var args
-
-size_t va_length(va_list& args) {
-    size_t arg_count = 0;
-    while(va_arg(args, const char*) != nullptr)
-        ++arg_count;
-    return arg_count;
+const char* safe_cstr(const char* value) noexcept {
+    return value == nullptr ? "" : value;
 }
 
-void va_copy_n(va_list& args, char* argv[], const size_t argc) {
-    for(size_t idx = 0; idx < argc; ++idx)
-        argv[idx] = va_arg(args, char*);
+const char* safe_argv0(char* const argv[]) noexcept {
+    return argv == nullptr ? "" : safe_cstr(argv[0]);
+}
+
+std::vector<char*> collect_variadic_argv(const char* first_arg, va_list& args) {
+    std::vector<char*> argv;
+    if(first_arg != nullptr) {
+        argv.push_back(const_cast<char*>(first_arg));
+        while(auto* arg = va_arg(args, const char*)) {
+            argv.push_back(const_cast<char*>(arg));
+        }
+    }
+    argv.push_back(nullptr);
+    return argv;
 }
 
 }  // namespace
@@ -45,8 +47,7 @@ namespace {
 // This is used for being multi thread safe (loading time only).
 std::atomic<bool> LOADED(false);
 // These are related to the functionality of this library.
-catter::Linker LINKER;
-catter::Session SESSION;
+catter::Executor EXECUTOR;
 
 }  // namespace
 
@@ -55,8 +56,6 @@ catter::Session SESSION;
  *
  * The first method to call after the library is loaded into memory.
  */
-
-namespace ct = catter;
 
 extern "C" EXPORT_SYMBOL void on_load() __attribute__((constructor));
 
@@ -69,8 +68,7 @@ extern "C" EXPORT_SYMBOL void on_load() {
     catter::log::init_logger("catter-hook", path, false);
 #endif
     INFO("catter hook library loaded, from executable path: {}", get_executable_path());
-    // TODO: initialization code here
-    ct::session::from(SESSION, environment());
+    EXECUTOR.init(environment());
     errno = 0;
 }
 
@@ -96,16 +94,16 @@ extern "C" EXPORT_SYMBOL void on_unload() {
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execve)(const char* path,
                                                char* const argv[],
                                                char* const envp[]) {
-    INFO("hooked execve called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).execve(path, argv, envp);
+    INFO("hooked execve called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv));
+    return EXECUTOR.execve(path, argv, envp);
 }
 
 INJECT_FUNCTION(execve);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execv)(const char* path, char* const argv[]) {
     auto envp = const_cast<char* const*>(environment());
-    INFO("hooked execv called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).execve(path, argv, envp);
+    INFO("hooked execv called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv));
+    return EXECUTOR.execv(path, argv, envp);
 }
 
 INJECT_FUNCTION(execv);
@@ -114,16 +112,16 @@ INJECT_FUNCTION(execv);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvpe)(const char* file,
                                                 char* const argv[],
                                                 char* const envp[]) {
-    INFO("hooked execvpe called: file={}, argv[0]={}", file, argv[0]);
-    return ct::Executor(LINKER, SESSION).execvpe(file, argv, envp);
+    INFO("hooked execvpe called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
+    return EXECUTOR.execvpe(file, argv, envp);
 }
 
 // INJECT_FUNCTION(execvpe);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execvp)(const char* file, char* const argv[]) {
     auto envp = const_cast<char* const*>(environment());
-    INFO("hooked execvp called: file={}, argv[0]={}", file, argv[0]);
-    return ct::Executor(LINKER, SESSION).execvpe(file, argv, envp);
+    INFO("hooked execvp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
+    return EXECUTOR.execvp(file, argv, envp);
 }
 
 INJECT_FUNCTION(execvp);
@@ -132,8 +130,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(execvP)(const char* file,
                                                const char* search_path,
                                                char* const argv[]) {
     auto envp = const_cast<char* const*>(environment());
-    INFO("hooked execvP called: file={}, argv[0]={}", file, argv[0]);
-    return ct::Executor(LINKER, SESSION).execvP(file, search_path, argv, envp);
+    INFO("hooked execvP called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
+    return EXECUTOR.execvP(file, search_path, argv, envp);
 }
 
 INJECT_FUNCTION(execvP);
@@ -141,78 +139,50 @@ INJECT_FUNCTION(execvP);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(exect)(const char* path,
                                               char* const argv[],
                                               char* const envp[]) {
-    INFO("hooked exect called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).execve(path, argv, envp);
+    INFO("hooked exect called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv));
+    return EXECUTOR.exect(path, argv, envp);
 }
 
 // INJECT_FUNCTION(exect);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvla"
-
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execl)(const char* path, const char* arg, ...) {
-
-    // Count the number of arguments.
     va_list ap;
     va_start(ap, arg);
-    const size_t argc = va_length(ap);
-    va_end(ap);
-    // Copy the arguments to the stack.
-    va_start(ap, arg);
-    char* argv[argc + 2];
-    argv[0] = const_cast<char*>(path);
-    va_copy_n(ap, &argv[1], argc + 1);
+    auto argv = collect_variadic_argv(arg, ap);
     va_end(ap);
 
     auto envp = const_cast<char* const*>(environment());
-    INFO("hooked execl called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).execve(path, argv, envp);
+    INFO("hooked execl called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv.data()));
+    return EXECUTOR.execl(path, argv.data(), envp);
 }
 
 INJECT_FUNCTION(execl);
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execlp)(const char* file, const char* arg, ...) {
-    // Count the number of arguments.
     va_list ap;
     va_start(ap, arg);
-    const size_t argc = va_length(ap);
-    va_end(ap);
-    // Copy the arguments to the stack.
-    va_start(ap, arg);
-    char* argv[argc + 2];
-    argv[0] = const_cast<char*>(file);
-    va_copy_n(ap, &argv[1], argc + 1);
+    auto argv = collect_variadic_argv(arg, ap);
     va_end(ap);
 
     auto envp = const_cast<char* const*>(environment());
-    INFO("hooked execlp called: file={}, argv[0]={}", file, argv[0]);
-    return ct::Executor(LINKER, SESSION).execvpe(file, argv, envp);
+    INFO("hooked execlp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv.data()));
+    return EXECUTOR.execlp(file, argv.data(), envp);
 }
 
 INJECT_FUNCTION(execlp);
 
 // int execle(const char *path, const char *arg, ..., char * const envp[]);
 extern "C" EXPORT_SYMBOL int HOOK_NAME(execle)(const char* path, const char* arg, ...) {
-
-    // Count the number of arguments.
     va_list ap;
     va_start(ap, arg);
-    const size_t argc = va_length(ap);
-    va_end(ap);
-    // Copy the arguments to the stack.
-    va_start(ap, arg);
-    char* argv[argc + 2];
-    argv[0] = const_cast<char*>(path);
-    va_copy_n(ap, &argv[1], argc + 1);
+    auto argv = collect_variadic_argv(arg, ap);
     char** envp = va_arg(ap, char**);
     va_end(ap);
-    INFO("hooked execle called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).execve(path, argv, envp);
+    INFO("hooked execle called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv.data()));
+    return EXECUTOR.execle(path, argv.data(), envp);
 }
 
 INJECT_FUNCTION(execle);
-
-#pragma GCC diagnostic pop
 
 extern "C" EXPORT_SYMBOL int HOOK_NAME(posix_spawn)(pid_t* pid,
                                                     const char* path,
@@ -220,8 +190,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(posix_spawn)(pid_t* pid,
                                                     const posix_spawnattr_t* attrp,
                                                     char* const argv[],
                                                     char* const envp[]) {
-    INFO("hooked posix_spawn called: path={}, argv[0]={}", path, argv[0]);
-    return ct::Executor(LINKER, SESSION).posix_spawn(pid, path, file_actions, attrp, argv, envp);
+    INFO("hooked posix_spawn called: path={}, argv[0]={}", safe_cstr(path), safe_argv0(argv));
+    return EXECUTOR.posix_spawn(pid, path, file_actions, attrp, argv, envp);
 }
 
 INJECT_FUNCTION(posix_spawn);
@@ -232,8 +202,8 @@ extern "C" EXPORT_SYMBOL int HOOK_NAME(posix_spawnp)(pid_t* pid,
                                                      const posix_spawnattr_t* attrp,
                                                      char* const argv[],
                                                      char* const envp[]) {
-    INFO("hooked posix_spawnp called: file={}, argv[0]={}", file, argv[0]);
-    return ct::Executor(LINKER, SESSION).posix_spawnp(pid, file, file_actions, attrp, argv, envp);
+    INFO("hooked posix_spawnp called: file={}, argv[0]={}", safe_cstr(file), safe_argv0(argv));
+    return EXECUTOR.posix_spawnp(pid, file, file_actions, attrp, argv, envp);
 }
 
 INJECT_FUNCTION(posix_spawnp);

@@ -8,6 +8,8 @@
 // RUN: %if !system-windows %{ %it_catter_hook --test execv | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execvp | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test execl | FileCheck %s --check-prefix=CHECK-OUTPUT %}
+// RUN: %if !system-windows %{ %it_catter_hook --test execlp | FileCheck %s --check-prefix=CHECK-OUTPUT %}
+// RUN: %if !system-windows %{ %it_catter_hook --test execle | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test posix_spawn | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 // RUN: %if !system-windows %{ %it_catter_hook --test posix_spawnp | FileCheck %s --check-prefix=CHECK-OUTPUT %}
 
@@ -113,6 +115,20 @@ void execl() {
     }
 }
 
+void execlp() {
+    char exec_name[] = "/bin/echo";
+    if(::execlp(exec_name, exec_name, "Hello, World!", static_cast<char*>(nullptr)) != 0) {
+        throw catter::system_error(errno, std::system_category(), "execlp failed");
+    }
+}
+
+void execle() {
+    char exec_name[] = "/bin/echo";
+    if(::execle(exec_name, exec_name, "Hello, World!", static_cast<char*>(nullptr), environ) != 0) {
+        throw catter::system_error(errno, std::system_category(), "execle failed");
+    }
+}
+
 void posix_spawn() {
     char exec_name[] = "/bin/echo";
     pid_t pid = 0;
@@ -152,6 +168,8 @@ std::unordered_map<std::string, std::function<void()>> funcs = {
     {"execv",        execv       },
     {"execvp",       execvp      },
     {"execl",        execl       },
+    {"execlp",       execlp      },
+    {"execle",       execle      },
     {"posix_spawn",  posix_spawn },
     {"posix_spawnp", posix_spawnp}
 };

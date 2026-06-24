@@ -1,47 +1,44 @@
 #pragma once
-#include "command.h"
-#include "linker.h"
-#include "resolver.h"
+
+#include <spawn.h>
+
 #include "session.h"
 
 namespace catter {
 
-/**
- * This class implements the process execution logic.
- *
- * The caller of this is the POSIX interface for process creation.
- * This class encapsulate most of the logic and leave the C wrapper light
- * in order to test the functionality in unit tests.
- *
- * This is just a subset of all process creation calls.
- *
- * - Variable argument methods are not implemented. (The `execl*` methods.)
- *   Caller needs to convert those convenient functions by collecting the
- *   arguments into a C array.
- *
- * - Environment needs to pass for this methods. If a method does not have
- *   the environment explicitly passed as argument, it needs to grab it
- *   and pass to these methods.
- */
+using ExecveFn = int(const char* path, char* const argv[], char* const envp[]);
+using PosixSpawnFn = int(pid_t* pid,
+                         const char* path,
+                         const posix_spawn_file_actions_t* file_actions,
+                         const posix_spawnattr_t* attrp,
+                         char* const argv[],
+                         char* const envp[]);
+
 class Executor {
-    constexpr static auto default_resolver = Resolver{};
-
 public:
-    Executor(const Linker& linker,
-             const Session& session,
-             const Resolver& resolver = default_resolver) noexcept;
+    void init(const char** envp) noexcept;
+    void init(Session session, ExecveFn* execve, PosixSpawnFn* posix_spawn) noexcept;
 
-    ~Executor() noexcept = default;
-
-public:
     int execve(const char* path, char* const argv[], char* const envp[]) noexcept;
 
+    int execv(const char* path, char* const argv[], char* const envp[]) noexcept;
+
     int execvpe(const char* file, char* const argv[], char* const envp[]) noexcept;
+
+    int execvp(const char* file, char* const argv[], char* const envp[]) noexcept;
 
     int execvP(const char* file,
                const char* search_path,
                char* const argv[],
                char* const envp[]) noexcept;
+
+    int exect(const char* path, char* const argv[], char* const envp[]) noexcept;
+
+    int execl(const char* path, char* const argv[], char* const envp[]) noexcept;
+
+    int execlp(const char* file, char* const argv[], char* const envp[]) noexcept;
+
+    int execle(const char* path, char* const argv[], char* const envp[]) noexcept;
 
     int posix_spawn(pid_t* pid,
                     const char* path,
@@ -58,10 +55,9 @@ public:
                      char* const envp[]) noexcept;
 
 private:
-    const catter::Linker& linker_;
-    const catter::Session& session_;
-    const catter::Resolver& resolver_;
-    catter::CmdBuilder cmd_builder_;
+    Session m_session;
+    ExecveFn* m_execve = nullptr;
+    PosixSpawnFn* m_posix_spawn = nullptr;
 };
 
 }  // namespace catter

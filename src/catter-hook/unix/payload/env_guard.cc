@@ -47,17 +47,22 @@ const char* handle_env(std::list<std::string>& new_preload, char* entry) noexcep
 }  // namespace
 
 namespace catter {
-EnvGuard::EnvGuard(const char*** env_ptr) noexcept {
-    new_envs_.reserve(64);
+SanitizedEnv sanitize_environment(char* const envp[]) noexcept {
+    SanitizedEnv env;
+    env.entries.reserve(64);
 
-    for(size_t i = 0; (*env_ptr)[i] != nullptr; ++i) {
-        char* env = const_cast<char*>((*env_ptr)[i]);
-        if(auto new_entry = handle_env(new_preload_, env); new_entry != nullptr) {
-            new_envs_.push_back(const_cast<char*>(new_entry));
+    if(envp == nullptr) {
+        env.entries.push_back(nullptr);
+        return env;
+    }
+
+    for(size_t i = 0; envp[i] != nullptr; ++i) {
+        if(auto new_entry = handle_env(env.owned_entries, envp[i]); new_entry != nullptr) {
+            env.entries.push_back(const_cast<char*>(new_entry));
         }
     }
-    new_envs_.push_back(nullptr);
+    env.entries.push_back(nullptr);
 
-    *env_ptr = const_cast<const char**>(new_envs_.data());
+    return env;
 }
 }  // namespace catter

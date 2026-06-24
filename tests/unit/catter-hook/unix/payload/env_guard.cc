@@ -40,20 +40,21 @@ TEST_CASE(removes_injected_keys_and_filters_hook_preload) {
                              preload.data(),
                              lang.data(),
                              nullptr};
-    const char** envp = raw_env;
+    auto envp = const_cast<char* const*>(raw_env);
 
-    ct::EnvGuard guard(&envp);
+    auto sanitized = ct::sanitize_environment(envp);
+    auto clean_envp = const_cast<const char**>(sanitized.data());
 
-    EXPECT_TRUE(find_entry(envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
-    EXPECT_TRUE(find_entry(envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
+    EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
+    EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
 
-    auto cleaned_preload = find_entry(envp, cfg::KEY_PRELOAD);
+    auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
     EXPECT_TRUE(cleaned_preload != nullptr);
     std::string expected_preload =
         std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
     EXPECT_TRUE(std::string_view(cleaned_preload) == expected_preload);
 
-    EXPECT_TRUE(find_entry(envp, "LANG") != nullptr);
+    EXPECT_TRUE(find_entry(clean_envp, "LANG") != nullptr);
 };
 
 TEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
@@ -62,11 +63,12 @@ TEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     std::string preload = std::string(cfg::KEY_PRELOAD) + "=" + hook_lib;
 
     const char* raw_env[] = {preload.data(), nullptr};
-    const char** envp = raw_env;
+    auto envp = const_cast<char* const*>(raw_env);
 
-    ct::EnvGuard guard(&envp);
+    auto sanitized = ct::sanitize_environment(envp);
+    auto clean_envp = const_cast<const char**>(sanitized.data());
 
-    auto cleaned_preload = find_entry(envp, cfg::KEY_PRELOAD);
+    auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
     EXPECT_TRUE(cleaned_preload == nullptr);
 };
 };  // TEST_SUITE(env_guard)

@@ -6,20 +6,17 @@
 
 namespace catter {
 
-/// An RAII context to remove envs used by hook, make sure the execution of the target process will
-/// not be affected by them.
-class EnvGuard {
-public:
-    explicit EnvGuard(const char*** env_ptr) noexcept;
-    ~EnvGuard() noexcept = default;
+struct SanitizedEnv {
+    std::vector<char*> entries;
+    std::list<std::string> owned_entries;
 
-    EnvGuard(const EnvGuard&) = delete;
-    EnvGuard& operator= (const EnvGuard&) = delete;
-    EnvGuard(EnvGuard&&) = delete;
-    EnvGuard& operator= (EnvGuard&&) = delete;
-
-private:
-    std::vector<char*> new_envs_;
-    std::list<std::string> new_preload_;
+    [[nodiscard]]
+    char* const* data() noexcept {
+        return entries.data();
+    }
 };
+
+/// Remove envs used by hook so the target process is not affected by them.
+[[nodiscard]]
+SanitizedEnv sanitize_environment(char* const envp[]) noexcept;
 }  // namespace catter

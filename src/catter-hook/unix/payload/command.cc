@@ -5,8 +5,8 @@
 #include "session.h"
 
 namespace {
-void push_proxy_args(catter::CmdBuilder::command::ArgvTy& argv,
-                     catter::Session& sess,
+void push_proxy_args(std::vector<std::string>& argv,
+                     const catter::Session& sess,
                      std::string_view exec_path,
                      bool error = false) {
     argv.emplace_back(sess.proxy_path);
@@ -24,21 +24,34 @@ namespace fs = std::filesystem;
 
 namespace catter {
 
-CmdBuilder::command CmdBuilder::proxy_cmd(const fs::path& path, ArgvRef argv) {
-    command cmd;
-    cmd.path = session_.proxy_path;
-    push_proxy_args(cmd.argv, session_, path.string());
+std::vector<char*> Command::c_argv() const {
+    std::vector<char*> res;
+    res.reserve(argv.size() + 1);
+    for(const auto& arg: argv) {
+        res.push_back(const_cast<char*>(arg.c_str()));
+    }
+    res.push_back(nullptr);
+    return res;
+}
+
+Command build_proxy_command(const Session& session, const fs::path& path, ArgvRef argv) {
+    Command cmd;
+    cmd.path = session.proxy_path;
+    push_proxy_args(cmd.argv, session, path.string());
     for(const auto arg: argv) {
         cmd.argv.emplace_back(arg);
     }
     return cmd;
 }
 
-CmdBuilder::command CmdBuilder::error_cmd(const char* msg, const fs::path& path, ArgvRef argv) {
-    command cmd;
-    cmd.path = session_.proxy_path;
-    push_proxy_args(cmd.argv, session_, path.string(), true);
-    std::string res_msg = std::format("Catter Proxy Error: {}\n", msg);
+Command build_error_command(const Session& session,
+                            std::string_view message,
+                            const fs::path& path,
+                            ArgvRef argv) {
+    Command cmd;
+    cmd.path = session.proxy_path;
+    push_proxy_args(cmd.argv, session, path.string(), true);
+    std::string res_msg = std::format("Catter Proxy Error: {}\n", message);
     if(!argv.empty()) {
         res_msg.append(std::format("in command: "));
         for(const auto arg: argv) {
