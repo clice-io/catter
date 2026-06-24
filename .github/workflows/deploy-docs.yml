@@ -1,0 +1,17 @@
+name: publish docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: clice-io/docs@main
+        with:
+          project: catter
+          token: ${{ secrets.PUBLISH_DOCS }}

@@ -1,0 +1,38 @@
+guide:
+  label: 指南
+  items:
+    - what-is-catter
+    - quick-start
+    - configuration
+
+features:
+  label: 功能
+  items:
+    - compilation-database
+    - command-tree
+    - target-tree
+    - fake-compilation
+    - build-profiling
+
+scripting:
+  label: 脚本系统
+  items:
+    - overview
+    - service-api
+    - command-analysis
+    - option-parsing
+    - builtin-modules
+
+design:
+  label: 设计
+  items:
+    - architecture
+    - hook-mechanism
+    - ipc-protocol
+
+dev:
+  label: 开发
+  collapsed: true
+  items:
+    - build
+    - contribution
