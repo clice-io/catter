@@ -137,9 +137,11 @@ void Executor::init(const char* const envp[]) noexcept {
     } catch(const std::exception& err) {
         ERROR("failed to initialize hook target: {}", err.what());
         m_execve = nullptr;
+        m_posix_spawn = nullptr;
     } catch(...) {
         ERROR("failed to initialize hook target with unknown exception");
         m_execve = nullptr;
+        m_posix_spawn = nullptr;
     }
 }
 
