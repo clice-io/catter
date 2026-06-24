@@ -15,6 +15,9 @@ using PosixSpawnFn = int(pid_t* pid,
                          char* const argv[],
                          char* const envp[]);
 
+/**
+ * Linux reference: https://www.man7.org/linux/man-pages/man3/exec.3.html
+ */
 class Executor {
 public:
     void init(const char* const envp[]) noexcept;

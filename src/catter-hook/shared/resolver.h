@@ -27,6 +27,11 @@ std::basic_string<CharT> resolve_command_line_token(std::basic_string_view<CharT
 //
 // If the specified filename includes a slash character, then PATH is ignored, and the file at the
 // specified pathname is executed.
+//
+// All other exec() functions (which do not include 'p' in the suffix) take as their first argument
+// a (relative or absolute) pathname that identifies the program to be executed.
+//
+// pathname resolution: https://man7.org/linux/man-pages/man7/path_resolution.7.html
 
 [[nodiscard]]
 std::expected<std::filesystem::path, int> resolve_path_like(std::string_view file);
