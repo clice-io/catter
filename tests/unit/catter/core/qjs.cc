@@ -109,9 +109,9 @@ TEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
         auto runtime = qjs::Runtime::create();
         EXPECT_TRUE(runtime);
 
-        auto& default_ctx = runtime.context();
-        auto& same_ctx = runtime.context();
-        auto& other_ctx = runtime.context("other");
+        auto default_ctx = runtime.context();
+        auto same_ctx = runtime.context();
+        auto other_ctx = runtime.context("other");
 
         EXPECT_TRUE(default_ctx.js_context() == same_ctx.js_context());
         EXPECT_TRUE(default_ctx.js_context() != other_ctx.js_context());
@@ -142,7 +142,7 @@ TEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
     EXPECT_TRUE(throws_with_message(
         [&]() { ctx.eval("throw new TypeError('boom')", "<eval>", eval_flags); },
         "TypeError"));
@@ -152,7 +152,7 @@ TEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
 TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto bool_value = qjs::Value::from(ctx.js_context(), true);
         auto signed_value = qjs::Value::from(ctx.js_context(), int64_t{-7});
@@ -183,7 +183,7 @@ TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
     auto bool_value = qjs::Value::from(ctx.js_context(), true);
     EXPECT_FALSE(bool_value.to<std::string>().has_value());
     EXPECT_TRUE(throws_with_message([&]() { (void)bool_value.as<std::string>(); },
@@ -192,7 +192,7 @@ TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
 
 TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
     auto global = ctx.global_this();
 
     constexpr std::string_view sync_source = "globalThis.syncResult = 40 + 2;";
@@ -249,7 +249,7 @@ TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
 TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto object = qjs::json::parse(R"({"existing":1})", ctx).as<qjs::Object>();
 
@@ -276,7 +276,7 @@ TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
     auto throwing_object =
         ctx.eval(
                "Object.defineProperty({}, 'boom', { get() { throw new Error('property boom'); } })",
@@ -293,7 +293,7 @@ TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
 TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto values = std::vector<int64_t>{1, 2, 3};
         auto array = qjs::Array<int64_t>::from(ctx.js_context(), values);
@@ -318,7 +318,7 @@ TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
 
     auto not_an_array = qjs::json::parse(R"({"length":1})", ctx).as<qjs::Object>();
     EXPECT_TRUE(throws_with_message([&]() { (void)not_an_array.as<qjs::Array<int64_t>>(); },
@@ -334,7 +334,7 @@ TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
 TEST_CASE(array_conversions_cover_string_roundtrip) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto string_values = std::vector<std::string>{"alpha", "beta", "gamma"};
         auto string_array = qjs::Array<std::string>::from(ctx.js_context(), string_values);
@@ -353,7 +353,7 @@ TEST_CASE(array_conversions_cover_string_roundtrip) {
 TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
         int64_t remembered = 0;
 
         auto plus_three =
@@ -419,7 +419,7 @@ TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
     auto zero_arg_js_function =
         ctx.eval("(function () { return 7; })", "<eval>", eval_flags).as<qjs::Object>();
     EXPECT_TRUE(throws_with_message(
@@ -439,7 +439,7 @@ TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
 
 TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
 
     auto expect_number = qjs::Function<int64_t(int64_t)>::from(ctx.js_context(),
                                                                [](int64_t value) { return value; });
@@ -468,7 +468,7 @@ TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
 
 TEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
 
     CountingFunctor counting_functor{};
     auto lvalue_functor = qjs::Function<int64_t(int64_t)>::from(ctx.js_context(), counting_functor);
@@ -488,7 +488,7 @@ TEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
 TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto sum_all = qjs::Function<int64_t(qjs::Parameters)>::from(ctx.js_context(),
                                                                      [](qjs::Parameters args) {
@@ -550,7 +550,7 @@ TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
-    auto& ctx = runtime.context();
+    auto ctx = runtime.context();
 
     auto plain_object = qjs::json::parse(R"({"value":1})", ctx).as<qjs::Object>();
     EXPECT_TRUE(throws_with_message(
@@ -574,7 +574,7 @@ TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
 TEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_args) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto error = ctx.eval("new TypeError('boom')", "<eval>", eval_flags)
                          .as<qjs::Object>()
@@ -608,9 +608,9 @@ TEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_a
 
 TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
     auto runtime_a = qjs::Runtime::create();
-    auto& ctx_a = runtime_a.context();
+    auto ctx_a = runtime_a.context();
     auto runtime_b = qjs::Runtime::create();
-    auto& ctx_b = runtime_b.context();
+    auto ctx_b = runtime_b.context();
 
     using Register = qjs::Object::Register<IncrementFunctor&&>;
 
@@ -644,7 +644,7 @@ TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
 TEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto& module = ctx.cmodule("native-test");
         auto& same_module = ctx.cmodule("native-test");
@@ -675,7 +675,7 @@ TEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
 TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         auto fulfilled_cap = qjs::PromiseCapability::create(ctx.js_context());
         auto fulfilled_promise_value = qjs::Value::from(fulfilled_cap.promise);
@@ -743,7 +743,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
     auto f = [&]() {
         auto task = []() -> kota::task<> {
             auto runtime = qjs::Runtime::create();
-            auto& ctx = runtime.context();
+            auto ctx = runtime.context();
             js::JsLoop js_loop;
 
             auto& loop = kota::event_loop::current();

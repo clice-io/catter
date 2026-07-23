@@ -23,7 +23,7 @@ TEST_SUITE(api_tests) {
 TEST_CASE(catter_runtime_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         js::CatterRuntime catter_runtime{
             .supportActions = {js::ActionType::skip, js::ActionType::modify},
@@ -40,7 +40,7 @@ TEST_CASE(catter_runtime_conversion) {
 TEST_CASE(command_data_and_action_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         js::CommandData command_data{
             .cwd = "D:/Code/hook/catter",
@@ -70,7 +70,7 @@ TEST_CASE(command_data_and_action_conversion) {
 TEST_CASE(process_result_and_config_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         js::ProcessResult process_result{
             .code = 0,
@@ -100,7 +100,7 @@ TEST_CASE(process_result_and_config_conversion) {
 TEST_CASE(option_item_and_info_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        auto& ctx = runtime.context();
+        auto ctx = runtime.context();
 
         js::OptionItem option_item{
             .values = {"include"},

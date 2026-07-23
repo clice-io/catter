@@ -62,7 +62,7 @@ std::string_view js_lib_source() {
 }
 
 kota::task<> eval_module(std::string_view input, const char* filename) {
-    auto& ctx = state.runtime.context();
+    auto ctx = state.runtime.context();
     auto result = co_await state.js_loop.promise_to_task<void>(ctx.eval_module(input, filename));
     if(!result) {
         throw result.error().to_exception();

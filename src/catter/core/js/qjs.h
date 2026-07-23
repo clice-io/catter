@@ -27,18 +27,7 @@
 
 namespace catter::qjs {
 
-namespace refl = kota::meta;
-
-namespace json {
-
-template <typename T>
-    requires requires(T&& t) {
-        { t.value() } -> std::convertible_to<JSValue>;
-        { t.context() } -> std::convertible_to<JSContext*>;
-    }
-std::string stringify(T&& v);
-
-}  // namespace json
+namespace meta = kota::meta;
 
 namespace detail {
 
@@ -481,7 +470,7 @@ public:
             id = it->second.id;
         } else {
             auto class_name =
-                std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
+                std::format("qjs.{}", std::string_view{meta::type_name<Invocable&&>()});
             if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
                 JSClassDef def{class_name.c_str(),
                                nullptr,
@@ -682,7 +671,7 @@ public:
             id = it->second.id;
         } else {
             auto class_name =
-                std::format("qjs.{}", std::string_view{refl::type_name<Invocable&&>()});
+                std::format("qjs.{}", std::string_view{meta::type_name<Invocable&&>()});
             if constexpr(std::is_lvalue_reference_v<Invocable&&>) {
                 JSClassDef def{class_name.c_str(),
                                nullptr,
@@ -1398,6 +1387,7 @@ class Context {
 public:
     friend class Runtime;
 
+    Context(JSContext* js_ctx) noexcept;
     Context() = default;
     Context(const Context&) = delete;
     Context(Context&&) = default;
@@ -1485,6 +1475,10 @@ private:
         ~Raw() = default;
 
     public:
+        static std::unique_ptr<Raw> create(JSContext* ctx) noexcept;
+
+        static Raw* from(JSContext* ctx) noexcept;
+
         struct JSContextDeleter {
             void operator() (JSContext* ctx) const noexcept;
         };
@@ -1493,13 +1487,7 @@ private:
         std::unordered_map<std::string, CModule> modules{};
     };
 
-    void set_opaque() noexcept;
-
-    static Raw* get_opaque(JSContext* ctx) noexcept;
-
-    Context(JSContext* js_ctx) noexcept;
-
-    std::unique_ptr<Raw> raw = nullptr;
+    JSContext* ctx = nullptr;
 };
 
 /**
@@ -1531,7 +1519,7 @@ public:
 
     // Get or create a context with the given name
     // @name: The name of the context. Just for identification purposes.
-    const Context& context(const std::string& name = "default") const;
+    Context context(const std::string& name = "default") const;
 
     JSRuntime* js_runtime() const noexcept;
 
@@ -1539,56 +1527,7 @@ public:
      * Install or replace this runtime's JavaScript module loader.
      * The callbacks are retained by the runtime and used by subsequent module evaluations.
      */
-    void set_module_loader(std::unique_ptr<ModuleLoader> loader) const noexcept {
-        this->raw->module_loader = std::move(loader);
-
-        return JS_SetModuleLoaderFunc(
-            this->js_runtime(),
-            [](JSContext* ctx, const char* module_base_name, const char* module_name, void* opaque)
-                -> char* {
-                auto raw = static_cast<Raw*>(opaque);
-                assert(raw && raw->module_loader && "Module loader is not set");
-                try {
-                    auto normalized_name =
-                        raw->module_loader->normalizer(module_base_name, module_name);
-
-                    return js_strdup(ctx, normalized_name.c_str());
-                } catch(const std::exception& e) {
-                    JS_ThrowInternalError(ctx, "Exception in module normalizer: %s", e.what());
-                    return nullptr;
-                } catch(...) {
-                    JS_ThrowInternalError(ctx, "Unknown exception in module normalizer");
-                    return nullptr;
-                }
-            },
-            [](JSContext* ctx, const char* module_name, void* opaque) -> JSModuleDef* {
-                auto raw = static_cast<Raw*>(opaque);
-                assert(raw && raw->module_loader && "Module loader is not set");
-
-                try {
-                    auto source = raw->module_loader->loader(module_name);
-                    auto module_value =
-                        Value{ctx,
-                              JS_Eval(ctx,
-                                      source.data(),
-                                      source.size(),
-                                      module_name,
-                                      JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY)};
-
-                    if(module_value.is_exception())
-                        return NULL;
-
-                    return (JSModuleDef*)JS_VALUE_GET_PTR(module_value.value());
-                } catch(const std::exception& e) {
-                    JS_ThrowInternalError(ctx, "Exception in module loader: %s", e.what());
-                    return nullptr;
-                } catch(...) {
-                    JS_ThrowInternalError(ctx, "Unknown exception in module loader");
-                    return nullptr;
-                }
-            },
-            this->raw.get());
-    }
+    void set_module_loader(std::unique_ptr<ModuleLoader> loader) const noexcept;
 
     bool has_job_pending() const noexcept {
         return JS_IsJobPending(this->js_runtime());
@@ -1599,20 +1538,7 @@ public:
      * @return std::expected<bool, Value> Returns true if a job was executed, false if no jobs were
      * pending, or std::unexpected(Value) if an exception occurred.
      */
-    std::expected<bool, Value> execute_pending_job() const noexcept {
-        JSContext* ctx = nullptr;
-        switch(JS_ExecutePendingJob(this->js_runtime(), &ctx)) {
-            case 1: return true;
-            case 0: return false;
-            case -1:
-                if(ctx) {
-                    return std::unexpected(Value{ctx, JS_GetException(ctx)});
-                } else {
-                    return std::unexpected(Value{});
-                }
-            default: return std::unexpected(Value{});
-        }
-    }
+    std::expected<bool, Value> execute_pending_job() const noexcept;
 
     operator bool() const noexcept;
 
@@ -1637,7 +1563,7 @@ private:
 
         std::unique_ptr<ModuleLoader> module_loader = nullptr;
         std::unique_ptr<JSRuntime, JSRuntimeDeleter> rt = nullptr;
-        std::unordered_map<std::string, Context> ctxs{};
+        std::unordered_map<std::string, std::unique_ptr<Context::Raw>> ctxs{};
     };
 
     Runtime(JSRuntime* js_rt);
@@ -1647,27 +1573,16 @@ private:
 
 namespace json {
 
+std::string stringify(qjs::Value v);
+
 template <typename T>
     requires requires(T&& t) {
         { t.value() } -> std::convertible_to<JSValue>;
         { t.context() } -> std::convertible_to<JSContext*>;
     }
 std::string stringify(T&& v) {
-    auto ctx = v.context();
-    auto val = v.value();
-    auto json_str_val = qjs::Value{ctx, JS_JSONStringify(ctx, val, JS_UNDEFINED, JS_UNDEFINED)};
-    if(JS_HasException(ctx)) {
-        throw qjs::JSException::dump(ctx);
-    }
-
-    const char* json_cstr = JS_ToCString(ctx, json_str_val.value());
-    if(json_cstr) {
-        std::string result{json_cstr};
-        JS_FreeCString(ctx, json_cstr);
-        return result;
-    }
-    throw qjs::TypeException("Failed to convert value to JSON string");
-};
+    return stringify(qjs::Value{v.context(), v.value()});
+}
 
 qjs::Value parse(const std::string& json_str, const Context& ctx);
 }  // namespace json
