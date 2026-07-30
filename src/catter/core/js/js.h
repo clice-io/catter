@@ -27,7 +27,7 @@ public:
     RuntimeScope(RuntimeScope&&) = delete;
     RuntimeScope& operator= (RuntimeScope&&) = delete;
 
-    kota::task<> start(RuntimeConfig config);
+    void start(RuntimeConfig config);
     kota::task<> stop();
 
 private:

@@ -193,6 +193,10 @@ std::string Atom::to_string() const noexcept {
     return result;
 }
 
+bool Module::is_valid() const noexcept {
+    return static_cast<const Value*>(this)->is_valid() && this->is_module();
+}
+
 Atom Module::module_name() const noexcept {
     auto module_def = this->module_def();
     if(!module_def) {
@@ -202,7 +206,7 @@ Atom Module::module_name() const noexcept {
 }
 
 JSModuleDef* Module::module_def() const noexcept {
-    if(!this->is_valid() || !this->is_module()) {
+    if(!this->is_valid()) {
         return nullptr;
     }
     return (JSModuleDef*)JS_VALUE_GET_PTR(this->value());

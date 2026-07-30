@@ -16,7 +16,7 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
 
     std::exception_ptr error;
     try {
-        co_await runtime_scope.start({.pwd = js_path});
+        runtime_scope.start({.pwd = js_path});
         co_await catter::js::run_script(
             catter::tests::js::load_js_file_by_name(js_path, "service.js"),
             (js_path / "service.js").string());

@@ -1381,7 +1381,6 @@ private:
 class Module : protected Value {
 public:
     friend class Context;
-    using Value::is_valid;
     using Value::value;
     using Value::context;
     using Value::operator bool;
@@ -1393,6 +1392,8 @@ public:
     Module& operator= (const Module&) = default;
     Module& operator= (Module&& other) = default;
     ~Module() = default;
+
+    bool is_valid() const noexcept;
 
     JSModuleDef* module_def() const noexcept;
 
@@ -1537,10 +1538,11 @@ public:
     /** Callbacks used to resolve and load JavaScript source modules. */
     struct ModuleLoader {
         /** Resolve module_name relative to referrer_name and return its canonical module name. */
-        virtual std::string normalizer(const char* referrer_name, const char* module_name) = 0;
+        virtual std::string normalizer(std::string_view referrer_name,
+                                       std::string_view module_name) = 0;
 
         /** Return the JavaScript source bytes for a canonical module name. */
-        virtual Module loader(Context ctx, const char* module_name) = 0;
+        virtual Module loader(Context ctx, std::string_view module_name) = 0;
 
         virtual ~ModuleLoader() = default;
     };

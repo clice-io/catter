@@ -43,7 +43,7 @@ kota::task<> async_run(const core::CatterConfig& config) {
     js::RuntimeScope runtime;
     std::exception_ptr error;
     try {
-        co_await runtime.start({.pwd = context.working_directory});
+        runtime.start({.pwd = context.working_directory});
         co_await js::run_script(load_script_content(context.script_config.scriptPath),
                                 context.script_config.scriptPath);
 
