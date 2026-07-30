@@ -1,7 +1,6 @@
 #pragma once
 
 /**
- * @file bridge.h
  * @brief Generic conversion bridge between C++ values and QuickJS values.
  *
  * This module centralizes the policy used by the C API data model to cross the C++/JavaScript
