@@ -69,13 +69,13 @@ std::string EsmModuleLoader::normalizer(const char* referrer_name, const char* m
     return resolve_path(referrer_name, module_name).string();
 }
 
-std::string EsmModuleLoader::loader(const char* module_name) {
+qjs::Module EsmModuleLoader::loader(qjs::Context ctx, const char* module_name) {
     const auto path = resolve_path(nullptr, module_name);
     std::ifstream input(path, std::ios::binary);
     if(!input) {
         throw qjs::Exception("Failed to read module '{}'", path.string());
     }
     std::string source{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
-    return source;
+    return ctx.load_module(source, module_name);
 }
 }  // namespace catter::js

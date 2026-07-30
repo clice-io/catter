@@ -21,7 +21,7 @@ public:
     explicit EsmModuleLoader(std::filesystem::path working_directory);
 
     std::string normalizer(const char* referrer_name, const char* module_name) override;
-    std::string loader(const char* module_name) override;
+    qjs::Module loader(qjs::Context ctx, const char* module_name) override;
 
 private:
     std::filesystem::path resolve_path(const char* referrer_name, const char* module_name) const;

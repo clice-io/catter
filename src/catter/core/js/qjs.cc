@@ -82,6 +82,10 @@ Value Value::null(JSContext* ctx) noexcept {
     return Value{ctx, JS_NULL};
 }
 
+bool Value::is_module() const noexcept {
+    return JS_IsModule(this->val);
+}
+
 bool Value::is_object() const noexcept {
     return JS_IsObject(this->val);
 }
@@ -187,6 +191,21 @@ std::string Atom::to_string() const noexcept {
     std::string result{str};
     JS_FreeCString(this->ctx, str);
     return result;
+}
+
+Atom Module::module_name() const noexcept {
+    auto module_def = this->module_def();
+    if(!module_def) {
+        return Atom{};
+    }
+    return Atom{this->context(), JS_GetModuleName(this->context(), module_def)};
+}
+
+JSModuleDef* Module::module_def() const noexcept {
+    if(!this->is_valid() || !this->is_module()) {
+        return nullptr;
+    }
+    return (JSModuleDef*)JS_VALUE_GET_PTR(this->value());
 }
 
 Value Object::get_property(const char* prop_name) const {
@@ -517,6 +536,21 @@ Value Context::eval(std::string_view input, const char* filename, int eval_flags
     return this->eval(input.data(), input.size(), filename, eval_flags);
 }
 
+Module Context::load_module(const char* input,
+                            size_t input_len,
+                            const char* module_name) const noexcept {
+    return Module{this->js_context(),
+                  JS_Eval(this->js_context(),
+                          input,
+                          input_len,
+                          module_name,
+                          JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY)};
+}
+
+Module Context::load_module(std::string_view input, const char* module_name) const noexcept {
+    return this->load_module(input.data(), input.size(), module_name);
+}
+
 Object Context::global_this() const noexcept {
     return Object{this->js_context(), JS_GetGlobalObject(this->js_context())};
 }
@@ -592,22 +626,8 @@ void Runtime::set_module_loader(std::unique_ptr<ModuleLoader> loader) const noex
         [](JSContext* js_ctx, const char* module_name, void* opaque) -> JSModuleDef* {
             auto raw = static_cast<Raw*>(opaque);
             assert(raw && raw->module_loader && "Module loader is not set");
-
             try {
-                auto source = raw->module_loader->loader(module_name);
-
-                auto module_value = Value{js_ctx,
-                                          JS_Eval(js_ctx,
-                                                  source.c_str(),
-                                                  source.size(),
-                                                  module_name,
-                                                  JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY)};
-
-                if(module_value.is_exception()) {
-                    return nullptr;
-                }
-
-                return (JSModuleDef*)JS_VALUE_GET_PTR(module_value.value());
+                return raw->module_loader->loader(js_ctx, module_name).module_def();
             } catch(const std::exception& e) {
                 JS_ThrowInternalError(js_ctx, "Exception in module loader: %s", e.what());
                 return nullptr;

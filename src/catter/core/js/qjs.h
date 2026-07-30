@@ -130,6 +130,8 @@ public:
         return detail::value_trans<T>::as(*this);
     }
 
+    bool is_module() const noexcept;
+
     bool is_object() const noexcept;
 
     bool is_promise() const noexcept;
@@ -1376,6 +1378,30 @@ private:
     std::unique_ptr<std::vector<kv>> exports{std::make_unique<std::vector<kv>>()};
 };
 
+class Module : protected Value {
+public:
+    friend class Context;
+    using Value::is_valid;
+    using Value::value;
+    using Value::context;
+    using Value::operator bool;
+    using Value::release;
+
+    Module() = default;
+    Module(const Module&) = default;
+    Module(Module&& other) = default;
+    Module& operator= (const Module&) = default;
+    Module& operator= (Module&& other) = default;
+    ~Module() = default;
+
+    JSModuleDef* module_def() const noexcept;
+
+    Atom module_name() const noexcept;
+
+private:
+    using Value::Value;
+};
+
 /**
  * @brief A wrapper around a QuickJS JSContext.
  * It manages the lifecycle of a JSContext and provides an interface for evaluating scripts,
@@ -1389,9 +1415,9 @@ public:
 
     Context(JSContext* js_ctx) noexcept;
     Context() = default;
-    Context(const Context&) = delete;
+    Context(const Context&) = default;
     Context(Context&&) = default;
-    Context& operator= (const Context&) = delete;
+    Context& operator= (const Context&) = default;
     Context& operator= (Context&&) = default;
     ~Context() = default;
 
@@ -1452,6 +1478,10 @@ public:
         return this->eval_module(input.data(), input.size(), filename);
     }
 
+    Module load_module(const char* input, size_t input_len, const char* module_name) const noexcept;
+
+    Module load_module(std::string_view input, const char* module_name) const noexcept;
+
     Object global_this() const noexcept;
 
     bool has_exception() const noexcept;
@@ -1510,7 +1540,7 @@ public:
         virtual std::string normalizer(const char* referrer_name, const char* module_name) = 0;
 
         /** Return the JavaScript source bytes for a canonical module name. */
-        virtual std::string loader(const char* module_name) = 0;
+        virtual Module loader(Context ctx, const char* module_name) = 0;
 
         virtual ~ModuleLoader() = default;
     };

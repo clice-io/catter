@@ -218,9 +218,9 @@ TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
             return "virtual:dependency";
         }
 
-        std::string loader(const char* module_name) override {
+        qjs::Module loader(qjs::Context ctx, const char* module_name) override {
             loaded_name = module_name;
-            return "export const value = 6 * 7;";
+            return ctx.load_module("export const value = 6 * 7;", module_name);
         }
 
         std::string normalized_referrer;

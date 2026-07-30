@@ -142,13 +142,13 @@ public:
     }
 };
 
-const InjectRuntimeDriver& inject_runtime_driver() noexcept {
+const InjectRuntimeDriver* inject_runtime_driver() noexcept {
     const static InjectRuntimeDriver driver;
-    return driver;
+    return &driver;
 }
 
 auto runtime_drivers() noexcept {
-    return std::array<const RuntimeDriver*, 1>{&inject_runtime_driver()};
+    return std::array<const RuntimeDriver*, 1>{inject_runtime_driver()};
 }
 
 }  // namespace
@@ -163,7 +163,7 @@ const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept {
 }
 
 const RuntimeDriver* default_runtime_driver() noexcept {
-    return &inject_runtime_driver();
+    return inject_runtime_driver();
 }
 
 js::ProcessResult to_js_process_result(data::process_result result) {

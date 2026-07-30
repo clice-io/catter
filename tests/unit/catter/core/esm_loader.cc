@@ -84,8 +84,12 @@ TEST_CASE(loader_reads_canonical_file_name) {
     fixture.write(fixture.root / "dep.js", "export const value = 42;");
     catter::js::EsmModuleLoader loader{fixture.root};
 
-    auto source = loader.loader((fixture.root / "dep.js").string().c_str());
-    EXPECT_TRUE(source == "export const value = 42;");
+    auto rt = qjs::Runtime::create();
+    auto ctx = rt.context();
+
+    auto module = loader.loader(ctx, (fixture.root / "dep.js").string().c_str());
+    EXPECT_TRUE(module.module_def() != nullptr);
+    EXPECT_TRUE(module.module_name().to_string() == (fixture.root / "dep.js").string());
 }
 
 struct ScriptRunConfig {
