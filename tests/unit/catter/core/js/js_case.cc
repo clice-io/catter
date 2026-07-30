@@ -33,7 +33,7 @@ kota::task<> async_run(ScriptRunConfig config) {
 
     std::exception_ptr error;
     try {
-        co_await runtime.start({.pwd = std::move(config.working_directory)});
+        runtime.start({.pwd = std::move(config.working_directory)});
         co_await catter::js::run_script(config.script_content, config.script_path);
     } catch(...) {
         error = std::current_exception();

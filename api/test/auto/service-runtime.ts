@@ -20,6 +20,7 @@ const config: CatterConfig = {
   runtime: runtimeInfo,
   options: {
     log: true,
+    stdioMode: "capture",
   },
   execute: true,
 };

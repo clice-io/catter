@@ -20,7 +20,7 @@ struct CatterOptions {
 
 public:
     bool log;
-    std::optional<StdioMode> stdioMode;
+    StdioMode stdioMode;
 };
 
 struct CatterRuntime {

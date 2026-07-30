@@ -51,6 +51,7 @@ function config(scriptArgs: string[]): CatterConfig {
     runtime,
     options: {
       log: false,
+      stdioMode: "capture",
     },
     execute: true,
   };

@@ -13,11 +13,6 @@
 #include "async.h"
 #include "esm_loader.h"
 
-extern "C" {
-    extern const char _binary_lib_js_start[];
-    extern const char _binary_lib_js_end[];
-}
-
 namespace catter::js {
 
 namespace {
@@ -52,15 +47,6 @@ struct RuntimeState {
 
 RuntimeState state{};
 
-std::string_view js_lib_source() {
-    const std::string_view js_lib{_binary_lib_js_start, _binary_lib_js_end};
-    auto last = js_lib.find_last_not_of('\0');
-    if(last == std::string_view::npos) {
-        return {};
-    }
-    return js_lib.substr(0, last + 1);
-}
-
 kota::task<> eval_module(std::string_view input, const char* filename) {
     auto ctx = state.runtime.context();
     auto result = co_await state.js_loop.promise_to_task<void>(ctx.eval_module(input, filename));
@@ -88,7 +74,7 @@ const RuntimeConfig& get_global_runtime_config() {
     return state.config;
 }
 
-kota::task<> RuntimeScope::start(RuntimeConfig config) {
+void RuntimeScope::start(RuntimeConfig config) {
     if(started) {
         throw qjs::Exception("QuickJS runtime scope is already started.");
     }
@@ -102,25 +88,14 @@ kota::task<> RuntimeScope::start(RuntimeConfig config) {
     auto loop_task = state.js_loop.run(state.runtime, loop);
     loop.schedule(std::move(loop_task));
 
-    std::exception_ptr error;
-    try {
-        const auto& ctx = state.runtime.context();
-        auto& mod = ctx.cmodule("catter-c");
-        for(auto& reg: catter::apitool::api_registers()) {
-            reg(mod, ctx);
-        }
-        co_await eval_module(js_lib_source(), "catter");
-    } catch(...) {
-        error = std::current_exception();
-    }
-
-    if(error) {
-        co_await state.js_loop.stop();
-        std::rethrow_exception(error);
+    const auto& ctx = state.runtime.context();
+    auto& mod = ctx.cmodule("catter-c");
+    for(auto& reg: catter::apitool::api_registers()) {
+        reg(mod, ctx);
     }
 
     started = true;
-    co_return;
+    return;
 }
 
 kota::task<> RuntimeScope::stop() {

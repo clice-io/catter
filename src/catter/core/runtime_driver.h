@@ -18,7 +18,7 @@ public:
 };
 
 const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept;
-const RuntimeDriver& default_runtime_driver() noexcept;
+const RuntimeDriver* default_runtime_driver() noexcept;
 
 js::ProcessResult to_js_process_result(data::process_result result);
 

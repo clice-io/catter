@@ -128,8 +128,7 @@ public:
                        proxy_path.string(),
                        "-p", "0",
                        "--", },
-            .mode = to_process_stdio_mode(
-                config.options.stdioMode.value_or(js::CatterOptions::StdioMode::inherit)),
+            .mode = to_process_stdio_mode(config.options.stdioMode),
         };
         util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 
@@ -142,13 +141,13 @@ public:
     }
 };
 
-const InjectRuntimeDriver& inject_runtime_driver() noexcept {
+const InjectRuntimeDriver* inject_runtime_driver() noexcept {
     const static InjectRuntimeDriver driver;
-    return driver;
+    return &driver;
 }
 
 auto runtime_drivers() noexcept {
-    return std::array<const RuntimeDriver*, 1>{&inject_runtime_driver()};
+    return std::array<const RuntimeDriver*, 1>{inject_runtime_driver()};
 }
 
 }  // namespace
@@ -162,7 +161,7 @@ const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept {
     return nullptr;
 }
 
-const RuntimeDriver& default_runtime_driver() noexcept {
+const RuntimeDriver* default_runtime_driver() noexcept {
     return inject_runtime_driver();
 }
 

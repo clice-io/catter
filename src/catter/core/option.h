@@ -16,14 +16,7 @@ namespace catter::core {
 namespace config {
 
 struct RunMode {
-    const RuntimeDriver* driver = nullptr;
-
-    const RuntimeDriver& value() const noexcept {
-        if(driver != nullptr) {
-            return *driver;
-        }
-        return default_runtime_driver();
-    }
+    const RuntimeDriver* driver = default_runtime_driver();
 
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string>;
@@ -116,43 +109,6 @@ struct CatterConfig {
     DECO_CFG_END()
 
     bool log = true;
-};
-
-struct RunContext {
-    const CatterConfig& config;
-    const RuntimeDriver& driver;
-
-    explicit RunContext(const CatterConfig& config) :
-        config(config), driver(config.mode->value()) {}
-
-    const std::filesystem::path& working_directory() const noexcept {
-        return config.working_dir->path;
-    }
-
-    js::CatterOptions option_defaults() const {
-        return js::CatterOptions{
-            .log = config.log,
-            .stdioMode = config.stdio_mode.value(),
-        };
-    }
-
-    js::CatterConfig make_script_config() const {
-        return js::CatterConfig{
-            .scriptPath = config.script_path.value(),
-            .scriptArgs = config.script_args,
-            .buildSystemCommand = config.command.value(),
-            .buildSystemCommandCwd = config.working_dir->path.string(),
-            .runtime = driver.runtime(),
-            .options = option_defaults(),
-            .execute = true,
-        };
-    }
-
-    void apply_option_defaults(js::CatterConfig& script_config) const {
-        if(!script_config.options.stdioMode.has_value()) {
-            script_config.options.stdioMode = config.stdio_mode.value();
-        }
-    }
 };
 
 }  // namespace catter::core

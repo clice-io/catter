@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "qjs.h"
@@ -20,11 +21,12 @@ class EsmModuleLoader final : public qjs::Runtime::ModuleLoader {
 public:
     explicit EsmModuleLoader(std::filesystem::path working_directory);
 
-    std::string normalizer(const char* referrer_name, const char* module_name) override;
-    std::string loader(const char* module_name) override;
+    std::string normalizer(std::string_view referrer_name, std::string_view module_name) override;
+    qjs::Module loader(qjs::Context ctx, std::string_view module_name) override;
 
 private:
-    std::filesystem::path resolve_path(const char* referrer_name, const char* module_name) const;
+    std::filesystem::path resolve_path(std::string_view referrer_name,
+                                       std::string_view module_name) const;
 
     std::filesystem::path working_directory;
 };

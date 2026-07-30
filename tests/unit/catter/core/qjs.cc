@@ -212,15 +212,16 @@ TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
     EXPECT_TRUE(global["asyncResult"].as<int64_t>() == 42);
 
     struct Loader : public qjs::Runtime::ModuleLoader {
-        std::string normalizer(const char* referrer_name, const char* module_name) override {
-            normalized_referrer = referrer_name;
-            normalized_specifier = module_name;
+        std::string normalizer(std::string_view referrer_name,
+                               std::string_view module_name) override {
+            normalized_referrer = std::string(referrer_name);
+            normalized_specifier = std::string(module_name);
             return "virtual:dependency";
         }
 
-        std::string loader(const char* module_name) override {
-            loaded_name = module_name;
-            return "export const value = 6 * 7;";
+        qjs::Module loader(qjs::Context ctx, std::string_view module_name) override {
+            loaded_name = std::string(module_name);
+            return ctx.load_module("export const value = 6 * 7;", module_name.data());
         }
 
         std::string normalized_referrer;
