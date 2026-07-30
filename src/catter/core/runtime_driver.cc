@@ -128,8 +128,7 @@ public:
                        proxy_path.string(),
                        "-p", "0",
                        "--", },
-            .mode = to_process_stdio_mode(
-                config.options.stdioMode.value_or(js::CatterOptions::StdioMode::inherit)),
+            .mode = to_process_stdio_mode(config.options.stdioMode),
         };
         util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);
 

@@ -1383,7 +1383,6 @@ public:
     friend class Context;
     using Value::value;
     using Value::context;
-    using Value::operator bool;
     using Value::release;
 
     Module() = default;
@@ -1392,6 +1391,10 @@ public:
     Module& operator= (const Module&) = default;
     Module& operator= (Module&& other) = default;
     ~Module() = default;
+
+    operator bool() const noexcept {
+        return this->is_valid();
+    }
 
     bool is_valid() const noexcept;
 
