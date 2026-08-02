@@ -7,7 +7,7 @@
 
 namespace catter::opt::lld_coff {
 
-namespace eo = kota::option;
+namespace kota_opt = kota::option;
 
 namespace detail {
 
@@ -30,11 +30,11 @@ constexpr std::size_t OptionCount = 0
 
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return eo::pfx_none;
-        case 1: return eo::pfx_double;
+        case 0: return kota_opt::pfx_none;
+        case 1: return kota_opt::pfx_double;
         case 3: return pfx_slash_dash_help;
         case 8: return pfx_slash_dash_help_hidden;
-        default: return eo::pfx_none;
+        default: return kota_opt::pfx_none;
     }
 }
 
@@ -47,7 +47,7 @@ static_assert(OptionPrefixesTable[8] == 4 && OptionPrefixesTable[9] == 18 &&
               OptionPrefixesTable[10] == 9 && OptionPrefixesTable[11] == 15 &&
               OptionPrefixesTable[12] == 6);
 
-constexpr auto OptionInfos = std::array<eo::Option, OptionCount>{
+constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -62,7 +62,7 @@ constexpr auto OptionInfos = std::array<eo::Option, OptionCount>{
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
                VALUES)                                                                             \
-    eo::Option{                                                                                    \
+    kota_opt::Option{                                                                              \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                               \
         .id = ID_##ID,                                                                             \
@@ -82,9 +82,10 @@ constexpr auto OptionInfos = std::array<eo::Option, OptionCount>{
 
 }  // namespace detail
 
-const eo::OptTable& table() {
+const kota_opt::OptTable& table() {
     const static auto opt_table = [] {
-        auto table = eo::OptTable(std::span<const eo::Option>(detail::OptionInfos), false, {});
+        auto table =
+            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), false, {});
         table.tablegen_mode = true;
         return table;
     }();

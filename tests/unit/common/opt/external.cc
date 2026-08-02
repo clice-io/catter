@@ -15,7 +15,7 @@
 #include "opt/external/llvm_lib.h"
 #include "opt/external/nvcc.h"
 
-namespace eo = kota::option;
+namespace kota_opt = kota::option;
 using namespace catter;
 
 namespace {
@@ -41,11 +41,11 @@ struct ParseResult {
     std::vector<std::string> errors;
 };
 
-ParseResult parse_command(const eo::OptTable& table, std::span<const std::string> argv) {
+ParseResult parse_command(const kota_opt::OptTable& table, std::span<const std::string> argv) {
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    eo::ParseOptions options;
+    kota_opt::ParseOptions options;
     options.dash_dash_parsing = true;
     for(auto parsed: table.parse(args, options)) {
         if(parsed.has_value()) {
@@ -62,7 +62,8 @@ ParseResult parse_command(const eo::OptTable& table, std::span<const std::string
     return result;
 };
 
-std::string_view canonical_spelling(const eo::OptTable& table, const ParseResult::OwnedArg& arg) {
+std::string_view canonical_spelling(const kota_opt::OptTable& table,
+                                    const ParseResult::OwnedArg& arg) {
     auto option = table.option(arg.id);
     if(!option.has_value()) {
         return arg.spelling;
@@ -134,7 +135,7 @@ TEST_CASE(parse_lld_macho_link_command) {
     EXPECT_TRUE(opt::lld_macho::table()
                     .option(opt::lld_macho::ID_force_cpusubtype_ALL)
                     .value()
-                    .has_flag(eo::HelpHidden));
+                    .has_flag(kota_opt::HelpHidden));
 
     EXPECT_EQ(parsed.args[2].id, opt::lld_macho::ID_INPUT);
     EXPECT_EQ(parsed.args[2].spelling, "foo.o");

@@ -234,11 +234,7 @@ const clangHiddenSeparate = parseItems(
   "clang hidden separate no leak",
   option.ClangVisibility.CC1Option,
 );
-expectEq(
-  clangHiddenSeparate.length,
-  1,
-  "clang hidden separate no leak length",
-);
+expectEq(clangHiddenSeparate.length, 1, "clang hidden separate no leak length");
 expectEq(
   clangHiddenSeparate[0].key,
   "main.cc",
