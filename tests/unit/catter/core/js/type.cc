@@ -106,7 +106,6 @@ TEST_CASE(option_item_and_info_conversion) {
             .values = {"include"},
             .key = "-I",
             .id = 12,
-            .unalias = 34,
             .index = 1,
         };
 

@@ -143,7 +143,6 @@ public:
     std::vector<std::string> values;
     std::string key;
     uint32_t id;
-    std::optional<uint32_t> unalias;
     uint32_t index;
 };
 

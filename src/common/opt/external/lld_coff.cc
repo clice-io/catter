@@ -47,7 +47,7 @@ static_assert(OptionPrefixesTable[8] == 4 && OptionPrefixesTable[9] == 18 &&
               OptionPrefixesTable[10] == 9 && OptionPrefixesTable[11] == 15 &&
               OptionPrefixesTable[12] == 6);
 
-constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
+constexpr auto OptionInfos = std::array<eo::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -62,9 +62,9 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
                VALUES)                                                                             \
-    eo::OptTable::Info{                                                                            \
-        ._prefixes = prefixes(PREFIXES_OFFSET),                                                    \
-        ._prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                              \
+    eo::Option{                                                                                    \
+        .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
+        .prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                               \
         .id = ID_##ID,                                                                             \
         .kind = KIND,                                                                              \
         .group_id = ID_##GROUP,                                                                    \
@@ -72,9 +72,8 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
         .alias_args = ALIAS_ARGS,                                                                  \
         .flags = FLAGS,                                                                            \
         .visibility = VISIBILITY,                                                                  \
-        .param = PARAM,                                                                            \
+        .num_args = PARAM,                                                                         \
         .help_text = HELP,                                                                         \
-        .help_texts_for_variants = DefaultHelpVariants,                                            \
         .meta_var = META_VAR,                                                                      \
     },
 #include <llvm-options-td/lld-COFF-Options.inc>
@@ -84,10 +83,11 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
 }  // namespace detail
 
 const eo::OptTable& table() {
-    const static auto opt_table =
-        eo::OptTable(std::span<const eo::OptTable::Info>(detail::OptionInfos))
-            .set_tablegen_mode(true)
-            .set_dash_dash_parsing(true);
+    const static auto opt_table = [] {
+        auto table = eo::OptTable(std::span<const eo::Option>(detail::OptionInfos), false, {});
+        table.tablegen_mode = true;
+        return table;
+    }();
     return opt_table;
 }
 

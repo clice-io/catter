@@ -3,7 +3,7 @@
 #include <array>
 #include <span>
 #include <string_view>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 namespace catter::opt::clang {
 
@@ -39,7 +39,7 @@ constexpr std::size_t OptionCount = 0
 
 // `clang-Driver-Options.inc` reuses LLVM driver flag names directly in the generated
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
-// `kota::option::OptTable::Info` without pulling in LLVM's option library.
+// `kota::option::Option` without pulling in LLVM's option library.
 enum Flag : unsigned {
     HelpHidden = eo::HelpHidden,
     RenderAsInput = eo::RenderAsInput,
@@ -51,10 +51,6 @@ enum Flag : unsigned {
     NoXarchOption = 1u << 8,
     TargetSpecific = 1u << 9,
     Unsupported = 1u << 10,
-};
-
-constexpr auto DefaultHelpVariants = std::array<std::pair<std::array<unsigned, 2>, const char*>, 1>{
-    std::pair{std::array<unsigned, 2>{0, 0}, nullptr},
 };
 
 // The generated prefix table only uses a small fixed set of layouts for clang
@@ -94,21 +90,21 @@ static_assert(OptionPrefixesTable[8] == 3 && OptionPrefixesTable[9] == 3 &&
 static_assert(OptionPrefixesTable[12] == 2 && OptionPrefixesTable[13] == 6 &&
               OptionPrefixesTable[14] == 1);
 
-#define Group eo::Option::GroupClass
-#define Input eo::Option::InputClass
-#define Unknown eo::Option::UnknownClass
-#define Flag eo::Option::FlagClass
-#define Joined eo::Option::JoinedClass
-#define Values eo::Option::ValuesClass
-#define Separate eo::Option::SeparateClass
-#define RemainingArgs eo::Option::RemainingArgsClass
-#define RemainingArgsJoined eo::Option::RemainingArgsJoinedClass
-#define CommaJoined eo::Option::CommaJoinedClass
-#define MultiArg eo::Option::MultiArgClass
-#define JoinedOrSeparate eo::Option::JoinedOrSeparateClass
-#define JoinedAndSeparate eo::Option::JoinedAndSeparateClass
+#define Group eo::Kind::Group
+#define Input eo::Kind::Input
+#define Unknown eo::Kind::Unknown
+#define Flag eo::Kind::Flag
+#define Joined eo::Kind::Joined
+#define Values eo::Kind::Values
+#define Separate eo::Kind::Separate
+#define RemainingArgs eo::Kind::RemainingArgs
+#define RemainingArgsJoined eo::Kind::RemainingArgsJoined
+#define CommaJoined eo::Kind::CommaJoined
+#define MultiArg eo::Kind::MultiArg
+#define JoinedOrSeparate eo::Kind::JoinedOrSeparate
+#define JoinedAndSeparate eo::Kind::JoinedAndSeparate
 
-constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
+constexpr auto OptionInfos = std::array<eo::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -123,9 +119,9 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
                VALUES)                                                                             \
-    eo::OptTable::Info{                                                                            \
-        ._prefixes = prefixes(PREFIXES_OFFSET),                                                    \
-        ._prefixed_name = str_at(NAME_OFFSET),                                                     \
+    eo::Option{                                                                                    \
+        .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
+        .prefixed_name = str_at(NAME_OFFSET),                                                      \
         .id = ID_##ID,                                                                             \
         .kind = KIND,                                                                              \
         .group_id = ID_##GROUP,                                                                    \
@@ -133,9 +129,8 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
         .alias_args = ALIAS_ARGS,                                                                  \
         .flags = FLAGS,                                                                            \
         .visibility = VISIBILITY,                                                                  \
-        .param = PARAM,                                                                            \
+        .num_args = PARAM,                                                                         \
         .help_text = HELP,                                                                         \
-        .help_texts_for_variants = DefaultHelpVariants,                                            \
         .meta_var = META_VAR,                                                                      \
     },
 #include <llvm-options-td/clang-Driver-Options.inc>
@@ -159,10 +154,11 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
 }  // namespace detail
 
 const eo::OptTable& table() {
-    const static auto opt_table =
-        eo::OptTable(std::span<const eo::OptTable::Info>(detail::OptionInfos))
-            .set_tablegen_mode(true)
-            .set_dash_dash_parsing(true);
+    const static auto opt_table = [] {
+        auto table = eo::OptTable(std::span<const eo::Option>(detail::OptionInfos), false, {});
+        table.tablegen_mode = true;
+        return table;
+    }();
     return opt_table;
 }
 

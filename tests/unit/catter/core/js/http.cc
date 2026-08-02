@@ -19,6 +19,7 @@
 #include <unistd.h>
 #endif
 #include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 
 namespace {
 

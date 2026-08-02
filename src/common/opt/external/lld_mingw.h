@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 namespace catter::opt::lld_mingw {
 

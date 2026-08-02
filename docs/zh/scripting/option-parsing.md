@@ -78,17 +78,18 @@ io.println(str); // 例如 "-std=c++20"
 
 ## 别名解析
 
-将别名选项转换为规范形式：
+解析时自动将别名转换为规范形式：
 
 ```js
 const items = option.collect("nvcc", ["-ofoo.o"]);
 if (Array.isArray(items)) {
-  option.convertToUnalias("nvcc", items[0]);
-  io.println(items[0].key); // "--output-file"
+  io.println(items[0].id); // 规范选项 "--output-file" 的 ID
+  io.println(items[0].values); // ["foo.o"]
 }
 ```
 
-注意：`convertToUnalias()` 会原地修改传入的 item 对象并返回，方便链式调用。
+解析结果本身即规范形式：`id` 为规范选项 ID，`values` 已包含别名提供的参数；
+`key` 保留命令行中的原始拼写。
 
 ## 重写参数
 
@@ -155,8 +156,7 @@ io.println(clangArgs.join(" ")); // 两个表中都有效的选项
 |------|------|------|
 | `key` | `string` | 选项键（如 `"-std="`、`"-c"`、`"-I"`） |
 | `values` | `string[]` | 选项值数组 |
-| `id` | `number` | 选项表中的数字 ID |
-| `unalias` | `number \| undefined` | 如果是别名，则为规范选项的 ID |
+| `id` | `number` | 规范选项的数字 ID（别名在解析时自动展开） |
 | `index` | `number` | 在原始 args 中的位置 |
 
 ## OptionInfo 结构

@@ -78,17 +78,19 @@ io.println(str); // e.g., "-std=c++20"
 
 ## Alias Resolution
 
-Convert an aliased option to its canonical form:
+Aliases are resolved automatically while parsing:
 
 ```js
 const items = option.collect("nvcc", ["-ofoo.o"]);
 if (Array.isArray(items)) {
-  option.convertToUnalias("nvcc", items[0]);
-  io.println(items[0].key); // "--output-file"
+  io.println(items[0].id); // canonical ID of "--output-file"
+  io.println(items[0].values); // ["foo.o"]
 }
 ```
 
-Note: `convertToUnalias()` mutates the item in place and returns it for convenience.
+Parsed items are already in canonical form: `id` is the canonical option ID and
+`values` already contains any arguments contributed by the alias. `key` keeps
+the original spelling as it appeared on the command line.
 
 ## Rewriting Arguments
 
@@ -155,8 +157,7 @@ Each parsed option is represented as an `OptionItem`:
 |-------|------|-------------|
 | `key` | `string` | Option key (e.g., `"-std="`, `"-c"`, `"-I"`) |
 | `values` | `string[]` | Option values array |
-| `id` | `number` | Numeric option ID from the table |
-| `unalias` | `number \| undefined` | Canonical option ID if this is an alias |
+| `id` | `number` | Canonical numeric option ID (aliases are resolved automatically) |
 | `index` | `number` | Position of this option in the original args |
 
 ## OptionInfo Structure

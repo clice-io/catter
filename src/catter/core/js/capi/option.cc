@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 #include <quickjs.h>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 #include "type.h"
 #include "../apitool.h"
@@ -74,48 +74,80 @@ std::vector<std::string> split_alias_args(const char* alias_args) {
 }
 
 catter::js::OptionItem make_option_item([[maybe_unused]] const eo::OptTable& table,
-                                        const eo::ParsedArgument& arg) {
+                                        const eo::ParsedArg& arg) {
     catter::js::OptionItem item{
         .values = copy_values(arg.values),
-        .key = std::string(arg.get_spelling_view()),
-        .id = static_cast<uint32_t>(arg.option_id.id()),
+        .key = std::string(arg.spelling),
+        .id = arg.id,
         .index = static_cast<uint32_t>(arg.index),
     };
-    if(arg.unaliased_option_id.has_value()) {
-        item.unalias = static_cast<uint32_t>(arg.unaliased_option_id->id());
-    }
     return item;
 }
 
-bool is_input_or_unknown_argument(const eo::OptTable& table, const eo::ParsedArgument& arg) {
-    const auto option = table.option(arg.option_id);
-    if(!option.valid()) {
-        return false;
+std::uint32_t match_option_length(const eo::Option& option,
+                                  std::string_view argument,
+                                  bool ignore_case) {
+    const auto name = option.name();
+    for(auto prefix: option.prefixes) {
+        if(!argument.starts_with(prefix)) {
+            continue;
+        }
+        auto rest = argument.substr(prefix.size());
+        bool matched =
+            ignore_case ? rest.size() >= name.size() &&
+                              std::equal(name.begin(),
+                                         name.end(),
+                                         rest.begin(),
+                                         [](char a, char b) {
+                                             return std::tolower(static_cast<unsigned char>(a)) ==
+                                                    std::tolower(static_cast<unsigned char>(b));
+                                         })
+                        : rest.starts_with(name);
+        if(matched) {
+            return static_cast<std::uint32_t>(prefix.size() + name.size());
+        }
     }
-    const auto kind = option.kind();
-    return kind == eo::Option::InputClass || kind == eo::Option::UnknownClass;
+    return 0;
 }
 
-unsigned hidden_option_end_for_input_or_unknown(const eo::OptTable& table,
-                                                std::span<std::string> args,
-                                                unsigned index,
-                                                uint32_t visibility) {
-    if(visibility == kAllOptionVisibility || index >= args.size()) {
-        return index;
+bool is_hidden_argument(const eo::OptTable& table, std::string_view spelling, uint32_t visibility) {
+    if(visibility == kAllOptionVisibility) {
+        return false;
     }
 
-    unsigned next_index = index;
-    auto parsed = table.parse_one_arg(args, next_index, eo::Visibility());
-    if(!parsed.has_value()) {
-        return index + 1;
+    // The parsed argument's id is already the canonical (unaliased) option, so
+    // find the original option entry that matched `spelling` and check its own
+    // visibility. Options whose visibility does not intersect the requested
+    // mask are consumed by the parser but hidden from the result.
+    const auto canonical = table.find_option(spelling, kAllOptionVisibility);
+    if(!canonical.has_value()) {
+        return false;
     }
-
-    const auto option = table.option(parsed->option_id);
-    if(!option.valid() || option.has_visibility_flag(visibility)) {
-        return index;
+    bool any_visible = false;
+    for(const auto& option: table.option_infos) {
+        auto matched_length = match_option_length(option, spelling, table.ignore_case);
+        if(matched_length == 0) {
+            continue;
+        }
+        if(matched_length < spelling.size()) {
+            // Partial prefix matches only count for joined-style options.
+            switch(option.kind) {
+                case eo::Kind::Joined:
+                case eo::Kind::CommaJoined:
+                case eo::Kind::JoinedOrSeparate:
+                case eo::Kind::JoinedAndSeparate:
+                case eo::Kind::RemainingArgsJoined: break;
+                default: continue;
+            }
+        }
+        if(option.alias_id != 0 && option.alias_id != canonical->id()) {
+            continue;
+        }
+        if(option.visibility & visibility) {
+            any_visible = true;
+        }
     }
-
-    return next_index > index ? next_index : index + 1;
+    return !any_visible;
 }
 
 bool emit_callback_value(OptionParseCallback& callback, catter::qjs::Value value) {
@@ -129,23 +161,27 @@ CTX_CAPI(option_get_info,
     using namespace catter;
     auto& table = resolve_table(table_name);
     const auto& option = table.option(id);
-    if(!option.valid()) {
+    if(!option.has_value()) {
         throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
     }
 
-    const auto& info = table.options()[option.id() - 1];
+    const auto& info = *option;
     return js::OptionInfo{
-        .id = static_cast<uint32_t>(info.id),
-        .prefixedKey = std::string(option.prefixed_name()),
-        .kind = static_cast<uint32_t>(info.kind),
-        .group = static_cast<uint32_t>(info.group_id),
-        .alias = static_cast<uint32_t>(info.alias_id),
-        .aliasArgs = split_alias_args(info.alias_args),
-        .flags = static_cast<uint32_t>(info.flags),
-        .visibility = static_cast<uint32_t>(info.visibility),
-        .param = static_cast<uint32_t>(info.param),
-        .help = std::string(info.help_text != nullptr ? info.help_text : ""),
-        .meta_var = std::string(info.meta_var != nullptr ? info.meta_var : ""),
+        .id = info.id(),
+        .prefixedKey = std::string(info.prefixed_name()),
+        .kind = static_cast<uint32_t>(info.kind()),
+        .group = static_cast<uint32_t>(info.group().has_value() ? info.group()->id() : 0),
+        .alias = static_cast<uint32_t>(info.alias().has_value() ? info.alias()->id() : 0),
+        .aliasArgs = split_alias_args(info.alias_args()),
+        .flags = table.option_infos[info.id() - 1].flags,
+        .visibility = table.option_infos[info.id() - 1].visibility,
+        .param = info.num_args(),
+        .help = std::string(table.option_infos[info.id() - 1].help_text != nullptr
+                                ? table.option_infos[info.id() - 1].help_text
+                                : ""),
+        .meta_var = std::string(table.option_infos[info.id() - 1].meta_var != nullptr
+                                    ? table.option_infos[info.id() - 1].meta_var
+                                    : ""),
     }
         .to_object(ctx);
 };
@@ -168,50 +204,36 @@ CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) 
     auto callback = callback_object.as<OptionParseCallback>();
     const auto& table = resolve_table(table_name);
 
-    unsigned missing_arg_index = 0;
-    unsigned missing_arg_count = 0;
-    const char* missing_reason = nullptr;
-    unsigned hidden_argument_end = 0;
+    eo::ParseOptions options;
+    options.dash_dash_parsing = true;
+    options.visibility = visibility;
 
-    table.parse_args(
-        args,
-        missing_arg_index,
-        missing_arg_count,
-        [&](eo::ParsedArgument parsed) -> bool {
-            if(is_input_or_unknown_argument(table, parsed)) {
-                if(parsed.index < hidden_argument_end) {
-                    return true;
-                }
-
-                const auto hidden_end =
-                    hidden_option_end_for_input_or_unknown(table, args, parsed.index, visibility);
-                if(hidden_end > parsed.index) {
-                    hidden_argument_end = hidden_end;
-                    return true;
-                }
-            }
-            return emit_callback_value(
+    for(auto result: table.parse(args, options)) {
+        if(!result.has_value()) {
+            const auto& error = result.error();
+            const auto failing_arg = error.index < args.size() ? std::string_view(args[error.index])
+                                                               : std::string_view("<end-of-argv>");
+            const auto reason = error.message != nullptr ? error.message : "missing argument";
+            emit_callback_value(
                 callback,
-                catter::qjs::Value::from(make_option_item(table, parsed).to_object(ctx)));
-        },
-        eo::Visibility(visibility),
-        &missing_reason);
+                catter::qjs::Value::from(ctx,
+                                         std::format("failed to parse '{}' (arg #{}) : {}",
+                                                     failing_arg,
+                                                     error.index,
+                                                     reason)));
+            return;
+        }
 
-    if(missing_arg_count != 0) {
-        const auto failing_arg = missing_arg_index < args.size()
-                                     ? std::string_view(args[missing_arg_index])
-                                     : std::string_view("<end-of-argv>");
-        const auto reason = missing_reason != nullptr ? missing_reason : "missing argument";
-        const auto noun = missing_arg_count == 1 ? "value" : "values";
-        emit_callback_value(callback,
-                            catter::qjs::Value::from(
-                                ctx,
-                                std::format("failed to parse '{}' (arg #{}) : {} (missing {} {})",
-                                            failing_arg,
-                                            missing_arg_index,
-                                            reason,
-                                            missing_arg_count,
-                                            noun)));
+        const auto& parsed = *result;
+        if(is_hidden_argument(table, parsed.spelling, visibility)) {
+            continue;
+        }
+
+        if(!emit_callback_value(
+               callback,
+               catter::qjs::Value::from(make_option_item(table, parsed).to_object(ctx)))) {
+            return;
+        }
     }
 }
 

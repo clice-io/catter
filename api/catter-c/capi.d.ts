@@ -360,7 +360,6 @@ export type OptionItem = {
   values: string[];
   key: string;
   id: number;
-  unalias?: number;
   index: number;
 };
 

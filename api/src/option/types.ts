@@ -6,12 +6,12 @@ export enum OptionKindClass {
   JoinedClass = 4,
   ValuesClass = 5,
   SeparateClass = 6,
-  RemainingArgsClass = 7,
-  RemainingArgsJoinedClass = 8,
-  CommaJoinedClass = 9,
-  MultiArgClass = 10,
-  JoinedOrSeparateClass = 11,
-  JoinedAndSeparateClass = 12,
+  CommaJoinedClass = 7,
+  MultiArgClass = 8,
+  JoinedOrSeparateClass = 9,
+  JoinedAndSeparateClass = 10,
+  RemainingArgsClass = 11,
+  RemainingArgsJoinedClass = 12,
 }
 
 export type OptionInfo = {
@@ -32,7 +32,6 @@ export type OptionItem = {
   values: string[];
   key: string;
   id: number;
-  unalias?: number;
   index: number;
 };
 

@@ -22,5 +22,7 @@ int main(int argc, char** argv) {
 
     catter::log::init_logger("ut", catter::util::get_catter_data_path() / "test.log", false);
 
-    return kota::zest::Runner::instance().run_tests(filter);
+    kota::zest::Options options;
+    options.test_filter = filter;
+    return kota::zest::Runner::instance().run_tests(std::move(options));
 }

@@ -454,7 +454,7 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("136", "fda7c785a7a149af52e995f6ac3ebb961f37f0c5")
+    add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -473,7 +473,6 @@ package("kotatsu")
         -- Pin the kotatsu submodules catter actually consumes so upstream
         -- default flips do not silently drop features we depend on.
         configs.async = true
-        configs.option = true
         configs.deco = true
         configs.ztest = true
         configs.http = true
@@ -506,7 +505,6 @@ package("kotatsu")
                     "--dev=false",
                     "--test=false",
                     "--async=true",
-                    "--option=true",
                     "--deco=true",
                     "--ztest=true",
                     "--http=true"

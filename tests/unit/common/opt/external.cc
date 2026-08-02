@@ -4,7 +4,7 @@
 #include <vector>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 #include "opt/external/lld_coff.h"
 #include "opt/external/lld_elf.h"
@@ -20,8 +20,24 @@ using namespace catter;
 
 namespace {
 
+std::vector<std::string> copy_values(std::span<const std::string_view> values) {
+    std::vector<std::string> copied;
+    copied.reserve(values.size());
+    for(auto value: values) {
+        copied.emplace_back(value);
+    }
+    return copied;
+}
+
 struct ParseResult {
-    std::vector<eo::ParsedArgumentOwning> args;
+    struct OwnedArg {
+        std::uint32_t id;
+        std::string spelling;
+        std::vector<std::string> values;
+        std::uint32_t index;
+    };
+
+    std::vector<OwnedArg> args;
     std::vector<std::string> errors;
 };
 
@@ -29,23 +45,29 @@ ParseResult parse_command(const eo::OptTable& table, std::span<const std::string
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    table.parse_args(args, [&](std::expected<eo::ParsedArgument, std::string> parsed) {
+    eo::ParseOptions options;
+    options.dash_dash_parsing = true;
+    for(auto parsed: table.parse(args, options)) {
         if(parsed.has_value()) {
-            result.args.emplace_back(eo::ParsedArgumentOwning::from_parsed_argument(*parsed));
+            result.args.emplace_back(ParseResult::OwnedArg{
+                .id = parsed->id,
+                .spelling = parsed->spelling,
+                .values = copy_values(parsed->values),
+                .index = parsed->index,
+            });
         } else {
-            result.errors.emplace_back(parsed.error());
+            result.errors.emplace_back(parsed.error().message);
         }
-    });
+    }
     return result;
 };
 
-std::string_view canonical_spelling(const eo::OptTable& table,
-                                    const eo::ParsedArgumentOwning& arg) {
-    auto option = table.option(arg.unaliased_opt());
-    if(!option.valid()) {
-        return arg.get_spelling_view();
+std::string_view canonical_spelling(const eo::OptTable& table, const ParseResult::OwnedArg& arg) {
+    auto option = table.option(arg.id);
+    if(!option.has_value()) {
+        return arg.spelling;
     }
-    return option.prefixed_name();
+    return option->unaliased_option().prefixed_name();
 };
 
 }  // namespace
@@ -68,8 +90,8 @@ TEST_CASE(parse_lld_coff_link_command) {
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "lib");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::lld_coff::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.obj");
+    EXPECT_EQ(parsed.args[2].id, opt::lld_coff::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.obj");
 
     EXPECT_EQ(canonical_spelling(opt::lld_coff::table(), parsed.args[3]), "/WX");
 };
@@ -91,8 +113,8 @@ TEST_CASE(parse_lld_elf_link_command) {
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "sha1");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::lld_elf::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.o");
+    EXPECT_EQ(parsed.args[2].id, opt::lld_elf::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.o");
 };
 
 TEST_CASE(parse_lld_macho_link_command) {
@@ -111,10 +133,11 @@ TEST_CASE(parse_lld_macho_link_command) {
     EXPECT_EQ(canonical_spelling(opt::lld_macho::table(), parsed.args[1]), "--help-hidden");
     EXPECT_TRUE(opt::lld_macho::table()
                     .option(opt::lld_macho::ID_force_cpusubtype_ALL)
+                    .value()
                     .has_flag(eo::HelpHidden));
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::lld_macho::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.o");
+    EXPECT_EQ(parsed.args[2].id, opt::lld_macho::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.o");
 };
 
 TEST_CASE(parse_lld_mingw_link_command) {
@@ -133,8 +156,8 @@ TEST_CASE(parse_lld_mingw_link_command) {
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "app.exe");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::lld_mingw::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.o");
+    EXPECT_EQ(parsed.args[2].id, opt::lld_mingw::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.o");
 };
 
 TEST_CASE(parse_lld_wasm_link_command) {
@@ -152,8 +175,8 @@ TEST_CASE(parse_lld_wasm_link_command) {
 
     EXPECT_EQ(canonical_spelling(opt::lld_wasm::table(), parsed.args[1]), "--export-all");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::lld_wasm::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.o");
+    EXPECT_EQ(parsed.args[2].id, opt::lld_wasm::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.o");
 };
 
 TEST_CASE(parse_llvm_dlltool_aliases) {
@@ -165,12 +188,12 @@ TEST_CASE(parse_llvm_dlltool_aliases) {
     EXPECT_TRUE(parsed.errors.empty());
     ASSERT_EQ(parsed.args.size(), 2U);
 
-    EXPECT_EQ(parsed.args[0].unaliased_opt().id(), opt::llvm_dlltool::ID_m);
+    EXPECT_EQ(parsed.args[0].id, opt::llvm_dlltool::ID_m);
     EXPECT_EQ(canonical_spelling(opt::llvm_dlltool::table(), parsed.args[0]), "-m");
     ASSERT_EQ(parsed.args[0].values.size(), 1U);
     EXPECT_EQ(parsed.args[0].values[0], "i386:x86-64");
 
-    EXPECT_EQ(parsed.args[1].unaliased_opt().id(), opt::llvm_dlltool::ID_D);
+    EXPECT_EQ(parsed.args[1].id, opt::llvm_dlltool::ID_D);
     EXPECT_EQ(canonical_spelling(opt::llvm_dlltool::table(), parsed.args[1]), "-D");
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "foo.dll");
@@ -193,8 +216,8 @@ TEST_CASE(parse_llvm_lib_command) {
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "lib");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::llvm_lib::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "foo.obj");
+    EXPECT_EQ(parsed.args[2].id, opt::llvm_lib::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "foo.obj");
 };
 
 TEST_CASE(parse_nvcc_command_and_aliases) {
@@ -206,25 +229,25 @@ TEST_CASE(parse_nvcc_command_and_aliases) {
     EXPECT_TRUE(parsed.errors.empty());
     ASSERT_EQ(parsed.args.size(), 5U);
 
-    EXPECT_EQ(parsed.args[0].unaliased_opt().id(), opt::nvcc::ID_output_file);
+    EXPECT_EQ(parsed.args[0].id, opt::nvcc::ID_output_file);
     EXPECT_EQ(canonical_spelling(opt::nvcc::table(), parsed.args[0]), "--output-file");
     ASSERT_EQ(parsed.args[0].values.size(), 1U);
     EXPECT_EQ(parsed.args[0].values[0], "foo.o");
 
-    EXPECT_EQ(parsed.args[1].unaliased_opt().id(), opt::nvcc::ID_include_path);
+    EXPECT_EQ(parsed.args[1].id, opt::nvcc::ID_include_path);
     EXPECT_EQ(canonical_spelling(opt::nvcc::table(), parsed.args[1]), "--include-path");
     ASSERT_EQ(parsed.args[1].values.size(), 1U);
     EXPECT_EQ(parsed.args[1].values[0], "include");
 
-    EXPECT_EQ(parsed.args[2].unaliased_opt().id(), opt::nvcc::ID_std);
+    EXPECT_EQ(parsed.args[2].id, opt::nvcc::ID_std);
     EXPECT_EQ(canonical_spelling(opt::nvcc::table(), parsed.args[2]), "--std");
     ASSERT_EQ(parsed.args[2].values.size(), 1U);
     EXPECT_EQ(parsed.args[2].values[0], "c++17");
 
-    EXPECT_EQ(parsed.args[3].unaliased_opt().id(), opt::nvcc::ID_no_align_double);
+    EXPECT_EQ(parsed.args[3].id, opt::nvcc::ID_no_align_double);
     EXPECT_EQ(canonical_spelling(opt::nvcc::table(), parsed.args[3]), "--no-align-double");
 
-    EXPECT_EQ(parsed.args[4].option_id.id(), opt::nvcc::ID_INPUT);
-    EXPECT_EQ(parsed.args[4].get_spelling_view(), "kernel.cu");
+    EXPECT_EQ(parsed.args[4].id, opt::nvcc::ID_INPUT);
+    EXPECT_EQ(parsed.args[4].spelling, "kernel.cu");
 };
 };  // TEST_SUITE(external_option_table_tests)

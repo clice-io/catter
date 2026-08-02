@@ -3,7 +3,7 @@
 #include <array>
 #include <span>
 #include <string_view>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 namespace catter::opt::external_detail {
 
@@ -20,10 +20,6 @@ struct StringTable {
 };
 
 }  // namespace llvm
-
-constexpr auto DefaultHelpVariants = std::array<std::pair<std::array<unsigned, 2>, const char*>, 1>{
-    std::pair{std::array<unsigned, 2>{0, 0}, nullptr},
-};
 
 constexpr std::string_view str_at(const char* storage, unsigned offset) {
     const char* begin = storage + offset;
@@ -49,19 +45,19 @@ constexpr inline std::string_view _pfx_slash_dash_help_hidden_storage[] = {"/??"
 constexpr inline auto pfx_slash_dash_help_hidden =
     std::span<const std::string_view>(_pfx_slash_dash_help_hidden_storage);
 
-constexpr inline auto Group = eo::Option::GroupClass;
-constexpr inline auto Input = eo::Option::InputClass;
-constexpr inline auto Unknown = eo::Option::UnknownClass;
-constexpr inline auto Flag = eo::Option::FlagClass;
-constexpr inline auto Joined = eo::Option::JoinedClass;
-constexpr inline auto Values = eo::Option::ValuesClass;
-constexpr inline auto Separate = eo::Option::SeparateClass;
-constexpr inline auto RemainingArgs = eo::Option::RemainingArgsClass;
-constexpr inline auto RemainingArgsJoined = eo::Option::RemainingArgsJoinedClass;
-constexpr inline auto CommaJoined = eo::Option::CommaJoinedClass;
-constexpr inline auto MultiArg = eo::Option::MultiArgClass;
-constexpr inline auto JoinedOrSeparate = eo::Option::JoinedOrSeparateClass;
-constexpr inline auto JoinedAndSeparate = eo::Option::JoinedAndSeparateClass;
+constexpr inline auto Group = eo::Kind::Group;
+constexpr inline auto Input = eo::Kind::Input;
+constexpr inline auto Unknown = eo::Kind::Unknown;
+constexpr inline auto Flag = eo::Kind::Flag;
+constexpr inline auto Joined = eo::Kind::Joined;
+constexpr inline auto Values = eo::Kind::Values;
+constexpr inline auto Separate = eo::Kind::Separate;
+constexpr inline auto RemainingArgs = eo::Kind::RemainingArgs;
+constexpr inline auto RemainingArgsJoined = eo::Kind::RemainingArgsJoined;
+constexpr inline auto CommaJoined = eo::Kind::CommaJoined;
+constexpr inline auto MultiArg = eo::Kind::MultiArg;
+constexpr inline auto JoinedOrSeparate = eo::Kind::JoinedOrSeparate;
+constexpr inline auto JoinedAndSeparate = eo::Kind::JoinedAndSeparate;
 
 constexpr inline unsigned HelpHidden = eo::HelpHidden;
 constexpr inline unsigned RenderAsInput = eo::RenderAsInput;
