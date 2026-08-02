@@ -229,6 +229,22 @@ const clangClAllVisible = parseItems(
 expectEq(clangClAllVisible.length, 2, "clang cl all visibility length");
 expectEq(clangClAllVisible[0].key, "/c", "clang cl all visibility key");
 
+const clangHiddenSeparate = parseItems(
+  ["-target", "x86_64-pc-windows-msvc", "main.cc"],
+  "clang hidden separate no leak",
+  option.ClangVisibility.CC1Option,
+);
+expectEq(
+  clangHiddenSeparate.length,
+  1,
+  "clang hidden separate no leak length",
+);
+expectEq(
+  clangHiddenSeparate[0].key,
+  "main.cc",
+  "clang hidden separate no leak input",
+);
+
 const collectError = option.collect("clang", ["-o"]);
 debug.assertThrow(typeof collectError === "string");
 if (typeof collectError !== "string") {

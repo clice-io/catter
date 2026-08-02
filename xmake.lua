@@ -452,9 +452,12 @@ package("kotatsu")
     set_homepage("https://clice.io")
     set_license("Apache-2.0")
 
-    set_urls("https://github.com/clice-io/kotatsu.git")
+    -- TEMP(local dev): build kotatsu from the local checkout while developing
+    -- the skip_excluded feature. Revert to the pinned remote before merging.
+    set_sourcedir("/home/seele/eventide")
+    -- set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
+    -- add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")

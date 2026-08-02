@@ -84,72 +84,6 @@ catter::js::OptionItem make_option_item([[maybe_unused]] const eo::OptTable& tab
     return item;
 }
 
-std::uint32_t match_option_length(const eo::Option& option,
-                                  std::string_view argument,
-                                  bool ignore_case) {
-    const auto name = option.name();
-    for(auto prefix: option.prefixes) {
-        if(!argument.starts_with(prefix)) {
-            continue;
-        }
-        auto rest = argument.substr(prefix.size());
-        bool matched =
-            ignore_case ? rest.size() >= name.size() &&
-                              std::equal(name.begin(),
-                                         name.end(),
-                                         rest.begin(),
-                                         [](char a, char b) {
-                                             return std::tolower(static_cast<unsigned char>(a)) ==
-                                                    std::tolower(static_cast<unsigned char>(b));
-                                         })
-                        : rest.starts_with(name);
-        if(matched) {
-            return static_cast<std::uint32_t>(prefix.size() + name.size());
-        }
-    }
-    return 0;
-}
-
-bool is_hidden_argument(const eo::OptTable& table, std::string_view spelling, uint32_t visibility) {
-    if(visibility == kAllOptionVisibility) {
-        return false;
-    }
-
-    // The parsed argument's id is already the canonical (unaliased) option, so
-    // find the original option entry that matched `spelling` and check its own
-    // visibility. Options whose visibility does not intersect the requested
-    // mask are consumed by the parser but hidden from the result.
-    const auto canonical = table.find_option(spelling, kAllOptionVisibility);
-    if(!canonical.has_value()) {
-        return false;
-    }
-    bool any_visible = false;
-    for(const auto& option: table.option_infos) {
-        auto matched_length = match_option_length(option, spelling, table.ignore_case);
-        if(matched_length == 0) {
-            continue;
-        }
-        if(matched_length < spelling.size()) {
-            // Partial prefix matches only count for joined-style options.
-            switch(option.kind) {
-                case eo::Kind::Joined:
-                case eo::Kind::CommaJoined:
-                case eo::Kind::JoinedOrSeparate:
-                case eo::Kind::JoinedAndSeparate:
-                case eo::Kind::RemainingArgsJoined: break;
-                default: continue;
-            }
-        }
-        if(option.alias_id != 0 && option.alias_id != canonical->id()) {
-            continue;
-        }
-        if(option.visibility & visibility) {
-            any_visible = true;
-        }
-    }
-    return !any_visible;
-}
-
 bool emit_callback_value(OptionParseCallback& callback, catter::qjs::Value value) {
     catter::qjs::Parameters args;
     args.emplace_back(std::move(value));
@@ -207,6 +141,7 @@ CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) 
     eo::ParseOptions options;
     options.dash_dash_parsing = true;
     options.visibility = visibility;
+    options.skip_excluded = true;
 
     for(auto result: table.parse(args, options)) {
         if(!result.has_value()) {
@@ -225,10 +160,6 @@ CTX_CAPI(option_parse, (JSContext * ctx, catter::qjs::Parameters params)->void) 
         }
 
         const auto& parsed = *result;
-        if(is_hidden_argument(table, parsed.spelling, visibility)) {
-            continue;
-        }
-
         if(!emit_callback_value(
                callback,
                catter::qjs::Value::from(make_option_item(table, parsed).to_object(ctx)))) {
