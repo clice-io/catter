@@ -211,3 +211,5 @@ const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 ```
 
 每个选项表导出自己的可见性常量（如 `ClangVisibility.DefaultVis`、`ClangVisibility.CLOption`）。
+
+被可见性掩码排除的选项不会被解析为对应选项，而是作为 `UnknownClass` 产出（其独立值会作为输入项出现），与 clang 把不可见选项当作 unknown 参数的行为一致。

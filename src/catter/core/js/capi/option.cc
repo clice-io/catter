@@ -136,7 +136,6 @@ CTX_CAPI(option_parse, (JSContext * ctx, qjs::Parameters params)->void) {
     kota_opt::ParseOptions options;
     options.dash_dash_parsing = true;
     options.visibility = visibility;
-    options.skip_excluded = true;
 
     for(auto result: table.parse(args, options)) {
         if(!result.has_value()) {

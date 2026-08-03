@@ -212,3 +212,5 @@ const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 ```
 
 Each option table exports its own visibility constants (e.g., `ClangVisibility.DefaultVis`, `ClangVisibility.CLOption`).
+
+Options excluded by the visibility mask are not parsed as their masked IDs; they are emitted as `UnknownClass` (with their separate values surfacing as independent input items), matching clang's treatment of masked options as unknown arguments.

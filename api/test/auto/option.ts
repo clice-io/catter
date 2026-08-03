@@ -170,36 +170,56 @@ const clangClDriverOnlyVisible = parseItems(
 );
 expectEq(
   clangClDriverOnlyVisible.length,
-  1,
+  2,
   "clang cl filtered visibility length",
 );
 expectEq(
   clangClDriverOnlyVisible[0].key,
+  "/c",
+  "clang cl filtered visibility key",
+);
+expectEq(
+  clangClDriverOnlyVisible[1].key,
   "main.cc",
   "clang cl filtered visibility input",
 );
 
-const clangClDriverOnlyNoLeak = parseItems(
+const clangClFilteredUnknown = parseItems(
   ["/Foobj/main.obj", "/c", "main.cc"],
-  "clang cl visibility filtered no leak",
+  "clang cl visibility filtered unknown",
   option.ClangVisibility.DefaultVis,
 );
-expectEq(clangClDriverOnlyNoLeak.length, 1, "clang cl filtered no leak length");
+expectEq(clangClFilteredUnknown.length, 3, "clang cl filtered unknown length");
 expectEq(
-  clangClDriverOnlyNoLeak[0].key,
+  clangClFilteredUnknown[0].key,
+  "/Foobj/main.obj",
+  "clang cl filtered unknown key",
+);
+expectEq(
+  clangClFilteredUnknown[1].key,
+  "/c",
+  "clang cl filtered unknown option",
+);
+expectEq(
+  clangClFilteredUnknown[2].key,
   "main.cc",
-  "clang cl filtered no leak input",
+  "clang cl filtered unknown input",
 );
 
-const clangClDriverOnlyHiddenMissing = parseItems(
+const clangClFilteredMissingValue = parseItems(
   ["/Fo"],
-  "clang cl visibility filtered hidden missing",
+  "clang cl visibility filtered missing value",
   option.ClangVisibility.DefaultVis,
 );
 expectEq(
-  clangClDriverOnlyHiddenMissing.length,
-  0,
-  "clang cl filtered hidden missing length",
+  clangClFilteredMissingValue.length,
+  1,
+  "clang cl filtered missing value length",
+);
+expectEq(
+  clangClFilteredMissingValue[0].key,
+  "/Fo",
+  "clang cl filtered missing value key",
 );
 
 const clangClOutputVisible = parseItems(
@@ -229,16 +249,30 @@ const clangClAllVisible = parseItems(
 expectEq(clangClAllVisible.length, 2, "clang cl all visibility length");
 expectEq(clangClAllVisible[0].key, "/c", "clang cl all visibility key");
 
-const clangHiddenSeparate = parseItems(
+const clangHiddenSeparateUnknown = parseItems(
   ["-target", "x86_64-pc-windows-msvc", "main.cc"],
-  "clang hidden separate no leak",
+  "clang hidden separate unknown",
   option.ClangVisibility.CC1Option,
 );
-expectEq(clangHiddenSeparate.length, 1, "clang hidden separate no leak length");
 expectEq(
-  clangHiddenSeparate[0].key,
+  clangHiddenSeparateUnknown.length,
+  3,
+  "clang hidden separate unknown length",
+);
+expectEq(
+  clangHiddenSeparateUnknown[0].key,
+  "-target",
+  "clang hidden separate unknown key",
+);
+expectEq(
+  clangHiddenSeparateUnknown[1].key,
+  "x86_64-pc-windows-msvc",
+  "clang hidden separate unknown value",
+);
+expectEq(
+  clangHiddenSeparateUnknown[2].key,
   "main.cc",
-  "clang hidden separate no leak input",
+  "clang hidden separate unknown input",
 );
 
 const collectError = option.collect("clang", ["-o"]);
