@@ -53,13 +53,6 @@ const RENDER_JOINED = 1 << 2;
 const RENDER_SEPARATE = 1 << 3;
 const ALL_OPTION_VISIBILITY = 0xffff_ffff;
 
-function cloneOptionItem(item: OptionItem): OptionItem {
-  return {
-    ...item,
-    values: [...item.values],
-  };
-}
-
 function joinedTokens(key: string, values: string[]): string[] {
   if (values.length === 0) {
     return [key];
@@ -67,96 +60,45 @@ function joinedTokens(key: string, values: string[]): string[] {
   return [key + values[0], ...values.slice(1)];
 }
 
-function renderTokens(info: OptionInfo, item: OptionItem): string[] {
+function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
   if (info.flags & RENDER_JOINED) {
-    return joinedTokens(item.key, item.values);
+    return joinedTokens(info.prefixedKey, item.values);
   }
   if (info.flags & RENDER_SEPARATE) {
-    return [item.key, ...item.values];
+    return [info.prefixedKey, ...item.values];
   }
 
   switch (info.kind) {
-    case OptionKindClass.GroupClass:
-    case OptionKindClass.InputClass:
-    case OptionKindClass.UnknownClass:
-      return [item.key];
-    case OptionKindClass.FlagClass:
-    case OptionKindClass.ValuesClass:
-    case OptionKindClass.SeparateClass:
-    case OptionKindClass.JoinedOrSeparateClass:
-    case OptionKindClass.RemainingArgsClass:
-    case OptionKindClass.MultiArgClass:
+    case OptionKindClass.Group:
+    case OptionKindClass.Input:
+    case OptionKindClass.Unknown:
       return [item.key, ...item.values];
-    case OptionKindClass.JoinedClass:
-    case OptionKindClass.RemainingArgsJoinedClass:
-      return joinedTokens(item.key, item.values);
-    case OptionKindClass.CommaJoinedClass:
+    case OptionKindClass.Joined:
+    case OptionKindClass.JoinedAndSeparate:
+      return joinedTokens(info.prefixedKey, item.values);
+    case OptionKindClass.CommaJoined:
       return item.values.length === 0
-        ? [item.key]
-        : [item.key + item.values.join(",")];
-    case OptionKindClass.JoinedAndSeparateClass:
-      return joinedTokens(item.key, item.values);
+        ? [info.prefixedKey]
+        : [info.prefixedKey + item.values.join(",")];
+    case OptionKindClass.Flag:
+    case OptionKindClass.Values:
+    case OptionKindClass.Separate:
+    case OptionKindClass.MultiArg:
+    case OptionKindClass.JoinedOrSeparate:
+    case OptionKindClass.RemainingArgs:
+    case OptionKindClass.RemainingArgsJoined:
+      return [info.prefixedKey, ...item.values];
     default:
       return [item.key, ...item.values];
   }
 }
 
 /**
- * Rewrites an aliased parsed option so that it uses its canonical option ID and key.
- *
- * This mutates `item` in place and returns the same object for convenience.
- *
- * @param table - The option table that defines how aliases in `item` should be resolved, such as `"clang"` or `"nvcc"`.
- * @param item - The parsed option item to normalize. If `item.unalias` is `undefined`, the item is returned unchanged.
- * @returns The same `OptionItem` instance after canonicalization.
- *
- * @example
- * ```typescript
- * import { option } from "catter";
- *
- * const parsed = option.collect("nvcc", ["-ofoo.o"]);
- * if (Array.isArray(parsed)) {
- *   option.convertToUnalias("nvcc", parsed[0]);
- *   println(parsed[0].key); // "--output-file"
- * }
- * ```
- */
-export function convertToUnalias(
-  table: OptionTable,
-  item: OptionItem,
-): OptionItem {
-  if (item.unalias === undefined) {
-    return item;
-  }
-
-  const aliasInfo = option_get_info(table, item.id) as OptionInfo;
-  const unaliasInfo = option_get_info(table, item.unalias) as OptionInfo;
-
-  item.id = item.unalias;
-  item.unalias = undefined;
-  if (
-    unaliasInfo.kind !== OptionKindClass.InputClass &&
-    unaliasInfo.kind !== OptionKindClass.UnknownClass
-  ) {
-    item.key = unaliasInfo.prefixedKey;
-  }
-  item.values.push(...aliasInfo.aliasArgs);
-  if (
-    aliasInfo.kind === OptionKindClass.FlagClass &&
-    aliasInfo.aliasArgs.length === 0 &&
-    unaliasInfo.kind === OptionKindClass.JoinedClass
-  ) {
-    item.values.push("");
-  }
-
-  return item;
-}
-
-/**
  * Renders a parsed option item back into a command-line fragment.
  *
- * Aliased items are normalized on a cloned copy before rendering, so the input
- * item is not mutated by this helper.
+ * Parsed items are already unaliased: `item.id` is the canonical option ID and
+ * `item.values` already contains any alias-provided arguments, so the item is
+ * rendered using the canonical option spelling from the table.
  *
  * @param table - The option table that should be used to interpret the item.
  * @param item - The parsed option item to stringify.
@@ -173,12 +115,8 @@ export function convertToUnalias(
  * ```
  */
 export function stringify(table: OptionTable, item: OptionItem): string {
-  const renderItem =
-    item.unalias === undefined
-      ? item
-      : convertToUnalias(table, cloneOptionItem(item));
-  const info = option_get_info(table, renderItem.id) as OptionInfo;
-  return renderTokens(info, renderItem).join(" ");
+  const info = option_get_info(table, item.id) as OptionInfo;
+  return renderTokensCanonical(info, item).join(" ");
 }
 
 /**
@@ -350,12 +288,12 @@ export function info(table: OptionTable, item: OptionItem) {
  * The input is first collected with `from`, then split back into the original
  * argument slices that produced each parsed item. Each slice is parsed again
  * with the current second-stage parser, and only slices whose parsed items are
- * not listed in `excludeID` and are not `UnknownClass` in `to` are preserved.
+ * not listed in `excludeID` and are not `Unknown` in `to` are preserved.
  *
  * @param from - The option table used to collect and split the original
  * argument array into per-option spans.
  * @param to - The option table used to inspect second-stage parsed items with
- * `info()`, for example to reject `UnknownClass` results.
+ * `info()`, for example to reject `Unknown` results.
  * @param args - Raw command-line arguments to inspect, without the
  * executable name.
  * @param excludeID - Option IDs that should cause a second-stage parsed span
@@ -387,7 +325,7 @@ export function table2table(
         toCheck.every(
           (val) =>
             !excludeID.includes(val.id) &&
-            info(to, val).kind != OptionKindClass.UnknownClass,
+            info(to, val).kind != OptionKindClass.Unknown,
         )
       );
     })

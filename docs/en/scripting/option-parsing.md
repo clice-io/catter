@@ -62,7 +62,7 @@ const items = option.collect("clang", ["-std=c++20"]);
 if (Array.isArray(items)) {
   const info = option.info("clang", items[0]);
   io.println(info.prefixedKey); // "-std="
-  io.println(info.kind);       // OptionKindClass.JoinedClass
+  io.println(info.kind);       // OptionKindClass.Joined
   io.println(info.help);       // help text from LLVM option table
 }
 ```
@@ -78,17 +78,19 @@ io.println(str); // e.g., "-std=c++20"
 
 ## Alias Resolution
 
-Convert an aliased option to its canonical form:
+Aliases are resolved automatically while parsing:
 
 ```js
 const items = option.collect("nvcc", ["-ofoo.o"]);
 if (Array.isArray(items)) {
-  option.convertToUnalias("nvcc", items[0]);
-  io.println(items[0].key); // "--output-file"
+  io.println(items[0].id); // canonical ID of "--output-file"
+  io.println(items[0].values); // ["foo.o"]
 }
 ```
 
-Note: `convertToUnalias()` mutates the item in place and returns it for convenience.
+Parsed items are already in canonical form: `id` is the canonical option ID and
+`values` already contains any arguments contributed by the alias. `key` keeps
+the original spelling as it appeared on the command line.
 
 ## Rewriting Arguments
 
@@ -145,7 +147,7 @@ if (typeof clangArgs === "string") {
 io.println(clangArgs.join(" ")); // options valid in both tables
 ```
 
-The function parses with the source table, splits args into per-option spans, then re-parses each span with the target table. Spans that parse as `UnknownClass` or match excluded IDs are dropped.
+The function parses with the source table, splits args into per-option spans, then re-parses each span with the target table. Spans that parse as `Unknown` or match excluded IDs are dropped.
 
 ## OptionItem Structure
 
@@ -155,8 +157,7 @@ Each parsed option is represented as an `OptionItem`:
 |-------|------|-------------|
 | `key` | `string` | Option key (e.g., `"-std="`, `"-c"`, `"-I"`) |
 | `values` | `string[]` | Option values array |
-| `id` | `number` | Numeric option ID from the table |
-| `unalias` | `number \| undefined` | Canonical option ID if this is an alias |
+| `id` | `number` | Canonical numeric option ID (aliases are resolved automatically) |
 | `index` | `number` | Position of this option in the original args |
 
 ## OptionInfo Structure
@@ -183,18 +184,18 @@ The `OptionKindClass` enum describes how an option consumes arguments:
 
 | Kind | Description |
 |------|-------------|
-| `FlagClass` | No value (e.g., `-c`, `-v`) |
-| `JoinedClass` | Value joined to key (e.g., `-std=c++20`) |
-| `SeparateClass` | Value in next argument (e.g., `-o main.o`) |
-| `JoinedOrSeparateClass` | Either joined or separate (e.g., `-Ipath` or `-I path`) |
-| `CommaJoinedClass` | Comma-separated values joined to key |
-| `RemainingArgsClass` | Consumes all remaining arguments |
-| `RemainingArgsJoinedClass` | Key + remaining args |
-| `MultiArgClass` | Fixed number of separate value arguments |
-| `ValuesClass` | Multiple separate values |
-| `InputClass` | Positional input (source file) |
-| `UnknownClass` | Unrecognized option |
-| `GroupClass` | Option group (not a real option) |
+| `Flag` | No value (e.g., `-c`, `-v`) |
+| `Joined` | Value joined to key (e.g., `-std=c++20`) |
+| `Separate` | Value in next argument (e.g., `-o main.o`) |
+| `JoinedOrSeparate` | Either joined or separate (e.g., `-Ipath` or `-I path`) |
+| `CommaJoined` | Comma-separated values joined to key |
+| `RemainingArgs` | Consumes all remaining arguments |
+| `RemainingArgsJoined` | Key + remaining args |
+| `MultiArg` | Fixed number of separate value arguments |
+| `Values` | Multiple separate values |
+| `Input` | Positional input (source file) |
+| `Unknown` | Unrecognized option |
+| `Group` | Option group (not a real option) |
 
 ## Visibility Filtering
 
@@ -211,3 +212,5 @@ const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 ```
 
 Each option table exports its own visibility constants (e.g., `ClangVisibility.DefaultVis`, `ClangVisibility.CLOption`).
+
+Options excluded by the visibility mask are not parsed as their masked IDs; they are emitted as `Unknown` (with their separate values surfacing as independent input items), matching clang's treatment of masked options as unknown arguments.

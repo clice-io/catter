@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
-namespace catter::opt::lld_elf {
+namespace catter::opt::clang {
 
 enum ID : unsigned {
     ID_INVALID = 0,
@@ -22,10 +22,20 @@ enum ID : unsigned {
                META_VAR,                                                                           \
                VALUES)                                                                             \
     ID_##ID,
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include <llvm-options-td/clang-Driver-Options.inc>
 #undef OPTION
+};
+
+enum DriverClass : unsigned {
+    DefaultVis = 1u << 0,
+    CLOption = 1u << 1,
+    CC1Option = 1u << 2,
+    CC1AsOption = 1u << 3,
+    FC1Option = 1u << 4,
+    DXCOption = 1u << 5,
+    FlangOption = 1u << 6,
 };
 
 const kota::option::OptTable& table();
 
-}  // namespace catter::opt::lld_elf
+}  // namespace catter::opt::clang

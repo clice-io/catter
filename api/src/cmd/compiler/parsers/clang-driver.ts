@@ -42,10 +42,10 @@ export function collectClangDriverOptions(
   }
 
   return collected.map((raw) => {
-    const item = option.convertToUnalias("clang", {
+    const item = {
       ...raw,
       values: [...raw.values],
-    });
+    };
     return {
       raw,
       item,

@@ -1,13 +1,13 @@
-#include "opt/external/lld_macho.h"
+#include "option/llvm_dlltool.h"
 
 #include <array>
 #include <span>
 
-#include "opt/external/tablegen.h"
+#include "option/tablegen.h"
 
-namespace catter::opt::lld_macho {
+namespace catter::opt::llvm_dlltool {
 
-namespace eo = kota::option;
+namespace kota_opt = kota::option;
 
 namespace detail {
 
@@ -15,36 +15,33 @@ using namespace catter::opt::external_detail;
 namespace llvm = catter::opt::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/lld-MachO-Options.inc>
+#include <llvm-options-td/llvm-dlltool-Options.inc>
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/lld-MachO-Options.inc>
+#include <llvm-options-td/llvm-dlltool-Options.inc>
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/lld-MachO-Options.inc>
+#include <llvm-options-td/llvm-dlltool-Options.inc>
 #undef OPTION
     ;
 
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return eo::pfx_none;
-        case 1: return eo::pfx_dash;
-        case 3: return eo::pfx_dash_double;
-        case 6: return eo::pfx_double;
-        default: return eo::pfx_none;
+        case 0: return kota_opt::pfx_none;
+        case 1: return kota_opt::pfx_dash;
+        case 3: return kota_opt::pfx_double;
+        default: return kota_opt::pfx_none;
     }
 }
 
 static_assert(OptionPrefixesTable[0] == 0);
 static_assert(OptionPrefixesTable[1] == 1 && OptionPrefixesTable[2] == 1);
-static_assert(OptionPrefixesTable[3] == 2 && OptionPrefixesTable[4] == 1 &&
-              OptionPrefixesTable[5] == 3);
-static_assert(OptionPrefixesTable[6] == 1 && OptionPrefixesTable[7] == 3);
+static_assert(OptionPrefixesTable[3] == 1 && OptionPrefixesTable[4] == 3);
 
-constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
+constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -59,9 +56,9 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
                VALUES)                                                                             \
-    eo::OptTable::Info{                                                                            \
-        ._prefixes = prefixes(PREFIXES_OFFSET),                                                    \
-        ._prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                              \
+    kota_opt::Option{                                                                              \
+        .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
+        .prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                               \
         .id = ID_##ID,                                                                             \
         .kind = KIND,                                                                              \
         .group_id = ID_##GROUP,                                                                    \
@@ -69,23 +66,24 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
         .alias_args = ALIAS_ARGS,                                                                  \
         .flags = FLAGS,                                                                            \
         .visibility = VISIBILITY,                                                                  \
-        .param = PARAM,                                                                            \
+        .num_args = PARAM,                                                                         \
         .help_text = HELP,                                                                         \
-        .help_texts_for_variants = DefaultHelpVariants,                                            \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/lld-MachO-Options.inc>
+#include <llvm-options-td/llvm-dlltool-Options.inc>
 #undef OPTION
 };
 
 }  // namespace detail
 
-const eo::OptTable& table() {
-    const static auto opt_table =
-        eo::OptTable(std::span<const eo::OptTable::Info>(detail::OptionInfos))
-            .set_tablegen_mode(true)
-            .set_dash_dash_parsing(true);
+const kota_opt::OptTable& table() {
+    const static auto opt_table = [] {
+        auto table =
+            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), false, {});
+        table.tablegen_mode = true;
+        return table;
+    }();
     return opt_table;
 }
 
-}  // namespace catter::opt::lld_macho
+}  // namespace catter::opt::llvm_dlltool

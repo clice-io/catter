@@ -1,33 +1,33 @@
 import { cmd, debug, io, option } from "catter";
 
 const OptionKindClass: {
-  GroupClass: number;
-  InputClass: number;
-  UnknownClass: number;
-  FlagClass: number;
-  JoinedClass: number;
-  ValuesClass: number;
-  SeparateClass: number;
-  RemainingArgsClass: number;
-  RemainingArgsJoinedClass: number;
-  CommaJoinedClass: number;
-  MultiArgClass: number;
-  JoinedOrSeparateClass: number;
-  JoinedAndSeparateClass: number;
+  Group: number;
+  Input: number;
+  Unknown: number;
+  Flag: number;
+  Joined: number;
+  Values: number;
+  Separate: number;
+  RemainingArgs: number;
+  RemainingArgsJoined: number;
+  CommaJoined: number;
+  MultiArg: number;
+  JoinedOrSeparate: number;
+  JoinedAndSeparate: number;
 } = {
-  GroupClass: 0,
-  InputClass: 1,
-  UnknownClass: 2,
-  FlagClass: 3,
-  JoinedClass: 4,
-  ValuesClass: 5,
-  SeparateClass: 6,
-  RemainingArgsClass: 7,
-  RemainingArgsJoinedClass: 8,
-  CommaJoinedClass: 9,
-  MultiArgClass: 10,
-  JoinedOrSeparateClass: 11,
-  JoinedAndSeparateClass: 12,
+  Group: 0,
+  Input: 1,
+  Unknown: 2,
+  Flag: 3,
+  Joined: 4,
+  Values: 5,
+  Separate: 6,
+  CommaJoined: 7,
+  MultiArg: 8,
+  JoinedOrSeparate: 9,
+  JoinedAndSeparate: 10,
+  RemainingArgs: 11,
+  RemainingArgsJoined: 12,
 };
 
 function expectEq<T>(actual: T, expected: T, label: string) {
@@ -110,7 +110,7 @@ expectEq(parsed.length, 4, "basic parse length");
 debug.assertThrow(
   parsed[0].key === "--all-warnings" &&
     parsed[0].values.length === 0 &&
-    typeof parsed[0].unalias === "number",
+    parsed[0].id === option.ClangID.ID_Wall,
 );
 debug.assertThrow(
   parsed[1].key === "-I" &&
@@ -146,7 +146,7 @@ if (!Array.isArray(collected)) {
 }
 expectEq(collected.length, 3, "collect parsed length");
 expectEq(collected[0].key, "--all-warnings", "collect alias key");
-debug.assertThrow(typeof collected[0].unalias === "number");
+expectEq(collected[0].id, option.ClangID.ID_Wall, "collect alias id");
 expectEq(
   option.stringify("clang", collected[0]),
   "-Wall",
@@ -170,36 +170,56 @@ const clangClDriverOnlyVisible = parseItems(
 );
 expectEq(
   clangClDriverOnlyVisible.length,
-  1,
+  2,
   "clang cl filtered visibility length",
 );
 expectEq(
   clangClDriverOnlyVisible[0].key,
+  "/c",
+  "clang cl filtered visibility key",
+);
+expectEq(
+  clangClDriverOnlyVisible[1].key,
   "main.cc",
   "clang cl filtered visibility input",
 );
 
-const clangClDriverOnlyNoLeak = parseItems(
+const clangClFilteredUnknown = parseItems(
   ["/Foobj/main.obj", "/c", "main.cc"],
-  "clang cl visibility filtered no leak",
+  "clang cl visibility filtered unknown",
   option.ClangVisibility.DefaultVis,
 );
-expectEq(clangClDriverOnlyNoLeak.length, 1, "clang cl filtered no leak length");
+expectEq(clangClFilteredUnknown.length, 3, "clang cl filtered unknown length");
 expectEq(
-  clangClDriverOnlyNoLeak[0].key,
+  clangClFilteredUnknown[0].key,
+  "/Foobj/main.obj",
+  "clang cl filtered unknown key",
+);
+expectEq(
+  clangClFilteredUnknown[1].key,
+  "/c",
+  "clang cl filtered unknown option",
+);
+expectEq(
+  clangClFilteredUnknown[2].key,
   "main.cc",
-  "clang cl filtered no leak input",
+  "clang cl filtered unknown input",
 );
 
-const clangClDriverOnlyHiddenMissing = parseItems(
+const clangClFilteredMissingValue = parseItems(
   ["/Fo"],
-  "clang cl visibility filtered hidden missing",
+  "clang cl visibility filtered missing value",
   option.ClangVisibility.DefaultVis,
 );
 expectEq(
-  clangClDriverOnlyHiddenMissing.length,
-  0,
-  "clang cl filtered hidden missing length",
+  clangClFilteredMissingValue.length,
+  1,
+  "clang cl filtered missing value length",
+);
+expectEq(
+  clangClFilteredMissingValue[0].key,
+  "/Fo",
+  "clang cl filtered missing value key",
 );
 
 const clangClOutputVisible = parseItems(
@@ -214,10 +234,11 @@ expectEq(
   "obj/main.obj",
   "clang cl output object value",
 );
+expectEq(clangClOutputVisible[1].key, "/Fe:", "clang cl output executable key");
 expectEq(
-  option.convertToUnalias("clang", cloneItem(clangClOutputVisible[1])).key,
-  "/Fe",
-  "clang cl output executable unalias key",
+  clangClOutputVisible[1].id,
+  option.ClangID.ID__SLASH_Fe,
+  "clang cl output executable id",
 );
 
 const clangClAllVisible = parseItems(
@@ -227,6 +248,32 @@ const clangClAllVisible = parseItems(
 );
 expectEq(clangClAllVisible.length, 2, "clang cl all visibility length");
 expectEq(clangClAllVisible[0].key, "/c", "clang cl all visibility key");
+
+const clangHiddenSeparateUnknown = parseItems(
+  ["-target", "x86_64-pc-windows-msvc", "main.cc"],
+  "clang hidden separate unknown",
+  option.ClangVisibility.CC1Option,
+);
+expectEq(
+  clangHiddenSeparateUnknown.length,
+  3,
+  "clang hidden separate unknown length",
+);
+expectEq(
+  clangHiddenSeparateUnknown[0].key,
+  "-target",
+  "clang hidden separate unknown key",
+);
+expectEq(
+  clangHiddenSeparateUnknown[1].key,
+  "x86_64-pc-windows-msvc",
+  "clang hidden separate unknown value",
+);
+expectEq(
+  clangHiddenSeparateUnknown[2].key,
+  "main.cc",
+  "clang hidden separate unknown input",
+);
 
 const collectError = option.collect("clang", ["-o"]);
 debug.assertThrow(typeof collectError === "string");
@@ -241,7 +288,7 @@ const nvccParsed = parseItemsFor(
   "nvcc basic parse",
 );
 expectEq(nvccParsed.length, 5, "nvcc parsed length");
-debug.assertThrow(typeof nvccParsed[0].unalias === "number");
+expectEq(nvccParsed[0].id, option.NvccID.ID_output_file, "nvcc output id");
 expectEq(
   option.stringify("nvcc", nvccParsed[0]),
   "--output-file foo.o",
@@ -264,37 +311,17 @@ expectEq(
 );
 expectEq(nvccParsed[4].key, "kernel.cu", "nvcc input key");
 
-const nvccOutputCopy = cloneItem(nvccParsed[0]);
-option.convertToUnalias("nvcc", nvccOutputCopy);
-expectEq(
-  nvccOutputCopy.id,
-  option.NvccID.ID_output_file,
-  "nvcc output unalias id",
-);
-expectEq(nvccOutputCopy.key, "--output-file", "nvcc output unalias key");
-expectEq(nvccOutputCopy.values[0], "foo.o", "nvcc output unalias value");
-
-const nvccFlagCopy = cloneItem(nvccParsed[3]);
-option.convertToUnalias("nvcc", nvccFlagCopy);
-expectEq(
-  nvccFlagCopy.id,
-  option.NvccID.ID_no_align_double,
-  "nvcc flag unalias id",
-);
-expectEq(nvccFlagCopy.key, "--no-align-double", "nvcc flag unalias key");
-expectEq(nvccFlagCopy.values.length, 0, "nvcc flag unalias values length");
-
 const nvccOutputInfo = infoById("nvcc", option.NvccID.ID_output_file);
 expectEq(
   nvccOutputInfo.kind,
-  OptionKindClass.SeparateClass,
+  OptionKindClass.Separate,
   "nvcc output info kind",
 );
 expectEq(nvccOutputInfo.prefixedKey, "--output-file", "nvcc output info key");
 expectEq(nvccOutputInfo.meta_var, "<file>", "nvcc output meta var");
 
 const nvccHelpInfo = infoById("nvcc", option.NvccID.ID_help);
-expectEq(nvccHelpInfo.kind, OptionKindClass.FlagClass, "nvcc help info kind");
+expectEq(nvccHelpInfo.kind, OptionKindClass.Flag, "nvcc help info kind");
 expectEq(nvccHelpInfo.prefixedKey, "--help", "nvcc help key");
 
 const nvccErrors = parseErrorsFor("nvcc", ["-o"], "nvcc missing value");
@@ -321,42 +348,18 @@ debug.assertThrow(
 );
 expectEq(
   includeInfo.kind,
-  OptionKindClass.JoinedOrSeparateClass,
+  OptionKindClass.JoinedOrSeparate,
   "include info kind",
 );
 
 const inputInfo = option.info("clang", parsed[3]);
 expectEq(inputInfo.prefixedKey, "<input>", "input prefixed key");
-expectEq(inputInfo.kind, OptionKindClass.InputClass, "input info kind");
+expectEq(inputInfo.kind, OptionKindClass.Input, "input info kind");
 
-const aliasTargetId = parsed[0].unalias;
-debug.assertThrow(typeof aliasTargetId === "number");
-if (typeof aliasTargetId !== "number") {
-  throw new Error("expected alias target for --all-warnings");
-}
-
-const aliasCopy = cloneItem(parsed[0]);
-const convertedAlias = option.convertToUnalias("clang", aliasCopy);
-debug.assertThrow(convertedAlias === aliasCopy);
 debug.assertThrow(
-  convertedAlias.id === aliasTargetId &&
-    convertedAlias.unalias === undefined &&
-    convertedAlias.key === "-Wall" &&
-    convertedAlias.values.length === 0,
-);
-debug.assertThrow(parsed[0].id !== aliasTargetId);
-debug.assertThrow(typeof parsed[0].unalias === "number");
-debug.assertThrow(parsed[0].values.length === 0);
-
-const includeCopy = cloneItem(parsed[1]);
-const unchangedInclude = option.convertToUnalias("clang", includeCopy);
-debug.assertThrow(unchangedInclude === includeCopy);
-expectEq(unchangedInclude.id, parsed[1].id, "convertToUnalias no-op id");
-expectEq(unchangedInclude.key, parsed[1].key, "convertToUnalias no-op key");
-expectEq(
-  unchangedInclude.values[0],
-  parsed[1].values[0],
-  "convertToUnalias no-op values",
+  parsed[0].id === option.ClangID.ID_Wall &&
+    parsed[0].key === "--all-warnings" &&
+    parsed[0].values.length === 0,
 );
 
 const aliasString = option.stringify("clang", parsed[0]);
@@ -367,8 +370,6 @@ expectEq(aliasString, "-Wall", "stringify alias");
 expectEq(includeString, "-I include", "stringify include");
 expectEq(outputString, "-o main.o", "stringify output");
 expectEq(inputString, "-dash.cc", "stringify input");
-debug.assertThrow(typeof parsed[0].unalias === "number");
-debug.assertThrow(parsed[0].values.length === 0);
 
 let invalidFailed = false;
 try {
@@ -390,53 +391,34 @@ expectEq(
   "stringify unknown",
 );
 const unknownInfo = option.info("clang", unknownParsed[0]);
-expectEq(unknownInfo.kind, OptionKindClass.UnknownClass, "unknown info kind");
+expectEq(unknownInfo.kind, OptionKindClass.Unknown, "unknown info kind");
 
 const livenessParsed = parseItems(
   ["-fextend-variable-liveness"],
   "alias with alias args",
 );
 expectEq(livenessParsed.length, 1, "liveness parsed length");
-debug.assertThrow(typeof livenessParsed[0].unalias === "number");
-const livenessInfo = option.info("clang", livenessParsed[0]);
-debug.assertThrow(
-  livenessInfo.aliasArgs.length === 1 && livenessInfo.aliasArgs[0] === "all",
-);
-const livenessCopy = cloneItem(livenessParsed[0]);
-option.convertToUnalias("clang", livenessCopy);
-expectEq(
-  livenessCopy.key,
-  "-fextend-variable-liveness=",
-  "liveness unaliased key",
-);
-expectEq(livenessCopy.values.length, 1, "liveness unaliased values length");
-expectEq(livenessCopy.values[0], "all", "liveness unaliased value");
 expectEq(
   option.stringify("clang", livenessParsed[0]),
   "-fextend-variable-liveness=all",
   "stringify liveness alias",
 );
-debug.assertThrow(livenessParsed[0].values.length === 0);
-debug.assertThrow(typeof livenessParsed[0].unalias === "number");
+expectEq(livenessParsed[0].values.length, 1, "liveness parsed values length");
+expectEq(livenessParsed[0].values[0], "all", "liveness parsed value");
 
 const optimizeParsed = parseItems(
   ["--optimize"],
   "alias to joined without alias args",
 );
 expectEq(optimizeParsed.length, 1, "optimize parsed length");
-debug.assertThrow(typeof optimizeParsed[0].unalias === "number");
-const optimizeCopy = cloneItem(optimizeParsed[0]);
-option.convertToUnalias("clang", optimizeCopy);
-expectEq(optimizeCopy.key, "-O", "optimize unaliased key");
-expectEq(optimizeCopy.values.length, 1, "optimize unaliased values length");
-expectEq(optimizeCopy.values[0], "", "optimize unaliased empty value");
 expectEq(
   option.stringify("clang", optimizeParsed[0]),
   "-O",
   "stringify optimize",
 );
-debug.assertThrow(optimizeParsed[0].values.length === 0);
-debug.assertThrow(typeof optimizeParsed[0].unalias === "number");
+expectEq(optimizeParsed[0].id, option.ClangID.ID_O, "optimize parsed id");
+expectEq(optimizeParsed[0].values.length, 1, "optimize parsed values length");
+expectEq(optimizeParsed[0].values[0], "", "optimize parsed empty value");
 
 const sanitizeParsed = parseItems(
   ["-fsanitize=address,undefined"],
@@ -444,11 +426,7 @@ const sanitizeParsed = parseItems(
 );
 expectEq(sanitizeParsed.length, 1, "sanitize parsed length");
 const sanitizeInfo = option.info("clang", sanitizeParsed[0]);
-expectEq(
-  sanitizeInfo.kind,
-  OptionKindClass.CommaJoinedClass,
-  "sanitize info kind",
-);
+expectEq(sanitizeInfo.kind, OptionKindClass.CommaJoined, "sanitize info kind");
 expectEq(sanitizeParsed[0].values.length, 2, "sanitize values length");
 expectEq(sanitizeParsed[0].values[0], "address", "sanitize first value");
 expectEq(sanitizeParsed[0].values[1], "undefined", "sanitize second value");
@@ -466,7 +444,7 @@ expectEq(xopenmpParsed.length, 1, "xopenmp parsed length");
 const xopenmpInfo = option.info("clang", xopenmpParsed[0]);
 expectEq(
   xopenmpInfo.kind,
-  OptionKindClass.JoinedAndSeparateClass,
+  OptionKindClass.JoinedAndSeparate,
   "xopenmp info kind",
 );
 expectEq(xopenmpParsed[0].values.length, 2, "xopenmp values length");
@@ -485,11 +463,7 @@ expectEq(
 const linkParsed = parseItems(["-ldl"], "render joined parse");
 expectEq(linkParsed.length, 1, "link parsed length");
 const linkInfo = option.info("clang", linkParsed[0]);
-expectEq(
-  linkInfo.kind,
-  OptionKindClass.JoinedOrSeparateClass,
-  "link info kind",
-);
+expectEq(linkInfo.kind, OptionKindClass.JoinedOrSeparate, "link info kind");
 expectEq(linkParsed[0].values.length, 1, "link values length");
 expectEq(linkParsed[0].values[0], "dl", "link value");
 expectEq(option.stringify("clang", linkParsed[0]), "-ldl", "stringify link");
@@ -500,7 +474,7 @@ const segaddrParsed = parseItems(
 );
 expectEq(segaddrParsed.length, 1, "segaddr parsed length");
 const segaddrInfo = option.info("clang", segaddrParsed[0]);
-expectEq(segaddrInfo.kind, OptionKindClass.MultiArgClass, "segaddr info kind");
+expectEq(segaddrInfo.kind, OptionKindClass.MultiArg, "segaddr info kind");
 expectEq(segaddrParsed[0].values.length, 2, "segaddr values length");
 expectEq(segaddrParsed[0].values[0], "__TEXT", "segaddr first value");
 expectEq(segaddrParsed[0].values[1], "0x1000", "segaddr second value");
@@ -683,10 +657,7 @@ const newCmd = option.replace(
   ),
   (parseRes) => {
     debug.assertThrow(typeof parseRes !== "string");
-    switch (
-      option.convertToUnalias("clang", parseRes as option.OptionItem)
-        .id as option.ClangID
-    ) {
+    switch ((parseRes as option.OptionItem).id as option.ClangID) {
       case option.ClangID.ID_o:
         return "-o 233";
       case option.ClangID.ID_INPUT:

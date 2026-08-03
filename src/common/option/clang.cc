@@ -1,13 +1,13 @@
-#include "opt/external/clang.h"
+#include "option/clang.h"
 
 #include <array>
 #include <span>
 #include <string_view>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 namespace catter::opt::clang {
 
-namespace eo = kota::option;
+namespace kota_opt = kota::option;
 
 namespace detail {
 
@@ -39,11 +39,11 @@ constexpr std::size_t OptionCount = 0
 
 // `clang-Driver-Options.inc` reuses LLVM driver flag names directly in the generated
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
-// `kota::option::OptTable::Info` without pulling in LLVM's option library.
+// `kota::option::Option` without pulling in LLVM's option library.
 enum Flag : unsigned {
-    HelpHidden = eo::HelpHidden,
-    RenderAsInput = eo::RenderAsInput,
-    RenderJoined = eo::RenderJoined,
+    HelpHidden = kota_opt::HelpHidden,
+    RenderAsInput = kota_opt::RenderAsInput,
+    RenderJoined = kota_opt::RenderJoined,
     Ignored = 1u << 4,
     LinkOption = 1u << 5,
     LinkerInput = 1u << 6,
@@ -53,22 +53,18 @@ enum Flag : unsigned {
     Unsupported = 1u << 10,
 };
 
-constexpr auto DefaultHelpVariants = std::array<std::pair<std::array<unsigned, 2>, const char*>, 1>{
-    std::pair{std::array<unsigned, 2>{0, 0}, nullptr},
-};
-
 // The generated prefix table only uses a small fixed set of layouts for clang
 // driver options, so we map the encoded table offsets to the corresponding
 // `kota::option` prefix spans directly.
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return eo::pfx_none;
-        case 1: return eo::pfx_dash;
-        case 3: return eo::pfx_dash_double;
-        case 6: return eo::pfx_double;
-        case 8: return eo::pfx_all;
-        case 12: return eo::pfx_slash_dash;
-        default: return eo::pfx_none;
+        case 0: return kota_opt::pfx_none;
+        case 1: return kota_opt::pfx_dash;
+        case 3: return kota_opt::pfx_dash_double;
+        case 6: return kota_opt::pfx_double;
+        case 8: return kota_opt::pfx_all;
+        case 12: return kota_opt::pfx_slash_dash;
+        default: return kota_opt::pfx_none;
     }
 }
 
@@ -94,21 +90,21 @@ static_assert(OptionPrefixesTable[8] == 3 && OptionPrefixesTable[9] == 3 &&
 static_assert(OptionPrefixesTable[12] == 2 && OptionPrefixesTable[13] == 6 &&
               OptionPrefixesTable[14] == 1);
 
-#define Group eo::Option::GroupClass
-#define Input eo::Option::InputClass
-#define Unknown eo::Option::UnknownClass
-#define Flag eo::Option::FlagClass
-#define Joined eo::Option::JoinedClass
-#define Values eo::Option::ValuesClass
-#define Separate eo::Option::SeparateClass
-#define RemainingArgs eo::Option::RemainingArgsClass
-#define RemainingArgsJoined eo::Option::RemainingArgsJoinedClass
-#define CommaJoined eo::Option::CommaJoinedClass
-#define MultiArg eo::Option::MultiArgClass
-#define JoinedOrSeparate eo::Option::JoinedOrSeparateClass
-#define JoinedAndSeparate eo::Option::JoinedAndSeparateClass
+#define Group kota_opt::Kind::Group
+#define Input kota_opt::Kind::Input
+#define Unknown kota_opt::Kind::Unknown
+#define Flag kota_opt::Kind::Flag
+#define Joined kota_opt::Kind::Joined
+#define Values kota_opt::Kind::Values
+#define Separate kota_opt::Kind::Separate
+#define RemainingArgs kota_opt::Kind::RemainingArgs
+#define RemainingArgsJoined kota_opt::Kind::RemainingArgsJoined
+#define CommaJoined kota_opt::Kind::CommaJoined
+#define MultiArg kota_opt::Kind::MultiArg
+#define JoinedOrSeparate kota_opt::Kind::JoinedOrSeparate
+#define JoinedAndSeparate kota_opt::Kind::JoinedAndSeparate
 
-constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
+constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -123,9 +119,9 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
                VALUES)                                                                             \
-    eo::OptTable::Info{                                                                            \
-        ._prefixes = prefixes(PREFIXES_OFFSET),                                                    \
-        ._prefixed_name = str_at(NAME_OFFSET),                                                     \
+    kota_opt::Option{                                                                              \
+        .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
+        .prefixed_name = str_at(NAME_OFFSET),                                                      \
         .id = ID_##ID,                                                                             \
         .kind = KIND,                                                                              \
         .group_id = ID_##GROUP,                                                                    \
@@ -133,9 +129,8 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
         .alias_args = ALIAS_ARGS,                                                                  \
         .flags = FLAGS,                                                                            \
         .visibility = VISIBILITY,                                                                  \
-        .param = PARAM,                                                                            \
+        .num_args = PARAM,                                                                         \
         .help_text = HELP,                                                                         \
-        .help_texts_for_variants = DefaultHelpVariants,                                            \
         .meta_var = META_VAR,                                                                      \
     },
 #include <llvm-options-td/clang-Driver-Options.inc>
@@ -158,11 +153,13 @@ constexpr auto OptionInfos = std::array<eo::OptTable::Info, OptionCount>{
 
 }  // namespace detail
 
-const eo::OptTable& table() {
-    const static auto opt_table =
-        eo::OptTable(std::span<const eo::OptTable::Info>(detail::OptionInfos))
-            .set_tablegen_mode(true)
-            .set_dash_dash_parsing(true);
+const kota_opt::OptTable& table() {
+    const static auto opt_table = [] {
+        auto table =
+            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), false, {});
+        table.tablegen_mode = true;
+        return table;
+    }();
     return opt_table;
 }
 

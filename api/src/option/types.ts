@@ -1,17 +1,17 @@
 export enum OptionKindClass {
-  GroupClass = 0,
-  InputClass = 1,
-  UnknownClass = 2,
-  FlagClass = 3,
-  JoinedClass = 4,
-  ValuesClass = 5,
-  SeparateClass = 6,
-  RemainingArgsClass = 7,
-  RemainingArgsJoinedClass = 8,
-  CommaJoinedClass = 9,
-  MultiArgClass = 10,
-  JoinedOrSeparateClass = 11,
-  JoinedAndSeparateClass = 12,
+  Group = 0,
+  Input = 1,
+  Unknown = 2,
+  Flag = 3,
+  Joined = 4,
+  Values = 5,
+  Separate = 6,
+  CommaJoined = 7,
+  MultiArg = 8,
+  JoinedOrSeparate = 9,
+  JoinedAndSeparate = 10,
+  RemainingArgs = 11,
+  RemainingArgsJoined = 12,
 }
 
 export type OptionInfo = {
@@ -32,7 +32,6 @@ export type OptionItem = {
   values: string[];
   key: string;
   id: number;
-  unalias?: number;
   index: number;
 };
 

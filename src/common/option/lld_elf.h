@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
-namespace catter::opt::lld_mingw {
+namespace catter::opt::lld_elf {
 
 enum ID : unsigned {
     ID_INVALID = 0,
@@ -22,10 +22,10 @@ enum ID : unsigned {
                META_VAR,                                                                           \
                VALUES)                                                                             \
     ID_##ID,
-#include <llvm-options-td/lld-MinGW-Options.inc>
+#include <llvm-options-td/lld-ELF-Options.inc>
 #undef OPTION
 };
 
 const kota::option::OptTable& table();
 
-}  // namespace catter::opt::lld_mingw
+}  // namespace catter::opt::lld_elf

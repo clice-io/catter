@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <utility>
 #include <kota/zest/macro.h>
+#include <kota/zest/zest.h>
 #include <kota/async/io/loop.h>
 
 #include "js_case.h"

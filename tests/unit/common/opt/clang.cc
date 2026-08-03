@@ -1,4 +1,4 @@
-#include "opt/external/clang.h"
+#include "option/clang.h"
 
 #include <array>
 #include <expected>
@@ -8,47 +8,61 @@
 #include <vector>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
-#include <kota/option/option.h>
+#include <kota/deco/option.h>
 
 using namespace catter;
 
 namespace {
 
+std::vector<std::string> copy_values(std::span<const std::string_view> values) {
+    std::vector<std::string> copied;
+    copied.reserve(values.size());
+    for(auto value: values) {
+        copied.emplace_back(value);
+    }
+    return copied;
+}
+
 struct ParseResult {
-    std::vector<kota::option::ParsedArgumentOwning> args;
+    struct OwnedArg {
+        std::uint32_t id;
+        std::string spelling;
+        std::vector<std::string> values;
+        std::uint32_t index;
+    };
+
+    std::vector<OwnedArg> args;
     std::vector<std::string> errors;
 };
 
-ParseResult parse_command(std::span<const std::string> argv,
-                          kota::option::Visibility visibility = kota::option::Visibility()) {
+ParseResult parse_command(std::span<const std::string> argv, uint32_t visibility = 0xffffffffU) {
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    unsigned missing_arg_index = 0;
-    unsigned missing_arg_count = 0;
-    const char* missing_reason = nullptr;
-    opt::clang::table().parse_args(
-        args,
-        missing_arg_index,
-        missing_arg_count,
-        [&](kota::option::ParsedArgument parsed) {
-            result.args.emplace_back(
-                kota::option::ParsedArgumentOwning::from_parsed_argument(parsed));
-        },
-        visibility,
-        &missing_reason);
-    if(missing_arg_count != 0) {
-        result.errors.emplace_back(missing_reason != nullptr ? missing_reason : "missing argument");
+    kota::option::ParseOptions options;
+    options.dash_dash_parsing = true;
+    options.visibility = visibility;
+    for(auto parsed: opt::clang::table().parse(args, options)) {
+        if(parsed.has_value()) {
+            result.args.emplace_back(ParseResult::OwnedArg{
+                .id = parsed->id,
+                .spelling = parsed->spelling,
+                .values = copy_values(parsed->values),
+                .index = parsed->index,
+            });
+        } else {
+            result.errors.emplace_back(parsed.error().message);
+        }
     }
     return result;
 }
 
-std::string_view canonical_spelling(const kota::option::ParsedArgumentOwning& arg) {
-    auto option = opt::clang::table().option(arg.unaliased_opt());
-    if(!option.valid()) {
-        return arg.get_spelling_view();
+std::string_view canonical_spelling(const ParseResult::OwnedArg& arg) {
+    auto option = opt::clang::table().option(arg.id);
+    if(!option.has_value()) {
+        return arg.spelling;
     }
-    return option.prefixed_name();
+    return option->unaliased_option().prefixed_name();
 }
 
 }  // namespace
@@ -63,20 +77,20 @@ TEST_CASE(parse_clang_compile_command) {
     EXPECT_TRUE(parsed.errors.empty());
     ASSERT_EQ(parsed.args.size(), 5U);
 
-    EXPECT_EQ(parsed.args[0].option_id.id(), opt::clang::ID_c);
+    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_c);
 
-    EXPECT_EQ(parsed.args[1].option_id.id(), opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[1].get_spelling_view(), "main.cc");
+    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_INPUT);
+    EXPECT_EQ(parsed.args[1].spelling, "main.cc");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::clang::ID_I);
+    EXPECT_EQ(parsed.args[2].id, opt::clang::ID_I);
     ASSERT_EQ(parsed.args[2].values.size(), 1U);
     EXPECT_EQ(parsed.args[2].values[0], "include");
 
-    EXPECT_EQ(parsed.args[3].option_id.id(), opt::clang::ID_isystem);
+    EXPECT_EQ(parsed.args[3].id, opt::clang::ID_isystem);
     ASSERT_EQ(parsed.args[3].values.size(), 1U);
     EXPECT_EQ(parsed.args[3].values[0], "/usr/include");
 
-    EXPECT_EQ(parsed.args[4].option_id.id(), opt::clang::ID_o);
+    EXPECT_EQ(parsed.args[4].id, opt::clang::ID_o);
     ASSERT_EQ(parsed.args[4].values.size(), 1U);
     EXPECT_EQ(parsed.args[4].values[0], "main.o");
 };
@@ -91,12 +105,12 @@ TEST_CASE(parse_alias_and_dash_dash_inputs) {
     ASSERT_EQ(parsed.args.size(), 3U);
 
     EXPECT_EQ(canonical_spelling(parsed.args[0]), "-Wall");
-    EXPECT_EQ(parsed.args[0].unaliased_opt().id(), opt::clang::ID_Wall);
+    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_Wall);
 
-    EXPECT_EQ(parsed.args[1].option_id.id(), opt::clang::ID_fsyntax_only);
+    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_fsyntax_only);
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].get_spelling_view(), "-dash.cc");
+    EXPECT_EQ(parsed.args[2].id, opt::clang::ID_INPUT);
+    EXPECT_EQ(parsed.args[2].spelling, "-dash.cc");
 };
 
 TEST_CASE(parse_unknown_and_missing_value) {
@@ -107,8 +121,8 @@ TEST_CASE(parse_unknown_and_missing_value) {
         auto parsed = parse_command(argv);
         EXPECT_TRUE(parsed.errors.empty());
         ASSERT_EQ(parsed.args.size(), 1U);
-        EXPECT_EQ(parsed.args[0].option_id.id(), opt::clang::ID_UNKNOWN);
-        EXPECT_EQ(parsed.args[0].get_spelling_view(), "--definitely-not-a-real-clang-flag");
+        EXPECT_EQ(parsed.args[0].id, opt::clang::ID_UNKNOWN);
+        EXPECT_EQ(parsed.args[0].spelling, "--definitely-not-a-real-clang-flag");
     };
 
     {
@@ -124,24 +138,22 @@ TEST_CASE(parse_clang_cl_output_options_with_cl_visibility) {
     const auto argv = std::to_array<std::string>(
         {"clang-cl", "/c", "main.cc", "/Foobj/main.obj", "/Fe:bin/tool.exe"});
 
-    auto parsed =
-        parse_command(argv,
-                      kota::option::Visibility(opt::clang::DefaultVis | opt::clang::CLOption));
+    auto parsed = parse_command(argv, opt::clang::DefaultVis | opt::clang::CLOption);
 
     EXPECT_TRUE(parsed.errors.empty());
     ASSERT_EQ(parsed.args.size(), 4U);
 
-    EXPECT_EQ(parsed.args[0].option_id.id(), opt::clang::ID__SLASH_c);
+    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_c);
+    EXPECT_EQ(parsed.args[0].spelling, "/c");
 
-    EXPECT_EQ(parsed.args[1].option_id.id(), opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[1].get_spelling_view(), "main.cc");
+    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_INPUT);
+    EXPECT_EQ(parsed.args[1].spelling, "main.cc");
 
-    EXPECT_EQ(parsed.args[2].option_id.id(), opt::clang::ID__SLASH_Fo);
+    EXPECT_EQ(parsed.args[2].id, opt::clang::ID__SLASH_Fo);
     ASSERT_EQ(parsed.args[2].values.size(), 1U);
     EXPECT_EQ(parsed.args[2].values[0], "obj/main.obj");
 
-    EXPECT_EQ(parsed.args[3].option_id.id(), opt::clang::ID__SLASH_Fe_COLON);
-    EXPECT_EQ(parsed.args[3].unaliased_opt().id(), opt::clang::ID__SLASH_Fe);
+    EXPECT_EQ(parsed.args[3].id, opt::clang::ID__SLASH_Fe);
     ASSERT_EQ(parsed.args[3].values.size(), 1U);
     EXPECT_EQ(parsed.args[3].values[0], "bin/tool.exe");
 };
