@@ -1,11 +1,11 @@
-#include "opt/external/lld_elf.h"
+#include "option/lld_macho.h"
 
 #include <array>
 #include <span>
 
-#include "opt/external/tablegen.h"
+#include "option/tablegen.h"
 
-namespace catter::opt::lld_elf {
+namespace catter::opt::lld_macho {
 
 namespace kota_opt = kota::option;
 
@@ -15,16 +15,16 @@ using namespace catter::opt::external_detail;
 namespace llvm = catter::opt::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include <llvm-options-td/lld-MachO-Options.inc>
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include <llvm-options-td/lld-MachO-Options.inc>
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include <llvm-options-td/lld-MachO-Options.inc>
 #undef OPTION
     ;
 
@@ -34,7 +34,6 @@ constexpr std::span<const std::string_view> prefixes(unsigned offset) {
         case 1: return kota_opt::pfx_dash;
         case 3: return kota_opt::pfx_dash_double;
         case 6: return kota_opt::pfx_double;
-        case 8: return pfx_double_dash_first;
         default: return kota_opt::pfx_none;
     }
 }
@@ -44,8 +43,6 @@ static_assert(OptionPrefixesTable[1] == 1 && OptionPrefixesTable[2] == 1);
 static_assert(OptionPrefixesTable[3] == 2 && OptionPrefixesTable[4] == 1 &&
               OptionPrefixesTable[5] == 3);
 static_assert(OptionPrefixesTable[6] == 1 && OptionPrefixesTable[7] == 3);
-static_assert(OptionPrefixesTable[8] == 2 && OptionPrefixesTable[9] == 3 &&
-              OptionPrefixesTable[10] == 1);
 
 constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
@@ -76,7 +73,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
         .help_text = HELP,                                                                         \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include <llvm-options-td/lld-MachO-Options.inc>
 #undef OPTION
 };
 
@@ -92,4 +89,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::lld_elf
+}  // namespace catter::opt::lld_macho

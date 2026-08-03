@@ -6,14 +6,14 @@
 #include <kota/zest/zest.h>
 #include <kota/deco/option.h>
 
-#include "opt/external/lld_coff.h"
-#include "opt/external/lld_elf.h"
-#include "opt/external/lld_macho.h"
-#include "opt/external/lld_mingw.h"
-#include "opt/external/lld_wasm.h"
-#include "opt/external/llvm_dlltool.h"
-#include "opt/external/llvm_lib.h"
-#include "opt/external/nvcc.h"
+#include "option/lld_coff.h"
+#include "option/lld_elf.h"
+#include "option/lld_macho.h"
+#include "option/lld_mingw.h"
+#include "option/lld_wasm.h"
+#include "option/llvm_dlltool.h"
+#include "option/llvm_lib.h"
+#include "option/nvcc.h"
 
 namespace kota_opt = kota::option;
 using namespace catter;

@@ -1,11 +1,11 @@
-#include "opt/external/llvm_dlltool.h"
+#include "option/lld_mingw.h"
 
 #include <array>
 #include <span>
 
-#include "opt/external/tablegen.h"
+#include "option/tablegen.h"
 
-namespace catter::opt::llvm_dlltool {
+namespace catter::opt::lld_mingw {
 
 namespace kota_opt = kota::option;
 
@@ -15,16 +15,16 @@ using namespace catter::opt::external_detail;
 namespace llvm = catter::opt::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/llvm-dlltool-Options.inc>
+#include <llvm-options-td/lld-MinGW-Options.inc>
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/llvm-dlltool-Options.inc>
+#include <llvm-options-td/lld-MinGW-Options.inc>
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/llvm-dlltool-Options.inc>
+#include <llvm-options-td/lld-MinGW-Options.inc>
 #undef OPTION
     ;
 
@@ -33,6 +33,7 @@ constexpr std::span<const std::string_view> prefixes(unsigned offset) {
         case 0: return kota_opt::pfx_none;
         case 1: return kota_opt::pfx_dash;
         case 3: return kota_opt::pfx_double;
+        case 5: return pfx_double_dash_first;
         default: return kota_opt::pfx_none;
     }
 }
@@ -40,6 +41,8 @@ constexpr std::span<const std::string_view> prefixes(unsigned offset) {
 static_assert(OptionPrefixesTable[0] == 0);
 static_assert(OptionPrefixesTable[1] == 1 && OptionPrefixesTable[2] == 1);
 static_assert(OptionPrefixesTable[3] == 1 && OptionPrefixesTable[4] == 3);
+static_assert(OptionPrefixesTable[5] == 2 && OptionPrefixesTable[6] == 3 &&
+              OptionPrefixesTable[7] == 1);
 
 constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
@@ -70,7 +73,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
         .help_text = HELP,                                                                         \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/llvm-dlltool-Options.inc>
+#include <llvm-options-td/lld-MinGW-Options.inc>
 #undef OPTION
 };
 
@@ -86,4 +89,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::llvm_dlltool
+}  // namespace catter::opt::lld_mingw

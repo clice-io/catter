@@ -1,11 +1,11 @@
-#include "opt/external/lld_mingw.h"
+#include "option/lld_coff.h"
 
 #include <array>
 #include <span>
 
-#include "opt/external/tablegen.h"
+#include "option/tablegen.h"
 
-namespace catter::opt::lld_mingw {
+namespace catter::opt::lld_coff {
 
 namespace kota_opt = kota::option;
 
@@ -15,34 +15,37 @@ using namespace catter::opt::external_detail;
 namespace llvm = catter::opt::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/lld-MinGW-Options.inc>
+#include <llvm-options-td/lld-COFF-Options.inc>
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/lld-MinGW-Options.inc>
+#include <llvm-options-td/lld-COFF-Options.inc>
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/lld-MinGW-Options.inc>
+#include <llvm-options-td/lld-COFF-Options.inc>
 #undef OPTION
     ;
 
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
         case 0: return kota_opt::pfx_none;
-        case 1: return kota_opt::pfx_dash;
-        case 3: return kota_opt::pfx_double;
-        case 5: return pfx_double_dash_first;
+        case 1: return kota_opt::pfx_double;
+        case 3: return pfx_slash_dash_help;
+        case 8: return pfx_slash_dash_help_hidden;
         default: return kota_opt::pfx_none;
     }
 }
 
 static_assert(OptionPrefixesTable[0] == 0);
-static_assert(OptionPrefixesTable[1] == 1 && OptionPrefixesTable[2] == 1);
-static_assert(OptionPrefixesTable[3] == 1 && OptionPrefixesTable[4] == 3);
-static_assert(OptionPrefixesTable[5] == 2 && OptionPrefixesTable[6] == 3 &&
-              OptionPrefixesTable[7] == 1);
+static_assert(OptionPrefixesTable[1] == 1 && OptionPrefixesTable[2] == 3);
+static_assert(OptionPrefixesTable[3] == 4 && OptionPrefixesTable[4] == 13 &&
+              OptionPrefixesTable[5] == 1 && OptionPrefixesTable[6] == 15 &&
+              OptionPrefixesTable[7] == 6);
+static_assert(OptionPrefixesTable[8] == 4 && OptionPrefixesTable[9] == 18 &&
+              OptionPrefixesTable[10] == 9 && OptionPrefixesTable[11] == 15 &&
+              OptionPrefixesTable[12] == 6);
 
 constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
@@ -73,7 +76,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
         .help_text = HELP,                                                                         \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/lld-MinGW-Options.inc>
+#include <llvm-options-td/lld-COFF-Options.inc>
 #undef OPTION
 };
 
@@ -89,4 +92,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::lld_mingw
+}  // namespace catter::opt::lld_coff

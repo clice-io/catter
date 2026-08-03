@@ -13,15 +13,15 @@
 #include "type.h"
 #include "../apitool.h"
 #include "../qjs.h"
-#include "opt/external/clang.h"
-#include "opt/external/lld_coff.h"
-#include "opt/external/lld_elf.h"
-#include "opt/external/lld_macho.h"
-#include "opt/external/lld_mingw.h"
-#include "opt/external/lld_wasm.h"
-#include "opt/external/llvm_dlltool.h"
-#include "opt/external/llvm_lib.h"
-#include "opt/external/nvcc.h"
+#include "option/clang.h"
+#include "option/lld_coff.h"
+#include "option/lld_elf.h"
+#include "option/lld_macho.h"
+#include "option/lld_mingw.h"
+#include "option/lld_wasm.h"
+#include "option/llvm_dlltool.h"
+#include "option/llvm_lib.h"
+#include "option/nvcc.h"
 
 namespace {
 
@@ -89,7 +89,13 @@ js::OptionItem make_option_item([[maybe_unused]] const kota_opt::OptTable& table
 CTX_CAPI(option_get_info, (JSContext * ctx, std::string table_name, unsigned int id)->qjs::Object) {
     using namespace catter;
     auto& table = resolve_table(table_name);
+
+    if(id == 0 || id >= table.option_infos.size()) {
+        throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
+    }
+
     const auto& option = table.option(id);
+
     if(!option.has_value()) {
         throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
     }

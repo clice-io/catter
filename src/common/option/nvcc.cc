@@ -1,9 +1,9 @@
-#include "opt/external/nvcc.h"
+#include "option/nvcc.h"
 
 #include <array>
 #include <span>
 
-#include "opt/external/tablegen.h"
+#include "option/tablegen.h"
 
 namespace catter::opt::nvcc {
 

@@ -47,12 +47,7 @@ int main(int argc, char* argv[]) {
                          res.error().message);
             return 1;
         }
-        auto& options = res.value().options;
-        auto task = app::async_run(options);
-        kota::event_loop loop;
-        loop.schedule(task);
-        loop.run();
-        task.result();
+        kota::run(app::async_run(res->options));
     } catch(const qjs::JSException& ex) {
         std::println("Eval JavaScript file failed: \n{}", ex.what());
         return 1;
