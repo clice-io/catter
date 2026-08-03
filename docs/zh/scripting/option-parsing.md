@@ -62,7 +62,7 @@ const items = option.collect("clang", ["-std=c++20"]);
 if (Array.isArray(items)) {
   const info = option.info("clang", items[0]);
   io.println(info.prefixedKey); // "-std="
-  io.println(info.kind);       // OptionKindClass.JoinedClass
+  io.println(info.kind);       // OptionKindClass.Joined
   io.println(info.help);       // 来自 LLVM 选项表的帮助文本
 }
 ```
@@ -146,7 +146,7 @@ if (typeof clangArgs === "string") {
 io.println(clangArgs.join(" ")); // 两个表中都有效的选项
 ```
 
-该函数先用源表解析参数，将其拆分为逐选项的片段，然后用目标表重新解析每个片段。解析为 `UnknownClass` 或匹配排除 ID 的片段会被丢弃。
+该函数先用源表解析参数，将其拆分为逐选项的片段，然后用目标表重新解析每个片段。解析为 `Unknown` 或匹配排除 ID 的片段会被丢弃。
 
 ## OptionItem 结构
 
@@ -183,18 +183,18 @@ io.println(clangArgs.join(" ")); // 两个表中都有效的选项
 
 | 类型 | 描述 |
 |------|------|
-| `FlagClass` | 无值（如 `-c`、`-v`） |
-| `JoinedClass` | 值直接连接在键后面（如 `-std=c++20`） |
-| `SeparateClass` | 值在下一个参数中（如 `-o main.o`） |
-| `JoinedOrSeparateClass` | 连接或分离均可（如 `-Ipath` 或 `-I path`） |
-| `CommaJoinedClass` | 逗号分隔的值连接在键后面 |
-| `RemainingArgsClass` | 消费所有剩余参数 |
-| `RemainingArgsJoinedClass` | 键 + 剩余参数 |
-| `MultiArgClass` | 固定数量的分离值参数 |
-| `ValuesClass` | 多个分离的值 |
-| `InputClass` | 位置输入（源文件） |
-| `UnknownClass` | 未识别的选项 |
-| `GroupClass` | 选项分组（非实际选项） |
+| `Flag` | 无值（如 `-c`、`-v`） |
+| `Joined` | 值直接连接在键后面（如 `-std=c++20`） |
+| `Separate` | 值在下一个参数中（如 `-o main.o`） |
+| `JoinedOrSeparate` | 连接或分离均可（如 `-Ipath` 或 `-I path`） |
+| `CommaJoined` | 逗号分隔的值连接在键后面 |
+| `RemainingArgs` | 消费所有剩余参数 |
+| `RemainingArgsJoined` | 键 + 剩余参数 |
+| `MultiArg` | 固定数量的分离值参数 |
+| `Values` | 多个分离的值 |
+| `Input` | 位置输入（源文件） |
+| `Unknown` | 未识别的选项 |
+| `Group` | 选项分组（非实际选项） |
 
 ## 可见性过滤
 
@@ -212,4 +212,4 @@ const clItems = option.collect("clang", args, ClangVisibility.CLOption);
 
 每个选项表导出自己的可见性常量（如 `ClangVisibility.DefaultVis`、`ClangVisibility.CLOption`）。
 
-被可见性掩码排除的选项不会被解析为对应选项，而是作为 `UnknownClass` 产出（其独立值会作为输入项出现），与 clang 把不可见选项当作 unknown 参数的行为一致。
+被可见性掩码排除的选项不会被解析为对应选项，而是作为 `Unknown` 产出（其独立值会作为输入项出现），与 clang 把不可见选项当作 unknown 参数的行为一致。

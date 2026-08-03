@@ -1,33 +1,33 @@
 import { cmd, debug, io, option } from "catter";
 
 const OptionKindClass: {
-  GroupClass: number;
-  InputClass: number;
-  UnknownClass: number;
-  FlagClass: number;
-  JoinedClass: number;
-  ValuesClass: number;
-  SeparateClass: number;
-  RemainingArgsClass: number;
-  RemainingArgsJoinedClass: number;
-  CommaJoinedClass: number;
-  MultiArgClass: number;
-  JoinedOrSeparateClass: number;
-  JoinedAndSeparateClass: number;
+  Group: number;
+  Input: number;
+  Unknown: number;
+  Flag: number;
+  Joined: number;
+  Values: number;
+  Separate: number;
+  RemainingArgs: number;
+  RemainingArgsJoined: number;
+  CommaJoined: number;
+  MultiArg: number;
+  JoinedOrSeparate: number;
+  JoinedAndSeparate: number;
 } = {
-  GroupClass: 0,
-  InputClass: 1,
-  UnknownClass: 2,
-  FlagClass: 3,
-  JoinedClass: 4,
-  ValuesClass: 5,
-  SeparateClass: 6,
-  CommaJoinedClass: 7,
-  MultiArgClass: 8,
-  JoinedOrSeparateClass: 9,
-  JoinedAndSeparateClass: 10,
-  RemainingArgsClass: 11,
-  RemainingArgsJoinedClass: 12,
+  Group: 0,
+  Input: 1,
+  Unknown: 2,
+  Flag: 3,
+  Joined: 4,
+  Values: 5,
+  Separate: 6,
+  CommaJoined: 7,
+  MultiArg: 8,
+  JoinedOrSeparate: 9,
+  JoinedAndSeparate: 10,
+  RemainingArgs: 11,
+  RemainingArgsJoined: 12,
 };
 
 function expectEq<T>(actual: T, expected: T, label: string) {
@@ -314,14 +314,14 @@ expectEq(nvccParsed[4].key, "kernel.cu", "nvcc input key");
 const nvccOutputInfo = infoById("nvcc", option.NvccID.ID_output_file);
 expectEq(
   nvccOutputInfo.kind,
-  OptionKindClass.SeparateClass,
+  OptionKindClass.Separate,
   "nvcc output info kind",
 );
 expectEq(nvccOutputInfo.prefixedKey, "--output-file", "nvcc output info key");
 expectEq(nvccOutputInfo.meta_var, "<file>", "nvcc output meta var");
 
 const nvccHelpInfo = infoById("nvcc", option.NvccID.ID_help);
-expectEq(nvccHelpInfo.kind, OptionKindClass.FlagClass, "nvcc help info kind");
+expectEq(nvccHelpInfo.kind, OptionKindClass.Flag, "nvcc help info kind");
 expectEq(nvccHelpInfo.prefixedKey, "--help", "nvcc help key");
 
 const nvccErrors = parseErrorsFor("nvcc", ["-o"], "nvcc missing value");
@@ -348,13 +348,13 @@ debug.assertThrow(
 );
 expectEq(
   includeInfo.kind,
-  OptionKindClass.JoinedOrSeparateClass,
+  OptionKindClass.JoinedOrSeparate,
   "include info kind",
 );
 
 const inputInfo = option.info("clang", parsed[3]);
 expectEq(inputInfo.prefixedKey, "<input>", "input prefixed key");
-expectEq(inputInfo.kind, OptionKindClass.InputClass, "input info kind");
+expectEq(inputInfo.kind, OptionKindClass.Input, "input info kind");
 
 debug.assertThrow(
   parsed[0].id === option.ClangID.ID_Wall &&
@@ -391,7 +391,7 @@ expectEq(
   "stringify unknown",
 );
 const unknownInfo = option.info("clang", unknownParsed[0]);
-expectEq(unknownInfo.kind, OptionKindClass.UnknownClass, "unknown info kind");
+expectEq(unknownInfo.kind, OptionKindClass.Unknown, "unknown info kind");
 
 const livenessParsed = parseItems(
   ["-fextend-variable-liveness"],
@@ -426,11 +426,7 @@ const sanitizeParsed = parseItems(
 );
 expectEq(sanitizeParsed.length, 1, "sanitize parsed length");
 const sanitizeInfo = option.info("clang", sanitizeParsed[0]);
-expectEq(
-  sanitizeInfo.kind,
-  OptionKindClass.CommaJoinedClass,
-  "sanitize info kind",
-);
+expectEq(sanitizeInfo.kind, OptionKindClass.CommaJoined, "sanitize info kind");
 expectEq(sanitizeParsed[0].values.length, 2, "sanitize values length");
 expectEq(sanitizeParsed[0].values[0], "address", "sanitize first value");
 expectEq(sanitizeParsed[0].values[1], "undefined", "sanitize second value");
@@ -448,7 +444,7 @@ expectEq(xopenmpParsed.length, 1, "xopenmp parsed length");
 const xopenmpInfo = option.info("clang", xopenmpParsed[0]);
 expectEq(
   xopenmpInfo.kind,
-  OptionKindClass.JoinedAndSeparateClass,
+  OptionKindClass.JoinedAndSeparate,
   "xopenmp info kind",
 );
 expectEq(xopenmpParsed[0].values.length, 2, "xopenmp values length");
@@ -467,11 +463,7 @@ expectEq(
 const linkParsed = parseItems(["-ldl"], "render joined parse");
 expectEq(linkParsed.length, 1, "link parsed length");
 const linkInfo = option.info("clang", linkParsed[0]);
-expectEq(
-  linkInfo.kind,
-  OptionKindClass.JoinedOrSeparateClass,
-  "link info kind",
-);
+expectEq(linkInfo.kind, OptionKindClass.JoinedOrSeparate, "link info kind");
 expectEq(linkParsed[0].values.length, 1, "link values length");
 expectEq(linkParsed[0].values[0], "dl", "link value");
 expectEq(option.stringify("clang", linkParsed[0]), "-ldl", "stringify link");
@@ -482,7 +474,7 @@ const segaddrParsed = parseItems(
 );
 expectEq(segaddrParsed.length, 1, "segaddr parsed length");
 const segaddrInfo = option.info("clang", segaddrParsed[0]);
-expectEq(segaddrInfo.kind, OptionKindClass.MultiArgClass, "segaddr info kind");
+expectEq(segaddrInfo.kind, OptionKindClass.MultiArg, "segaddr info kind");
 expectEq(segaddrParsed[0].values.length, 2, "segaddr values length");
 expectEq(segaddrParsed[0].values[0], "__TEXT", "segaddr first value");
 expectEq(segaddrParsed[0].values[1], "0x1000", "segaddr second value");

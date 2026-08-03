@@ -69,24 +69,24 @@ function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
   }
 
   switch (info.kind) {
-    case OptionKindClass.GroupClass:
-    case OptionKindClass.InputClass:
-    case OptionKindClass.UnknownClass:
+    case OptionKindClass.Group:
+    case OptionKindClass.Input:
+    case OptionKindClass.Unknown:
       return [item.key, ...item.values];
-    case OptionKindClass.JoinedClass:
-    case OptionKindClass.JoinedAndSeparateClass:
+    case OptionKindClass.Joined:
+    case OptionKindClass.JoinedAndSeparate:
       return joinedTokens(info.prefixedKey, item.values);
-    case OptionKindClass.CommaJoinedClass:
+    case OptionKindClass.CommaJoined:
       return item.values.length === 0
         ? [info.prefixedKey]
         : [info.prefixedKey + item.values.join(",")];
-    case OptionKindClass.FlagClass:
-    case OptionKindClass.ValuesClass:
-    case OptionKindClass.SeparateClass:
-    case OptionKindClass.MultiArgClass:
-    case OptionKindClass.JoinedOrSeparateClass:
-    case OptionKindClass.RemainingArgsClass:
-    case OptionKindClass.RemainingArgsJoinedClass:
+    case OptionKindClass.Flag:
+    case OptionKindClass.Values:
+    case OptionKindClass.Separate:
+    case OptionKindClass.MultiArg:
+    case OptionKindClass.JoinedOrSeparate:
+    case OptionKindClass.RemainingArgs:
+    case OptionKindClass.RemainingArgsJoined:
       return [info.prefixedKey, ...item.values];
     default:
       return [item.key, ...item.values];
@@ -288,12 +288,12 @@ export function info(table: OptionTable, item: OptionItem) {
  * The input is first collected with `from`, then split back into the original
  * argument slices that produced each parsed item. Each slice is parsed again
  * with the current second-stage parser, and only slices whose parsed items are
- * not listed in `excludeID` and are not `UnknownClass` in `to` are preserved.
+ * not listed in `excludeID` and are not `Unknown` in `to` are preserved.
  *
  * @param from - The option table used to collect and split the original
  * argument array into per-option spans.
  * @param to - The option table used to inspect second-stage parsed items with
- * `info()`, for example to reject `UnknownClass` results.
+ * `info()`, for example to reject `Unknown` results.
  * @param args - Raw command-line arguments to inspect, without the
  * executable name.
  * @param excludeID - Option IDs that should cause a second-stage parsed span
@@ -325,7 +325,7 @@ export function table2table(
         toCheck.every(
           (val) =>
             !excludeID.includes(val.id) &&
-            info(to, val).kind != OptionKindClass.UnknownClass,
+            info(to, val).kind != OptionKindClass.Unknown,
         )
       );
     })
