@@ -374,26 +374,10 @@ export type OptionTable =
   | "llvm-dlltool"
   | "llvm-lib";
 
-export enum OptionKindClass {
-  GroupClass = 0,
-  InputClass,
-  UnknownClass,
-  FlagClass,
-  JoinedClass,
-  ValuesClass,
-  SeparateClass,
-  RemainingArgsClass,
-  RemainingArgsJoinedClass,
-  CommaJoinedClass,
-  MultiArgClass,
-  JoinedOrSeparateClass,
-  JoinedAndSeparateClass,
-}
-
 export type OptionInfo = {
   id: number;
   prefixedKey: string;
-  kind: OptionKindClass;
+  kind: number;
   group: number;
   alias: number;
   aliasArgs: string[];

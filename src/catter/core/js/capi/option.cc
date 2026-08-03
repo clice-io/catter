@@ -90,7 +90,7 @@ CTX_CAPI(option_get_info, (JSContext * ctx, std::string table_name, unsigned int
     using namespace catter;
     auto& table = resolve_table(table_name);
 
-    if(id == 0 || id >= table.option_infos.size()) {
+    if(id == 0 || id > table.option_infos.size()) {
         throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
     }
 
