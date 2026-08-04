@@ -46,8 +46,3 @@ export {
   cli,
   neverthrow,
 };
-
-export * from "catter/service";
-export { OptionKindClass } from "catter/option";
-export type { OptionInfo, OptionItem, OptionTable } from "catter/option";
-export type * from "catter/cli";

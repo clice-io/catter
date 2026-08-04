@@ -32,8 +32,8 @@
   ],
   "scripts": {
     "clean": "xmake l os.tryrm ./output ./build",
-    "build:runtime": "rollup -c ./rollup.config.js",
-    "build:types": "node ./scripts/build-types.mjs",
+    "build:runtime": "xmake l os.tryrm ./output/lib && rollup -c ./rollup.config.js",
+    "build:types": "xmake l os.tryrm ./output/types && node ./scripts/build-types.mjs",
     "build:tests": "xmake l os.tryrm ./output/test && tsc --project tsconfig.test.json",
     "build": "run-p build:runtime build:types",
     "test": "run-s build:types build:tests",
@@ -43,7 +43,7 @@
   "keywords": [],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.55.0",
+    "@microsoft/api-extractor": "^7.58.12",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.3.0",
