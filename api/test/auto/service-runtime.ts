@@ -1,10 +1,10 @@
-import {
-  debug,
-  service,
-  type CatterConfig,
-  type CatterRuntime,
-  type CommandCaptureResult,
-} from "catter";
+import * as debug from "catter/debug";
+import * as service from "catter/service";
+import type {
+  CatterConfig,
+  CatterRuntime,
+  CommandCaptureResult,
+} from "catter/service";
 
 const runtimeInfo: CatterRuntime = {
   supportActions: ["skip", "drop", "abort", "modify"],

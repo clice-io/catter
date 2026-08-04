@@ -215,7 +215,7 @@ export enum LldCoffID {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("lld-coff", option.LldCoffID.ID_UNKNOWN);
@@ -233,7 +233,7 @@ export enum LldCoffFlag {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("lld-coff", option.LldCoffID.ID_UNKNOWN);

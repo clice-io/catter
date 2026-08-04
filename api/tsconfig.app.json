@@ -13,6 +13,13 @@
             "ES2020",
         ],
         "paths": {
+            "catter": [
+                "./src/index.ts"
+            ],
+            "catter/*": [
+                "./src/*/index.ts",
+                "./src/*.ts"
+            ],
             "catter-c": [
                 "./catter-c/capi.d.ts"
             ],

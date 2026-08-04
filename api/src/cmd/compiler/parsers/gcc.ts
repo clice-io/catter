@@ -3,7 +3,7 @@ import {
   buildClangGnuDriverModel,
   collectClangDriverOptions,
 } from "./clang-driver.js";
-import { ClangVisibility } from "../../../option/clang.js";
+import { ClangVisibility } from "catter/option";
 import type { CompilerParseResult } from "../types.js";
 
 /**

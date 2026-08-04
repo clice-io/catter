@@ -1,5 +1,4 @@
 import * as capi from "catter-c";
-import { io } from "./index.js";
 
 /**
  * Prints content to standard output without a trailing newline.

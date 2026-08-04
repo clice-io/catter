@@ -1,4 +1,4 @@
-import * as fs from "../../../fs.js";
+import * as fs from "catter/fs";
 import {
   CompilerArtifact,
   CompilerDialect,

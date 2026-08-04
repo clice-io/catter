@@ -257,7 +257,8 @@ TEST_CASE(run_http_client_js_file_through_async_loop) {
     auto f = [&]() {
         LocalHttpServer server{2};
         auto source = std::string{R"JS(
-            import { debug, http } from "catter";
+            import * as debug from "catter/debug";
+            import * as http from "catter/http";
 
             const base = "__BASE_URL__";
             const client = new http.Client();

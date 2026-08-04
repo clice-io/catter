@@ -1,10 +1,10 @@
-import * as data from "../data/index.js";
-import * as fs from "../fs.js";
-import * as io from "../io.js";
-import * as service from "../service.js";
-import * as cli from "../cli/index.js";
-import * as view from "../view/index.js";
-import { analyze as analyzeCmd } from "../cmd/index.js";
+import * as data from "catter/data";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
+import * as service from "catter/service";
+import * as cli from "catter/cli";
+import * as view from "catter/view";
+import { analyze as analyzeCmd } from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -43,7 +43,8 @@ const targetTreeCLI = cli.command({
  *
  * @example
  * ```ts
- * import { scripts, service } from "catter";
+ * import * as scripts from "catter/scripts";
+import * as service from "catter/service";
  *
  * service.register(scripts.targetTree());
  * ```

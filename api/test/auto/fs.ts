@@ -1,4 +1,6 @@
-import { debug, fs, io } from "catter";
+import * as debug from "catter/debug";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
 
 // use pwd/res/fs-test-env as the test environment
 const testEnvPath = fs.path.joinAll(".", "res", "fs-test-env");

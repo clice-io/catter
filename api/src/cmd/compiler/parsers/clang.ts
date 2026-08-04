@@ -1,4 +1,4 @@
-import { ClangID, ClangVisibility } from "../../../option/clang.js";
+import { ClangID, ClangVisibility } from "catter/option";
 import {
   buildClangClDriverModel,
   buildClangGnuDriverModel,

@@ -1,23 +1,23 @@
-import * as data from "../data/index.js";
-import * as service from "../service.js";
+import * as data from "catter/data";
+import * as service from "catter/service";
 
-import * as cli from "../cli/index.js";
-import * as io from "../io.js";
-import * as fs from "../fs.js";
+import * as cli from "catter/cli";
+import * as io from "catter/io";
+import * as fs from "catter/fs";
 import {
   CompilerAnalyzer,
   CompilerResolver,
   type CompilerAnalysis,
   type CompilerAnalysisError,
   type CompilerResolveDebug,
-} from "../cmd/index.js";
+} from "catter/cmd";
 import {
   CDBManager,
   type CDBCommand,
   type CDBEntry,
   type CDBItem,
   cdbItemsOf,
-} from "../cdb/index.js";
+} from "catter/cdb";
 
 type Producer = CDBCommand;
 
@@ -237,7 +237,8 @@ function compilerAnalysisErrorLog(
  *
  * @example
  * ```ts
- * import { scripts, service } from "catter";
+ * import * as scripts from "catter/scripts";
+import * as service from "catter/service";
  *
  * service.register(scripts.cdb("build/compile_commands.json"));
  * ```

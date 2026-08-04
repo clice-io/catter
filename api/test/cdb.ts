@@ -1,13 +1,13 @@
-import {
-  cdb,
-  debug,
-  fs,
-  scripts,
-  service,
-  type CatterConfig,
-  type CatterRuntime,
-  type CommandCaptureResult,
-} from "catter";
+import * as cdb from "catter/cdb";
+import * as debug from "catter/debug";
+import * as fs from "catter/fs";
+import * as scripts from "catter/scripts";
+import * as service from "catter/service";
+import type {
+  CatterConfig,
+  CatterRuntime,
+  CommandCaptureResult,
+} from "catter/service";
 
 const runtime: CatterRuntime = {
   supportActions: ["skip", "drop", "abort", "modify"],

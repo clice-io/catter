@@ -1,4 +1,5 @@
-import { cli, debug } from "catter";
+import * as cli from "catter/cli";
+import * as debug from "catter/debug";
 
 const commandOptions = [
   cli.flag("verbose", {

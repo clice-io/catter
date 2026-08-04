@@ -143,9 +143,12 @@ target("catter-js-types")
         js_target = "build:types",
         js_inputs = {
             "api/src/**.ts",
+            "api/modules.json",
             "api/catter-c/**.d.ts",
             "api/package.json",
             "api/tsconfig.app.json",
+            "api/tsconfig.types.json",
+            "api/scripts/build-types.mjs",
             "api/api-extractor.json",
             "tsconfig.base.json"
         },
@@ -161,6 +164,7 @@ target("catter-js-tests")
         js_inputs = {
             "api/test/**.ts",
             "api/output/types/index.d.ts",
+            "api/output/types/catter/**.d.ts",
             "api/package.json",
             "api/tsconfig.test.json",
             "tsconfig.base.json"
@@ -175,6 +179,7 @@ target("catter-js-runtime")
         js_target = "build:runtime",
         js_inputs = {
             "api/src/**.ts",
+            "api/modules.json",
             "api/catter-c/**.d.ts",
             "api/package.json",
             "api/rollup.config.js",
@@ -182,7 +187,8 @@ target("catter-js-runtime")
             "api/tsconfig.app.json",
             "tsconfig.base.json"
         },
-        js_output = "api/output/lib/lib.js"
+        js_output = "api/output/lib/jslib.bin",
+        js_manifest = "api/output/lib/manifest.json"
     })
 
 target("catter-core")
@@ -389,10 +395,12 @@ rule("build.js")
         import("lib.detect.find_tool")
         import("core.project.depend")
         import("utils.progress")
+        import("core.base.json")
 
         local js_target = target:extraconf("rules", "build.js", "js_target")
         local js_inputs = target:extraconf("rules", "build.js", "js_inputs")
         local js_output = target:extraconf("rules", "build.js", "js_output")
+        local js_manifest = target:extraconf("rules", "build.js", "js_manifest")
 
         local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
         local stampfile = target:autogenfile(path.join("rules", "build.js", target:name() .. ".stamp"))
@@ -415,11 +423,51 @@ rule("build.js")
             os.mkdir(path.directory(objectfile))
         end
 
+        local function read_all(filepath)
+            local f = assert(io.open(filepath, "rb"), "cannot open " .. filepath)
+            local data = f:read("*a")
+            f:close()
+            return data
+        end
+
+        -- Pack every module file from manifest.json into one binary blob:
+        --   u32 count, then for each module:
+        --   u32 name_len, name, u32 content_len, content, NUL.
+        -- The trailing NUL keeps each content view NUL-terminated in memory,
+        -- which QuickJS's tokenizer relies on to detect end of input.
+        -- This is the (mod_name, mod_content) array consumed by EsmModuleLoader.
+        local function pack_modules(manifest_path, output_path)
+            local manifest = json.decode(read_all(manifest_path))
+            local modules = manifest.modules
+            local names = {}
+            for name, _ in pairs(modules) do
+                table.insert(names, name)
+            end
+            table.sort(names)
+
+            local out = assert(io.open(output_path, "wb"), "cannot open " .. output_path)
+            out:write(string.pack("<I4", #names))
+            for _, name in ipairs(names) do
+                local content = read_all(path.join(path.directory(manifest_path), modules[name]))
+                out:write(string.pack("<I4", #name))
+                out:write(name)
+                out:write(string.pack("<I4", #content))
+                out:write(content)
+                out:write(string.char(0))
+            end
+            out:close()
+        end
+
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Building js target %s", js_target)
             os.vrunv(pnpm.program, {"--dir", "api", "run", js_target})
 
             if objectfile then
+                if js_manifest then
+                    progress.show(opt.progress or 0, "${color.build.object}packing.jslib %s", js_output)
+                    pack_modules(js_manifest, js_output)
+                end
+
                 local format
                 if target:is_plat("windows", "mingw", "msys", "cygwin") then
                     format = "coff"

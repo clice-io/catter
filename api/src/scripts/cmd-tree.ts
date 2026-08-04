@@ -1,8 +1,8 @@
-import * as cli from "../cli/index.js";
-import * as data from "../data/index.js";
-import * as io from "../io.js";
-import * as service from "../service.js";
-import * as view from "../view/index.js";
+import * as cli from "catter/cli";
+import * as data from "catter/data";
+import * as io from "catter/io";
+import * as service from "catter/service";
+import * as view from "catter/view";
 
 const cmdTreeCLI = cli.command({
   name: "cmd-tree",
@@ -95,7 +95,8 @@ function formatCommand(
  *
  * @example
  * ```ts
- * import { scripts, service } from "catter";
+ * import * as scripts from "catter/scripts";
+import * as service from "catter/service";
  *
  * service.register(scripts.cmdTree());
  * ```

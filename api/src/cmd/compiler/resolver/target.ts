@@ -1,4 +1,4 @@
-import * as os from "../../../os.js";
+import * as os from "catter/os";
 import { CompilerTargetResolutionError } from "../errors.js";
 import {
   CompilerArtifactModel,

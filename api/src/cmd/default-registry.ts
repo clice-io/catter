@@ -4,7 +4,7 @@ import type {
   AnalyzedData,
   IAnalyzer,
 } from "./model.js";
-import type { Result } from "../neverthrow/index.js";
+import type { Result } from "catter/neverthrow";
 import { ArchiverAnalyzer } from "./archiver-cmd.js";
 import { CompilerAnalyzer } from "./compiler-cmd.js";
 import { Registry } from "./registry.js";

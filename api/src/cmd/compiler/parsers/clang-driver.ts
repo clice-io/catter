@@ -1,6 +1,6 @@
-import * as option from "../../../option/index.js";
-import { ClangID, ClangVisibility } from "../../../option/clang.js";
-import { type OptionInfo, type OptionItem } from "../../../option/types.js";
+import * as option from "catter/option";
+import { ClangID, ClangVisibility } from "catter/option";
+import { type OptionInfo, type OptionItem } from "catter/option";
 import type {
   CompilerAction,
   CompilerDialect,

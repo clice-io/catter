@@ -1,4 +1,4 @@
-import { fromThrowable, type Result } from "../../neverthrow/index.js";
+import { fromThrowable, type Result } from "catter/neverthrow";
 import { Analysis, Analyzer } from "../model.js";
 import type { AnalyzedData } from "../model.js";
 import { CompilerAnalysisError, toCompilerAnalysisError } from "./errors.js";

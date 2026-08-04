@@ -8,7 +8,7 @@ import type {
   CompilerTargetFact,
 } from "./types.js";
 
-import { platform } from "../../os.js";
+import { platform } from "catter/os";
 
 const VERSION_PATTERN = String.raw`(?:[-_]?\d+(?:[._-][0-9a-zA-Z]+)*)?`;
 const COMPILER_PATTERN_FLAGS = platform() === "windows" ? "i" : "";

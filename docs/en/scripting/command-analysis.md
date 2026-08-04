@@ -7,7 +7,9 @@ The `cmd` module provides structured analysis of compiler and archiver command l
 Analyzes compiler command lines (GCC, Clang) to extract structured information.
 
 ```js
-import { cmd, io, service } from "catter";
+import * as cmd from "catter/cmd";
+import * as io from "catter/io";
+import * as service from "catter/service";
 
 service.onCommand((ctx) => {
   if (!ctx.capture.success) return;
@@ -102,7 +104,7 @@ For compile commands, edges pair each object file with its own source file. For 
 Analyzes archive commands (`ar`, `llvm-ar`, `gcc-ar`).
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 const argv = ["llvm-ar", "rcs", "libfoo.a", "foo.o", "bar.o"];
 const analysis = cmd.ArchiverAnalysis.analyze(argv);
@@ -145,7 +147,7 @@ Analyzers are organized in a `Registry`. The default registry includes `Compiler
 ### Using the Default Registry
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 // Analyze with all built-in analyzers
 const analysis = cmd.analyze(["clang", "-c", "main.c"]);
@@ -157,7 +159,7 @@ const canHandle = cmd.canHandle(["clang", "-c", "main.c"]);
 ### Custom Registry
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 const registry = new cmd.Registry();
 registry.register(cmd.CompilerAnalysis);
@@ -171,7 +173,7 @@ const analysis = registry.analyze(["gcc", "-c", "main.c"]);
 Implement the `Analyzer` interface with `key`, `supports()`, and `analyze()`:
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 class MyToolAnalysis extends cmd.Analysis {
   static key = "my-tool";

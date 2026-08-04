@@ -1,4 +1,6 @@
-import { debug, io, os } from "catter";
+import * as debug from "catter/debug";
+import * as io from "catter/io";
+import * as os from "catter/os";
 
 debug.assertThrow(
   os.platform() == "linux" ||

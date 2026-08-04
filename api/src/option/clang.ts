@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  *
  * const parsed = option.collect("clang", ["input.file"]);
  * if (Array.isArray(parsed) && parsed[0].id === option.ClangID.ID_INPUT) {
@@ -3539,7 +3539,7 @@ export enum ClangID {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);
@@ -3567,7 +3567,7 @@ export enum ClangFlag {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);
@@ -3592,7 +3592,7 @@ export enum ClangVisibility {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);

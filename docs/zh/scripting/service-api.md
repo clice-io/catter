@@ -7,7 +7,7 @@ Service API 是 catter 脚本系统的核心。它允许你注册回调函数来
 注册一个包含一个或多个回调的服务对象：
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 service.register({
   onStart(config) { /* ... */ },
@@ -199,7 +199,7 @@ service.register({
 `service` 模块还提供了 `pipeline()` 和 `parallel()` 用于组合服务：
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 // 顺序管道 -- 服务按顺序执行
 const combined = service.pipeline(serviceA, serviceB);
@@ -217,7 +217,7 @@ service.register(combined);
 使用 `service.create()` 构造带类型上下文回调的服务对象：
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 const myService = service.create({
   onStart(config) { return config; },

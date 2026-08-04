@@ -1,4 +1,4 @@
-import * as option from "../option/index.js";
+import * as option from "catter/option";
 
 /**
  * Filters an `nvcc` argument list down to the segments that are not valid

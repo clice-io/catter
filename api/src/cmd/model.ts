@@ -5,7 +5,7 @@ import type {
   ArchiverAnalyzer,
 } from "./archiver-cmd.js";
 import type { CompilerAnalysisError } from "./compiler-cmd.js";
-import type { Result } from "../neverthrow/index.js";
+import type { Result } from "catter/neverthrow";
 
 /**
  * Describes one concrete dependency edge produced by a command.

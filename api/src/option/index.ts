@@ -1,7 +1,6 @@
 import { option_get_info, option_parse } from "catter-c";
 import { OptionKindClass } from "./types.js";
 import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
-import { io } from "../index.js";
 
 /**
  * Helpers for working with generated compiler option tables.
@@ -12,7 +11,7 @@ import { io } from "../index.js";
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  *
  * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
  * ```
@@ -106,7 +105,7 @@ function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  *
  * const parsed = option.collect("nvcc", ["-I=include"]);
  * if (Array.isArray(parsed)) {
@@ -128,7 +127,7 @@ export function stringify(table: OptionTable, item: OptionItem): string {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  *
  * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
  * if (!Array.isArray(parsed)) {
@@ -168,7 +167,7 @@ export function collect(
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  *
  * const rewritten = option.replace("clang", ["-Iold", "main.cc"], (parseRes) => {
  *   if (typeof parseRes === "string") {

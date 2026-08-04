@@ -13,17 +13,20 @@ std::string load_script_content(const std::string& script_path) {
     const static std::unordered_map<std::string_view, std::string_view> internal_scripts = {
         {"script::cdb",
          R"(
-    import { scripts, service } from "catter";
+    import * as scripts from "catter/scripts";
+    import * as service from "catter/service";
     service.register(scripts.cdb());
     )"},
         {"script::cmd-tree",
          R"(
-    import { scripts, service } from "catter";
+    import * as scripts from "catter/scripts";
+    import * as service from "catter/service";
     service.register(scripts.cmdTree());
     )"},
         {"script::target-tree",
          R"(
-    import { scripts, service } from "catter";
+    import * as scripts from "catter/scripts";
+    import * as service from "catter/service";
     service.register(scripts.targetTree());
     )"}
     };

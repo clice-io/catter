@@ -395,7 +395,7 @@ export enum NvccID {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("nvcc", option.NvccID.ID_UNKNOWN);
@@ -413,7 +413,7 @@ export enum NvccFlag {
  *
  * @example
  * ```typescript
- * import { option } from "catter";
+ * import * as option from "catter/option";
  * import { option_get_info } from "catter-c";
  *
  * const info = option_get_info("nvcc", option.NvccID.ID_UNKNOWN);
