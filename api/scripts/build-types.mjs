@@ -74,6 +74,7 @@ execFileSync(process.execPath, [tscBin, "--project", "tsconfig.app.json"], {
 //    aggregate keeps re-exporting the very same `catter/<mod>` modules that
 //    subpath consumers resolve to. Bundling the namespaces into a separate
 //    declaration would break type identity for classes with private members.
+fs.mkdirSync(path.join(root, "output", "types"), { recursive: true });
 fs.copyFileSync(
   path.join(root, dtsPathFor(modules.catter)),
   path.join(root, "output", "types", "index.d.ts"),
