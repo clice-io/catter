@@ -55,7 +55,7 @@ TEST_SUITE(esm_loader_tests) {
 TEST_CASE(path_resolution_uses_parent_without_extension_inference) {
     Fixture fixture;
     fixture.write(fixture.root / "nested" / "dep.js", "export const value = 42;");
-    catter::js::EsmModuleLoader loader{fixture.root};
+    catter::js::EsmModuleLoader loader{};
 
     auto resolved =
         loader.normalizer((fixture.root / "main.js").string().c_str(), "./nested/dep.js");
@@ -69,7 +69,7 @@ TEST_CASE(path_resolution_uses_parent_without_extension_inference) {
 
 TEST_CASE(path_resolution_rejects_directories_and_non_path_specifiers) {
     Fixture fixture;
-    catter::js::EsmModuleLoader loader{fixture.root};
+    catter::js::EsmModuleLoader loader{};
 
     EXPECT_TRUE(throws_with_message(
         [&]() { (void)loader.normalizer((fixture.root / "main.js").string().c_str(), "./nested"); },
@@ -82,7 +82,7 @@ TEST_CASE(path_resolution_rejects_directories_and_non_path_specifiers) {
 TEST_CASE(loader_reads_canonical_file_name) {
     Fixture fixture;
     fixture.write(fixture.root / "dep.js", "export const value = 42;");
-    catter::js::EsmModuleLoader loader{fixture.root};
+    catter::js::EsmModuleLoader loader{};
 
     auto rt = qjs::Runtime::create();
     auto ctx = rt.context();
@@ -216,7 +216,7 @@ TEST_CASE(api_source_style_project_dependency_graph_is_resolved_once) {
         loop.run();
         task.result();
 
-        catter::js::EsmModuleLoader path_loader{fixture.root};
+        catter::js::EsmModuleLoader path_loader{};
         const auto from_data_index =
             path_loader.normalizer((fixture.root / "data" / "index.js").string().c_str(),
                                    "./flat-tree.js");

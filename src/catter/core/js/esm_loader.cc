@@ -14,14 +14,6 @@ bool is_path_specifier(std::string_view specifier) {
            specifier == ".." || std::filesystem::path(specifier).is_absolute();
 }
 
-std::filesystem::path absolute_normalized(std::filesystem::path path,
-                                          const std::filesystem::path& working_directory) {
-    if(path.is_relative()) {
-        path = working_directory / std::move(path);
-    }
-    return std::filesystem::absolute(path).lexically_normal();
-}
-
 }  // namespace
 
 extern "C" {
@@ -45,9 +37,6 @@ std::string_view load_builtin_module(std::string_view module_name) {
     return {};
 }
 
-EsmModuleLoader::EsmModuleLoader(std::filesystem::path working_directory) :
-    working_directory(std::filesystem::absolute(std::move(working_directory)).lexically_normal()) {}
-
 std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_name,
                                                     std::string_view module_name) const {
 
@@ -56,15 +45,29 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
                              module_name);
     }
 
-    std::filesystem::path base = this->working_directory;
-
     auto referrer = std::filesystem::path(referrer_name);
-    if(referrer.is_relative()) {
-        referrer = this->working_directory / std::move(referrer);
-    }
-    base = referrer.parent_path();
 
-    auto resolved = absolute_normalized(std::filesystem::path(module_name), base);
+    if(referrer.is_relative()) {
+        throw qjs::Exception(
+            "Referrer path '{}' is not absolute; only absolute paths are supported",
+            referrer_name);
+    }
+
+    std::filesystem::path path = referrer.parent_path() / std::filesystem::path(module_name);
+
+    return path.lexically_normal().string();
+}
+
+std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
+                                        std::string_view module_name) {
+    if(module_name.starts_with("catter")) {
+        // Builtin specifiers (and the native "catter-c" module) keep their name as the canonical
+        // module name.
+        return std::string(module_name);
+    }
+
+    auto resolved = resolve_path(referrer_name, module_name);
+
     std::error_code ec;
     const bool exists = std::filesystem::exists(resolved, ec);
     if(ec || !exists) {
@@ -78,15 +81,7 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
     if(ec || !std::filesystem::is_regular_file(resolved, ec) || ec) {
         throw qjs::Exception("Cannot load module '{}'", resolved.string());
     }
-    return resolved;
-}
-
-std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
-                                        std::string_view module_name) {
-    if(module_name.starts_with("catter")) {
-        return std::string(module_name);
-    }
-    return resolve_path(referrer_name, module_name).string();
+    return resolved.string();
 }
 
 qjs::Module EsmModuleLoader::loader(qjs::Context ctx, std::string_view module_name) {

@@ -1,6 +1,7 @@
 #include "app_runner.h"
 
 #include <exception>
+#include <filesystem>
 #include <utility>
 
 #include "app_config.h"
@@ -44,8 +45,12 @@ kota::task<> async_run(const core::CatterConfig& config) {
     std::exception_ptr error;
     try {
         runtime.start({.pwd = context.working_directory});
+
+        auto script_absolute_path =
+            std::filesystem::absolute(context.script_config.scriptPath).lexically_normal().string();
+
         co_await js::run_script(load_script_content(context.script_config.scriptPath),
-                                context.script_config.scriptPath);
+                                script_absolute_path);
 
         auto script_config = co_await js::on_start(context.script_config);
 

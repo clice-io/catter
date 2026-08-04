@@ -63,12 +63,10 @@ vsxmake*/
 !.pixi/config.toml
 
 # Agent
-Agent.md
 .claude
 CLAUDE.md
 .codex
 AGENTS.md
-implementation-plan.md
 
 # Release assets
 release-assets/
