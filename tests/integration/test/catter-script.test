@@ -1,0 +1,5 @@
+RUN: %catter -m inject script::cdb -o %t.json --verbose -- "%it_catter_proxy" --child | FileCheck %s
+
+CHECK: CDB verbose logging enabled.
+CHECK: Generated 0 entries for 0 source files
+CHECK: CDB saved to {{.*}} with 0 entries.

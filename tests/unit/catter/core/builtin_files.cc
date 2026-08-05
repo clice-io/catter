@@ -22,9 +22,19 @@ TEST_CASE(builtin_module_lookup_returns_embedded_sources) {
 }
 
 TEST_CASE(builtin_script_lookup_returns_embedded_sources) {
-    const auto script = catter::js::load_builtin_script("script::cdb");
-    EXPECT_TRUE(!script.empty());
-    EXPECT_TRUE(script.find("build/compile_commands.json") != std::string_view::npos);
+    const auto cdb = catter::js::load_builtin_script("script::cdb");
+    EXPECT_TRUE(!cdb.empty());
+    EXPECT_TRUE(cdb.find("catter/cdb") != std::string_view::npos);
+
+    const auto cmd_tree = catter::js::load_builtin_script("script::cmd-tree");
+    EXPECT_TRUE(!cmd_tree.empty());
+    EXPECT_TRUE(cmd_tree.find("cmd-tree") != std::string_view::npos);
+
+    const auto target_tree = catter::js::load_builtin_script("script::target-tree");
+    EXPECT_TRUE(!target_tree.empty());
+    EXPECT_TRUE(target_tree.find("target-tree") != std::string_view::npos);
+
+    EXPECT_TRUE(catter::js::load_builtin_script("script::does-not-exist").empty());
 }
 
 };  // TEST_SUITE(builtin_files_tests)

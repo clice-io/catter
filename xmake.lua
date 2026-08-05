@@ -186,7 +186,8 @@ target("catter-js-runtime")
         pack_output = "api/output/lib/jslib.bin"
     })
     -- Embed the packed blob into an object file consumed by catter-core.
-    add_files("api/output/lib/jslib.bin", {rule = "utils.bin2obj", zeroend = true})
+    add_files("api/output/lib/jslib.bin",
+              {rule = "utils.bin2obj", zeroend = true, always_added = true})
 
 target("catter-js-tests")
     set_kind("phony")
@@ -232,7 +233,8 @@ target("catter-js-scripts")
         pack_manifest = "scripts/output/manifest.json",
         pack_output = "scripts/output/scripts.bin"
     })
-    add_files("scripts/output/scripts.bin", {rule = "utils.bin2obj", zeroend = true})
+    add_files("scripts/output/scripts.bin",
+              {rule = "utils.bin2obj", zeroend = true, always_added = true})
 
 target("catter-core")
     -- use object, avoid register invalid
