@@ -108,7 +108,7 @@ import * as service from "catter/service";
  *     └── ld main.o -o app
  * ```
  */
-export function cmdTree(): service.CatterContextService {
+function cmdTree(): service.CatterContextService {
   const commandTree = new data.FlatTree<number, service.CommandCaptureResult>();
   let maxDepth: number | undefined;
   let visibleArgCount = -1;
@@ -180,3 +180,5 @@ export function cmdTree(): service.CatterContextService {
     },
   });
 }
+
+service.register(cmdTree());

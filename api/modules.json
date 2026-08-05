@@ -8,7 +8,6 @@
   "catter/http": "src/http.ts",
   "catter/service": "src/service.ts",
   "catter/option": "src/option/index.ts",
-  "catter/scripts": "src/scripts/index.ts",
   "catter/cmd": "src/cmd/index.ts",
   "catter/cdb": "src/cdb/index.ts",
   "catter/data": "src/data/index.ts",

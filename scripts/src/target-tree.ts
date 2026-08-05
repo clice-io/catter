@@ -57,7 +57,7 @@ import * as service from "catter/service";
  *     └── util.o
  * ```
  */
-export function targetTree(): service.CatterContextService {
+function targetTree(): service.CatterContextService {
   const targetTree = new data.FlatTree<string, string>();
   let maxDepth: number | undefined;
 
@@ -151,3 +151,5 @@ export function targetTree(): service.CatterContextService {
     },
   });
 }
+
+service.register(targetTree());

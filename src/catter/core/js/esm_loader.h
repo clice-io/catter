@@ -11,12 +11,6 @@
 namespace catter::js {
 
 /**
- * Returns the source of a builtin module such as "catter" or "catter/cdb",
- * or an empty view when the module is unknown.
- */
-std::string_view load_builtin_module(std::string_view module_name);
-
-/**
  * Path-only ESM loader.
  *
  * Specifiers are resolved relative to the importing file. Explicit absolute paths are also

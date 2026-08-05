@@ -1,0 +1,20 @@
+{
+  "name": "catter-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Catter built-in service scripts.",
+  "type": "module",
+  "scripts": {
+    "rm": "xmake l os.tryrm",
+    "clean": "pnpm run rm ./output && pnpm run rm ./build",
+    "build": "pnpm run clean && tsc --project tsconfig.json && rollup -c ./rollup.config.js"
+  },
+  "keywords": [],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "npm-run-all": "^4.1.5",
+    "rollup": "^4.53.2",
+    "typescript": "^5.9.3"
+  }
+}

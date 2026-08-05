@@ -2,8 +2,7 @@
 node_modules
 .rollup*
 api/output
-
-*.inc
+scripts/output
 
 # Prerequisites
 *.d

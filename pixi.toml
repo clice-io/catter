@@ -89,7 +89,8 @@ clang = { features = ["dev", "clang"] }
 npm-install = { cmd = "pnpm install", inputs = [
   "pnpm-lock.yaml",
   "package.json",
-  "api/package.json"
+  "api/package.json",
+  "scripts/package.json"
 ] }
 build = "xmake --verbose --diagnosis"
 
@@ -123,6 +124,9 @@ cmd = "pnpm --dir api run build"
 
 [tasks.build-js-runtime]
 cmd = "pnpm --dir api run build:runtime"
+
+[tasks.build-js-scripts]
+cmd = "pnpm --dir scripts run build:runtime"
 
 [tasks.build-js-types]
 cmd = "pnpm --dir api run build:types"

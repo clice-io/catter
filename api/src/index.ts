@@ -23,7 +23,6 @@ import * as time from "catter/time";
 import * as http from "catter/http";
 import * as service from "catter/service";
 import * as option from "catter/option";
-import * as scripts from "catter/scripts";
 import * as cmd from "catter/cmd";
 import * as cdb from "catter/cdb";
 import * as data from "catter/data";
@@ -39,7 +38,6 @@ export {
   http,
   option,
   service,
-  scripts,
   cmd,
   cdb,
   data,

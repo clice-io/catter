@@ -92,19 +92,6 @@ TEST_CASE(loader_reads_canonical_file_name) {
     EXPECT_TRUE(module.module_name().to_string() == (fixture.root / "dep.js").string());
 }
 
-TEST_CASE(builtin_module_lookup_returns_embedded_sources) {
-    const auto aggregate = catter::js::load_builtin_module("catter");
-    EXPECT_TRUE(!aggregate.empty());
-    // The aggregate entry re-exports the per-module bundles.
-    EXPECT_TRUE(aggregate.find("catter/") != std::string_view::npos);
-
-    const auto cdb = catter::js::load_builtin_module("catter/cdb");
-    EXPECT_TRUE(!cdb.empty());
-    EXPECT_TRUE(cdb.find("CDBManager") != std::string_view::npos);
-
-    EXPECT_TRUE(catter::js::load_builtin_module("catter/does-not-exist").empty());
-}
-
 TEST_CASE(loader_rejects_unknown_builtin_specifiers) {
     catter::js::EsmModuleLoader loader{};
     auto rt = qjs::Runtime::create();

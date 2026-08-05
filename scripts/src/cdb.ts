@@ -260,7 +260,7 @@ import * as service from "catter/service";
  * CDB saved to /tmp/demo/build/compile_commands.json with 1 entries.
  * ```
  */
-export function cdb(
+function cdb(
   savePath = "build/compile_commands.json",
 ): service.CatterContextService {
   let options = defaultOptions(savePath);
@@ -464,3 +464,5 @@ export function cdb(
     },
   });
 }
+
+service.register(cdb());

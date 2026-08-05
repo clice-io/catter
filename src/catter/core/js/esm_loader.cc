@@ -1,11 +1,11 @@
 #include "esm_loader.h"
 
-#include <cstring>
 #include <format>
 #include <fstream>
 #include <iterator>
 #include <string_view>
-#include <unordered_map>
+
+#include "builtin_files.h"
 
 namespace catter::js {
 
@@ -18,76 +18,7 @@ bool is_path_specifier(std::string_view specifier) {
            specifier == ".." || std::filesystem::path(specifier).is_absolute();
 }
 
-extern "C" {
-    extern const char _binary_jslib_bin_start[];
-    extern const char _binary_jslib_bin_end[];
-}
-
-uint32_t read_u32(const char*& cursor, const char* end) {
-    if(cursor + sizeof(uint32_t) > end) {
-        return 0;
-    }
-    uint32_t value;
-    std::memcpy(&value, cursor, sizeof(value));
-    cursor += sizeof(value);
-    return value;
-}
-
-struct BuiltinTable {
-    std::unordered_map<std::string, std::string_view> modules;
-};
-
-/**
- * Parses the embedded jslib.bin blob once.
- *
- * Layout (little-endian): u32 count, then per module:
- *   u32 name_len, name bytes, u32 content_len, content bytes.
- * All views point into the blob, which lives for the process lifetime.
- */
-const BuiltinTable& builtin_table() {
-    const static BuiltinTable table = [] {
-        BuiltinTable table;
-        const char* cursor = _binary_jslib_bin_start;
-        const char* end = _binary_jslib_bin_end;
-        const uint32_t count = read_u32(cursor, end);
-        for(uint32_t i = 0; i < count; ++i) {
-            const uint32_t name_len = read_u32(cursor, end);
-            if(name_len == 0 || cursor + name_len > end) {
-                break;
-            }
-            const std::string_view name{cursor, name_len};
-            cursor += name_len;
-
-            const uint32_t content_len = read_u32(cursor, end);
-            if(cursor + content_len > end) {
-                break;
-            }
-            const std::string_view content{cursor, content_len};
-            cursor += content_len;
-
-            table.modules.emplace(name, content);
-
-            // Each content view is followed by a NUL separator in the blob so
-            // the view is NUL-terminated in memory (QuickJS's tokenizer relies
-            // on NUL to detect end of input).
-            if(cursor < end) {
-                ++cursor;
-            }
-        }
-        return table;
-    }();
-    return table;
-}
-
 }  // namespace
-
-std::string_view load_builtin_module(std::string_view module_name) {
-    const auto& table = builtin_table();
-    if(auto it = table.modules.find(std::string(module_name)); it != table.modules.end()) {
-        return it->second;
-    }
-    return {};
-}
 
 std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_name,
                                                     std::string_view module_name) const {
@@ -138,7 +69,7 @@ std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
 
 qjs::Module EsmModuleLoader::loader(qjs::Context ctx, std::string_view module_name) {
     if(module_name.starts_with(kJsLibPrefix)) {
-        const auto source = load_builtin_module(module_name);
+        const auto source = catter::js::load_builtin_module(module_name);
         if(source.empty()) {
             throw qjs::Exception("Unknown builtin module '{}'", module_name);
         }
