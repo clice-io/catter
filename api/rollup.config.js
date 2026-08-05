@@ -1,5 +1,3 @@
-import typescript from "@rollup/plugin-typescript";
-import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +10,7 @@ const input = {};
 const specToFile = {};
 for (const [spec, entry] of Object.entries(modules)) {
   const name = spec === "catter" ? "catter" : spec.slice("catter/".length);
-  input[name] = entry;
+  input[name] = `build/lib/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
   specToFile[spec] = `${name}.js`;
 }
 
@@ -47,22 +45,6 @@ export default {
     },
   ],
   plugins: [
-    resolve({
-      extensions: [".ts", ".js"],
-      browser: false,
-    }),
-    typescript({
-      tsconfig: "./tsconfig.rollup.json",
-      compilerOptions: {
-        declarationDir: undefined,
-
-        declaration: false,
-        declarationMap: false,
-
-        module: "esnext",
-        moduleResolution: "bundler",
-      },
-    }),
     writeManifest(),
     terser({}),
   ],

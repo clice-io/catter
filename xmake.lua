@@ -193,7 +193,6 @@ target("catter-js-runtime")
             "api/catter-c/**.d.ts",
             "api/package.json",
             "api/rollup.config.js",
-            "api/tsconfig.rollup.json",
             "api/tsconfig.app.json",
             "tsconfig.base.json"
         },

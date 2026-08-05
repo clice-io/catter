@@ -10,7 +10,6 @@
  *    `output/types/catter/<mod>.d.ts`, so `catter/<mod>` subpath imports
  *    resolve to exactly their own module's declarations.
  */
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,42 +17,24 @@ import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const modules = JSON.parse(fs.readFileSync(path.join(root, "modules.json"), "utf-8"));
-const tscBin = path.join(root, "node_modules", "typescript", "bin", "tsc");
+const configFile = path.join(root, "api-extractor.json");
+const baseConfig = ExtractorConfig.loadFile(configFile);
 
 function dtsPathFor(entry) {
   return `build/types/${entry.replace(/^src\//, "").replace(/\.ts$/, ".d.ts")}`;
 }
 
 function runExtractor(label, entryDts, outputDts) {
-  const configObject = {
-    projectFolder: root,
-    mainEntryPointFilePath: `<projectFolder>/${entryDts}`,
-    compiler: {
-      tsconfigFilePath: "<projectFolder>/tsconfig.types.json",
-    },
-    apiReport: {
-      enabled: false,
-    },
-    docModel: {
-      enabled: false,
-    },
-    dtsRollup: {
-      enabled: true,
-      untrimmedFilePath: `<projectFolder>/${outputDts}`,
-    },
-    messages: {
-      extractorMessageReporting: {
-        "ae-missing-release-tag": { logLevel: "none" },
+  const extractorConfig = ExtractorConfig.prepare({
+    configObject: {
+      ...baseConfig,
+      mainEntryPointFilePath: `<projectFolder>/${entryDts}`,
+      dtsRollup: {
+        ...baseConfig.dtsRollup,
+        untrimmedFilePath: `<projectFolder>/${outputDts}`,
       },
     },
-    tsdocMetadata: {
-      enabled: false,
-    },
-  };
-
-  const extractorConfig = ExtractorConfig.prepare({
-    configObject,
-    configObjectFullPath: path.join(root, "api-extractor.json"),
+    configObjectFullPath: configFile,
     packageJsonFullPath: path.join(root, "package.json"),
     projectFolderLookupToken: root,
   });
@@ -64,13 +45,7 @@ function runExtractor(label, entryDts, outputDts) {
   }
 }
 
-// 1. Per-file declarations.
-execFileSync(process.execPath, [tscBin, "--project", "tsconfig.app.json"], {
-  cwd: root,
-  stdio: "inherit",
-});
-
-// 2. Aggregate entry. Copy the tsc-emitted declarations verbatim so the
+// 1. Aggregate entry. Copy the tsc-emitted declarations verbatim so the
 //    aggregate keeps re-exporting the very same `catter/<mod>` modules that
 //    subpath consumers resolve to. Bundling the namespaces into a separate
 //    declaration would break type identity for classes with private members.
@@ -80,7 +55,7 @@ fs.copyFileSync(
   path.join(root, "output", "types", "index.d.ts"),
 );
 
-// 3. Per-module entries.
+// 2. Per-module entries.
 for (const [spec, entry] of Object.entries(modules)) {
   if (spec === "catter") {
     continue;

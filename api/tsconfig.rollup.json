@@ -1,8 +1,0 @@
-{
-    "extends": "./tsconfig.app.json",
-    "compilerOptions": {
-        "declaration": false,
-        "declarationMap": false,
-        "noEmit": false
-    }
-}
