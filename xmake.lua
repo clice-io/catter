@@ -151,6 +151,7 @@ target("catter-js-types")
             "api/tsconfig.app.json",
             "api/tsconfig.types.json",
             "api/scripts/build-types.mjs",
+            "api/scripts/check-modules.mjs",
             "api/api-extractor.json",
             "tsconfig.base.json"
         },
@@ -193,6 +194,7 @@ target("catter-js-runtime")
             "api/catter-c/**.d.ts",
             "api/package.json",
             "api/rollup.config.js",
+            "api/scripts/check-modules.mjs",
             "api/tsconfig.app.json",
             "tsconfig.base.json"
         },
