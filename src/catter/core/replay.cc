@@ -137,9 +137,7 @@ kota::task<> replay_task(ReplayConfig config, const ReplayFile& replay) {
         auto script_config = co_await js::on_start(to_catter_config(config, replay));
         if(script_config.execute) {
             for(const auto& event: replay.events) {
-                auto data = to_command_data(config, event);
-                auto action = co_await js::on_command(event.id, std::move(data));
-                (void)action;
+                co_await js::on_command(event.id, to_command_data(config, event));
                 if(event.execution.has_value()) {
                     co_await js::on_execution(event.id, *event.execution);
                 }
