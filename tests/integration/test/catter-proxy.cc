@@ -55,12 +55,12 @@ public:
 
     ~ServiceImpl() override = default;
 
-    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) override {
+    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept override {
         std::println("event=create service={} parent={}", this->id, parent_id);
         co_return this->id;
     }
 
-    kota::task<data::action> make_decision(data::command cmd) override {
+    kota::task<data::action> make_decision(data::command cmd) noexcept override {
         std::println(R"(event=decision executable="{}" cwd="{}" argc={})",
                      cmd.executable,
                      cmd.cwd,
@@ -71,7 +71,7 @@ public:
         co_return data::action{.type = data::action::WRAP, .cmd = std::move(cmd)};
     }
 
-    kota::task<> finish(data::process_result result) override {
+    kota::task<> finish(data::process_result result) noexcept override {
         std::println(R"(event=finish code={} stdout="{}" stderr="{}")",
                      result.code,
                      log::escape(result.std_out),
@@ -79,7 +79,7 @@ public:
         co_return;
     }
 
-    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) override {
+    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept override {
         std::println(R"(event=error parent={} message="{}")", parent_id, log::escape(error_msg));
         co_return;
     }

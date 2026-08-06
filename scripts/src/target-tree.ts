@@ -1,9 +1,9 @@
-import * as data from "catter/data";
+import { FlatTree } from "catter/data";
 import * as fs from "catter/fs";
 import * as io from "catter/io";
 import * as service from "catter/service";
 import * as cli from "catter/cli";
-import * as view from "catter/view";
+import {TreeRenderer} from "catter/view";
 import { analyze as analyzeCmd } from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
@@ -50,7 +50,7 @@ const targetTreeCLI = cli.command({
  * ```
  */
 function targetTree(): service.CatterContextService {
-  const targetTree = new data.FlatTree<string, string>();
+  const targetTree = new FlatTree<string, string>();
   let maxDepth: number | undefined;
 
   return service.create({
@@ -76,9 +76,9 @@ function targetTree(): service.CatterContextService {
         return;
       }
 
-      targetTree.assemble();
+      const cycles = targetTree.assemble();
       const walker = targetTree.walk();
-      const renderer = new view.TreeRenderer({
+      const renderer = new TreeRenderer({
         first: walker.first,
         children: walker.children,
         content: (id) => targetTree.node(id)?.content,
@@ -91,6 +91,15 @@ function targetTree(): service.CatterContextService {
           text: (_content, id) => fs.path.filename(id) || id,
         }),
       );
+
+      if (cycles.length > 0) {
+        io.println("");
+        io.println("Detected target cycles:");
+        for (const cycle of cycles) {
+          const names = cycle.map((id) => fs.path.filename(id) || id);
+          io.println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+        }
+      }
     },
 
     onCommand(ctx) {

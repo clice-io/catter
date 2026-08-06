@@ -270,6 +270,27 @@ await pipelineRuntime.execution(11, { code: 0, stdout: "", stderr: "" });
 debug.assertThrow(pipelineEvents.includes("exec:10"));
 debug.assertThrow(!pipelineEvents.includes("exec:11"));
 
+const cyclicParentRuntime = new service.ServiceRuntime();
+cyclicParentRuntime.use(
+  service.create({
+    onCommand(ctx) {
+      if (!ctx.capture.success) {
+        return;
+      }
+      ctx.skip();
+    },
+  }),
+);
+
+// 40 reports 41 as its parent while 41 reports 40, forming a parent cycle.
+// Walking the ancestor chain must terminate instead of looping forever.
+const cyclicParentA = await cyclicParentRuntime.command(40, command("cc1", 41));
+const cyclicParentB = await cyclicParentRuntime.command(41, command("cc1", 40));
+debug.assertThrow(cyclicParentA.type === "skip");
+debug.assertThrow(cyclicParentB.type === "skip");
+debug.assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(40));
+debug.assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(41));
+
 const conflictRuntime = new service.ServiceRuntime();
 conflictRuntime.use(
   service.parallel(

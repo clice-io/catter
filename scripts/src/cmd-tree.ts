@@ -143,7 +143,7 @@ function cmdTree(): service.CatterContextService {
         io.println("No commands found.");
         return;
       }
-      commandTree.assemble();
+      const cycles = commandTree.assemble();
 
       const walker = commandTree.walk();
       const renderer = new view.TreeRenderer({
@@ -169,6 +169,28 @@ function cmdTree(): service.CatterContextService {
           },
         }),
       );
+
+      if (cycles.length > 0) {
+        io.println("");
+        io.println("Detected command cycles:");
+        for (const cycle of cycles) {
+          const names = cycle.map((id) => {
+            const capture = commandTree.node(id)?.content;
+            if (!capture) {
+              return `#${String(id)}`;
+            }
+            if (!capture.success) {
+              return `[capture error] ${capture.error.msg}`;
+            }
+            return formatCommand(
+              capture.data.argv,
+              visibleArgCount,
+              maxArgWidth,
+            );
+          });
+          io.println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+        }
+      }
     },
   });
 }

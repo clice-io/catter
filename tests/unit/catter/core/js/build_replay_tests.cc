@@ -278,6 +278,34 @@ TEST_CASE(cmd_tree_renders_captured_commands) {
     EXPECT_TRUE(rendered.find("make") != std::string::npos);
     EXPECT_TRUE(rendered.find("clang++ main.cc -c") != std::string::npos);
     EXPECT_TRUE(rendered.find("ld main.o -o app") != std::string::npos);
+    EXPECT_TRUE(rendered.find("Detected command cycles:") == std::string::npos);
+}
+
+TEST_CASE(cmd_tree_reports_command_cycle) {
+    TempFileManager cleanup(make_root());
+    const auto root = cleanup.root;
+    const auto output_path = root / "stdout.txt";
+
+    BuildReplay replay;
+    {
+        StdoutCapture capture(output_path);
+        // Deliberately cross-link parents: command 2 reports command 3 as its
+        // parent and command 3 reports command 2, forming a directed cycle.
+        replay.run({.script = "script::cmd-tree", .working_directory = root},
+                   {
+                       command(1, "make", {"make"}, root),
+                       command(2, "clang++", {"clang++", "main.cc", "-c"}, root, 3),
+                       command(3, "ld", {"ld", "main.o", "-o", "app"}, root, 2),
+                   },
+                   {.code = 0});
+    }
+
+    const auto rendered = read_file(output_path);
+    EXPECT_TRUE(rendered.find("Detected command cycles:") != std::string::npos);
+    EXPECT_TRUE(rendered.find("[cycle]") != std::string::npos);
+    EXPECT_TRUE(rendered.find("->") != std::string::npos);
+    EXPECT_TRUE(rendered.find("clang++ main.cc -c") != std::string::npos);
+    EXPECT_TRUE(rendered.find("ld main.o -o app") != std::string::npos);
 }
 
 TEST_CASE(cmd_tree_reports_empty_build) {
@@ -316,6 +344,31 @@ TEST_CASE(target_tree_renders_target_forest) {
     EXPECT_TRUE(rendered.find("main.cc") != std::string::npos);
     EXPECT_TRUE(rendered.find("main.o") != std::string::npos);
     EXPECT_TRUE(rendered.find("app") != std::string::npos);
+    EXPECT_TRUE(rendered.find("Detected target cycles:") == std::string::npos);
+}
+
+TEST_CASE(target_tree_reports_target_cycle) {
+    TempFileManager cleanup(make_root());
+    const auto root = cleanup.root;
+    const auto output_path = root / "stdout.txt";
+
+    BuildReplay replay;
+    {
+        StdoutCapture capture(output_path);
+        // Two archiver invocations that claim each other's output as input:
+        // a.o depends on b.o while b.o depends on a.o.
+        replay.run({.script = "script::target-tree", .working_directory = root},
+                   {
+                       command(1, "ar", {"ar", "rcs", "a.o", "b.o"}, root),
+                       command(2, "ar", {"ar", "rcs", "b.o", "a.o"}, root),
+                   },
+                   {.code = 0});
+    }
+
+    const auto rendered = read_file(output_path);
+    EXPECT_TRUE(rendered.find("Detected target cycles:") != std::string::npos);
+    EXPECT_TRUE(rendered.find("a.o -> b.o -> a.o") != std::string::npos ||
+                rendered.find("b.o -> a.o -> b.o") != std::string::npos);
 }
 
 };  // TEST_SUITE(build_replay_tests)

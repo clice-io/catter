@@ -310,11 +310,15 @@ export class ServiceRuntime {
       return false;
     }
 
+    // Guard against malformed parent chains (e.g. cycles) so a hostile or
+    // corrupted capture cannot hang the runtime.
+    const seen = new Set<number>();
     let parentId = this.commandParentId(id);
-    while (parentId !== undefined) {
+    while (parentId !== undefined && !seen.has(parentId)) {
       if (this.ignoredCommandIds.has(parentId)) {
         return true;
       }
+      seen.add(parentId);
       parentId = this.commandParentId(parentId);
     }
 

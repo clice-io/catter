@@ -31,12 +31,12 @@ class InjectService final : public ipc::InjectService {
 public:
     InjectService(data::ipcid_t id, const js::CatterRuntime* runtime) : id(id), runtime(runtime) {}
 
-    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) override {
+    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept override {
         this->parent_id = parent_id;
         co_return this->id;
     }
 
-    kota::task<data::action> make_decision(data::command cmd) override {
+    kota::task<data::action> make_decision(data::command cmd) noexcept override {
         auto act = co_await js::on_command(this->id,
                                            js::CommandData{
                                                .cwd = cmd.cwd,
@@ -73,12 +73,12 @@ public:
         }
     }
 
-    kota::task<> finish(data::process_result result) override {
+    kota::task<> finish(data::process_result result) noexcept override {
         co_await js::on_execution(this->id, to_js_process_result(std::move(result)));
         co_return;
     }
 
-    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) override {
+    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept override {
         co_await js::on_command(
             id,
             std::unexpected(js::CatterErr{.msg = std::move(error_msg), .parent = parent_id}));
