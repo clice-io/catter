@@ -134,10 +134,14 @@ ReplayCommand compile_command(uint32_t id,
 }
 
 void write_existing_database(const fs::path& path, const fs::path& root) {
+    // Windows paths use backslashes, which are invalid as raw JSON escapes.
+    // Normalize to forward slashes so the fixture parses on every platform.
+    auto directory = root.string();
+    std::replace(directory.begin(), directory.end(), '\\', '/');
     std::ofstream output(path, std::ios::binary);
     output << "[\n"
            << "  {\n"
-           << "    \"directory\": \"" << root.string() << "\",\n"
+           << "    \"directory\": \"" << directory << "\",\n"
            << "    \"file\": \"src/inherited.cc\",\n"
            << "    \"arguments\": [\"clang++\", \"-c\", \"src/inherited.cc\"]\n"
            << "  }\n"

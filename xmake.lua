@@ -252,6 +252,9 @@ target("catter")
     add_local_prefix_includedirs()
     add_deps("catter-core")
     add_files("src/catter/main.cc")
+    if is_plat("windows") then
+        add_ldflags("/STACK:8388608", {force = true})
+    end
 
 target("hook-resolver")
     set_kind("static")
@@ -341,6 +344,9 @@ target("catter-proxy")
     add_deps("common", "catter-hook", "hook-resolver")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
+    if is_plat("windows") then
+        add_ldflags("/STACK:8388608", {force = true})
+    end
 
 
 
@@ -350,6 +356,12 @@ rule("ut-base")
         target:add("includedirs", "tests/unit/base/")
         target:add("files", "tests/unit/base/**.cc")
         target:add("packages", "kotatsu")
+        -- Windows binaries default to a 1 MiB main-thread stack (MSVC linker
+        -- default), which is too small for the deep native<->JS call chains in
+        -- the replay tests under ASan debug builds. Match the Unix 8 MiB stack.
+        if target:is_plat("windows") then
+            target:add("ldflags", "/STACK:8388608", {force = true})
+        end
     end)
 
 target("ut-common")

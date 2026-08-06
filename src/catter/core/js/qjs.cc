@@ -586,6 +586,21 @@ Runtime Runtime::create() {
     if(!js_rt) {
         throw qjs::Exception("Failed to create new JS runtime");
     }
+    // QuickJS reserves a 1 MiB C-stack budget for JS execution by default.
+    // This is not a JS frame count: the budget covers every C frame below the
+    // runtime's stack watermark, including the event-loop/coroutine machinery,
+    // the native<->JS bridge, and QuickJS's per-call working buffers. Measured
+    // on an ASan debug build, a normal compiler analysis chain (registry
+    // analyzer dispatch -> identify -> parse -> resolve) already reaches
+    // ~590 KiB of real C stack at the failure catch point on macOS, with no
+    // recursion involved (the complete JS backtrace is a single ~20-frame
+    // descent), and the deepest frames push past 1 MiB. Apple-clang ASan
+    // frames are roughly twice the size of GCC's, so the same bundle stays
+    // under the default budget on Linux but overflows on macOS. Raise the
+    // budget so legitimate call depth has headroom; the 8 MiB platform thread
+    // stack still bounds runaway JS recursion, and the catchable RangeError
+    // behaviour is preserved.
+    JS_SetMaxStackSize(js_rt, 4 * 1024 * 1024);
     return Runtime(js_rt);
 }
 
