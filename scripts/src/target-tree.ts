@@ -41,14 +41,6 @@ const targetTreeCLI = cli.command({
  * Each recognized command contributes dependency edges through
  * `analysis.edges`, and the final output is rendered with `FlatTree`.
  *
- * @example
- * ```ts
- * import * as scripts from "catter/scripts";
-import * as service from "catter/service";
- *
- * service.register(scripts.targetTree());
- * ```
- *
  * Output:
  * ```txt
  * .

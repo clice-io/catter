@@ -235,14 +235,6 @@ function compilerAnalysisErrorLog(
  * When one command feeds another, the saved `output` field points to the
  * current producing command output rather than the final top-level target.
  *
- * @example
- * ```ts
- * import * as scripts from "catter/scripts";
-import * as service from "catter/service";
- *
- * service.register(scripts.cdb("build/compile_commands.json"));
- * ```
- *
  * Example saved entry:
  * ```json
  * [

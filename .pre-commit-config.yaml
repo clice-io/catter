@@ -32,10 +32,12 @@ repos:
         language: node
         files: '\.(ts)$'
         types: [file]
+        require_serial: true
 
       - id: prettier
         name: Prettier
-        entry: pnpm run prettier
+        entry: pnpm exec prettier --write
         language: node
         files: '\.(ts)$'
         types: [file]
+        require_serial: true

@@ -8,6 +8,7 @@ on:
       - "src/**"
       - "tests/**"
       - "api/**"
+      - "scripts/**"
       - "xmake.lua"
       - "pixi.toml"
 

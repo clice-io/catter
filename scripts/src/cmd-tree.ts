@@ -93,14 +93,6 @@ function formatCommand(
  * Each node is printed from the captured `argv`, with optional argument count
  * and per-argument width limits.
  *
- * @example
- * ```ts
- * import * as scripts from "catter/scripts";
-import * as service from "catter/service";
- *
- * service.register(scripts.cmdTree());
- * ```
- *
  * Output:
  * ```txt
  * .

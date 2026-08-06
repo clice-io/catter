@@ -3,6 +3,7 @@ node_modules
 .rollup*
 api/output
 scripts/output
+.eslintcache
 
 # Prerequisites
 *.d
