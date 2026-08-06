@@ -1,0 +1,20 @@
+// Replays captured build events from a JSON fixture through script::cmd-tree.
+// The tree renderer emits ANSI color codes around each node, so CHECK
+// patterns skip them with {{.*}}.
+
+RUN: "%it_catter_replay" "%S/replay/cmd-tree-basic.json" script::cmd-tree | FileCheck %s
+
+CHECK: make
+CHECK-NEXT: ├──{{.*}}clang++ main.cc -c
+CHECK-NEXT: └──{{.*}}ld main.o -o app
+CHECK-NOT: Detected command cycles:
+
+RUN: "%it_catter_replay" "%S/replay/cmd-tree-cycle.json" script::cmd-tree | FileCheck %s --check-prefix=CYCLE
+
+CYCLE: make
+CYCLE: Detected command cycles:
+CYCLE-NEXT: [cycle] ld main.o -o app -> clang++ main.cc -c -> ld main.o -o app
+
+RUN: "%it_catter_replay" "%S/replay/cmd-tree-empty.json" script::cmd-tree | FileCheck %s --check-prefix=EMPTY
+
+EMPTY: No commands found.

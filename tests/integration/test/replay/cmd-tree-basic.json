@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "make with two children",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 1,
+      "exe": "clang++",
+      "argv": ["clang++", "main.cc", "-c"]
+    },
+    {
+      "type": "command",
+      "id": 3,
+      "parent": 1,
+      "exe": "ld",
+      "argv": ["ld", "main.o", "-o", "app"]
+    }
+  ],
+  "finish": {
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

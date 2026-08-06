@@ -430,6 +430,18 @@ target("it-catter-proxy")
     add_files("tests/integration/test/catter-proxy.cc")
     add_deps("common", "catter-core", "catter-proxy")
 
+target("it-catter-replay")
+    set_default(has_config("test"))
+    set_kind("binary")
+    add_local_prefix_includedirs()
+    add_files("tests/integration/replay/catter-replay.cc")
+    add_deps("common", "catter-core")
+    if is_plat("windows") then
+        -- The replay driver executes the same deep native<->JS call chains as
+        -- the unit-test replay suite; match the stack size used there.
+        add_ldflags("/STACK:8388608", {force = true})
+    end
+
 -- rule("build.js"): runs a JS toolchain build (pnpm script in api/) and
 -- tracks the inputs/outputs for change detection. It hooks into before_build,
 -- so the produced artifacts are ready before the target's default build (e.g.

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "compile and link a single source",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "clang++",
+      "argv": ["clang++", "-c", "src/main.cc", "-o", "obj/main.o"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "exe": "clang++",
+      "argv": ["clang++", "obj/main.o", "-o", "bin/app"]
+    }
+  ]
+}
