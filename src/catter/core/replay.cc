@@ -143,8 +143,9 @@ kota::task<> replay_task(ReplayConfig config, const ReplayFile& replay) {
                 if(event.execution.has_value()) {
                     co_await js::on_execution(event.id, *event.execution);
                 }
-                co_await js::on_finish(replay.finish.value_or(js::ProcessResult{.code = 0}));
             }
+
+            co_await js::on_finish(replay.finish.value_or(js::ProcessResult{.code = 0}));
         }
 
     } catch(...) {
