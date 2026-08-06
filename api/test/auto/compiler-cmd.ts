@@ -1,5 +1,7 @@
-import { cmd, debug, fs } from "catter";
-import { neverthrow } from "catter";
+import * as cmd from "catter/cmd";
+import * as debug from "catter/debug";
+import * as fs from "catter/fs";
+import * as neverthrow from "catter/neverthrow";
 
 type ExpectedAnalysis = {
   label: string;

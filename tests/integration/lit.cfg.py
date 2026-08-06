@@ -106,6 +106,9 @@ it_proxy_path = os.path.join(project_root, it_proxy_config["targetfile"])
 proxy_config = run_with_json("xmake show -t catter-proxy --json")
 proxy_path = os.path.join(project_root, proxy_config["targetfile"])
 
+catter_config = run_with_json("xmake show -t catter --json")
+catter_path = os.path.join(project_root, catter_config["targetfile"])
+
 match platform.system():
     case "Windows":
         if project_mode == "debug":
@@ -119,7 +122,9 @@ match platform.system():
             if "g++" in compiler and "clang" not in compiler:
                 asan_path = run(f"{compiler} -print-file-name=libasan.so").strip()
                 hook_path = f"env LD_PRELOAD={asan_path} {hook_path}"
+                catter_path = f"env LD_PRELOAD={asan_path} {catter_path}"
 
 config.substitutions.append(("%it_catter_hook", hook_path))
 config.substitutions.append(("%it_catter_proxy", it_proxy_path))
 config.substitutions.append(("%catter_proxy", proxy_path))
+config.substitutions.append(("%catter", catter_path))

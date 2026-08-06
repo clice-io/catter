@@ -1,4 +1,6 @@
-import { cmd, debug, neverthrow } from "catter";
+import * as cmd from "catter/cmd";
+import * as debug from "catter/debug";
+import * as neverthrow from "catter/neverthrow";
 
 function expectEq<T>(actual: T, expected: T, label: string): void {
   if (actual !== expected) {

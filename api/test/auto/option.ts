@@ -1,4 +1,7 @@
-import { cmd, debug, io, option } from "catter";
+import * as cmd from "catter/cmd";
+import * as debug from "catter/debug";
+import * as io from "catter/io";
+import * as option from "catter/option";
 
 const OptionKindClass: {
   Group: number;

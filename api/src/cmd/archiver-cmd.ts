@@ -1,4 +1,4 @@
-import { fromThrowable, type Result } from "../neverthrow/index.js";
+import { fromThrowable, type Result } from "catter/neverthrow";
 import { Analysis, AnalysisError, Analyzer, AnalyzedData } from "./model.js";
 
 export class ArchiverNotRecognizedError extends AnalysisError {

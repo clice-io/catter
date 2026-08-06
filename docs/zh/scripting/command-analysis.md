@@ -7,7 +7,9 @@
 分析编译器命令行（GCC、Clang），提取结构化信息。
 
 ```js
-import { cmd, io, service } from "catter";
+import * as cmd from "catter/cmd";
+import * as io from "catter/io";
+import * as service from "catter/service";
 
 service.onCommand((ctx) => {
   if (!ctx.capture.success) return;
@@ -102,7 +104,7 @@ service.onCommand((ctx) => {
 分析归档命令（`ar`、`llvm-ar`、`gcc-ar`）。
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 const argv = ["llvm-ar", "rcs", "libfoo.a", "foo.o", "bar.o"];
 const analysis = cmd.ArchiverAnalysis.analyze(argv);
@@ -145,7 +147,7 @@ if (analysis) {
 ### 使用默认注册表
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 // 使用所有内置分析器进行分析
 const analysis = cmd.analyze(["clang", "-c", "main.c"]);
@@ -157,7 +159,7 @@ const canHandle = cmd.canHandle(["clang", "-c", "main.c"]);
 ### 自定义注册表
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 const registry = new cmd.Registry();
 registry.register(cmd.CompilerAnalysis);
@@ -171,7 +173,7 @@ const analysis = registry.analyze(["gcc", "-c", "main.c"]);
 实现 `Analyzer` 接口，提供 `key`、`supports()` 和 `analyze()`：
 
 ```js
-import { cmd } from "catter";
+import * as cmd from "catter/cmd";
 
 class MyToolAnalysis extends cmd.Analysis {
   static key = "my-tool";

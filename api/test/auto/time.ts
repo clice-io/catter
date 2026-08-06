@@ -1,4 +1,5 @@
-import { debug, time } from "catter";
+import * as debug from "catter/debug";
+import * as time from "catter/time";
 
 const before = Date.now();
 const now = time.now();

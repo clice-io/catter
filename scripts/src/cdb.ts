@@ -1,23 +1,23 @@
-import * as data from "../data/index.js";
-import * as service from "../service.js";
+import * as data from "catter/data";
+import * as service from "catter/service";
 
-import * as cli from "../cli/index.js";
-import * as io from "../io.js";
-import * as fs from "../fs.js";
+import * as cli from "catter/cli";
+import * as io from "catter/io";
+import * as fs from "catter/fs";
 import {
   CompilerAnalyzer,
   CompilerResolver,
   type CompilerAnalysis,
   type CompilerAnalysisError,
   type CompilerResolveDebug,
-} from "../cmd/index.js";
+} from "catter/cmd";
 import {
   CDBManager,
   type CDBCommand,
   type CDBEntry,
   type CDBItem,
   cdbItemsOf,
-} from "../cdb/index.js";
+} from "catter/cdb";
 
 type Producer = CDBCommand;
 
@@ -235,13 +235,6 @@ function compilerAnalysisErrorLog(
  * When one command feeds another, the saved `output` field points to the
  * current producing command output rather than the final top-level target.
  *
- * @example
- * ```ts
- * import { scripts, service } from "catter";
- *
- * service.register(scripts.cdb("build/compile_commands.json"));
- * ```
- *
  * Example saved entry:
  * ```json
  * [
@@ -259,7 +252,7 @@ function compilerAnalysisErrorLog(
  * CDB saved to /tmp/demo/build/compile_commands.json with 1 entries.
  * ```
  */
-export function cdb(
+function cdb(
   savePath = "build/compile_commands.json",
 ): service.CatterContextService {
   let options = defaultOptions(savePath);
@@ -463,3 +456,5 @@ export function cdb(
     },
   });
 }
+
+service.register(cdb());

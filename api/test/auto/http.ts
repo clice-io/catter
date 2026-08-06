@@ -1,4 +1,5 @@
-import { debug, http } from "catter";
+import * as debug from "catter/debug";
+import * as http from "catter/http";
 
 const client = new http.Client();
 client.close();

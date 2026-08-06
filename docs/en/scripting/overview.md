@@ -41,7 +41,9 @@ Then in your script:
 
 ```js
 // @ts-check
-import { service, fs, io } from "catter";
+import * as service from "catter/service";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
 ```
 
 This provides IDE autocompletion and type checking for the entire catter scripting API.
@@ -49,7 +51,8 @@ This provides IDE autocompletion and type checking for the entire catter scripti
 ## Minimal Example
 
 ```js
-import { service, io } from "catter";
+import * as service from "catter/service";
+import * as io from "catter/io";
 
 service.register({
   onStart(config) {
@@ -90,5 +93,14 @@ The `catter` package exposes several namespaced modules:
 Import them individually:
 
 ```js
-import { service, cmd, option, fs, io, os, http, time, debug, cli } from "catter";
+import * as service from "catter/service";
+import * as cmd from "catter/cmd";
+import * as option from "catter/option";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
+import * as os from "catter/os";
+import * as http from "catter/http";
+import * as time from "catter/time";
+import * as debug from "catter/debug";
+import * as cli from "catter/cli";
 ```

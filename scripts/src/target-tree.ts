@@ -1,10 +1,10 @@
-import * as data from "../data/index.js";
-import * as fs from "../fs.js";
-import * as io from "../io.js";
-import * as service from "../service.js";
-import * as cli from "../cli/index.js";
-import * as view from "../view/index.js";
-import { analyze as analyzeCmd } from "../cmd/index.js";
+import * as data from "catter/data";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
+import * as service from "catter/service";
+import * as cli from "catter/cli";
+import * as view from "catter/view";
+import { analyze as analyzeCmd } from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -41,13 +41,6 @@ const targetTreeCLI = cli.command({
  * Each recognized command contributes dependency edges through
  * `analysis.edges`, and the final output is rendered with `FlatTree`.
  *
- * @example
- * ```ts
- * import { scripts, service } from "catter";
- *
- * service.register(scripts.targetTree());
- * ```
- *
  * Output:
  * ```txt
  * .
@@ -56,7 +49,7 @@ const targetTreeCLI = cli.command({
  *     └── util.o
  * ```
  */
-export function targetTree(): service.CatterContextService {
+function targetTree(): service.CatterContextService {
   const targetTree = new data.FlatTree<string, string>();
   let maxDepth: number | undefined;
 
@@ -150,3 +143,5 @@ export function targetTree(): service.CatterContextService {
     },
   });
 }
+
+service.register(targetTree());

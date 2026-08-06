@@ -76,7 +76,9 @@ pre-commit = "*"
 [feature.dev.tasks]
 format = "pre-commit run --all-files"
 unit-test = "xmake test --verbose"
-integration-test = "lit ./tests/integration -sav"
+# All catter/catter-proxy processes share one global IPC pipe, so integration
+# tests must run one at a time to avoid cross-talk on the same socket.
+integration-test = "lit ./tests/integration -sav -j 1"
 ut = [{ task = "unit-test" }]
 it = [{ task = "integration-test" }]
 test = [{ task = "build" }, { task = "ut" }, { task = "it" }]
@@ -89,7 +91,8 @@ clang = { features = ["dev", "clang"] }
 npm-install = { cmd = "pnpm install", inputs = [
   "pnpm-lock.yaml",
   "package.json",
-  "api/package.json"
+  "api/package.json",
+  "scripts/package.json"
 ] }
 build = "xmake --verbose --diagnosis"
 
@@ -116,6 +119,7 @@ depends-on = [
 depends-on = [
   { task = "npm-install" },
   { task = "format" },
+  { task = "check-js-modules" },
 ]
 
 [tasks.build-js]
@@ -124,12 +128,18 @@ cmd = "pnpm --dir api run build"
 [tasks.build-js-runtime]
 cmd = "pnpm --dir api run build:runtime"
 
+[tasks.build-js-scripts]
+cmd = "pnpm --dir scripts run build"
+
 [tasks.build-js-types]
 cmd = "pnpm --dir api run build:types"
 
 [tasks.build-js-tests]
 cmd = "pnpm --dir api run build:tests"
 depends-on = "build-js-types"
+
+[tasks.check-js-modules]
+cmd = "pnpm --dir api run check:modules"
 
 [tasks.clean-js]
 cmd = "pnpm --dir api run clean"

@@ -1,4 +1,5 @@
-import { debug, service } from "catter";
+import * as debug from "catter/debug";
+import * as service from "catter/service";
 
 const serviceArg = "--from-service";
 

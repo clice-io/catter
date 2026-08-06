@@ -21,7 +21,7 @@ The `option` module provides full option table parsing for major C/C++ toolchain
 Parse all options from an argument array:
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const args = ["-std=c++20", "-O2", "-c", "main.cc", "-o", "main.o"];
 const items = option.collect("clang", args);
@@ -41,7 +41,7 @@ for (const item of items) {
 Parse with a callback instead of collecting:
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 option.parse("clang", args, (result) => {
   if (typeof result === "string") {
@@ -97,7 +97,7 @@ the original spelling as it appeared on the command line.
 Replace or remove options in an argument array:
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const rewritten = option.replace("clang", ["-Iold", "-O0", "main.cc"], (result) => {
   if (typeof result === "string") {
@@ -135,7 +135,7 @@ The callback can return:
 Convert arguments from one option table to another, keeping only options that are valid in the target table:
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const nvccArgs = ["--gpu-architecture=sm_70", "-std=c++17", "-O2"];
 const clangArgs = option.table2table("nvcc", "clang", nvccArgs);
@@ -202,7 +202,7 @@ The `OptionKindClass` enum describes how an option consumes arguments:
 Options can be filtered by platform visibility when parsing. This is useful for handling platform-specific options like MSVC-style `/TC`:
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 // Parse with default visibility (all options visible)
 const items = option.collect("clang", args);

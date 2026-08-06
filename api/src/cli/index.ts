@@ -1,4 +1,4 @@
-import * as io from "../io.js";
+import * as io from "catter/io";
 
 /**
  * Lightweight declarative command-line parser for catter QuickJS scripts.

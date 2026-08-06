@@ -15,3 +15,12 @@
 *.yml
 
 !*.ts
+
+# Generated / tool outputs
+build
+api/build
+api/output
+scripts/build
+scripts/output
+.pixi
+.xmake

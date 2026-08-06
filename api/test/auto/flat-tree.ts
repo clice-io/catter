@@ -1,4 +1,4 @@
-import { data } from "catter";
+import * as data from "catter/data";
 
 function mergeNode<Id extends PropertyKey, Content>(
   tree: data.FlatTree<Id, Content>,

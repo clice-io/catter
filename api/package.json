@@ -5,26 +5,54 @@
   "description": "Catter QuickJS runtime API types and editor hints.",
   "type": "module",
   "types": "./output/types/index.d.ts",
+  "main": "./output/lib/catter.js",
+  "exports": {
+    ".": {
+      "types": "./output/types/index.d.ts",
+      "default": "./output/lib/catter.js"
+    },
+    "./*": {
+      "types": "./output/types/catter/*.d.ts",
+      "default": "./output/lib/*.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "catter": [
+        "output/types/index.d.ts"
+      ],
+      "catter/*": [
+        "output/types/catter/*"
+      ]
+    }
+  },
   "files": [
-    "output/types/index.d.ts"
+    "output/lib",
+    "output/types"
   ],
   "scripts": {
-    "clean": "xmake l os.tryrm ./output ./build",
-    "build:runtime": "rollup -c ./rollup.config.js",
-    "build:types": "tsc --project tsconfig.app.json && api-extractor run",
-    "build:tests": "xmake l os.tryrm ./output/test && tsc --project tsconfig.test.json",
-    "build": "run-p build:runtime build:types",
-    "test": "run-s build:types build:tests",
-    "prepack": "pnpm run test",
-    "pack:dry": "npm pack --dry-run"
+    "rm": "xmake l os.tryrm",
+    "clean:lib": "pnpm run rm ./build/lib && pnpm run rm ./output/lib",
+    "clean:types": "pnpm run rm ./output/types && pnpm run rm ./build/types",
+    "clean:tests": "pnpm run rm ./output/test",
+    "clean": "pnpm run rm ./output && pnpm run rm ./build",
+    "check:modules": "node ./scripts/check-modules.mjs",
+    "compile:js": "pnpm run check:modules && tsc --project tsconfig.app.json --declaration false --declarationDir null --declarationMap false",
+    "compile:types": "pnpm run check:modules && tsc --project tsconfig.app.json --emitDeclarationOnly",
+    "compile:test": "tsc --project tsconfig.test.json",
+    "compile": "pnpm run check:modules && tsc --project tsconfig.app.json",
+    "package:runtime": "rollup -c ./rollup.config.js",
+    "package:types": "node ./scripts/build-types.mjs",
+    "build:runtime": "run-s clean:lib compile:js package:runtime",
+    "build:types": "run-s clean:types compile:types package:types",
+    "build:tests": "run-s clean:tests compile:test",
+    "build": "run-s clean compile && run-p package:runtime package:types && run-s compile:test"
   },
   "keywords": [],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.55.0",
-    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@microsoft/api-extractor": "^7.58.12",
     "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.3.0",
     "npm-run-all": "^4.1.5",
     "rollup": "^4.53.2",
     "tslib": "^2.8.1",

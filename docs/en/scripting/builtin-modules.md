@@ -1,6 +1,9 @@
 # Built-in Modules Reference
 
-Catter provides several built-in modules accessible via `import { ... } from "catter"`. This page covers the utility modules that complement the core `service`, `cmd`, and `option` APIs.
+Catter provides several built-in modules, each importable through its own
+subpath such as `import * as fs from "catter/fs"`. The aggregate `catter` entry
+remains available for compatibility. This page covers the utility modules that
+complement the core `service`, `cmd`, and `option` APIs.
 
 ## fs -- File System
 
@@ -9,7 +12,7 @@ The `fs` module provides synchronous file operations and path manipulation utili
 ### File Operations
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 fs.exists("/path/to/file");        // boolean
 fs.isFile("/path/to/file");        // boolean
@@ -25,7 +28,7 @@ fs.rename("old", "new");           // rename/move, returns false if old doesn't 
 ### Path Utilities
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 fs.path.isAbsolute("/tmp/file");           // true
 fs.path.absolute("./relative");            // resolve to absolute path
@@ -40,7 +43,7 @@ fs.path.lexicalNormal("src/./a/../b.cc");  // "src/b.cc"
 ### Async Operations
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 await fs.async.exists(path);
 await fs.async.isFile(path);
@@ -59,7 +62,7 @@ await fs.async.writeText(path, text);  // write string to file
 ### Text Output
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 io.print("no newline");
 io.println("with newline");
@@ -76,7 +79,7 @@ Supported colors: `"red"`, `"yellow"`, `"blue"`, `"green"`.
 The `FileStream` class provides low-level binary read/write access:
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 const stream = new io.FileStream("data.bin");
 const bytes = stream.read(1024);
@@ -109,7 +112,7 @@ stream.seekRead(10, io.SeekWhence.CUR);  // relative to current position
 The `TextFileStream` class wraps `FileStream` with encoding support (ASCII and UTF-8):
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 io.TextFileStream.with("log.txt", "utf-8", (stream) => {
   const lines = stream.readLines();
@@ -134,7 +137,7 @@ Key methods:
 ## os -- Operating System
 
 ```js
-import { os } from "catter";
+import * as os from "catter/os";
 
 os.platform();  // "linux" | "macos" | "windows"
 os.arch();      // "x86" | "x64" | "arm" | "arm64"
@@ -145,7 +148,7 @@ os.arch();      // "x86" | "x64" | "arm" | "arm64"
 ### Quick Methods
 
 ```js
-import { http } from "catter";
+import * as http from "catter/http";
 
 const text = await http.text("https://example.com");
 const data = await http.json("https://api.example.com/data");
@@ -160,7 +163,7 @@ const res = await http.head(url);
 ### Full Request
 
 ```js
-import { http } from "catter";
+import * as http from "catter/http";
 
 const response = await http.request("https://example.com/api", {
   method: "POST",
@@ -216,7 +219,7 @@ client.close();
 ### Timestamps
 
 ```js
-import { time } from "catter";
+import * as time from "catter/time";
 
 time.now();          // Unix timestamp in ms (same as time.unixMs())
 time.unixMs();       // Unix timestamp in milliseconds
@@ -260,7 +263,7 @@ const seconds = time.elapsed(start, "s");
 ## debug -- Assertions
 
 ```js
-import { debug } from "catter";
+import * as debug from "catter/debug";
 
 debug.assertPrint(condition);         // prints "assertion failed!" on failure
 debug.assertThrow(condition);         // throws Error on failure
@@ -276,7 +279,7 @@ The `cli` module provides a declarative argument parser for script options. It i
 ### Defining a Command
 
 ```js
-import { cli } from "catter";
+import * as cli from "catter/cli";
 
 const myCommand = cli.command({
   name: "my-script",

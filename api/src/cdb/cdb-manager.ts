@@ -1,5 +1,5 @@
-import * as fs from "../fs.js";
-import * as io from "../io.js";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
 
 export class CDBError extends Error {
   constructor(message: string) {

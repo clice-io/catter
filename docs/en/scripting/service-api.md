@@ -7,7 +7,7 @@ The service API is the core of catter scripting. It lets you register callbacks 
 Register a service object with one or more callbacks:
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 service.register({
   onStart(config) { /* ... */ },
@@ -199,7 +199,7 @@ service.register({
 The `service` module also provides `pipeline()` and `parallel()` for composing services:
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 // Sequential pipeline -- services run in order
 const combined = service.pipeline(serviceA, serviceB);
@@ -217,7 +217,7 @@ With `service.parallel()`, at most one service may set an action for any given c
 Use `service.create()` to construct a service object with typed context-style callbacks:
 
 ```js
-import { service } from "catter";
+import * as service from "catter/service";
 
 const myService = service.create({
   onStart(config) { return config; },

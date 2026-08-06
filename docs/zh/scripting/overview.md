@@ -41,7 +41,9 @@ npm install --save-dev catter
 
 ```js
 // @ts-check
-import { service, fs, io } from "catter";
+import * as service from "catter/service";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
 ```
 
 这样可以在 IDE 中获得完整的自动补全和类型检查支持。
@@ -49,7 +51,8 @@ import { service, fs, io } from "catter";
 ## 最小示例
 
 ```js
-import { service, io } from "catter";
+import * as service from "catter/service";
+import * as io from "catter/io";
 
 service.register({
   onStart(config) {
@@ -90,5 +93,14 @@ service.register({
 按需导入：
 
 ```js
-import { service, cmd, option, fs, io, os, http, time, debug, cli } from "catter";
+import * as service from "catter/service";
+import * as cmd from "catter/cmd";
+import * as option from "catter/option";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
+import * as os from "catter/os";
+import * as http from "catter/http";
+import * as time from "catter/time";
+import * as debug from "catter/debug";
+import * as cli from "catter/cli";
 ```

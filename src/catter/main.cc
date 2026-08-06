@@ -4,7 +4,6 @@
 #include <kota/async/io/loop.h>
 #include <kota/deco/deco.h>
 
-#include "app_config.h"
 #include "app_runner.h"
 #include "option.h"
 #include "config/catter.h"

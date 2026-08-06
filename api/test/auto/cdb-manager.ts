@@ -1,4 +1,7 @@
-import { cdb, debug, fs, io } from "catter";
+import * as cdb from "catter/cdb";
+import * as debug from "catter/debug";
+import * as fs from "catter/fs";
+import * as io from "catter/io";
 
 function expectEq<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {

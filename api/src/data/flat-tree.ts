@@ -1,4 +1,4 @@
-import * as io from "../io.js";
+import * as io from "catter/io";
 
 /**
  * A comparable node identifier supported by `FlatTree`.
@@ -42,7 +42,7 @@ export type FlatTreeRelation =
  *
  * @example
  * ```ts
- * import { data } from "catter";
+ * import * as data from "catter/data";
  *
  * const tree = new data.FlatTree<number, string>();
  * tree.justMergeNode({ id: 1, content: "root" });
@@ -75,7 +75,7 @@ export interface FlatTreeWalker<Id extends FlatTreeId> {
  *
  * @example
  * ```ts
- * import { data } from "catter";
+ * import * as data from "catter/data";
  *
  * const tree = new data.FlatTree<string, string>();
  * tree.justMergeNode({ id: "app", content: "app" });
@@ -108,7 +108,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import { data } from "catter";
+   * import * as data from "catter/data";
    *
    * const tree = new data.FlatTree<number, string>();
    * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
@@ -276,7 +276,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import { data } from "catter";
+   * import * as data from "catter/data";
    *
    * const tree = new data.FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });
@@ -311,7 +311,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import { data } from "catter";
+   * import * as data from "catter/data";
    *
    * const tree = new data.FlatTree<number, string>();
    * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
@@ -347,7 +347,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import { data } from "catter";
+   * import * as data from "catter/data";
    *
    * const tree = new data.FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });
@@ -413,7 +413,7 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import { data } from "catter";
+   * import * as data from "catter/data";
    *
    * const tree = new data.FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });

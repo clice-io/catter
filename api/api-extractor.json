@@ -3,7 +3,7 @@
   "projectFolder": ".",
   "mainEntryPointFilePath": "<projectFolder>/build/types/index.d.ts",
   "compiler": {
-    "tsconfigFilePath": "<projectFolder>/tsconfig.app.json"
+    "tsconfigFilePath": "<projectFolder>/tsconfig.types.json"
   },
   "apiReport": {
     "enabled": false
@@ -17,7 +17,9 @@
   },
   "messages": {
     "extractorMessageReporting": {
-      "ae-missing-release-tag": { "logLevel": "none" }
+      "ae-missing-release-tag": { "logLevel": "none" },
+      "ae-internal-missing-underscore": { "logLevel": "none" },
+      "ae-forgotten-export": { "logLevel": "none" }
     }
   },
   "tsdocMetadata": {

@@ -1,8 +1,8 @@
-import * as cli from "../cli/index.js";
-import * as data from "../data/index.js";
-import * as io from "../io.js";
-import * as service from "../service.js";
-import * as view from "../view/index.js";
+import * as cli from "catter/cli";
+import * as data from "catter/data";
+import * as io from "catter/io";
+import * as service from "catter/service";
+import * as view from "catter/view";
 
 const cmdTreeCLI = cli.command({
   name: "cmd-tree",
@@ -93,13 +93,6 @@ function formatCommand(
  * Each node is printed from the captured `argv`, with optional argument count
  * and per-argument width limits.
  *
- * @example
- * ```ts
- * import { scripts, service } from "catter";
- *
- * service.register(scripts.cmdTree());
- * ```
- *
  * Output:
  * ```txt
  * .
@@ -107,7 +100,7 @@ function formatCommand(
  *     └── ld main.o -o app
  * ```
  */
-export function cmdTree(): service.CatterContextService {
+function cmdTree(): service.CatterContextService {
   const commandTree = new data.FlatTree<number, service.CommandCaptureResult>();
   let maxDepth: number | undefined;
   let visibleArgCount = -1;
@@ -179,3 +172,5 @@ export function cmdTree(): service.CatterContextService {
     },
   });
 }
+
+service.register(cmdTree());

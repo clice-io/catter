@@ -113,11 +113,4 @@ TEST_CASE(run_service_js_file_and_callbacks) {
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(run_cdb_js_file) {
-    auto f = [&]() {
-        catter::tests::js::run_basic_js_case("cdb.js");
-    };
-
-    EXPECT_NOTHROWS(f());
-};
 };  // TEST_SUITE(js_file_tests)

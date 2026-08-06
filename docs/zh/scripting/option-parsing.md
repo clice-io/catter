@@ -21,7 +21,7 @@
 将参数数组中的所有选项解析为结构化数据：
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const args = ["-std=c++20", "-O2", "-c", "main.cc", "-o", "main.o"];
 const items = option.collect("clang", args);
@@ -41,7 +41,7 @@ for (const item of items) {
 使用回调而非收集方式进行解析：
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 option.parse("clang", args, (result) => {
   if (typeof result === "string") {
@@ -96,7 +96,7 @@ if (Array.isArray(items)) {
 替换或删除参数数组中的选项：
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const rewritten = option.replace("clang", ["-Iold", "-O0", "main.cc"], (result) => {
   if (typeof result === "string") {
@@ -134,7 +134,7 @@ io.println(rewritten); // "-Inew-include -O2 main.cc"
 将参数从一个选项表转换到另一个，仅保留在目标表中有效的选项：
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 const nvccArgs = ["--gpu-architecture=sm_70", "-std=c++17", "-O2"];
 const clangArgs = option.table2table("nvcc", "clang", nvccArgs);
@@ -201,7 +201,7 @@ io.println(clangArgs.join(" ")); // 两个表中都有效的选项
 解析时可以按平台可见性过滤选项。这对于处理平台特定选项（如 MSVC 风格的 `/TC`）很有用：
 
 ```js
-import { option } from "catter";
+import * as option from "catter/option";
 
 // 使用默认可见性解析（所有选项可见）
 const items = option.collect("clang", args);

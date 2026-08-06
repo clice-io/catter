@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "../neverthrow/index.js";
+import { err, ok, type Result } from "catter/neverthrow";
 import {
   AnalysisError,
   type Analysis,

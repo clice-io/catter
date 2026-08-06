@@ -1,4 +1,5 @@
-import { cmd, os } from "catter";
+import * as cmd from "catter/cmd";
+import * as os from "catter/os";
 
 function expectEq<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {

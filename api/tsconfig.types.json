@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.app.json",
+    "compilerOptions": {
+        "paths": {
+            "catter": [
+                "./build/types/index.d.ts"
+            ],
+            "catter/*": [
+                "./build/types/*/index.d.ts",
+                "./build/types/*.d.ts"
+            ],
+            "catter-c": [
+                "./catter-c/capi.d.ts"
+            ],
+        }
+    }
+}

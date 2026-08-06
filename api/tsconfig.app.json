@@ -1,18 +1,22 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "tsBuildInfoFile": "./build/.tsbuildinfo",
         "module": "nodenext",
         "moduleResolution": "nodenext",
         "rootDir": "./src",
-        "outDir": "./output/lib",
+        "outDir": "./build/lib",
         "declaration": true,
         "declarationDir": "./build/types",
-        "emitDeclarationOnly": true,
-        "lib": [
-            "ES2020",
-        ],
+        "declarationMap": true,
+        "sourceMap": true,
         "paths": {
+            "catter": [
+                "./src/index.ts"
+            ],
+            "catter/*": [
+                "./src/*/index.ts",
+                "./src/*.ts"
+            ],
             "catter-c": [
                 "./catter-c/capi.d.ts"
             ],

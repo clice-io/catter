@@ -5,48 +5,20 @@
 #include <iterator>
 #include <string_view>
 
+#include "builtin_files.h"
+
 namespace catter::js {
 
 namespace {
+
+constexpr std::string_view kJsLibPrefix = "catter";
 
 bool is_path_specifier(std::string_view specifier) {
     return specifier.starts_with("./") || specifier.starts_with("../") || specifier == "." ||
            specifier == ".." || std::filesystem::path(specifier).is_absolute();
 }
 
-std::filesystem::path absolute_normalized(std::filesystem::path path,
-                                          const std::filesystem::path& working_directory) {
-    if(path.is_relative()) {
-        path = working_directory / std::move(path);
-    }
-    return std::filesystem::absolute(path).lexically_normal();
-}
-
 }  // namespace
-
-extern "C" {
-    extern const char _binary_lib_js_start[];
-    extern const char _binary_lib_js_end[];
-}
-
-std::string_view js_lib_source() {
-    const std::string_view js_lib{_binary_lib_js_start, _binary_lib_js_end};
-    auto last = js_lib.find_last_not_of('\0');
-    if(last == std::string_view::npos) {
-        return {};
-    }
-    return js_lib.substr(0, last + 1);
-}
-
-std::string_view load_builtin_module(std::string_view module_name) {
-    if(module_name == "catter") {
-        return js_lib_source();
-    }
-    return {};
-}
-
-EsmModuleLoader::EsmModuleLoader(std::filesystem::path working_directory) :
-    working_directory(std::filesystem::absolute(std::move(working_directory)).lexically_normal()) {}
 
 std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_name,
                                                     std::string_view module_name) const {
@@ -56,15 +28,29 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
                              module_name);
     }
 
-    std::filesystem::path base = this->working_directory;
-
     auto referrer = std::filesystem::path(referrer_name);
-    if(referrer.is_relative()) {
-        referrer = this->working_directory / std::move(referrer);
-    }
-    base = referrer.parent_path();
 
-    auto resolved = absolute_normalized(std::filesystem::path(module_name), base);
+    if(referrer.is_relative()) {
+        throw qjs::Exception(
+            "Referrer path '{}' is not absolute; only absolute paths are supported",
+            referrer_name);
+    }
+
+    std::filesystem::path path = referrer.parent_path() / std::filesystem::path(module_name);
+
+    return path.lexically_normal().string();
+}
+
+std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
+                                        std::string_view module_name) {
+    if(module_name.starts_with(kJsLibPrefix)) {
+        // Builtin specifiers (and the native "catter-c" module) keep their name as the canonical
+        // module name.
+        return std::string(module_name);
+    }
+
+    auto resolved = resolve_path(referrer_name, module_name);
+
     std::error_code ec;
     const bool exists = std::filesystem::exists(resolved, ec);
     if(ec || !exists) {
@@ -78,20 +64,16 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
     if(ec || !std::filesystem::is_regular_file(resolved, ec) || ec) {
         throw qjs::Exception("Cannot load module '{}'", resolved.string());
     }
-    return resolved;
-}
-
-std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
-                                        std::string_view module_name) {
-    if(module_name.starts_with("catter")) {
-        return std::string(module_name);
-    }
-    return resolve_path(referrer_name, module_name).string();
+    return resolved.string();
 }
 
 qjs::Module EsmModuleLoader::loader(qjs::Context ctx, std::string_view module_name) {
-    if(module_name.starts_with("catter")) {
-        return ctx.load_module(load_builtin_module(module_name), module_name.data());
+    if(module_name.starts_with(kJsLibPrefix)) {
+        const auto source = catter::js::load_builtin_module(module_name);
+        if(source.empty()) {
+            throw qjs::Exception("Unknown builtin module '{}'", module_name);
+        }
+        return ctx.load_module(source, module_name.data());
     }
 
     std::filesystem::path path = module_name;

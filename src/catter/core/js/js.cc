@@ -40,7 +40,7 @@ struct RuntimeState {
         on_command = {};
         on_execution = {};
         runtime = qjs::Runtime::create();
-        runtime.set_module_loader(std::make_unique<EsmModuleLoader>(next_config.pwd));
+        runtime.set_module_loader(std::make_unique<EsmModuleLoader>());
         config = std::move(next_config);
     }
 };

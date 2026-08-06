@@ -1,6 +1,6 @@
 # 内置模块参考
 
-Catter 提供多个内置模块，通过 `import { ... } from "catter"` 导入。本页介绍核心 `service`、`cmd` 和 `option` API 之外的工具模块。
+Catter 提供多个内置模块，每个模块都可以通过独立子路径导入，例如 `import * as fs from "catter/fs"`；聚合入口 `catter` 仍保留用于兼容。本页介绍核心 `service`、`cmd` 和 `option` API 之外的工具模块。
 
 ## fs -- 文件系统
 
@@ -9,7 +9,7 @@ Catter 提供多个内置模块，通过 `import { ... } from "catter"` 导入�
 ### 文件操作
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 fs.exists("/path/to/file");        // boolean
 fs.isFile("/path/to/file");        // boolean
@@ -25,7 +25,7 @@ fs.rename("old", "new");           // 重命名/移动，old 不存在时返回 
 ### 路径工具
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 fs.path.isAbsolute("/tmp/file");           // true
 fs.path.absolute("./relative");            // 解析为绝对路径
@@ -40,7 +40,7 @@ fs.path.lexicalNormal("src/./a/../b.cc");  // "src/b.cc"
 ### 异步操作
 
 ```js
-import { fs } from "catter";
+import * as fs from "catter/fs";
 
 await fs.async.exists(path);
 await fs.async.isFile(path);
@@ -59,7 +59,7 @@ await fs.async.writeText(path, text);  // 将字符串写入文件
 ### 文本输出
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 io.print("no newline");
 io.println("with newline");
@@ -76,7 +76,7 @@ io.coloredPrintln("info", "blue");
 `FileStream` 类提供底层的二进制读写能力：
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 const stream = new io.FileStream("data.bin");
 const bytes = stream.read(1024);
@@ -109,7 +109,7 @@ stream.seekRead(10, io.SeekWhence.CUR);  // 相对当前位置
 `TextFileStream` 类封装了 `FileStream`，支持编码（ASCII 和 UTF-8）：
 
 ```js
-import { io } from "catter";
+import * as io from "catter/io";
 
 io.TextFileStream.with("log.txt", "utf-8", (stream) => {
   const lines = stream.readLines();
@@ -134,7 +134,7 @@ io.TextFileStream.with("log.txt", "utf-8", (stream) => {
 ## os -- 操作系统
 
 ```js
-import { os } from "catter";
+import * as os from "catter/os";
 
 os.platform();  // "linux" | "macos" | "windows"
 os.arch();      // "x86" | "x64" | "arm" | "arm64"
@@ -145,7 +145,7 @@ os.arch();      // "x86" | "x64" | "arm" | "arm64"
 ### 快捷方法
 
 ```js
-import { http } from "catter";
+import * as http from "catter/http";
 
 const text = await http.text("https://example.com");
 const data = await http.json("https://api.example.com/data");
@@ -160,7 +160,7 @@ const res = await http.head(url);
 ### 完整请求
 
 ```js
-import { http } from "catter";
+import * as http from "catter/http";
 
 const response = await http.request("https://example.com/api", {
   method: "POST",
@@ -216,7 +216,7 @@ client.close();
 ### 时间戳
 
 ```js
-import { time } from "catter";
+import * as time from "catter/time";
 
 time.now();          // Unix 时间戳（毫秒），与 time.unixMs() 相同
 time.unixMs();       // Unix 时间戳（毫秒）
@@ -260,7 +260,7 @@ const seconds = time.elapsed(start, "s");
 ## debug -- 断言
 
 ```js
-import { debug } from "catter";
+import * as debug from "catter/debug";
 
 debug.assertPrint(condition);         // 失败时打印 "assertion failed!"
 debug.assertThrow(condition);         // 失败时抛出 Error
@@ -276,7 +276,7 @@ debug.assertDo(condition, () => {     // 失败时执行回调
 ### 定义命令
 
 ```js
-import { cli } from "catter";
+import * as cli from "catter/cli";
 
 const myCommand = cli.command({
   name: "my-script",
