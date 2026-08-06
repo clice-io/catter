@@ -1,10 +1,10 @@
-import { FlatTree } from "catter/data";
 import * as fs from "catter/fs";
-import * as io from "catter/io";
 import * as service from "catter/service";
 import * as cli from "catter/cli";
-import {TreeRenderer} from "catter/view";
-import { analyze as analyzeCmd } from "catter/cmd";
+import { println, print } from "catter/io";
+import { FlatTree } from "catter/data";
+import { TreeRenderer } from "catter/view";
+import { analyze } from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -66,13 +66,13 @@ function targetTree(): service.CatterContextService {
 
     onFinish(result) {
       if (result.code !== 0) {
-        io.println(
+        println(
           `Build failed with exit code ${result.code}. Printing partial target forest.`,
         );
       }
 
       if (targetTree.size() === 0) {
-        io.println("No targets found.");
+        println("No targets found.");
         return;
       }
 
@@ -84,7 +84,7 @@ function targetTree(): service.CatterContextService {
         content: (id) => targetTree.node(id)?.content,
       });
 
-      io.print(
+      print(
         renderer.output({
           type: "cli",
           maxDepth,
@@ -93,11 +93,11 @@ function targetTree(): service.CatterContextService {
       );
 
       if (cycles.length > 0) {
-        io.println("");
-        io.println("Detected target cycles:");
+        println("");
+        println("Detected target cycles:");
         for (const cycle of cycles) {
           const names = cycle.map((id) => fs.path.filename(id) || id);
-          io.println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+          println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
         }
       }
     },
@@ -108,7 +108,7 @@ function targetTree(): service.CatterContextService {
         return;
       }
 
-      const analysisResult = analyzeCmd({
+      const analysisResult = analyze({
         exe: data.data.exe,
         argv: data.data.argv,
       });

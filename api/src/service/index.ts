@@ -17,9 +17,9 @@ import {
   type RegisterableService,
   type ServiceFinishHandler,
   type ServiceStartHandler,
-} from "./service/runtime.js";
+} from "./runtime.js";
 
-export * from "./service/runtime.js";
+export * from "./runtime.js";
 
 export type {
   Action,

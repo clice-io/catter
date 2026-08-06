@@ -1,8 +1,8 @@
 import * as cli from "catter/cli";
-import * as data from "catter/data";
-import * as io from "catter/io";
 import * as service from "catter/service";
-import * as view from "catter/view";
+import { println, print } from "catter/io";
+import { FlatTree } from "catter/data";
+import { TreeRenderer } from "catter/view";
 
 const cmdTreeCLI = cli.command({
   name: "cmd-tree",
@@ -101,7 +101,7 @@ function formatCommand(
  * ```
  */
 function cmdTree(): service.CatterContextService {
-  const commandTree = new data.FlatTree<number, service.CommandCaptureResult>();
+  const commandTree = new FlatTree<number, service.CommandCaptureResult>();
   let maxDepth: number | undefined;
   let visibleArgCount = -1;
   let maxArgWidth = 10;
@@ -134,25 +134,25 @@ function cmdTree(): service.CatterContextService {
 
     onFinish(result) {
       if (result.code !== 0) {
-        io.println(
+        println(
           `Build failed with exit code ${result.code}. Printing partial command tree.`,
         );
       }
 
       if (commandTree.size() === 0) {
-        io.println("No commands found.");
+        println("No commands found.");
         return;
       }
       const cycles = commandTree.assemble();
 
       const walker = commandTree.walk();
-      const renderer = new view.TreeRenderer({
+      const renderer = new TreeRenderer({
         first: walker.first,
         children: walker.children,
         content: (id) => commandTree.node(id)?.content,
       });
 
-      io.print(
+      print(
         renderer.output({
           type: "cli",
           maxDepth,
@@ -171,8 +171,8 @@ function cmdTree(): service.CatterContextService {
       );
 
       if (cycles.length > 0) {
-        io.println("");
-        io.println("Detected command cycles:");
+        println("");
+        println("Detected command cycles:");
         for (const cycle of cycles) {
           const names = cycle.map((id) => {
             const capture = commandTree.node(id)?.content;
@@ -188,7 +188,7 @@ function cmdTree(): service.CatterContextService {
               maxArgWidth,
             );
           });
-          io.println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+          println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
         }
       }
     },
