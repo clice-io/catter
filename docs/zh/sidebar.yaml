@@ -18,10 +18,6 @@ scripting:
   label: 脚本系统
   items:
     - overview
-    - service-api
-    - command-analysis
-    - option-parsing
-    - builtin-modules
 
 design:
   label: 设计
