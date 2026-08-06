@@ -104,13 +104,13 @@ function targetTree(): service.CatterContextService {
 
     onCommand(ctx) {
       const data = ctx.capture;
-      if (!data.success) {
+      if (data.isErr()) {
         return;
       }
 
       const analysisResult = analyze({
-        exe: data.data.exe,
-        argv: data.data.argv,
+        exe: data.value.exe,
+        argv: data.value.argv,
       });
       if (analysisResult.isErr()) {
         return;
@@ -120,7 +120,7 @@ function targetTree(): service.CatterContextService {
       const targetEntries = analysis.edges;
       const entries = targetEntries
         .map((entry) => {
-          const output = normalizePath(data.data.cwd, entry.output);
+          const output = normalizePath(data.value.cwd, entry.output);
           if (output === undefined) {
             return undefined;
           }
@@ -128,7 +128,7 @@ function targetTree(): service.CatterContextService {
           return {
             output,
             inputs: entry.inputs
-              .map((input) => normalizePath(data.data.cwd, input))
+              .map((input) => normalizePath(data.value.cwd, input))
               .filter(isDefined),
           };
         })

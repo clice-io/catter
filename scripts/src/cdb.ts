@@ -369,7 +369,7 @@ function cdb(
 
     onCommand(ctx) {
       const data = ctx.capture;
-      if (!data.success) {
+      if (data.isErr()) {
         const message = `CDB received capture error: ${data.error.msg}`;
         if (options.abortOnCaptureError) {
           throw new Error(message);
@@ -378,7 +378,7 @@ function cdb(
         return;
       }
 
-      const command = data.data;
+      const command = data.value;
       const analysisResult = compilerAnalyzer.analyze({
         exe: command.exe,
         argv: command.argv,

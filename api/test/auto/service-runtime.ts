@@ -1,9 +1,11 @@
 import * as debug from "catter/debug";
 import * as service from "catter/service";
+import { ok, type Result } from "catter/neverthrow";
 import type {
   CatterConfig,
+  CatterErr,
   CatterRuntime,
-  CommandCaptureResult,
+  CommandData,
 } from "catter/service";
 
 const runtimeInfo: CatterRuntime = {
@@ -25,18 +27,15 @@ const config: CatterConfig = {
   execute: true,
 };
 
-function command(exe: string, parent?: number): CommandCaptureResult {
-  return {
-    success: true,
-    data: {
-      cwd: "/tmp",
-      exe,
-      argv: [exe],
-      env: [],
-      runtime: runtimeInfo,
-      parent,
-    },
-  };
+function command(exe: string, parent?: number): Result<CommandData, CatterErr> {
+  return ok({
+    cwd: "/tmp",
+    exe,
+    argv: [exe],
+    env: [],
+    runtime: runtimeInfo,
+    parent,
+  });
 }
 
 const commandIds: number[] = [];
@@ -57,11 +56,11 @@ runtime.use(
       await Promise.resolve();
       commandIds.push(ctx.id);
 
-      if (ctx.capture.success && ctx.capture.data.exe === "gcc") {
+      if (ctx.capture.isOk() && ctx.capture.value.exe === "gcc") {
         ctx.ignoreDescendants();
         ctx.modify({
-          ...ctx.capture.data,
-          argv: [...ctx.capture.data.argv, "-Wall"],
+          ...ctx.capture.value,
+          argv: [...ctx.capture.value.argv, "-Wall"],
         });
       }
     },
@@ -172,7 +171,7 @@ pipelineRuntime.use(
       async onCommand(ctx) {
         await Promise.resolve();
         pipelineEvents.push(`seen:${ctx.id}`);
-        if (ctx.capture.success && ctx.capture.data.exe === "clang") {
+        if (ctx.capture.isOk() && ctx.capture.value.exe === "clang") {
           ctx.ignoreDescendants();
         }
       },
@@ -181,12 +180,12 @@ pipelineRuntime.use(
       async onCommand(id, data) {
         await Promise.resolve();
         pipelineEvents.push(`action:${id}`);
-        if (data.success && data.data.exe === "clang") {
+        if (data.isOk() && data.value.exe === "clang") {
           return {
             type: "modify",
             data: {
-              ...data.data,
-              argv: [...data.data.argv, "-O2"],
+              ...data.value,
+              argv: [...data.value.argv, "-O2"],
             },
           };
         }
@@ -209,24 +208,24 @@ sequentialPipelineRuntime.use(
     service.create({
       onCommand(ctx) {
         sequentialPipelineEvents.push("first");
-        if (!ctx.capture.success) {
+        if (ctx.capture.isErr()) {
           return;
         }
         ctx.modify({
-          ...ctx.capture.data,
-          argv: [...ctx.capture.data.argv, "first"],
+          ...ctx.capture.value,
+          argv: [...ctx.capture.value.argv, "first"],
         });
       },
     }),
     service.create({
       onCommand(ctx) {
         sequentialPipelineEvents.push(`second:${ctx.action.type}`);
-        if (!ctx.capture.success) {
+        if (ctx.capture.isErr()) {
           return;
         }
         ctx.modify({
-          ...ctx.capture.data,
-          argv: [...ctx.capture.data.argv, "second"],
+          ...ctx.capture.value,
+          argv: [...ctx.capture.value.argv, "second"],
         });
       },
     }),
@@ -274,7 +273,7 @@ const cyclicParentRuntime = new service.ServiceRuntime();
 cyclicParentRuntime.use(
   service.create({
     onCommand(ctx) {
-      if (!ctx.capture.success) {
+      if (ctx.capture.isErr()) {
         return;
       }
       ctx.skip();
