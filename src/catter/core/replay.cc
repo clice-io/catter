@@ -86,8 +86,7 @@ js::CatterConfig to_catter_config(const ReplayConfig& config, const ReplayFile& 
     return {
         .scriptPath = config.script,
         .scriptArgs = config.script_args,
-        .buildSystemCommand =
-            replay.build_system_command.value_or(config.build_system_command),
+        .buildSystemCommand = replay.build_system_command.value_or(config.build_system_command),
         .buildSystemCommandCwd = config.working_directory.string(),
         .runtime = config.runtime,
         .options = config.options,
@@ -107,8 +106,8 @@ std::string command_cwd(const ReplayConfig& config, const ReplayEvent& event) {
     return cwd.lexically_normal().string();
 }
 
-std::expected<js::CommandData, js::CatterErr>
-    to_command_data(const ReplayConfig& config, const ReplayEvent& event) {
+std::expected<js::CommandData, js::CatterErr> to_command_data(const ReplayConfig& config,
+                                                              const ReplayEvent& event) {
     if(event.error.has_value()) {
         return std::unexpected(js::CatterErr{
             .msg = event.error->message,

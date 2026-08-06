@@ -32,8 +32,7 @@ int main(int argc, char* argv[]) {
         const fs::path base = replay_path.parent_path();
         if(replay.cwd.has_value()) {
             fs::path cwd = *replay.cwd;
-            config.working_directory =
-                cwd.is_absolute() ? cwd : (base / cwd).lexically_normal();
+            config.working_directory = cwd.is_absolute() ? cwd : (base / cwd).lexically_normal();
         } else {
             config.working_directory = base;
         }
