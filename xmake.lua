@@ -153,7 +153,8 @@ target("catter-js-types")
             "api/scripts/check-modules.mjs",
             "api/api-extractor.json",
             "tsconfig.base.json"
-        }
+        },
+        js_outputs = "api/output/types/**.d.ts"
     })
 
 target("catter-js-runtime")
@@ -176,6 +177,10 @@ target("catter-js-runtime")
             "api/scripts/check-modules.mjs",
             "api/tsconfig.app.json",
             "tsconfig.base.json"
+        },
+        js_outputs = {
+            "api/output/lib/manifest.json",
+            "api/output/lib/**.js"
         }
     })
     add_rules("pack.js", {
@@ -199,7 +204,8 @@ target("catter-js-tests")
             "api/package.json",
             "api/tsconfig.test.json",
             "tsconfig.base.json"
-        }
+        },
+        js_outputs = "api/output/test/**.js"
     })
 
 target("catter-js-scripts")
@@ -218,6 +224,10 @@ target("catter-js-scripts")
             "scripts/tsconfig.json",
             "api/catter-c/**.d.ts",
             "tsconfig.base.json"
+        },
+        js_outputs = {
+            "scripts/output/manifest.json",
+            "scripts/output/**.js"
         }
     })
     add_rules("pack.js", {
@@ -452,6 +462,7 @@ target("it-catter-replay")
 --   js_dir     directory of the JS package, defaults to "api".
 --   js_script  pnpm script to run in api/, e.g. "build:runtime".
 --   js_inputs  glob patterns of the source files that trigger a rebuild.
+--   js_outputs glob patterns of the output files to track.
 --
 -- Change detection: a stamp file records the last successful build; the build
 -- runs only when an input file changed, the script/input/output config
@@ -462,9 +473,10 @@ rule("build.js")
         import("core.project.depend")
         import("utils.progress")
 
+        local js_dir = target:extraconf("rules", "build.js", "js_dir") or "api"
         local js_script = target:extraconf("rules", "build.js", "js_script")
         local js_inputs = target:extraconf("rules", "build.js", "js_inputs")
-        local js_dir = target:extraconf("rules", "build.js", "js_dir") or "api"
+        local js_outputs = target:extraconf("rules", "build.js", "js_outputs")
 
         assert(js_script, "build.js rule requires js_script")
         local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
@@ -472,30 +484,34 @@ rule("build.js")
         os.mkdir(path.directory(stampfile))
 
         -- Expand the input globs into concrete files used for change detection.
-        local inputfiles = {}
-        if js_inputs then
-            for _, pattern in ipairs(js_inputs) do
-                table.join2(inputfiles, os.files(pattern))
-            end
-        end
-        table.sort(inputfiles)
-
-        -- The script/input config is tracked as values too, so
+        local changefiles = {}
+        -- The script/input/output config is tracked as values too, so
         -- changing them in xmake.lua also forces a rebuild.
         local dependvalues = {js_script}
         table.insert(dependvalues, "dir:" .. js_dir)
+
+        if js_outputs then
+            for _, pattern in ipairs(js_outputs) do
+                table.join2(changefiles, os.files(pattern))
+                table.insert(dependvalues, "output:" .. pattern)
+            end
+        end
+
         if js_inputs then
             for _, pattern in ipairs(js_inputs) do
+                table.join2(changefiles, os.files(pattern))
                 table.insert(dependvalues, "input:" .. pattern)
             end
         end
+
+        table.sort(changefiles)
 
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Running js script %s", js_script)
             os.vrunv(pnpm.program, {"--dir", js_dir, "run", js_script})
             io.writefile(stampfile, os.date("%Y-%m-%dT%H:%M:%S"))
         end, {
-            files = inputfiles,
+            files = changefiles,
             values = dependvalues,
             dependfile = target:dependfile(stampfile),
             changed = target:is_rebuilt()
