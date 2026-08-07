@@ -44,6 +44,28 @@ function expectArrayEq<T>(
   }
 }
 
+function expectCyclesEq(
+  actual: readonly (readonly PropertyKey[])[],
+  expected: readonly (readonly PropertyKey[])[],
+  label: string,
+) {
+  const normalize = (cycles: readonly (readonly PropertyKey[])[]) =>
+    cycles
+      .map((cycle) => [...cycle].sort().join(","))
+      .sort()
+      .join(";");
+
+  if (normalize(actual) !== normalize(expected)) {
+    throw new Error(
+      `${label}: expected [${expected
+        .map((cycle) => `[${cycle.join(", ")}]`)
+        .join(", ")}], got [${actual
+        .map((cycle) => `[${cycle.join(", ")}]`)
+        .join(", ")}]`,
+    );
+  }
+}
+
 const basic = new data.FlatTree<number, string>();
 mergeNode(basic, { id: 1, content: "root" });
 mergeNode(basic, { id: 2, parent: [1], content: "left" });
@@ -52,7 +74,7 @@ mergeNode(basic, { id: 4, parent: [2], content: "leaf" });
 mergeNode(basic, { id: 5, parent: [42], content: "orphan" });
 
 expectEq(size(basic), 5, "basic size");
-expectEq(basic.assemble(), true, "basic assemble");
+expectCyclesEq(basic.assemble(), [], "basic assemble");
 expectArrayEq(basic.roots(), [1], "basic roots");
 
 const basicWalk = basic.walk();
@@ -83,7 +105,11 @@ const incremental = new data.FlatTree<number, string>();
 mergeNode(incremental, { id: 2, parent: [1], content: "child" });
 mergeNode(incremental, { id: 3, parent: [2], content: "leaf" });
 
-expectEq(incremental.assemble(), true, "incremental assemble before parent");
+expectCyclesEq(
+  incremental.assemble(),
+  [],
+  "incremental assemble before parent",
+);
 expectArrayEq(incremental.roots(), [], "incremental roots before parent");
 
 const incrementalBeforeParent = incremental.walk();
@@ -140,7 +166,7 @@ mergeNode(dag, { id: "tool", content: "tool" });
 mergeNode(dag, { id: "main.o", parent: ["app"], content: "main.o" });
 mergeNode(dag, { id: "main.o", parent: ["tool"], content: "main.o" });
 
-expectEq(dag.assemble(), true, "dag assemble");
+expectCyclesEq(dag.assemble(), [], "dag assemble");
 expectArrayEq(dag.roots(), ["app", "tool"], "dag roots");
 
 const dagWalk = dag.walk();
@@ -162,13 +188,46 @@ expectEq(
 const cyclic = new data.FlatTree<number, string>();
 mergeNode(cyclic, { id: 1, children: [2], content: "one" });
 mergeNode(cyclic, { id: 2, children: [1], content: "two" });
-expectEq(cyclic.assemble(), false, "cycle detection");
+expectCyclesEq(cyclic.assemble(), [[1, 2]], "cycle detection");
+
+const selfLoop = new data.FlatTree<number, string>();
+mergeNode(selfLoop, { id: 1, children: [1], content: "self" });
+mergeNode(selfLoop, { id: 2, parent: [1], content: "child" });
+expectCyclesEq(selfLoop.assemble(), [[1]], "self-loop detection");
+
+const cyclicDownstream = new data.FlatTree<number, string>();
+mergeNode(cyclicDownstream, { id: 1, children: [2], content: "one" });
+mergeNode(cyclicDownstream, {
+  id: 2,
+  children: [1, 3],
+  content: "two",
+});
+mergeNode(cyclicDownstream, { id: 3, content: "downstream" });
+expectCyclesEq(
+  cyclicDownstream.assemble(),
+  [[1, 2]],
+  "cycle excludes downstream node",
+);
+
+const twoCycles = new data.FlatTree<number, string>();
+mergeNode(twoCycles, { id: 1, children: [2], content: "one" });
+mergeNode(twoCycles, { id: 2, children: [1], content: "two" });
+mergeNode(twoCycles, { id: 3, children: [4], content: "three" });
+mergeNode(twoCycles, { id: 4, children: [3], content: "four" });
+expectCyclesEq(
+  twoCycles.assemble(),
+  [
+    [1, 2],
+    [3, 4],
+  ],
+  "two independent cycles",
+);
 
 const mutable = new data.FlatTree<number, string>();
 mergeNode(mutable, { id: 1, content: "root" });
 mergeNode(mutable, { id: 2, parent: [1], content: "left" });
 mergeNode(mutable, { id: 3, content: "right" });
-expectEq(mutable.assemble(), true, "mutable assemble");
+expectCyclesEq(mutable.assemble(), [], "mutable assemble");
 
 mutable.update({ id: 2, parent: [3], content: "left moved" });
 const mutableWalk = mutable.walk();

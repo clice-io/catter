@@ -103,6 +103,9 @@ hook_path = os.path.join(project_root, hook_config["targetfile"])
 it_proxy_config = run_with_json("xmake show -t it-catter-proxy --json")
 it_proxy_path = os.path.join(project_root, it_proxy_config["targetfile"])
 
+it_replay_config = run_with_json("xmake show -t it-catter-replay --json")
+it_replay_path = os.path.join(project_root, it_replay_config["targetfile"])
+
 proxy_config = run_with_json("xmake show -t catter-proxy --json")
 proxy_path = os.path.join(project_root, proxy_config["targetfile"])
 
@@ -126,5 +129,6 @@ match platform.system():
 
 config.substitutions.append(("%it_catter_hook", hook_path))
 config.substitutions.append(("%it_catter_proxy", it_proxy_path))
+config.substitutions.append(("%it_catter_replay", it_replay_path))
 config.substitutions.append(("%catter_proxy", proxy_path))
 config.substitutions.append(("%catter", catter_path))

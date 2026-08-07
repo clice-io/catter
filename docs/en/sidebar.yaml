@@ -18,10 +18,6 @@ scripting:
   label: Scripting
   items:
     - overview
-    - service-api
-    - command-analysis
-    - option-parsing
-    - builtin-modules
 
 design:
   label: Design

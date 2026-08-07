@@ -1,9 +1,7 @@
 #include <atomic>
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -11,62 +9,17 @@
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
-
-#include "build_replay.h"
+#include "replay.h"
 #include "temp_file_manager.h"
 
 namespace fs = std::filesystem;
 using namespace catter;
-using catter::tests::js::BuildReplay;
-using catter::tests::js::BuildReplayConfig;
-using catter::tests::js::ReplayCommand;
+using catter::core::ReplayConfig;
+using catter::core::ReplayEvent;
+using catter::core::ReplayFile;
+using catter::core::ReplayRunner;
 
 namespace {
-
-class StdoutCapture {
-public:
-    explicit StdoutCapture(const fs::path& path) {
-#ifdef _WIN32
-        saved_fd_ = _dup(_fileno(stdout));
-#else
-        saved_fd_ = dup(fileno(stdout));
-#endif
-        if(saved_fd_ < 0) {
-            throw std::runtime_error("failed to duplicate stdout");
-        }
-        if(freopen(path.string().c_str(), "w", stdout) == nullptr) {
-#ifdef _WIN32
-            _close(saved_fd_);
-#else
-            close(saved_fd_);
-#endif
-            throw std::runtime_error("failed to redirect stdout to " + path.string());
-        }
-    }
-
-    ~StdoutCapture() {
-        fflush(stdout);
-#ifdef _WIN32
-        _dup2(saved_fd_, _fileno(stdout));
-        _close(saved_fd_);
-#else
-        dup2(saved_fd_, fileno(stdout));
-        close(saved_fd_);
-#endif
-        clearerr(stdout);
-    }
-
-    StdoutCapture(const StdoutCapture&) = delete;
-    StdoutCapture& operator= (const StdoutCapture&) = delete;
-
-private:
-    int saved_fd_ = -1;
-};
 
 fs::path make_root() {
     static std::atomic_uint64_t serial{0};
@@ -98,21 +51,21 @@ size_t count_occurrences(std::string_view haystack, std::string_view needle) {
     return count;
 }
 
-ReplayCommand command(uint32_t id,
-                      std::string exe,
-                      std::vector<std::string> argv,
-                      const fs::path& cwd,
-                      uint32_t parent = 0) {
+ReplayEvent command(uint32_t id,
+                    std::string exe,
+                    std::vector<std::string> argv,
+                    const fs::path& cwd,
+                    uint32_t parent = 0) {
     return {
         .id = id,
-        .parent = parent,
+        .parent = parent == 0 ? std::optional<int64_t>{} : parent,
         .cwd = cwd.string(),
         .exe = std::move(exe),
         .argv = std::move(argv),
     };
 }
 
-BuildReplayConfig cdb_config(const fs::path& root, std::vector<std::string> script_args) {
+ReplayConfig cdb_config(const fs::path& root, std::vector<std::string> script_args) {
     return {
         .script = "script::cdb",
         .script_args = std::move(script_args),
@@ -121,11 +74,11 @@ BuildReplayConfig cdb_config(const fs::path& root, std::vector<std::string> scri
     };
 }
 
-ReplayCommand compile_command(uint32_t id,
-                              const fs::path& root,
-                              std::string source,
-                              std::string object,
-                              uint32_t parent = 0) {
+ReplayEvent compile_command(uint32_t id,
+                            const fs::path& root,
+                            std::string source,
+                            std::string object,
+                            uint32_t parent = 0) {
     return command(id,
                    "clang++",
                    {"clang++", "-c", std::move(source), "-o", std::move(object)},
@@ -157,14 +110,24 @@ TEST_CASE(cdb_generates_compile_database) {
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
 
-    BuildReplay replay;
-    replay.run(cdb_config(root, {"--output", save_path.string(), "--quiet"}),
-               {
-                   command(1, "make", {"make"}, root),
-                   compile_command(2, root, "src/main.cc", "obj/main.o", 1),
-                   command(3, "clang++", {"clang++", "obj/main.o", "-o", "bin/app"}, root, 1),
-               },
-               {.code = 0});
+    ReplayRunner replay;
+    replay.run(
+        cdb_config(root,
+                   {
+                       "--output",
+                       save_path.string(),
+                       "--quiet"
+    }),
+        {
+            .version = 1,
+            .events =
+                {
+                    command(1, "make", {"make"}, root),
+                    compile_command(2, root, "src/main.cc", "obj/main.o", 1),
+                    command(3, "clang++", {"clang++", "obj/main.o", "-o", "bin/app"}, root, 1),
+                },
+            .finish = js::ProcessResult{.code = 0},
+        });
 
     const auto content = read_file(save_path);
     EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
@@ -177,10 +140,13 @@ TEST_CASE(cdb_does_not_save_on_failure_by_default) {
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
 
-    BuildReplay replay;
+    ReplayRunner replay;
     replay.run(cdb_config(root, {"--output", save_path.string(), "--quiet"}),
-               {compile_command(1, root, "src/main.cc", "obj/main.o")},
-               {.code = 1});
+               {
+                   .version = 1,
+                   .events = {compile_command(1, root, "src/main.cc", "obj/main.o")},
+                   .finish = js::ProcessResult{.code = 1},
+               });
 
     EXPECT_TRUE(!fs::exists(save_path));
 }
@@ -190,10 +156,13 @@ TEST_CASE(cdb_saves_on_failure_with_save_on_failure) {
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
 
-    BuildReplay replay;
+    ReplayRunner replay;
     replay.run(cdb_config(root, {"--output", save_path.string(), "--save-on-failure", "--quiet"}),
-               {compile_command(1, root, "src/main.cc", "obj/main.o")},
-               {.code = 1});
+               {
+                   .version = 1,
+                   .events = {compile_command(1, root, "src/main.cc", "obj/main.o")},
+                   .finish = js::ProcessResult{.code = 1},
+               });
 
     const auto content = read_file(save_path);
     EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
@@ -208,13 +177,19 @@ TEST_CASE(cdb_append_and_replace_existing_database) {
     write_existing_database(append_path, root);
     write_existing_database(replace_path, root);
 
-    BuildReplay replay;
+    ReplayRunner replay;
     replay.run(cdb_config(root, {"--output", append_path.string(), "--quiet"}),
-               {compile_command(1, root, "src/main.cc", "obj/main.o")},
-               {.code = 0});
+               {
+                   .version = 1,
+                   .events = {compile_command(1, root, "src/main.cc", "obj/main.o")},
+                   .finish = js::ProcessResult{.code = 0},
+               });
     replay.run(cdb_config(root, {"--output", replace_path.string(), "--replace", "--quiet"}),
-               {compile_command(2, root, "src/main.cc", "obj/main.o")},
-               {.code = 0});
+               {
+                   .version = 1,
+                   .events = {compile_command(2, root, "src/main.cc", "obj/main.o")},
+                   .finish = js::ProcessResult{.code = 0},
+               });
 
     const auto appended = read_file(append_path);
     EXPECT_EQ(count_occurrences(appended, "\"file\":"), 2);
@@ -232,9 +207,9 @@ TEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
 
-    BuildReplay replay;
+    ReplayRunner replay;
     auto broken = compile_command(1, root, "src/broken.cc", "obj/broken.o");
-    broken.execution = catter::js::ProcessResult{.code = 2};
+    broken.execution = js::ProcessResult{.code = 2};
     bool aborted = false;
     try {
         replay.run(cdb_config(root,
@@ -243,8 +218,11 @@ TEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
                                "--abort-on-command-failure",
                                "--save-on-failure",
                                "--quiet"}),
-                   {broken},
-                   {.code = 0});
+                   {
+                       .version = 1,
+                       .events = {broken},
+                       .finish = js::ProcessResult{.code = 0},
+                   });
     } catch(const std::exception& error) {
         aborted =
             std::string_view(error.what()).find("exited with code 2") != std::string_view::npos;
@@ -254,68 +232,6 @@ TEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
     const auto content = read_file(save_path);
     EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
     EXPECT_TRUE(content.find("src/broken.cc") != std::string_view::npos);
-}
-
-TEST_CASE(cmd_tree_renders_captured_commands) {
-    TempFileManager cleanup(make_root());
-    const auto root = cleanup.root;
-    const auto output_path = root / "stdout.txt";
-
-    BuildReplay replay;
-    {
-        StdoutCapture capture(output_path);
-        replay.run({.script = "script::cmd-tree", .working_directory = root},
-                   {
-                       command(1, "make", {"make"}, root),
-                       command(2, "clang++", {"clang++", "main.cc", "-c"}, root, 1),
-                       command(3, "ld", {"ld", "main.o", "-o", "app"}, root, 1),
-                   },
-                   {.code = 0});
-    }
-
-    const auto rendered = read_file(output_path);
-    EXPECT_TRUE(rendered.find("└──") != std::string::npos);
-    EXPECT_TRUE(rendered.find("make") != std::string::npos);
-    EXPECT_TRUE(rendered.find("clang++ main.cc -c") != std::string::npos);
-    EXPECT_TRUE(rendered.find("ld main.o -o app") != std::string::npos);
-}
-
-TEST_CASE(cmd_tree_reports_empty_build) {
-    TempFileManager cleanup(make_root());
-    const auto root = cleanup.root;
-    const auto output_path = root / "stdout.txt";
-
-    BuildReplay replay;
-    {
-        StdoutCapture capture(output_path);
-        replay.run({.script = "script::cmd-tree", .working_directory = root}, {}, {.code = 0});
-    }
-
-    const auto rendered = read_file(output_path);
-    EXPECT_TRUE(rendered.find("No commands found.") != std::string::npos);
-}
-
-TEST_CASE(target_tree_renders_target_forest) {
-    TempFileManager cleanup(make_root());
-    const auto root = cleanup.root;
-    const auto output_path = root / "stdout.txt";
-
-    BuildReplay replay;
-    {
-        StdoutCapture capture(output_path);
-        replay.run({.script = "script::target-tree", .working_directory = root},
-                   {
-                       compile_command(1, root, "src/main.cc", "obj/main.o"),
-                       command(2, "clang++", {"clang++", "obj/main.o", "-o", "bin/app"}, root),
-                   },
-                   {.code = 0});
-    }
-
-    const auto rendered = read_file(output_path);
-    EXPECT_TRUE(rendered.find("└──") != std::string::npos);
-    EXPECT_TRUE(rendered.find("main.cc") != std::string::npos);
-    EXPECT_TRUE(rendered.find("main.o") != std::string::npos);
-    EXPECT_TRUE(rendered.find("app") != std::string::npos);
 }
 
 };  // TEST_SUITE(build_replay_tests)

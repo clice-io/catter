@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "archiver outputs that claim each other as input",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "ar",
+      "argv": ["ar", "rcs", "a.o", "b.o"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "exe": "ar",
+      "argv": ["ar", "rcs", "b.o", "a.o"]
+    }
+  ]
+}

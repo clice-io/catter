@@ -6,7 +6,7 @@
   "catter/fs": "src/fs.ts",
   "catter/time": "src/time.ts",
   "catter/http": "src/http.ts",
-  "catter/service": "src/service.ts",
+  "catter/service": "src/service/index.ts",
   "catter/option": "src/option/index.ts",
   "catter/cmd": "src/cmd/index.ts",
   "catter/cdb": "src/cdb/index.ts",

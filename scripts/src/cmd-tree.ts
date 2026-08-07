@@ -1,8 +1,9 @@
 import * as cli from "catter/cli";
-import * as data from "catter/data";
-import * as io from "catter/io";
 import * as service from "catter/service";
-import * as view from "catter/view";
+import { println, print } from "catter/io";
+import { FlatTree } from "catter/data";
+import { TreeRenderer } from "catter/view";
+import { Result } from "catter/neverthrow";
 
 const cmdTreeCLI = cli.command({
   name: "cmd-tree",
@@ -101,7 +102,10 @@ function formatCommand(
  * ```
  */
 function cmdTree(): service.CatterContextService {
-  const commandTree = new data.FlatTree<number, service.CommandCaptureResult>();
+  const commandTree = new FlatTree<
+    number,
+    Result<service.CommandData, service.CatterErr>
+  >();
   let maxDepth: number | undefined;
   let visibleArgCount = -1;
   let maxArgWidth = 10;
@@ -112,8 +116,8 @@ function cmdTree(): service.CatterContextService {
       commandTree.justMergeNode({
         id: ctx.id,
         parent:
-          capture.success && capture.data.parent !== undefined
-            ? [capture.data.parent]
+          capture.isOk() && capture.value.parent !== undefined
+            ? [capture.value.parent]
             : [],
         content: capture,
       });
@@ -134,41 +138,63 @@ function cmdTree(): service.CatterContextService {
 
     onFinish(result) {
       if (result.code !== 0) {
-        io.println(
+        println(
           `Build failed with exit code ${result.code}. Printing partial command tree.`,
         );
       }
 
       if (commandTree.size() === 0) {
-        io.println("No commands found.");
+        println("No commands found.");
         return;
       }
-      commandTree.assemble();
+      const cycles = commandTree.assemble();
 
       const walker = commandTree.walk();
-      const renderer = new view.TreeRenderer({
+      const renderer = new TreeRenderer({
         first: walker.first,
         children: walker.children,
         content: (id) => commandTree.node(id)?.content,
       });
 
-      io.print(
+      print(
         renderer.output({
           type: "cli",
           maxDepth,
           text: (capture) => {
-            if (!capture.success) {
+            if (capture.isErr()) {
               return `[capture error] ${capture.error.msg}`;
             }
 
             return formatCommand(
-              capture.data.argv,
+              capture.value.argv,
               visibleArgCount,
               maxArgWidth,
             );
           },
         }),
       );
+
+      if (cycles.length > 0) {
+        println("");
+        println("Detected command cycles:");
+        for (const cycle of cycles) {
+          const names = cycle.map((id) => {
+            const capture = commandTree.node(id)?.content;
+            if (!capture) {
+              return `#${String(id)}`;
+            }
+            if (capture.isErr()) {
+              return `[capture error] ${capture.error.msg}`;
+            }
+            return formatCommand(
+              capture.value.argv,
+              visibleArgCount,
+              maxArgWidth,
+            );
+          });
+          println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+        }
+      }
     },
   });
 }

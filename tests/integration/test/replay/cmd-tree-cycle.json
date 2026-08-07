@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "commands with a parent cycle",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 3,
+      "exe": "clang++",
+      "argv": ["clang++", "main.cc", "-c"]
+    },
+    {
+      "type": "command",
+      "id": 3,
+      "parent": 2,
+      "exe": "ld",
+      "argv": ["ld", "main.o", "-o", "app"]
+    }
+  ]
+}

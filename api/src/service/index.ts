@@ -4,6 +4,8 @@ import {
   service_on_finish,
   service_on_start,
 } from "catter-c";
+import { err, ok, type Result } from "catter/neverthrow";
+import type { CatterErr, CommandCaptureResult, CommandData } from "catter-c";
 
 import {
   ServiceRuntime,
@@ -17,9 +19,9 @@ import {
   type RegisterableService,
   type ServiceFinishHandler,
   type ServiceStartHandler,
-} from "./service/runtime.js";
+} from "./runtime.js";
 
-export * from "./service/runtime.js";
+export * from "./runtime.js";
 
 export type {
   Action,
@@ -28,7 +30,6 @@ export type {
   CatterErr,
   CatterStdioMode,
   CatterRuntime,
-  CommandCaptureResult,
   CommandData,
   ProcessResult,
 } from "catter-c";
@@ -58,8 +59,15 @@ function installRuntime(): void {
   runtimeInstalled = true;
   service_on_start((config) => defaultRuntime.start(config));
   service_on_finish((result) => defaultRuntime.finish(result));
-  service_on_command((id, data) => defaultRuntime.command(id, data));
+  // The native bridge reports captures as a tagged CommandCaptureResult; the
+  // service layer converts it once into a Result so handlers never see the
+  // native shape.
+  service_on_command((id, data) => defaultRuntime.command(id, toResult(data)));
   service_on_execution((id, result) => defaultRuntime.execution(id, result));
+}
+
+function toResult(data: CommandCaptureResult): Result<CommandData, CatterErr> {
+  return data.success ? ok(data.data) : err(data.error);
 }
 
 /**

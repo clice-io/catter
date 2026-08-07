@@ -89,7 +89,7 @@ export interface FlatTreeWalker<Id extends FlatTreeId> {
  *
  * Output:
  * ```txt
- * true
+ * []
  * ["app"]
  * ["main.o", "util.o"]
  * ```
@@ -153,16 +153,31 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     this.dataPool.delete(id);
   }
 
+  /**
+   * Merges one node into the graph, then reassembles it.
+   *
+   * See `assemble()` for the returned cycle report.
+   */
   merge(node: FlatTreeNodeInput<Id, Content>) {
     this.justMergeNode(node);
     return this.assemble();
   }
 
+  /**
+   * Replaces one node's links and content, then reassembles the graph.
+   *
+   * See `assemble()` for the returned cycle report.
+   */
   update(node: FlatTreeNodeInput<Id, Content>) {
     this.justUpdateNode(node);
     return this.assemble();
   }
 
+  /**
+   * Removes one node, then reassembles the graph.
+   *
+   * See `assemble()` for the returned cycle report.
+   */
   remove(id: Id) {
     this.justRemoveNode(id);
     return this.assemble();
@@ -226,47 +241,187 @@ export class FlatTree<Id extends FlatTreeId, Content> {
     }
   }
 
-  assemble(): boolean {
+  /**
+   * Stitches parent/child edges and topologically sorts the graph using
+   * Kahn's algorithm to detect cycles.
+   *
+   * The result is one representative directed cycle per strongly connected
+   * cyclic component. Each cycle is an ordered list of node ids where every
+   * consecutive pair (and the last back to the first) is an edge; a self-loop
+   * is reported as a single-node cycle. The union of all returned ids is
+   * exactly the set of nodes that participate in a cycle. An empty array means
+   * the graph is acyclic.
+   *
+   * @example
+   * ```ts
+   * import * as data from "catter/data";
+   *
+   * const tree = new data.FlatTree<number, string>();
+   * tree.justMergeNode({ id: 1, children: [2], content: "one" });
+   * tree.justMergeNode({ id: 2, children: [1], content: "two" });
+   *
+   * console.log(tree.assemble());
+   * ```
+   *
+   * Output:
+   * ```txt
+   * [[1, 2]]
+   * ```
+   */
+  assemble(): readonly (readonly Id[])[] {
     this.stitchEdges();
 
-    // 0=unvisited, 1=visited in this tree, 2=visited previously, no cycle found
-    const states: Map<Id, 0 | 1 | 2> = new Map();
+    // Kahn's algorithm: repeatedly remove nodes whose in-tree parents are all
+    // gone. Any node left over is part of a cycle or reachable from one.
+    const inDegree = new Map<Id, number>();
     for (const id of this.dataPool.keys()) {
-      states.set(id, 0);
+      inDegree.set(id, 0);
+    }
+    for (const [id, node] of this.dataPool) {
+      for (const parentId of node.parent) {
+        if (this.dataPool.has(parentId)) {
+          inDegree.set(id, (inDegree.get(id) as number) + 1);
+        }
+      }
     }
 
-    let noCycle = true;
+    const ready: Id[] = [];
+    for (const [id, degree] of inDegree) {
+      if (degree === 0) {
+        ready.push(id);
+      }
+    }
 
-    const hasCycleDFS = (nodeId: Id): boolean => {
-      const state = states.get(nodeId);
-      if (state === 1) return true;
-      if (state === 2) return false;
+    let removed = 0;
+    while (ready.length > 0) {
+      const id = ready.pop() as Id;
+      removed += 1;
+      const node = this.dataPool.get(id);
+      if (!node) {
+        continue;
+      }
+      for (const childId of node.children) {
+        const degree = inDegree.get(childId);
+        if (degree === undefined) {
+          continue;
+        }
+        const next = degree - 1;
+        inDegree.set(childId, next);
+        if (next === 0) {
+          ready.push(childId);
+        }
+      }
+    }
 
-      states.set(nodeId, 1);
+    if (removed === this.dataPool.size) {
+      return [];
+    }
+
+    // Narrow the surviving nodes to those actually in a cycle. Nodes that are
+    // only downstream of a cycle (reachable but not strongly connected back)
+    // are excluded by keeping just the non-trivial SCCs via Tarjan's algorithm.
+    const leftover = new Set<Id>();
+    for (const [id, degree] of inDegree) {
+      if (degree > 0) {
+        leftover.add(id);
+      }
+    }
+
+    const index = new Map<Id, number>();
+    const lowLink = new Map<Id, number>();
+    const onStack = new Set<Id>();
+    const stack: Id[] = [];
+    const cycles: Id[][] = [];
+    let nextIndex = 0;
+
+    const strongConnect = (nodeId: Id): void => {
+      index.set(nodeId, nextIndex);
+      lowLink.set(nodeId, nextIndex);
+      nextIndex += 1;
+      stack.push(nodeId);
+      onStack.add(nodeId);
 
       const node = this.dataPool.get(nodeId);
-      if (node) {
-        for (const childId of node.children) {
-          if (hasCycleDFS(childId)) {
-            return true;
-          }
+      const children = node
+        ? node.children.filter((childId) => leftover.has(childId))
+        : [];
+      for (const childId of children) {
+        if (!index.has(childId)) {
+          strongConnect(childId);
+          lowLink.set(
+            nodeId,
+            Math.min(
+              lowLink.get(nodeId) as number,
+              lowLink.get(childId) as number,
+            ),
+          );
+        } else if (onStack.has(childId)) {
+          lowLink.set(
+            nodeId,
+            Math.min(
+              lowLink.get(nodeId) as number,
+              index.get(childId) as number,
+            ),
+          );
         }
       }
 
-      states.set(nodeId, 2);
-      return false;
+      if (lowLink.get(nodeId) !== index.get(nodeId)) {
+        return;
+      }
+
+      const component: Id[] = [];
+      let top: Id;
+      do {
+        top = stack.pop() as Id;
+        onStack.delete(top);
+        component.push(top);
+      } while (top !== nodeId);
+
+      const selfLoop = component.some(
+        (memberId) =>
+          this.dataPool.get(memberId)?.children.includes(memberId) ?? false,
+      );
+      if (component.length > 1 || selfLoop) {
+        cycles.push(this.extractCycle(component));
+      }
     };
 
-    for (const id of this.dataPool.keys()) {
-      if (states.get(id) === 0) {
-        if (hasCycleDFS(id)) {
-          noCycle = false;
-          break;
-        }
+    for (const id of leftover) {
+      if (!index.has(id)) {
+        strongConnect(id);
       }
     }
 
-    return noCycle;
+    return cycles;
+  }
+
+  /**
+   * Extracts one ordered directed cycle from a strongly connected component.
+   *
+   * Walks outgoing edges within the component until a node repeats; the
+   * repeated segment is a simple cycle. A single-node component is only
+   * passed in for self-loops and yields `[id]`.
+   */
+  private extractCycle(component: Id[]): Id[] {
+    const componentSet = new Set(component);
+    const position = new Map<Id, number>();
+    const path: Id[] = [];
+    let current = component[0] as Id;
+
+    while (!position.has(current)) {
+      position.set(current, path.length);
+      path.push(current);
+      const children =
+        this.dataPool
+          .get(current)
+          ?.children.filter((childId) => componentSet.has(childId)) ?? [];
+      // Every node in a non-trivial SCC has an outgoing edge that stays inside
+      // the component, so the walk is guaranteed to loop back on itself.
+      current = children[0] as Id;
+    }
+
+    return path.slice(position.get(current) as number);
   }
 
   /**

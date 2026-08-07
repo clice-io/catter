@@ -1,10 +1,10 @@
-import * as data from "catter/data";
 import * as fs from "catter/fs";
-import * as io from "catter/io";
 import * as service from "catter/service";
 import * as cli from "catter/cli";
-import * as view from "catter/view";
-import { analyze as analyzeCmd } from "catter/cmd";
+import { println, print } from "catter/io";
+import { FlatTree } from "catter/data";
+import { TreeRenderer } from "catter/view";
+import { analyze } from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
@@ -50,7 +50,7 @@ const targetTreeCLI = cli.command({
  * ```
  */
 function targetTree(): service.CatterContextService {
-  const targetTree = new data.FlatTree<string, string>();
+  const targetTree = new FlatTree<string, string>();
   let maxDepth: number | undefined;
 
   return service.create({
@@ -66,42 +66,51 @@ function targetTree(): service.CatterContextService {
 
     onFinish(result) {
       if (result.code !== 0) {
-        io.println(
+        println(
           `Build failed with exit code ${result.code}. Printing partial target forest.`,
         );
       }
 
       if (targetTree.size() === 0) {
-        io.println("No targets found.");
+        println("No targets found.");
         return;
       }
 
-      targetTree.assemble();
+      const cycles = targetTree.assemble();
       const walker = targetTree.walk();
-      const renderer = new view.TreeRenderer({
+      const renderer = new TreeRenderer({
         first: walker.first,
         children: walker.children,
         content: (id) => targetTree.node(id)?.content,
       });
 
-      io.print(
+      print(
         renderer.output({
           type: "cli",
           maxDepth,
           text: (_content, id) => fs.path.filename(id) || id,
         }),
       );
+
+      if (cycles.length > 0) {
+        println("");
+        println("Detected target cycles:");
+        for (const cycle of cycles) {
+          const names = cycle.map((id) => fs.path.filename(id) || id);
+          println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
+        }
+      }
     },
 
     onCommand(ctx) {
       const data = ctx.capture;
-      if (!data.success) {
+      if (data.isErr()) {
         return;
       }
 
-      const analysisResult = analyzeCmd({
-        exe: data.data.exe,
-        argv: data.data.argv,
+      const analysisResult = analyze({
+        exe: data.value.exe,
+        argv: data.value.argv,
       });
       if (analysisResult.isErr()) {
         return;
@@ -111,7 +120,7 @@ function targetTree(): service.CatterContextService {
       const targetEntries = analysis.edges;
       const entries = targetEntries
         .map((entry) => {
-          const output = normalizePath(data.data.cwd, entry.output);
+          const output = normalizePath(data.value.cwd, entry.output);
           if (output === undefined) {
             return undefined;
           }
@@ -119,7 +128,7 @@ function targetTree(): service.CatterContextService {
           return {
             output,
             inputs: entry.inputs
-              .map((input) => normalizePath(data.data.cwd, input))
+              .map((input) => normalizePath(data.value.cwd, input))
               .filter(isDefined),
           };
         })

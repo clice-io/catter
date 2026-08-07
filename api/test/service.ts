@@ -39,23 +39,23 @@ service.register({
     await Promise.resolve();
     debug.assertThrow(id === 7);
 
-    if (!data.success) {
+    if (data.isErr()) {
       debug.assertThrow(data.error.msg === "spawn failed");
       commandErrorBranchSeen = true;
       return { type: "skip" };
     }
 
-    debug.assertThrow(data.data.cwd === "/tmp");
-    debug.assertThrow(data.data.exe === "clang++");
-    debug.assertThrow(data.data.argv.length === 3);
-    debug.assertThrow(data.data.argv[2] === "-c");
-    debug.assertThrow(data.data.parent === 41);
+    debug.assertThrow(data.value.cwd === "/tmp");
+    debug.assertThrow(data.value.exe === "clang++");
+    debug.assertThrow(data.value.argv.length === 3);
+    debug.assertThrow(data.value.argv[2] === "-c");
+    debug.assertThrow(data.value.parent === 41);
 
     return {
       type: "modify",
       data: {
-        ...data.data,
-        argv: [...data.data.argv, serviceArg],
+        ...data.value,
+        argv: [...data.value.argv, serviceArg],
       },
     };
   },

@@ -1,0 +1,15 @@
+// Replays captured build events from a JSON fixture through script::target-tree.
+// The tree renderer emits ANSI color codes around each node, so CHECK
+// patterns skip them with {{.*}}.
+
+RUN: "%it_catter_replay" "%S/replay/target-tree-basic.json" script::target-tree | FileCheck %s
+
+CHECK: app
+CHECK-NEXT: └──{{.*}}main.o
+CHECK-NEXT: {{.*}}└──{{.*}}main.cc
+CHECK-NOT: Detected target cycles:
+
+RUN: "%it_catter_replay" "%S/replay/target-tree-cycle.json" script::target-tree | FileCheck %s --check-prefix=CYCLE
+
+CYCLE: Detected target cycles:
+CYCLE-NEXT: [cycle] b.o -> a.o -> b.o

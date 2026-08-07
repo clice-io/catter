@@ -1,10 +1,11 @@
 import type {
   Action,
+  CatterErr,
   CatterConfig,
-  CommandCaptureResult,
   CommandData,
   ProcessResult,
 } from "catter-c";
+import type { Result } from "catter/neverthrow";
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -20,7 +21,7 @@ export type ServiceFinishHandler = (
 
 export type LegacyCommandHandler = (
   id: number,
-  data: CommandCaptureResult,
+  data: Result<CommandData, CatterErr>,
 ) => MaybePromise<Action>;
 
 export type ContextCommandHandler = (
@@ -38,7 +39,7 @@ export type ContextExecutionHandler = (
 
 export interface CommandContext {
   readonly id: number;
-  readonly capture: CommandCaptureResult;
+  readonly capture: Result<CommandData, CatterErr>;
   readonly action: Action;
   readonly stopped: boolean;
 
@@ -97,7 +98,7 @@ class RuntimeCommandContext implements CommandContext {
   constructor(
     private readonly owner: ServiceRuntime,
     readonly id: number,
-    readonly capture: CommandCaptureResult,
+    readonly capture: Result<CommandData, CatterErr>,
   ) {}
 
   get action(): Action {
@@ -154,7 +155,7 @@ class ParallelCommandContext implements CommandContext {
   constructor(
     private readonly parent: CommandContext,
     readonly id: number,
-    readonly capture: CommandCaptureResult,
+    readonly capture: Result<CommandData, CatterErr>,
   ) {}
 
   get action(): Action {
@@ -247,8 +248,11 @@ export class ServiceRuntime {
     }
   }
 
-  async command(id: number, data: CommandCaptureResult): Promise<Action> {
-    this.rememberCommand(id, data.success ? data.data.parent : undefined);
+  async command(
+    id: number,
+    data: Result<CommandData, CatterErr>,
+  ): Promise<Action> {
+    this.rememberCommand(id, data.isOk() ? data.value.parent : undefined);
 
     const ctx = new RuntimeCommandContext(this, id, data);
     if (this.hasIgnoredAncestor(id)) {
@@ -310,11 +314,15 @@ export class ServiceRuntime {
       return false;
     }
 
+    // Guard against malformed parent chains (e.g. cycles) so a hostile or
+    // corrupted capture cannot hang the runtime.
+    const seen = new Set<number>();
     let parentId = this.commandParentId(id);
-    while (parentId !== undefined) {
+    while (parentId !== undefined && !seen.has(parentId)) {
       if (this.ignoredCommandIds.has(parentId)) {
         return true;
       }
+      seen.add(parentId);
       parentId = this.commandParentId(parentId);
     }
 

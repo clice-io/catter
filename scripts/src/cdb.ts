@@ -1,8 +1,6 @@
-import * as data from "catter/data";
 import * as service from "catter/service";
 
 import * as cli from "catter/cli";
-import * as io from "catter/io";
 import * as fs from "catter/fs";
 import {
   CompilerAnalyzer,
@@ -18,6 +16,8 @@ import {
   type CDBItem,
   cdbItemsOf,
 } from "catter/cdb";
+import { FlatTree } from "catter/data";
+import { println } from "catter/io";
 
 type Producer = CDBCommand;
 
@@ -113,13 +113,13 @@ function defaultOptions(outputPath: string): CDBScriptOptions {
 
 function log(options: CDBScriptOptions, message: string): void {
   if (!options.quiet) {
-    io.println(message);
+    println(message);
   }
 }
 
 function verboseLog(options: CDBScriptOptions, message: string): void {
   if (options.verbose && !options.quiet) {
-    io.println(message);
+    println(message);
   }
 }
 
@@ -257,7 +257,7 @@ function cdb(
 ): service.CatterContextService {
   let options = defaultOptions(savePath);
   let compilerAnalyzer = new CompilerAnalyzer();
-  const commandTree = new data.FlatTree<string, string>();
+  const commandTree = new FlatTree<string, string>();
   const producers = new Map<string, Producer[]>();
   const srcFiles = new Map<string, string>();
   const capturedCompilerCommandIds = new Set<number>();
@@ -369,7 +369,7 @@ function cdb(
 
     onCommand(ctx) {
       const data = ctx.capture;
-      if (!data.success) {
+      if (data.isErr()) {
         const message = `CDB received capture error: ${data.error.msg}`;
         if (options.abortOnCaptureError) {
           throw new Error(message);
@@ -378,7 +378,7 @@ function cdb(
         return;
       }
 
-      const command = data.data;
+      const command = data.value;
       const analysisResult = compilerAnalyzer.analyze({
         exe: command.exe,
         argv: command.argv,

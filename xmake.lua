@@ -140,7 +140,6 @@ target("catter-js-types")
     set_kind("phony")
     set_default(false)
     -- Regenerates the public TypeScript declarations (build:types). Phony
-    -- target: no object file is produced, js_output only gates rebuilds.
     add_rules("build.js", {
         js_script = "build:types",
         js_inputs = {
@@ -155,7 +154,7 @@ target("catter-js-types")
             "api/api-extractor.json",
             "tsconfig.base.json"
         },
-        js_output = "api/output/types/index.d.ts"
+        js_outputs = {"api/output/types/**.d.ts"}
     })
 
 target("catter-js-runtime")
@@ -179,7 +178,10 @@ target("catter-js-runtime")
             "api/tsconfig.app.json",
             "tsconfig.base.json"
         },
-        js_output = "api/output/lib/manifest.json"
+        js_outputs = {
+            "api/output/lib/manifest.json",
+            "api/output/lib/**.js"
+        }
     })
     add_rules("pack.js", {
         pack_manifest = "api/output/lib/manifest.json",
@@ -199,13 +201,11 @@ target("catter-js-tests")
         js_script = "build:tests",
         js_inputs = {
             "api/test/**.ts",
-            "api/output/types/index.d.ts",
-            "api/output/types/catter/**.d.ts",
             "api/package.json",
             "api/tsconfig.test.json",
             "tsconfig.base.json"
         },
-        js_output = "api/output/test"
+        js_outputs = {"api/output/test/**.js"}
     })
 
 target("catter-js-scripts")
@@ -222,12 +222,13 @@ target("catter-js-scripts")
             "scripts/package.json",
             "scripts/rollup.config.js",
             "scripts/tsconfig.json",
-            "api/output/types/index.d.ts",
-            "api/output/types/catter/**.d.ts",
             "api/catter-c/**.d.ts",
             "tsconfig.base.json"
         },
-        js_output = "scripts/output/manifest.json"
+        js_outputs = {
+            "scripts/output/manifest.json",
+            "scripts/output/**.js"
+        }
     })
     add_rules("pack.js", {
         pack_manifest = "scripts/output/manifest.json",
@@ -439,6 +440,18 @@ target("it-catter-proxy")
     add_files("tests/integration/test/catter-proxy.cc")
     add_deps("common", "catter-core", "catter-proxy")
 
+target("it-catter-replay")
+    set_default(has_config("test"))
+    set_kind("binary")
+    add_local_prefix_includedirs()
+    add_files("tests/integration/replay/catter-replay.cc")
+    add_deps("common", "catter-core")
+    if is_plat("windows") then
+        -- The replay driver executes the same deep native<->JS call chains as
+        -- the unit-test replay suite; match the stack size used there.
+        add_ldflags("/STACK:8388608", {force = true})
+    end
+
 -- rule("build.js"): runs a JS toolchain build (pnpm script in api/) and
 -- tracks the inputs/outputs for change detection. It hooks into before_build,
 -- so the produced artifacts are ready before the target's default build (e.g.
@@ -449,8 +462,7 @@ target("it-catter-proxy")
 --   js_dir     directory of the JS package, defaults to "api".
 --   js_script  pnpm script to run in api/, e.g. "build:runtime".
 --   js_inputs  glob patterns of the source files that trigger a rebuild.
---   js_output  the output file/directory produced by the script; a missing
---              output also forces a rebuild.
+--   js_outputs glob patterns of the output files to track.
 --
 -- Change detection: a stamp file records the last successful build; the build
 -- runs only when an input file changed, the script/input/output config
@@ -461,10 +473,10 @@ rule("build.js")
         import("core.project.depend")
         import("utils.progress")
 
+        local js_dir = target:extraconf("rules", "build.js", "js_dir") or "api"
         local js_script = target:extraconf("rules", "build.js", "js_script")
         local js_inputs = target:extraconf("rules", "build.js", "js_inputs")
-        local js_output = target:extraconf("rules", "build.js", "js_output")
-        local js_dir = target:extraconf("rules", "build.js", "js_dir") or "api"
+        local js_outputs = target:extraconf("rules", "build.js", "js_outputs")
 
         assert(js_script, "build.js rule requires js_script")
         local pnpm = assert(find_tool("pnpm") or find_tool("pnpm.cmd") or find_tool("pnpm.bat"), "pnpm not found!")
@@ -472,36 +484,38 @@ rule("build.js")
         os.mkdir(path.directory(stampfile))
 
         -- Expand the input globs into concrete files used for change detection.
-        local inputfiles = {}
-        if js_inputs then
-            for _, pattern in ipairs(js_inputs) do
-                table.join2(inputfiles, os.files(pattern))
-            end
-        end
-        table.sort(inputfiles)
-
+        local changefiles = {}
         -- The script/input/output config is tracked as values too, so
         -- changing them in xmake.lua also forces a rebuild.
         local dependvalues = {js_script}
         table.insert(dependvalues, "dir:" .. js_dir)
-        if js_output then table.insert(dependvalues, js_output) end
+
+        if js_outputs then
+            for _, pattern in ipairs(js_outputs) do
+                table.join2(changefiles, os.files(pattern))
+                table.insert(dependvalues, "output:" .. pattern)
+            end
+        end
+
         if js_inputs then
             for _, pattern in ipairs(js_inputs) do
+                table.join2(changefiles, os.files(pattern))
                 table.insert(dependvalues, "input:" .. pattern)
             end
         end
+
+        table.sort(changefiles)
 
         depend.on_changed(function()
             progress.show(opt.progress or 0, "${color.build.object}Running js script %s", js_script)
             os.vrunv(pnpm.program, {"--dir", js_dir, "run", js_script})
             io.writefile(stampfile, os.date("%Y-%m-%dT%H:%M:%S"))
         end, {
-            files = inputfiles,
+            files = changefiles,
             values = dependvalues,
             dependfile = target:dependfile(stampfile),
             changed = target:is_rebuilt()
                 or not os.isfile(stampfile)
-                or (js_output and not os.exists(js_output)),
         })
     end)
 
@@ -683,7 +697,7 @@ xpack("catter")
     set_homepage("https://clice.io")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
-    add_installfiles("api/output/types/index.d.ts", {prefixdir = "types"})
+    add_installfiles("api/output/types/*.d.ts", {prefixdir = "types"})
 
     before_package(function ()
         assert(os.isfile("api/output/types/index.d.ts"),
