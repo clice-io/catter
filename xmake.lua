@@ -154,7 +154,7 @@ target("catter-js-types")
             "api/api-extractor.json",
             "tsconfig.base.json"
         },
-        js_outputs = "api/output/types/**.d.ts"
+        js_outputs = {"api/output/types/**.d.ts"}
     })
 
 target("catter-js-runtime")
@@ -205,7 +205,7 @@ target("catter-js-tests")
             "api/tsconfig.test.json",
             "tsconfig.base.json"
         },
-        js_outputs = "api/output/test/**.js"
+        js_outputs = {"api/output/test/**.js"}
     })
 
 target("catter-js-scripts")
