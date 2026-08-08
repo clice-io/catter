@@ -11,9 +11,18 @@
 #include "util/crossplat.h"
 #include "util/log.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace catter;
 
 int main(int argc, char* argv[]) {
+
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     auto args = kota::deco::util::argvify(argc, argv, 1);
     kota::deco::cli::text::set_default_renderer(kota::deco::cli::text::ModernRenderer());
 

@@ -61,5 +61,5 @@ for (const [spec, entry] of Object.entries(modules)) {
     continue;
   }
   const mod = spec.slice("catter/".length);
-  runExtractor(spec, dtsPathFor(entry), `output/types/catter/${mod}.d.ts`);
+  runExtractor(spec, dtsPathFor(entry), `output/types/${mod}.d.ts`);
 }

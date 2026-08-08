@@ -8,7 +8,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "u
 
 const input = {};
 const specToFile = {};
-for (const [spec, entry] of Object.entries(manifest.modules)) {
+for (const [spec, entry] of Object.entries(manifest)) {
   const name = spec.replace(/^script::/, "");
   input[name] = `build/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
   specToFile[spec] = `${name}.js`;

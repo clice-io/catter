@@ -149,4 +149,3 @@ args = [
   { arg = "outputdir", default = "release-assets" }
 ]
 cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"
-depends-on = "build-js-types"

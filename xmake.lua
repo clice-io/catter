@@ -253,9 +253,6 @@ target("catter")
     add_local_prefix_includedirs()
     add_deps("catter-core")
     add_files("src/catter/main.cc")
-    if is_plat("windows") then
-        add_ldflags("/STACK:8388608", {force = true})
-    end
 
 target("hook-resolver")
     set_kind("static")
@@ -345,24 +342,12 @@ target("catter-proxy")
     add_deps("common", "catter-hook", "hook-resolver")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
-    if is_plat("windows") then
-        add_ldflags("/STACK:8388608", {force = true})
-    end
-
-
-
 
 rule("ut-base")
     on_load(function (target)
         target:add("includedirs", "tests/unit/base/")
         target:add("files", "tests/unit/base/**.cc")
         target:add("packages", "kotatsu")
-        -- Windows binaries default to a 1 MiB main-thread stack (MSVC linker
-        -- default), which is too small for the deep native<->JS call chains in
-        -- the replay tests under ASan debug builds. Match the Unix 8 MiB stack.
-        if target:is_plat("windows") then
-            target:add("ldflags", "/STACK:8388608", {force = true})
-        end
     end)
 
 target("ut-common")
@@ -446,11 +431,6 @@ target("it-catter-replay")
     add_local_prefix_includedirs()
     add_files("tests/integration/replay/catter-replay.cc")
     add_deps("common", "catter-core")
-    if is_plat("windows") then
-        -- The replay driver executes the same deep native<->JS call chains as
-        -- the unit-test replay suite; match the stack size used there.
-        add_ldflags("/STACK:8388608", {force = true})
-    end
 
 -- rule("build.js"): runs a JS toolchain build (pnpm script in api/) and
 -- tracks the inputs/outputs for change detection. It hooks into before_build,
@@ -697,7 +677,7 @@ xpack("catter")
     set_homepage("https://clice.io")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
-    add_installfiles("api/output/types/*.d.ts", {prefixdir = "types"})
+    add_installfiles("api/output/types/**.d.ts", {prefixdir = "types"})
 
     before_package(function ()
         assert(os.isfile("api/output/types/index.d.ts"),
