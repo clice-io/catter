@@ -14,4 +14,4 @@ jobs:
       - uses: clice-io/docs@main
         with:
           project: catter
-          token: ${{ secrets.PUBLISH_DOCS }}
+          token: ${{ secrets.CLICE_DOCS }}
