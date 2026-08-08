@@ -13,7 +13,7 @@
         "../api/output/types/index.d.ts"
       ],
       "catter/*": [
-        "../api/output/types/catter/*.d.ts"
+        "../api/output/types/*.d.ts"
       ],
       "catter-c": [
         "../api/catter-c/capi.d.ts"

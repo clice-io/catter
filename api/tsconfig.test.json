@@ -11,7 +11,7 @@
                 "./output/types/index.d.ts"
             ],
             "catter/*": [
-                "./output/types/catter/*"
+                "./output/types/*"
             ],
             "catter-c": [
                 "./catter-c/capi.d.ts"

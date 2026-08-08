@@ -12,7 +12,7 @@
       "default": "./output/lib/catter.js"
     },
     "./*": {
-      "types": "./output/types/catter/*.d.ts",
+      "types": "./output/types/*.d.ts",
       "default": "./output/lib/*.js"
     }
   },
@@ -22,7 +22,7 @@
         "output/types/index.d.ts"
       ],
       "catter/*": [
-        "output/types/catter/*"
+        "output/types/*"
       ]
     }
   },

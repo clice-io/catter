@@ -1,7 +1,5 @@
 {
-  "modules": {
-    "script::cdb": "src/cdb.ts",
-    "script::cmd-tree": "src/cmd-tree.ts",
-    "script::target-tree": "src/target-tree.ts"
-  }
+  "script::cdb": "src/cdb.ts",
+  "script::cmd-tree": "src/cmd-tree.ts",
+  "script::target-tree": "src/target-tree.ts"
 }
