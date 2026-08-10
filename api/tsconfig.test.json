@@ -7,9 +7,6 @@
         "outDir": "./output/test/",
         "declaration": false,
         "paths": {
-            "catter": [
-                "./output/types/index.d.ts"
-            ],
             "catter/*": [
                 "./output/types/*"
             ],

@@ -3,10 +3,7 @@
  * Generates the public type declarations for every builtin module.
  *
  * 1. Runs `tsc` to emit the per-file declaration tree under `build/types/`.
- * 2. Copies the aggregate entry to `output/types/index.d.ts` verbatim, so the
- *    aggregate re-exports the same `catter/<mod>` declarations as subpath
- *    consumers (preserving type identity for classes with private members).
- * 3. Rolls each `modules.json` entry into a flat per-module declaration at
+ * 2. Rolls each `modules.json` entry into a flat per-module declaration at
  *    `output/types/catter/<mod>.d.ts`, so `catter/<mod>` subpath imports
  *    resolve to exactly their own module's declarations.
  */
@@ -45,21 +42,8 @@ function runExtractor(label, entryDts, outputDts) {
   }
 }
 
-// 1. Aggregate entry. Copy the tsc-emitted declarations verbatim so the
-//    aggregate keeps re-exporting the very same `catter/<mod>` modules that
-//    subpath consumers resolve to. Bundling the namespaces into a separate
-//    declaration would break type identity for classes with private members.
-fs.mkdirSync(path.join(root, "output", "types"), { recursive: true });
-fs.copyFileSync(
-  path.join(root, dtsPathFor(modules.catter)),
-  path.join(root, "output", "types", "index.d.ts"),
-);
-
-// 2. Per-module entries.
+// Per-module entries.
 for (const [spec, entry] of Object.entries(modules)) {
-  if (spec === "catter") {
-    continue;
-  }
   const mod = spec.slice("catter/".length);
   runExtractor(spec, dtsPathFor(entry), `output/types/${mod}.d.ts`);
 }

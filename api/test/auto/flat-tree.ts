@@ -1,7 +1,7 @@
-import * as data from "catter/data";
+import { FlatTree, FlatTreeRelation } from "catter/data";
 
 function mergeNode<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
+  tree: FlatTree<Id, Content>,
   node: {
     id: Id;
     content: Content;
@@ -13,7 +13,7 @@ function mergeNode<Id extends PropertyKey, Content>(
 }
 
 function size<Id extends PropertyKey, Content>(
-  tree: data.FlatTree<Id, Content>,
+  tree: FlatTree<Id, Content>,
 ): number {
   return tree.size();
 }
@@ -66,7 +66,7 @@ function expectCyclesEq(
   }
 }
 
-const basic = new data.FlatTree<number, string>();
+const basic = new FlatTree<number, string>();
 mergeNode(basic, { id: 1, content: "root" });
 mergeNode(basic, { id: 2, parent: [1], content: "left" });
 mergeNode(basic, { id: 3, parent: [1], content: "right" });
@@ -88,20 +88,16 @@ expectArrayEq(basicWalk.children(1), [2, 3], "basic root children");
 expectArrayEq(basicWalk.children(2), [4], "basic branch children");
 expectArrayEq(basicWalk.children(5), [], "basic orphan children");
 
-expectEq(
-  basic.relation(1, 4),
-  data.FlatTreeRelation.Ancestor,
-  "ancestor relation",
-);
+expectEq(basic.relation(1, 4), FlatTreeRelation.Ancestor, "ancestor relation");
 expectEq(
   basic.relation(4, 1),
-  data.FlatTreeRelation.Descendant,
+  FlatTreeRelation.Descendant,
   "descendant relation",
 );
-expectEq(basic.relation(2, 2), data.FlatTreeRelation.Self, "self relation");
-expectEq(basic.relation(3, 5), data.FlatTreeRelation.None, "none relation");
+expectEq(basic.relation(2, 2), FlatTreeRelation.Self, "self relation");
+expectEq(basic.relation(3, 5), FlatTreeRelation.None, "none relation");
 
-const incremental = new data.FlatTree<number, string>();
+const incremental = new FlatTree<number, string>();
 mergeNode(incremental, { id: 2, parent: [1], content: "child" });
 mergeNode(incremental, { id: 3, parent: [2], content: "leaf" });
 
@@ -151,16 +147,16 @@ const incrementalDag = incremental.walk();
 expectArrayEq(incrementalDag.children(1), [2, 3], "incremental dag children");
 expectEq(
   incremental.relation(1, 3),
-  data.FlatTreeRelation.Ancestor,
+  FlatTreeRelation.Ancestor,
   "incremental dag ancestor relation",
 );
 expectEq(
   incremental.relation(2, 3),
-  data.FlatTreeRelation.Ancestor,
+  FlatTreeRelation.Ancestor,
   "incremental original ancestor relation",
 );
 
-const dag = new data.FlatTree<string, string>();
+const dag = new FlatTree<string, string>();
 mergeNode(dag, { id: "app", content: "app" });
 mergeNode(dag, { id: "tool", content: "tool" });
 mergeNode(dag, { id: "main.o", parent: ["app"], content: "main.o" });
@@ -176,26 +172,26 @@ expectArrayEq(dagWalk.children("app"), ["main.o"], "dag app children");
 expectArrayEq(dagWalk.children("tool"), ["main.o"], "dag tool children");
 expectEq(
   dag.relation("app", "main.o"),
-  data.FlatTreeRelation.Ancestor,
+  FlatTreeRelation.Ancestor,
   "first dag ancestor relation",
 );
 expectEq(
   dag.relation("tool", "main.o"),
-  data.FlatTreeRelation.Ancestor,
+  FlatTreeRelation.Ancestor,
   "second dag ancestor relation",
 );
 
-const cyclic = new data.FlatTree<number, string>();
+const cyclic = new FlatTree<number, string>();
 mergeNode(cyclic, { id: 1, children: [2], content: "one" });
 mergeNode(cyclic, { id: 2, children: [1], content: "two" });
 expectCyclesEq(cyclic.assemble(), [[1, 2]], "cycle detection");
 
-const selfLoop = new data.FlatTree<number, string>();
+const selfLoop = new FlatTree<number, string>();
 mergeNode(selfLoop, { id: 1, children: [1], content: "self" });
 mergeNode(selfLoop, { id: 2, parent: [1], content: "child" });
 expectCyclesEq(selfLoop.assemble(), [[1]], "self-loop detection");
 
-const cyclicDownstream = new data.FlatTree<number, string>();
+const cyclicDownstream = new FlatTree<number, string>();
 mergeNode(cyclicDownstream, { id: 1, children: [2], content: "one" });
 mergeNode(cyclicDownstream, {
   id: 2,
@@ -209,7 +205,7 @@ expectCyclesEq(
   "cycle excludes downstream node",
 );
 
-const twoCycles = new data.FlatTree<number, string>();
+const twoCycles = new FlatTree<number, string>();
 mergeNode(twoCycles, { id: 1, children: [2], content: "one" });
 mergeNode(twoCycles, { id: 2, children: [1], content: "two" });
 mergeNode(twoCycles, { id: 3, children: [4], content: "three" });
@@ -223,7 +219,7 @@ expectCyclesEq(
   "two independent cycles",
 );
 
-const mutable = new data.FlatTree<number, string>();
+const mutable = new FlatTree<number, string>();
 mergeNode(mutable, { id: 1, content: "root" });
 mergeNode(mutable, { id: 2, parent: [1], content: "left" });
 mergeNode(mutable, { id: 3, content: "right" });

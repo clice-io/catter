@@ -39,12 +39,12 @@ export {};
  *
  * @example
  * ```typescript
- * if (exists('/home/user/file.txt')) {
+ * if (existsSync('/home/user/file.txt')) {
  *   console.log('File exists');
  * }
  * ```
  */
-export function exists(pathStr: string): boolean {
+export function existsSync(pathStr: string): boolean {
   return fs_exists(pathStr);
 }
 
@@ -58,12 +58,12 @@ export function exists(pathStr: string): boolean {
  *
  * @example
  * ```typescript
- * if (isFile('./config.json')) {
+ * if (isFileSync('./config.json')) {
  *   console.log('Config is a file');
  * }
  * ```
  */
-export function isFile(pathStr: string): boolean {
+export function isFileSync(pathStr: string): boolean {
   return fs_is_file(pathStr);
 }
 
@@ -77,12 +77,12 @@ export function isFile(pathStr: string): boolean {
  *
  * @example
  * ```typescript
- * if (isDir('./src')) {
+ * if (isDirSync('./src')) {
  *   console.log('src is a directory');
  * }
  * ```
  */
-export function isDir(pathStr: string): boolean {
+export function isDirSync(pathStr: string): boolean {
   return fs_is_dir(pathStr);
 }
 
@@ -111,13 +111,13 @@ export function pwd(): string {
  *
  * @example
  * ```typescript
- * const entries = readDirs('./src');
+ * const entries = readDirsSync('./src');
  * for (let i = 0; i < entries.length; i++) {
  *   println(entries[i]);
  * }
  * ```
  */
-export function readDirs(pathStr: string): string[] {
+export function readDirsSync(pathStr: string): string[] {
   return fs_list_dir(pathStr);
 }
 
@@ -137,18 +137,18 @@ export function readDirs(pathStr: string): string[] {
  * @example
  * ```typescript
  * // Create nested directories
- * mkdir('./path/to/deep/dir');
+ * mkdirSync('./path/to/deep/dir');
  *
  * // Create only if parent exists
- * mkdir('./existing/subdir', false);
+ * mkdirSync('./existing/subdir', false);
  * ```
  */
-export function mkdir(pathStr: string, recursively = true): boolean {
+export function mkdirSync(pathStr: string, recursively = true): boolean {
   if (recursively) {
     fs_create_dir_recursively(pathStr);
     return true;
   }
-  if (isDir(path.toAncestor(pathStr))) {
+  if (isDirSync(path.toAncestor(pathStr))) {
     fs_create_dir_recursively(pathStr);
     return true;
   }
@@ -172,18 +172,18 @@ export function mkdir(pathStr: string, recursively = true): boolean {
  * @example
  * ```typescript
  * // Create file with parent directories
- * createFile('./logs/app/error.log');
+ * createFileSync('./logs/app/error.log');
  *
  * // Create only if parent exists
- * createFile('./existing/file.txt', false);
+ * createFileSync('./existing/file.txt', false);
  * ```
  */
-export function createFile(pathStr: string, recursively = true): boolean {
+export function createFileSync(pathStr: string, recursively = true): boolean {
   if (recursively) {
     fs_create_empty_file_recursively(pathStr);
     return true;
   }
-  if (isDir(path.toAncestor(pathStr))) {
+  if (isDirSync(path.toAncestor(pathStr))) {
     fs_create_empty_file_recursively(pathStr);
     return true;
   }
@@ -202,13 +202,13 @@ export function createFile(pathStr: string, recursively = true): boolean {
  * @example
  * ```typescript
  * // Remove a file
- * removeAll('./temp.txt');
+ * removeAllSync('./temp.txt');
  *
  * // Remove a directory and all its contents
- * removeAll('./build');
+ * removeAllSync('./build');
  * ```
  */
-export function removeAll(pathStr: string): void {
+export function removeAllSync(pathStr: string): void {
   return fs_remove_recursively(pathStr);
 }
 
@@ -228,114 +228,112 @@ export function removeAll(pathStr: string): void {
  * @example
  * ```typescript
  * // Rename a file
- * rename('./old-name.txt', './new-name.txt');
+ * renameSync('./old-name.txt', './new-name.txt');
  *
  * // Move to different directory
- * rename('./src/file.ts', './dist/file.ts');
+ * renameSync('./src/file.ts', './dist/file.ts');
  * ```
  */
-export function rename(oldPath: string, newPath: string): boolean {
+export function renameSync(oldPath: string, newPath: string): boolean {
   return fs_rename_if_exists(oldPath, newPath);
 }
 
-export namespace async {
-  /**
-   * Asynchronously checks whether a path exists.
-   */
-  export function exists(pathStr: string): Promise<boolean> {
-    return fs_async_exists(pathStr);
-  }
+/**
+ * Asynchronously checks whether a path exists.
+ */
+export function exists(pathStr: string): Promise<boolean> {
+  return fs_async_exists(pathStr);
+}
 
-  /**
-   * Asynchronously checks whether a path points to a regular file.
-   */
-  export function isFile(pathStr: string): Promise<boolean> {
-    return fs_async_is_file(pathStr);
-  }
+/**
+ * Asynchronously checks whether a path points to a regular file.
+ */
+export function isFile(pathStr: string): Promise<boolean> {
+  return fs_async_is_file(pathStr);
+}
 
-  /**
-   * Asynchronously checks whether a path points to a directory.
-   */
-  export function isDir(pathStr: string): Promise<boolean> {
-    return fs_async_is_dir(pathStr);
-  }
+/**
+ * Asynchronously checks whether a path points to a directory.
+ */
+export function isDir(pathStr: string): Promise<boolean> {
+  return fs_async_is_dir(pathStr);
+}
 
-  /**
-   * Asynchronously lists all entries in a directory.
-   */
-  export function readDirs(pathStr: string): Promise<string[]> {
-    return fs_async_list_dir(pathStr);
-  }
+/**
+ * Asynchronously lists all entries in a directory.
+ */
+export function readDirs(pathStr: string): Promise<string[]> {
+  return fs_async_list_dir(pathStr);
+}
 
-  /**
-   * Asynchronously creates a directory.
-   */
-  export async function mkdir(
-    pathStr: string,
-    recursively = true,
-  ): Promise<boolean> {
-    if (recursively) {
-      await fs_async_create_dir_recursively(pathStr);
-      return true;
-    }
-    if (await async.isDir(path.toAncestor(pathStr))) {
-      await fs_async_create_dir_recursively(pathStr);
-      return true;
-    }
-    return false;
+/**
+ * Asynchronously creates a directory.
+ */
+export async function mkdir(
+  pathStr: string,
+  recursively = true,
+): Promise<boolean> {
+  if (recursively) {
+    await fs_async_create_dir_recursively(pathStr);
+    return true;
   }
+  if (await isDir(path.toAncestor(pathStr))) {
+    await fs_async_create_dir_recursively(pathStr);
+    return true;
+  }
+  return false;
+}
 
-  /**
-   * Asynchronously creates an empty file.
-   */
-  export async function createFile(
-    pathStr: string,
-    recursively = true,
-  ): Promise<boolean> {
-    if (recursively) {
-      await fs_async_create_empty_file_recursively(pathStr);
-      return true;
-    }
-    if (await async.isDir(path.toAncestor(pathStr))) {
-      await fs_async_create_empty_file_recursively(pathStr);
-      return true;
-    }
-    return false;
+/**
+ * Asynchronously creates an empty file.
+ */
+export async function createFile(
+  pathStr: string,
+  recursively = true,
+): Promise<boolean> {
+  if (recursively) {
+    await fs_async_create_empty_file_recursively(pathStr);
+    return true;
   }
+  if (await isDir(path.toAncestor(pathStr))) {
+    await fs_async_create_empty_file_recursively(pathStr);
+    return true;
+  }
+  return false;
+}
 
-  /**
-   * Asynchronously removes a file or directory tree.
-   */
-  export async function removeAll(pathStr: string): Promise<void> {
-    return fs_async_remove_recursively(pathStr);
-  }
+/**
+ * Asynchronously removes a file or directory tree.
+ */
+export async function removeAll(pathStr: string): Promise<void> {
+  return fs_async_remove_recursively(pathStr);
+}
 
-  /**
-   * Asynchronously renames or moves a file or directory.
-   */
-  export async function rename(
-    oldPath: string,
-    newPath: string,
-  ): Promise<boolean> {
-    return fs_async_rename_if_exists(oldPath, newPath);
-  }
+/**
+ * Asynchronously renames or moves a file or directory.
+ */
+export async function rename(
+  oldPath: string,
+  newPath: string,
+): Promise<boolean> {
+  return fs_async_rename_if_exists(oldPath, newPath);
+}
 
-  /**
-   * Asynchronously reads a text file as a string.
-   */
-  export async function readText(pathStr: string): Promise<string> {
-    return fs_async_read_text(pathStr);
-  }
+/**
+ * Asynchronously reads a text file as a string.
+ */
+export async function readText(pathStr: string): Promise<string> {
+  return fs_async_read_text(pathStr);
+}
 
-  /**
-   * Asynchronously writes a string to a text file.
-   */
-  export async function writeText(
-    pathStr: string,
-    content: string,
-  ): Promise<void> {
-    return fs_async_write_text(pathStr, content);
-  }
+/**
+ * Asynchronously writes a string to a text file.
+ */
+export async function writeText(
+  pathStr: string,
+  content: string,
+): Promise<void> {
+  return fs_async_write_text(pathStr, content);
 }
 
 /**

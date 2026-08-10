@@ -1,5 +1,4 @@
 {
-  "catter": "src/index.ts",
   "catter/debug": "src/debug.ts",
   "catter/io": "src/io.ts",
   "catter/os": "src/os.ts",

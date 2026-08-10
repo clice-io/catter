@@ -1,5 +1,5 @@
-import * as debug from "catter/debug";
-import * as service from "catter/service";
+import { assertThrow } from "catter/debug";
+import { ServiceRuntime, create, parallel, pipeline } from "catter/service";
 import { ok, type Result } from "catter/neverthrow";
 import type {
   CatterConfig,
@@ -41,9 +41,9 @@ function command(exe: string, parent?: number): Result<CommandData, CatterErr> {
 const commandIds: number[] = [];
 const executionIds: number[] = [];
 
-const runtime = new service.ServiceRuntime();
+const runtime = new ServiceRuntime();
 runtime.use(
-  service.create({
+  create({
     async onStart(startConfig) {
       await Promise.resolve();
       return {
@@ -73,35 +73,35 @@ runtime.use(
 );
 
 const updatedConfig = await runtime.start(config);
-debug.assertThrow(
+assertThrow(
   updatedConfig.scriptArgs[updatedConfig.scriptArgs.length - 1] ===
     "--from-runtime",
 );
 
 const rootAction = await runtime.command(1, command("gcc"));
-debug.assertThrow(rootAction.type === "modify");
+assertThrow(rootAction.type === "modify");
 if (rootAction.type === "modify") {
-  debug.assertThrow(
+  assertThrow(
     rootAction.data.argv[rootAction.data.argv.length - 1] === "-Wall",
   );
 }
 
 const childAction = await runtime.command(2, command("cc1", 1));
-debug.assertThrow(childAction.type === "skip");
-debug.assertThrow(commandIds.length === 1);
-debug.assertThrow(commandIds[0] === 1);
-debug.assertThrow(runtime.hasCommand(2));
-debug.assertThrow(runtime.hasIgnoredAncestor(2));
+assertThrow(childAction.type === "skip");
+assertThrow(commandIds.length === 1);
+assertThrow(commandIds[0] === 1);
+assertThrow(runtime.hasCommand(2));
+assertThrow(runtime.hasIgnoredAncestor(2));
 
 await runtime.execution(1, { code: 0, stdout: "", stderr: "" });
 await runtime.execution(2, { code: 0, stdout: "", stderr: "" });
-debug.assertThrow(executionIds.length === 1);
-debug.assertThrow(executionIds[0] === 1);
+assertThrow(executionIds.length === 1);
+assertThrow(executionIds[0] === 1);
 
-const parallelStartRuntime = new service.ServiceRuntime();
+const parallelStartRuntime = new ServiceRuntime();
 parallelStartRuntime.use(
-  service.parallel(
-    service.create({
+  parallel(
+    create({
       onStart(startConfig) {
         return {
           ...startConfig,
@@ -109,7 +109,7 @@ parallelStartRuntime.use(
         };
       },
     }),
-    service.create({
+    create({
       async onStart(startConfig) {
         await Promise.resolve();
         return {
@@ -118,23 +118,23 @@ parallelStartRuntime.use(
         };
       },
     }),
-    service.create({
+    create({
       onStart() {},
     }),
   ),
 );
 
 const parallelStartedConfig = await parallelStartRuntime.start(config);
-debug.assertThrow(
+assertThrow(
   parallelStartedConfig.scriptArgs[
     parallelStartedConfig.scriptArgs.length - 1
   ] === "--parallel",
 );
 
-const parallelStartConflictRuntime = new service.ServiceRuntime();
+const parallelStartConflictRuntime = new ServiceRuntime();
 parallelStartConflictRuntime.use(
-  service.parallel(
-    service.create({
+  parallel(
+    create({
       onStart(startConfig) {
         return {
           ...startConfig,
@@ -142,7 +142,7 @@ parallelStartConflictRuntime.use(
         };
       },
     }),
-    service.create({
+    create({
       onStart(startConfig) {
         return {
           ...startConfig,
@@ -161,13 +161,13 @@ try {
     "identical onStart results",
   );
 }
-debug.assertThrow(parallelStartConflictSeen);
+assertThrow(parallelStartConflictSeen);
 
 const pipelineEvents: string[] = [];
-const pipelineRuntime = new service.ServiceRuntime();
+const pipelineRuntime = new ServiceRuntime();
 pipelineRuntime.use(
-  service.parallel(
-    service.create({
+  parallel(
+    create({
       async onCommand(ctx) {
         await Promise.resolve();
         pipelineEvents.push(`seen:${ctx.id}`);
@@ -192,7 +192,7 @@ pipelineRuntime.use(
         return { type: "skip" };
       },
     },
-    service.create({
+    create({
       async onExecution(ctx) {
         await Promise.resolve();
         pipelineEvents.push(`exec:${ctx.id}`);
@@ -201,11 +201,11 @@ pipelineRuntime.use(
   ),
 );
 
-const sequentialPipelineRuntime = new service.ServiceRuntime();
+const sequentialPipelineRuntime = new ServiceRuntime();
 const sequentialPipelineEvents: string[] = [];
 sequentialPipelineRuntime.use(
-  service.pipeline(
-    service.create({
+  pipeline(
+    create({
       onCommand(ctx) {
         sequentialPipelineEvents.push("first");
         if (ctx.capture.isErr()) {
@@ -217,7 +217,7 @@ sequentialPipelineRuntime.use(
         });
       },
     }),
-    service.create({
+    create({
       onCommand(ctx) {
         sequentialPipelineEvents.push(`second:${ctx.action.type}`);
         if (ctx.capture.isErr()) {
@@ -236,42 +236,42 @@ const sequentialPipelineAction = await sequentialPipelineRuntime.command(
   30,
   command("clang++"),
 );
-debug.assertThrow(sequentialPipelineAction.type === "modify");
+assertThrow(sequentialPipelineAction.type === "modify");
 if (sequentialPipelineAction.type === "modify") {
-  debug.assertThrow(
+  assertThrow(
     sequentialPipelineAction.data.argv[
       sequentialPipelineAction.data.argv.length - 1
     ] === "second",
   );
 }
-debug.assertThrow(sequentialPipelineEvents.join(",") === "first,second:modify");
+assertThrow(sequentialPipelineEvents.join(",") === "first,second:modify");
 
 const pipelineAction = await pipelineRuntime.command(10, command("clang"));
-debug.assertThrow(pipelineAction.type === "modify");
+assertThrow(pipelineAction.type === "modify");
 if (pipelineAction.type === "modify") {
-  debug.assertThrow(
+  assertThrow(
     pipelineAction.data.argv[pipelineAction.data.argv.length - 1] === "-O2",
   );
 }
-debug.assertThrow(pipelineEvents.includes("seen:10"));
-debug.assertThrow(pipelineEvents.includes("action:10"));
+assertThrow(pipelineEvents.includes("seen:10"));
+assertThrow(pipelineEvents.includes("action:10"));
 
 const pipelineChildAction = await pipelineRuntime.command(
   11,
   command("cc1", 10),
 );
-debug.assertThrow(pipelineChildAction.type === "skip");
-debug.assertThrow(!pipelineEvents.includes("seen:11"));
-debug.assertThrow(!pipelineEvents.includes("action:11"));
+assertThrow(pipelineChildAction.type === "skip");
+assertThrow(!pipelineEvents.includes("seen:11"));
+assertThrow(!pipelineEvents.includes("action:11"));
 
 await pipelineRuntime.execution(10, { code: 0, stdout: "", stderr: "" });
 await pipelineRuntime.execution(11, { code: 0, stdout: "", stderr: "" });
-debug.assertThrow(pipelineEvents.includes("exec:10"));
-debug.assertThrow(!pipelineEvents.includes("exec:11"));
+assertThrow(pipelineEvents.includes("exec:10"));
+assertThrow(!pipelineEvents.includes("exec:11"));
 
-const cyclicParentRuntime = new service.ServiceRuntime();
+const cyclicParentRuntime = new ServiceRuntime();
 cyclicParentRuntime.use(
-  service.create({
+  create({
     onCommand(ctx) {
       if (ctx.capture.isErr()) {
         return;
@@ -285,15 +285,15 @@ cyclicParentRuntime.use(
 // Walking the ancestor chain must terminate instead of looping forever.
 const cyclicParentA = await cyclicParentRuntime.command(40, command("cc1", 41));
 const cyclicParentB = await cyclicParentRuntime.command(41, command("cc1", 40));
-debug.assertThrow(cyclicParentA.type === "skip");
-debug.assertThrow(cyclicParentB.type === "skip");
-debug.assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(40));
-debug.assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(41));
+assertThrow(cyclicParentA.type === "skip");
+assertThrow(cyclicParentB.type === "skip");
+assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(40));
+assertThrow(!cyclicParentRuntime.hasIgnoredAncestor(41));
 
-const conflictRuntime = new service.ServiceRuntime();
+const conflictRuntime = new ServiceRuntime();
 conflictRuntime.use(
-  service.parallel(
-    service.create({
+  parallel(
+    create({
       onCommand(ctx) {
         ctx.drop();
       },
@@ -312,4 +312,4 @@ try {
 } catch (error) {
   conflictSeen = String(error).includes("at most one action result");
 }
-debug.assertThrow(conflictSeen);
+assertThrow(conflictSeen);

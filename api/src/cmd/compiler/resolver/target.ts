@@ -1,4 +1,4 @@
-import * as os from "catter/os";
+import { platform } from "catter/os";
 import { CompilerTargetResolutionError } from "../errors.js";
 import {
   CompilerArtifactModel,
@@ -105,7 +105,7 @@ function clDriverTarget(): CompilerTargetFact {
 }
 
 function hostTarget(): CompilerTargetFact {
-  switch (os.platform()) {
+  switch (platform()) {
     case "windows":
       return {
         target: {

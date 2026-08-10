@@ -1,39 +1,58 @@
-import * as debug from "catter/debug";
-import * as time from "catter/time";
+import { assertThrow } from "catter/debug";
+import {
+  convert,
+  days,
+  elapsed,
+  elapsedMs,
+  fromMs,
+  hours,
+  minutes,
+  monotonicMs,
+  monotonicUs,
+  ms,
+  now,
+  ns,
+  seconds,
+  toMs,
+  unixMs,
+  unixSeconds,
+  unixUs,
+  us,
+} from "catter/time";
 
 const before = Date.now();
-const now = time.now();
+const nowMs = now();
 const after = Date.now();
 
-debug.assertThrow(now >= before - 1_000);
-debug.assertThrow(now <= after + 1_000);
-debug.assertThrow(time.unixMs() >= before - 1_000);
-debug.assertThrow(time.unixUs() >= (before - 1_000) * 1_000);
-debug.assertThrow(Math.abs(time.unixSeconds() * 1_000 - now) < 2_000);
+assertThrow(nowMs >= before - 1_000);
+assertThrow(nowMs <= after + 1_000);
+assertThrow(unixMs() >= before - 1_000);
+assertThrow(unixUs() >= (before - 1_000) * 1_000);
+assertThrow(Math.abs(unixSeconds() * 1_000 - nowMs) < 2_000);
 
-const monotonicA = time.monotonicMs();
-const monotonicB = time.monotonicMs();
-debug.assertThrow(monotonicB >= monotonicA);
+const monotonicA = monotonicMs();
+const monotonicB = monotonicMs();
+assertThrow(monotonicB >= monotonicA);
 
-const monotonicUsA = time.monotonicUs();
-const monotonicUsB = time.monotonicUs();
-debug.assertThrow(monotonicUsB >= monotonicUsA);
+const monotonicUsA = monotonicUs();
+const monotonicUsB = monotonicUs();
+assertThrow(monotonicUsB >= monotonicUsA);
 
-debug.assertThrow(time.convert(1, "s", "ms") === 1_000);
-debug.assertThrow(time.convert(2, "min", "s") === 120);
-debug.assertThrow(time.convert(1, "h", "min") === 60);
-debug.assertThrow(time.toMs(1, "d") === 86_400_000);
-debug.assertThrow(time.fromMs(1_500, "s") === 1.5);
+assertThrow(convert(1, "s", "ms") === 1_000);
+assertThrow(convert(2, "min", "s") === 120);
+assertThrow(convert(1, "h", "min") === 60);
+assertThrow(toMs(1, "d") === 86_400_000);
+assertThrow(fromMs(1_500, "s") === 1.5);
 
-debug.assertThrow(time.ns(1_000_000) === 1);
-debug.assertThrow(time.us(1_000) === 1);
-debug.assertThrow(time.ms(9) === 9);
-debug.assertThrow(time.seconds(2) === 2_000);
-debug.assertThrow(time.minutes(2) === 120_000);
-debug.assertThrow(time.hours(1) === 3_600_000);
-debug.assertThrow(time.days(1) === 86_400_000);
+assertThrow(ns(1_000_000) === 1);
+assertThrow(us(1_000) === 1);
+assertThrow(ms(9) === 9);
+assertThrow(seconds(2) === 2_000);
+assertThrow(minutes(2) === 120_000);
+assertThrow(hours(1) === 3_600_000);
+assertThrow(days(1) === 86_400_000);
 
 const timerStart = 100;
-const timerEnd = timerStart + time.seconds(2);
-debug.assertThrow(time.elapsedMs(timerStart, timerEnd) === 2_000);
-debug.assertThrow(time.elapsed(timerStart, "s", timerEnd) === 2);
+const timerEnd = timerStart + seconds(2);
+assertThrow(elapsedMs(timerStart, timerEnd) === 2_000);
+assertThrow(elapsed(timerStart, "s", timerEnd) === 2);

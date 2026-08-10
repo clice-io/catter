@@ -1,4 +1,5 @@
 import { option_get_info, option_parse } from "catter-c";
+import { err, ok, type Result } from "catter/neverthrow";
 import { OptionKindClass } from "./types.js";
 import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
 
@@ -11,9 +12,9 @@ import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect } from "catter/option";
  *
- * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
+ * const parsed = collect("clang", ["-Iinclude", "main.cc"]);
  * ```
  */
 
@@ -105,11 +106,11 @@ function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect, stringify } from "catter/option";
  *
- * const parsed = option.collect("nvcc", ["-I=include"]);
- * if (Array.isArray(parsed)) {
- *   println(option.stringify("nvcc", parsed[0]));
+ * const parsed = collect("nvcc", ["-I=include"]);
+ * if (parsed.isOk()) {
+ *   println(stringify("nvcc", parsed.value[0]));
  * }
  * ```
  */
@@ -123,15 +124,16 @@ export function stringify(table: OptionTable, item: OptionItem): string {
  *
  * @param table - The option table that should be used to interpret `args`.
  * @param args - The raw argument array, usually without the executable name.
- * @returns An array of parsed items when parsing succeeds, or the first parser error string.
+ * @returns A `Result` whose `Ok` value is the parsed items, or whose `Err`
+ * value is the first parser error string.
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect } from "catter/option";
  *
- * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
- * if (!Array.isArray(parsed)) {
- *   throw new Error(parsed);
+ * const parsed = collect("clang", ["-Iinclude", "main.cc"]);
+ * if (parsed.isErr()) {
+ *   throw new Error(parsed.error);
  * }
  * ```
  */
@@ -139,22 +141,23 @@ export function collect(
   table: OptionTable,
   args: string[],
   visibility = ALL_OPTION_VISIBILITY,
-): OptionItem[] | string {
-  let res: OptionItem[] | string = [];
+): Result<OptionItem[], string> {
+  const items: OptionItem[] = [];
+  let failure: string | undefined;
   option_parse(
     table,
     args,
     (parseRes) => {
       if (typeof parseRes === "string") {
-        res = parseRes;
+        failure = parseRes;
         return false;
       }
-      (res as OptionItem[]).push(parseRes);
+      items.push(parseRes);
       return true;
     },
     visibility,
   );
-  return res;
+  return failure === undefined ? ok(items) : err(failure);
 }
 
 /**
@@ -167,14 +170,14 @@ export function collect(
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { replace } from "catter/option";
  *
- * const rewritten = option.replace("clang", ["-Iold", "main.cc"], (parseRes) => {
- *   if (typeof parseRes === "string") {
- *     throw new Error(parseRes);
+ * const rewritten = replace("clang", ["-Iold", "main.cc"], (parseRes) => {
+ *   if (parseRes.isErr()) {
+ *     throw new Error(parseRes.error);
  *   }
- *   if (parseRes.key === "-I") {
- *     return { ...parseRes, values: ["include"] };
+ *   if (parseRes.value.key === "-I") {
+ *     return { ...parseRes.value, values: ["include"] };
  *   }
  * });
  * ```
@@ -183,7 +186,7 @@ export function replace(
   table: OptionTable,
   args: string[],
   cb: (
-    parseRes: string | Readonly<OptionItem>,
+    parseRes: Result<Readonly<OptionItem>, string>,
   ) => OptionItem | boolean | undefined | string | string[],
 ): string {
   let nextToAdd = 0;
@@ -198,11 +201,15 @@ export function replace(
     nextToAdd = endIndex;
   };
   option_parse(table, args, (parseRes) => {
+    const res: Result<Readonly<OptionItem>, string> = typeof parseRes ===
+    "string"
+      ? err(parseRes)
+      : ok(parseRes);
     if (prevIndex != -1) {
-      concatParts(typeof parseRes === "string" ? args.length : parseRes.index);
+      concatParts(res.isErr() ? args.length : res.value.index);
       prevIndex = -1;
     }
-    const cbRes = cb(parseRes);
+    const cbRes = cb(res);
     if (cbRes === undefined) {
       return true;
     }
@@ -218,8 +225,8 @@ export function replace(
       newPart = stringify(table, cbRes);
     }
 
-    if (typeof parseRes !== "string") {
-      prevIndex = parseRes.index;
+    if (res.isOk()) {
+      prevIndex = res.value.index;
     }
     return true;
   });
@@ -242,11 +249,13 @@ export function replace(
  *
  * @example
  * ```typescript
- * option.parse("clang", ["-Iinclude", "main.cc"], (parseRes) => {
- *   if (typeof parseRes === "string") {
- *     throw new Error(parseRes);
+ * import { parse } from "catter/option";
+ *
+ * parse("clang", ["-Iinclude", "main.cc"], (parseRes) => {
+ *   if (parseRes.isErr()) {
+ *     throw new Error(parseRes.error);
  *   }
- *   println(parseRes.key);
+ *   println(parseRes.value.key);
  *   return true;
  * });
  * ```
@@ -254,10 +263,17 @@ export function replace(
 export function parse(
   table: OptionTable,
   args: string[],
-  cb: (parseRes: string | OptionItem) => boolean,
+  cb: (parseRes: Result<OptionItem, string>) => boolean,
   visibility = ALL_OPTION_VISIBILITY,
 ): void {
-  option_parse(table, args, cb, visibility);
+  option_parse(
+    table,
+    args,
+    (parseRes) => {
+      return cb(typeof parseRes === "string" ? err(parseRes) : ok(parseRes));
+    },
+    visibility,
+  );
 }
 
 /**
@@ -269,9 +285,11 @@ export function parse(
  *
  * @example
  * ```typescript
- * const parsed = option.collect("nvcc", ["--help"]);
- * if (Array.isArray(parsed)) {
- *   const meta = option.info("nvcc", parsed[0]);
+ * import { collect, info } from "catter/option";
+ *
+ * const parsed = collect("nvcc", ["--help"]);
+ * if (parsed.isOk()) {
+ *   const meta = info("nvcc", parsed.value[0]);
  *   println(meta.prefixedKey);
  * }
  * ```
@@ -297,36 +315,39 @@ export function info(table: OptionTable, item: OptionItem) {
  * executable name.
  * @param excludeID - Option IDs that should cause a second-stage parsed span
  * to be discarded. Defaults to `[0]`, which is INVALID in LLVM option table.
- * @returns A flattened array containing only spans that pass the second-stage
- * filter, or the parser error string returned while collecting `from`.
+ * @returns A `Result` whose `Ok` value is the flattened array containing only
+ * spans that pass the second-stage filter, or whose `Err` value is the parser
+ * error string returned while collecting `from`.
  */
 export function table2table(
   from: OptionTable,
   to: OptionTable,
   args: string[],
   excludeID: number[] = [/*invliad default*/ 0],
-): string | string[] {
+): Result<string[], string> {
   const fromRes = collect(from, args);
-  if (typeof fromRes === "string") {
-    return fromRes;
+  if (fromRes.isErr()) {
+    return err(fromRes.error);
   }
-  const optArgs = fromRes.map((val, idx) => {
-    if (idx == fromRes.length - 1) {
+  const optArgs = fromRes.value.map((val, idx) => {
+    if (idx == fromRes.value.length - 1) {
       return args.slice(val.index);
     }
-    return args.slice(val.index, fromRes[idx + 1].index);
+    return args.slice(val.index, fromRes.value[idx + 1].index);
   });
-  return optArgs
-    .filter((optArg) => {
-      const toCheck = collect(to, optArg);
-      return (
-        Array.isArray(toCheck) &&
-        toCheck.every(
-          (val) =>
-            !excludeID.includes(val.id) &&
-            info(to, val).kind != OptionKindClass.Unknown,
-        )
-      );
-    })
-    .flat();
+  return ok(
+    optArgs
+      .filter((optArg) => {
+        const toCheck = collect(to, optArg);
+        return (
+          toCheck.isOk() &&
+          toCheck.value.every(
+            (val) =>
+              !excludeID.includes(val.id) &&
+              info(to, val).kind != OptionKindClass.Unknown,
+          )
+        );
+      })
+      .flat(),
+  );
 }

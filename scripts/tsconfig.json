@@ -9,9 +9,6 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "catter": [
-        "../api/output/types/index.d.ts"
-      ],
       "catter/*": [
         "../api/output/types/*.d.ts"
       ],

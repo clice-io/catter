@@ -215,11 +215,11 @@ export enum LldCoffID {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { LldCoffFlag, LldCoffID } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("lld-coff", option.LldCoffID.ID_UNKNOWN);
- * const hasCustomFlags = info.flags !== option.LldCoffFlag.None;
+ * const info = option_get_info("lld-coff", LldCoffID.ID_UNKNOWN);
+ * const hasCustomFlags = info.flags !== LldCoffFlag.None;
  * ```
  */
 export enum LldCoffFlag {
@@ -233,11 +233,11 @@ export enum LldCoffFlag {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { LldCoffID, LldCoffVisibility } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("lld-coff", option.LldCoffID.ID_UNKNOWN);
- * const isVisible = (info.visibility & option.LldCoffVisibility.DefaultVis) !== 0;
+ * const info = option_get_info("lld-coff", LldCoffID.ID_UNKNOWN);
+ * const isVisible = (info.visibility & LldCoffVisibility.DefaultVis) !== 0;
  * ```
  */
 export enum LldCoffVisibility {

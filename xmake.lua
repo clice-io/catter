@@ -680,7 +680,7 @@ xpack("catter")
     add_installfiles("api/output/types/**.d.ts", {prefixdir = "types"})
 
     before_package(function ()
-        assert(os.isfile("api/output/types/index.d.ts"),
+        assert(os.isfile("api/output/types/cli.d.ts"),
             "Type declarations are missing; run `pixi run -e dev build-js-types` before packaging.")
     end)
 

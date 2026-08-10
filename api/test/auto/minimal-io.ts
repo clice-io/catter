@@ -1,3 +1,3 @@
-import * as io from "catter/io";
+import { print } from "catter/io";
 
-io.print("minimal io subpath works\n");
+print("minimal io subpath works\n");

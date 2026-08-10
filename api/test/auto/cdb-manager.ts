@@ -1,7 +1,13 @@
-import * as cdb from "catter/cdb";
-import * as debug from "catter/debug";
-import * as fs from "catter/fs";
-import * as io from "catter/io";
+import { CDBManager } from "catter/cdb";
+import { assertThrow } from "catter/debug";
+import {
+  createFileSync,
+  existsSync,
+  mkdirSync,
+  path,
+  removeAllSync,
+} from "catter/fs";
+import { TextFileStream } from "catter/io";
 
 function expectEq<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -18,21 +24,21 @@ function expectDefined<T>(value: T | undefined, label: string): T {
 
 function readJSON(path: string): unknown {
   let content = "";
-  io.TextFileStream.with(path, "utf-8", (stream) => {
+  TextFileStream.with(path, "utf-8", (stream) => {
     content = stream.readEntireFile();
   });
   return JSON.parse(content);
 }
 
-const testEnvPath = fs.path.joinAll(".", "cdb-manager-test-env");
-if (fs.exists(testEnvPath)) {
-  fs.removeAll(testEnvPath);
+const testEnvPath = path.joinAll(".", "cdb-manager-test-env");
+if (existsSync(testEnvPath)) {
+  removeAllSync(testEnvPath);
 }
-debug.assertThrow(fs.mkdir(testEnvPath));
+assertThrow(mkdirSync(testEnvPath));
 
-const buildDir = fs.path.joinAll(testEnvPath, "build");
-const sourceDir = fs.path.joinAll(testEnvPath, "src");
-const inheritedPath = fs.path.joinAll(testEnvPath, "compile_commands.json");
+const buildDir = path.joinAll(testEnvPath, "build");
+const sourceDir = path.joinAll(testEnvPath, "src");
+const inheritedPath = path.joinAll(testEnvPath, "compile_commands.json");
 
 const inheritedItems = [
   {
@@ -54,31 +60,31 @@ const inheritedItems = [
   },
   {
     directory: buildDir,
-    file: fs.path.joinAll(sourceDir, "绝对路径.cc"),
+    file: path.joinAll(sourceDir, "绝对路径.cc"),
     arguments: ["clang++", "-c", "绝对路径.cc", "-DNAME=你好"],
     output: "unicode.o",
   },
 ];
 
-debug.assertThrow(fs.createFile(inheritedPath));
-io.TextFileStream.with(inheritedPath, "utf-8", (stream) => {
+assertThrow(createFileSync(inheritedPath));
+TextFileStream.with(inheritedPath, "utf-8", (stream) => {
   stream.write(JSON.stringify(inheritedItems, null, 2));
 });
 
-const manager = new cdb.CDBManager(inheritedPath);
+const manager = new CDBManager(inheritedPath);
 const initialItems = manager.items();
 expectEq(initialItems.length, 4, "initial item count");
 
-const extraPath = fs.path.joinAll(testEnvPath, "other.json");
-const extra = new cdb.CDBManager(extraPath);
+const extraPath = path.joinAll(testEnvPath, "other.json");
+const extra = new CDBManager(extraPath);
 extra.addItem({
-  directory: fs.path.joinAll(buildDir, "."),
+  directory: path.joinAll(buildDir, "."),
   file: "./override.cc",
   command: "clang++ -Winvalid -c override.cc",
   output: "override-new.o",
 });
 extra.addItem({
-  directory: fs.path.joinAll(buildDir, "."),
+  directory: path.joinAll(buildDir, "."),
   file: "./override.cc",
   command: "clang++ -Winvalid -c override.cc -fmodules",
   output: "override-mod.o",
@@ -124,30 +130,30 @@ const unicodeItem = expectDefined(
 );
 expectEq(
   unicodeItem.file,
-  fs.path.joinAll(sourceDir, "绝对路径.cc"),
+  path.joinAll(sourceDir, "绝对路径.cc"),
   "absolute unicode file preserved",
 );
-debug.assertThrow(Array.isArray(unicodeItem.arguments));
+assertThrow(Array.isArray(unicodeItem.arguments));
 expectEq(unicodeItem.arguments?.[3], "-DNAME=你好", "unicode flag preserved");
 const newItem = expectDefined(
   mergedItems.find((item) => item.file === "new.cc"),
   "new item",
 );
 expectEq(newItem.file, "new.cc", "new item appended");
-debug.assertThrow(Array.isArray(newItem.arguments));
+assertThrow(Array.isArray(newItem.arguments));
 
-const savePath = fs.path.joinAll(testEnvPath, "out", "compile_commands.json");
+const savePath = path.joinAll(testEnvPath, "out", "compile_commands.json");
 expectEq(manager.save(savePath), savePath, "save path");
-debug.assertThrow(fs.exists(savePath));
+assertThrow(existsSync(savePath));
 
 const savedJSON = readJSON(savePath);
-debug.assertThrow(Array.isArray(savedJSON));
+assertThrow(Array.isArray(savedJSON));
 if (!Array.isArray(savedJSON)) {
   throw new Error("saved cdb should be an array");
 }
 expectEq(savedJSON.length, 5, "saved item count");
 
-const reloaded = new cdb.CDBManager(savePath).items();
+const reloaded = new CDBManager(savePath).items();
 expectEq(reloaded.length, 5, "reloaded item count");
 const reloadedOverrideItem = expectDefined(
   reloaded.find((item) => item.output === "override-new.o"),
@@ -173,7 +179,7 @@ const reloadedUnicodeItem = expectDefined(
 );
 expectEq(
   reloadedUnicodeItem.file,
-  fs.path.joinAll(sourceDir, "绝对路径.cc"),
+  path.joinAll(sourceDir, "绝对路径.cc"),
   "reloaded absolute unicode file",
 );
 expectEq(

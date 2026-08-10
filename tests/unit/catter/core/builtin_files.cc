@@ -9,14 +9,16 @@ using namespace catter;
 TEST_SUITE(builtin_files_tests) {
 
 TEST_CASE(builtin_module_lookup_returns_embedded_sources) {
-    const auto aggregate = catter::js::load_builtin_module("catter");
-    EXPECT_TRUE(!aggregate.empty());
-    // The aggregate entry re-exports the per-module bundles.
-    EXPECT_TRUE(aggregate.find("catter/") != std::string_view::npos);
+    // There is no aggregate "catter" module; every public module is a
+    // subpath entry such as "catter/cdb" or "catter/cli".
+    EXPECT_TRUE(catter::js::load_builtin_module("catter").empty());
 
     const auto cdb = catter::js::load_builtin_module("catter/cdb");
     EXPECT_TRUE(!cdb.empty());
     EXPECT_TRUE(cdb.find("CDBManager") != std::string_view::npos);
+
+    const auto cli = catter::js::load_builtin_module("catter/cli");
+    EXPECT_TRUE(!cli.empty());
 
     EXPECT_TRUE(catter::js::load_builtin_module("catter/does-not-exist").empty());
 }

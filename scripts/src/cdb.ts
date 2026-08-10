@@ -1,7 +1,11 @@
-import * as service from "catter/service";
-
-import * as cli from "catter/cli";
-import * as fs from "catter/fs";
+import {
+  create,
+  register,
+  type CatterContextService,
+  type CommandData,
+} from "catter/service";
+import { cli, run } from "catter/cli";
+import { path } from "catter/fs";
 import {
   CompilerAnalyzer,
   CompilerResolver,
@@ -89,14 +93,16 @@ function isSet<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
 
-function pathOf(cwd: string, path: string): string | undefined {
-  if (path === "-") {
+function pathOf(cwd: string, pathStr: string): string | undefined {
+  if (pathStr === "-") {
     return undefined;
   }
 
-  const base = fs.path.absolute(cwd);
-  const joined = fs.path.isAbsolute(path) ? path : fs.path.joinAll(base, path);
-  return fs.path.lexicalNormal(joined);
+  const base = path.absolute(cwd);
+  const joined = path.isAbsolute(pathStr)
+    ? pathStr
+    : path.joinAll(base, pathStr);
+  return path.lexicalNormal(joined);
 }
 
 function defaultOptions(outputPath: string): CDBScriptOptions {
@@ -129,7 +135,7 @@ function quoteArgument(argument: string): string {
     : JSON.stringify(argument);
 }
 
-function commandLine(command: service.CommandData): string {
+function commandLine(command: CommandData): string {
   const argv = command.argv.length === 0 ? [command.exe] : command.argv;
   return argv.map(quoteArgument).join(" ");
 }
@@ -191,7 +197,7 @@ function compilerOutputs(analysis: CompilerAnalysis): string[] {
 
 function compilerAnalysisSuccessLog(
   id: number,
-  command: service.CommandData,
+  command: CommandData,
   analysis: CompilerAnalysis,
 ): string {
   const lines = [
@@ -213,7 +219,7 @@ function compilerAnalysisSuccessLog(
 
 function compilerAnalysisErrorLog(
   id: number,
-  command: service.CommandData,
+  command: CommandData,
   error: CompilerAnalysisError,
 ): string {
   return [
@@ -252,9 +258,7 @@ function compilerAnalysisErrorLog(
  * CDB saved to /tmp/demo/build/compile_commands.json with 1 entries.
  * ```
  */
-function cdb(
-  savePath = "build/compile_commands.json",
-): service.CatterContextService {
+function cdb(savePath = "build/compile_commands.json"): CatterContextService {
   let options = defaultOptions(savePath);
   let compilerAnalyzer = new CompilerAnalyzer();
   const commandTree = new FlatTree<string, string>();
@@ -314,13 +318,13 @@ function cdb(
     const savedPath = manager.save();
     log(
       options,
-      `CDB saved to ${fs.path.absolute(savedPath)} with ${manager.items().length} entries.`,
+      `CDB saved to ${path.absolute(savedPath)} with ${manager.items().length} entries.`,
     );
   }
 
-  return service.create({
+  return create({
     onStart(config) {
-      const parsed = cli.run(cdbCLI, config.scriptArgs);
+      const parsed = run(cdbCLI, config.scriptArgs);
       if (parsed === undefined) {
         config.execute = false;
         return config;
@@ -457,4 +461,4 @@ function cdb(
   });
 }
 
-service.register(cdb());
+register(cdb());

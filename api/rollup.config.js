@@ -9,7 +9,7 @@ const modules = JSON.parse(fs.readFileSync(path.join(root, "modules.json"), "utf
 const input = {};
 const specToFile = {};
 for (const [spec, entry] of Object.entries(modules)) {
-  const name = spec === "catter" ? "catter" : spec.slice("catter/".length);
+  const name = spec.slice("catter/".length);
   input[name] = `build/lib/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
   specToFile[spec] = `${name}.js`;
 }

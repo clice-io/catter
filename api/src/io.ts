@@ -1,4 +1,19 @@
-import * as capi from "catter-c";
+import {
+  file_close,
+  file_open,
+  file_read_n,
+  file_seek_read,
+  file_seek_write,
+  file_tell_read,
+  file_tell_write,
+  file_write_n,
+  os_name,
+  stdout_print,
+  stdout_print_blue,
+  stdout_print_green,
+  stdout_print_red,
+  stdout_print_yellow,
+} from "catter-c";
 
 /**
  * Prints content to standard output without a trailing newline.
@@ -13,7 +28,7 @@ import * as capi from "catter-c";
  * ```
  */
 export function print(content: string) {
-  capi.stdout_print(content);
+  stdout_print(content);
 }
 
 /**
@@ -31,7 +46,7 @@ export function print(content: string) {
  * ```
  */
 export function println(content: string) {
-  capi.stdout_print(content + "\n");
+  stdout_print(content + "\n");
 }
 
 /**
@@ -55,16 +70,16 @@ export function coloredPrint(
 ) {
   switch (color) {
     case "red":
-      capi.stdout_print_red(content);
+      stdout_print_red(content);
       break;
     case "yellow":
-      capi.stdout_print_yellow(content);
+      stdout_print_yellow(content);
       break;
     case "blue":
-      capi.stdout_print_blue(content);
+      stdout_print_blue(content);
       break;
     case "green":
-      capi.stdout_print_green(content);
+      stdout_print_green(content);
       break;
   }
 }
@@ -102,7 +117,7 @@ export function coloredPrintln(
  * ```
  */
 export function dir_sep(): "/" | "\\" {
-  return capi.os_name() === "windows" ? "\\" : "/";
+  return os_name() === "windows" ? "\\" : "/";
 }
 
 /**
@@ -160,7 +175,7 @@ export class FileStream {
    * @throws Will throw if the file cannot be opened (does not exist, permission denied, etc.).
    */
   public constructor(path: string) {
-    this.fd = capi.file_open(path);
+    this.fd = file_open(path);
   }
 
   /**
@@ -179,7 +194,7 @@ export class FileStream {
    * ```
    */
   public close(): void {
-    capi.file_close(this.fd);
+    file_close(this.fd);
   }
 
   /**
@@ -199,7 +214,7 @@ export class FileStream {
    * ```
    */
   public seekWrite(offset: number, whence: SeekWhence): void {
-    capi.file_seek_write(this.fd, offset, whence);
+    file_seek_write(this.fd, offset, whence);
   }
 
   /**
@@ -218,7 +233,7 @@ export class FileStream {
    * ```
    */
   public seekRead(offset: number, whence: SeekWhence): void {
-    capi.file_seek_read(this.fd, offset, whence);
+    file_seek_read(this.fd, offset, whence);
   }
 
   /**
@@ -246,7 +261,7 @@ export class FileStream {
       return new Uint8Array(0);
     }
     const buf = new ArrayBuffer(n);
-    const bytesRead = capi.file_read_n(this.fd, n, buf);
+    const bytesRead = file_read_n(this.fd, n, buf);
     return new Uint8Array(buf, 0, bytesRead);
   }
 
@@ -269,7 +284,7 @@ export class FileStream {
    * ```
    */
   public readBuf(into: Uint8Array): number {
-    const bytesRead = capi.file_read_n(
+    const bytesRead = file_read_n(
       this.fd,
       into.length,
       into.buffer as ArrayBuffer,
@@ -293,7 +308,7 @@ export class FileStream {
    * ```
    */
   public write(data: Uint8Array): void {
-    capi.file_write_n(this.fd, data.length, data.buffer as ArrayBuffer);
+    file_write_n(this.fd, data.length, data.buffer as ArrayBuffer);
   }
 
   /**
@@ -330,9 +345,9 @@ export class FileStream {
    * ```
    */
   public file_size(): number {
-    const currentPos = capi.file_tell_read(this.fd);
+    const currentPos = file_tell_read(this.fd);
     this.seekRead(0, SeekWhence.END);
-    const size = capi.file_tell_read(this.fd);
+    const size = file_tell_read(this.fd);
     this.seekRead(currentPos, SeekWhence.SET);
     return size;
   }
@@ -350,7 +365,7 @@ export class FileStream {
    * ```
    */
   public tellRead(): number {
-    return capi.file_tell_read(this.fd);
+    return file_tell_read(this.fd);
   }
 
   /**
@@ -366,7 +381,7 @@ export class FileStream {
    * ```
    */
   public tellWrite(): number {
-    return capi.file_tell_write(this.fd);
+    return file_tell_write(this.fd);
   }
 
   /**

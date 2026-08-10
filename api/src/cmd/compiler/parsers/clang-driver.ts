@@ -1,4 +1,4 @@
-import * as option from "catter/option";
+import { collect, info } from "catter/option";
 import { ClangID, ClangVisibility } from "catter/option";
 import { type OptionInfo, type OptionItem } from "catter/option";
 import type {
@@ -36,12 +36,12 @@ export function collectClangDriverOptions(
   args: readonly string[],
   visibility: number = ClangVisibility.DefaultVis,
 ): ClangDriverParsedOption[] {
-  const collected = option.collect("clang", [...args], visibility);
-  if (!Array.isArray(collected)) {
-    throw new CompilerParseError(`fatal error in parsing: ${collected}`);
+  const collected = collect("clang", [...args], visibility);
+  if (collected.isErr()) {
+    throw new CompilerParseError(`fatal error in parsing: ${collected.error}`);
   }
 
-  return collected.map((raw) => {
+  return collected.value.map((raw) => {
     const item = {
       ...raw,
       values: [...raw.values],
@@ -49,7 +49,7 @@ export function collectClangDriverOptions(
     return {
       raw,
       item,
-      info: option.info("clang", item),
+      info: info("clang", item),
     };
   });
 }
