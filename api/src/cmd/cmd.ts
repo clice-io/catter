@@ -14,7 +14,7 @@ import type { Result } from "catter/neverthrow";
  * executable name.
  * @returns A `Result` whose `Ok` value is the flattened array containing only
  * non-`clang` `nvcc` argument segments, or whose `Err` value is the parser
- * error string returned while collecting `nvcc` options.
+ * error string returned while collecting `clang` options.
  */
 export function nvcc2clang(args: string[]): Result<string[], string> {
   return table2table("clang", "nvcc", args);

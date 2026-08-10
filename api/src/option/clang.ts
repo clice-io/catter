@@ -3,19 +3,6 @@
 
 /**
  * Option identifier enum for the `clang` option table.
- *
- * Compare these values against `OptionItem.id` or pass them to `option_get_info`
- * when you need metadata for a parsed option.
- *
- * @example
- * ```typescript
- * import { ClangID, collect } from "catter/option";
- *
- * const parsed = collect("clang", ["input.file"]);
- * if (Array.isArray(parsed) && parsed[0].id === ClangID.ID_INPUT) {
- *   println(parsed[0].key);
- * }
- * ```
  */
 export enum ClangID {
   ID_INVALID = 0,
