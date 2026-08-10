@@ -11,9 +11,9 @@ import type { OptionInfo, OptionItem, OptionTable } from "./types.js";
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect } from "catter/option";
  *
- * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
+ * const parsed = collect("clang", ["-Iinclude", "main.cc"]);
  * ```
  */
 
@@ -105,11 +105,11 @@ function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect, stringify } from "catter/option";
  *
- * const parsed = option.collect("nvcc", ["-I=include"]);
+ * const parsed = collect("nvcc", ["-I=include"]);
  * if (Array.isArray(parsed)) {
- *   println(option.stringify("nvcc", parsed[0]));
+ *   println(stringify("nvcc", parsed[0]));
  * }
  * ```
  */
@@ -127,9 +127,9 @@ export function stringify(table: OptionTable, item: OptionItem): string {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { collect } from "catter/option";
  *
- * const parsed = option.collect("clang", ["-Iinclude", "main.cc"]);
+ * const parsed = collect("clang", ["-Iinclude", "main.cc"]);
  * if (!Array.isArray(parsed)) {
  *   throw new Error(parsed);
  * }
@@ -167,9 +167,9 @@ export function collect(
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { replace } from "catter/option";
  *
- * const rewritten = option.replace("clang", ["-Iold", "main.cc"], (parseRes) => {
+ * const rewritten = replace("clang", ["-Iold", "main.cc"], (parseRes) => {
  *   if (typeof parseRes === "string") {
  *     throw new Error(parseRes);
  *   }
@@ -242,7 +242,9 @@ export function replace(
  *
  * @example
  * ```typescript
- * option.parse("clang", ["-Iinclude", "main.cc"], (parseRes) => {
+ * import { parse } from "catter/option";
+ *
+ * parse("clang", ["-Iinclude", "main.cc"], (parseRes) => {
  *   if (typeof parseRes === "string") {
  *     throw new Error(parseRes);
  *   }
@@ -269,9 +271,11 @@ export function parse(
  *
  * @example
  * ```typescript
- * const parsed = option.collect("nvcc", ["--help"]);
+ * import { collect, info } from "catter/option";
+ *
+ * const parsed = collect("nvcc", ["--help"]);
  * if (Array.isArray(parsed)) {
- *   const meta = option.info("nvcc", parsed[0]);
+ *   const meta = info("nvcc", parsed[0]);
  *   println(meta.prefixedKey);
  * }
  * ```

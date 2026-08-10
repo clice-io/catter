@@ -1,5 +1,11 @@
-import * as fs from "catter/fs";
-import * as io from "catter/io";
+import {
+  createFileSync,
+  existsSync,
+  isFileSync,
+  path,
+  removeAllSync,
+} from "catter/fs";
+import { TextFileStream } from "catter/io";
 
 export class CDBError extends Error {
   constructor(message: string) {
@@ -57,7 +63,7 @@ function cloneItem(item: CDBItem): CDBItem {
 
 function readEntireText(path: string): string {
   let content = "";
-  io.TextFileStream.with(path, "utf-8", (stream) => {
+  TextFileStream.with(path, "utf-8", (stream) => {
     content = stream.readEntireFile();
   });
   return content;
@@ -123,11 +129,11 @@ function asItem(value: unknown, context: string): CDBItem {
 }
 
 function fileKey(item: CDBItem): string {
-  const base = fs.path.absolute(item.directory);
-  const file = fs.path.isAbsolute(item.file)
+  const base = path.absolute(item.directory);
+  const file = path.isAbsolute(item.file)
     ? item.file
-    : fs.path.joinAll(base, item.file);
-  return fs.path.lexicalNormal(file);
+    : path.joinAll(base, item.file);
+  return path.lexicalNormal(file);
 }
 
 function itemKey(item: CDBItem): string {
@@ -149,10 +155,10 @@ function addTo(store: Map<string, Map<string, CDBItem>>, item: CDBItem): void {
 }
 
 function readItemsFromPath(path: string): CDBItem[] {
-  if (!fs.exists(path)) {
+  if (!existsSync(path)) {
     return [];
   }
-  if (!fs.isFile(path)) {
+  if (!isFileSync(path)) {
     throw new CDBFileError(`CDB path is not a file: ${path}`);
   }
 
@@ -170,12 +176,12 @@ function readItemsFromPath(path: string): CDBItem[] {
 }
 
 function writeItemsToPath(path: string, items: CDBItem[]): void {
-  if (fs.exists(path)) {
-    fs.removeAll(path);
+  if (existsSync(path)) {
+    removeAllSync(path);
   }
-  fs.createFile(path, true);
+  createFileSync(path, true);
 
-  io.TextFileStream.with(path, "utf-8", (stream) => {
+  TextFileStream.with(path, "utf-8", (stream) => {
     stream.write(JSON.stringify(items, null, 2));
   });
 }

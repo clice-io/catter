@@ -1,5 +1,10 @@
-import * as cmd from "catter/cmd";
-import * as os from "catter/os";
+import {
+  CompilerDialect,
+  CompilerIdentifier,
+  identifyCompiler,
+  type CompilerKind,
+} from "catter/cmd";
+import { platform } from "catter/os";
 
 function expectEq<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
@@ -9,7 +14,7 @@ function expectEq<T>(actual: T, expected: T, label: string) {
 
 const compilerCases: readonly {
   executable: string;
-  expected: cmd.CompilerKind;
+  expected: CompilerKind;
 }[] = [
   { executable: "gcc", expected: "gcc" },
   { executable: "g++", expected: "gcc" },
@@ -147,7 +152,7 @@ const compilerCases: readonly {
 
 for (const testCase of compilerCases) {
   expectEq(
-    cmd.identifyCompiler(testCase.executable),
+    identifyCompiler(testCase.executable),
     testCase.expected,
     testCase.executable,
   );
@@ -155,7 +160,7 @@ for (const testCase of compilerCases) {
 
 const uppercaseCompilerCases: readonly {
   executable: string;
-  windowsExpected: cmd.CompilerKind;
+  windowsExpected: CompilerKind;
 }[] = [
   {
     executable: String.raw`C:\LLVM\BIN\CLANG.EXE`,
@@ -174,13 +179,13 @@ const uppercaseCompilerCases: readonly {
 
 for (const testCase of uppercaseCompilerCases) {
   expectEq(
-    cmd.identifyCompiler(testCase.executable),
-    os.platform() === "windows" ? testCase.windowsExpected : "unknown",
+    identifyCompiler(testCase.executable),
+    platform() === "windows" ? testCase.windowsExpected : "unknown",
     `${testCase.executable} case sensitivity`,
   );
 }
 
-const identifier = new cmd.CompilerIdentifier();
+const identifier = new CompilerIdentifier();
 const versionedClang = identifier.identifyCompilerCommand({
   exe: "clang-20",
   argv: ["clang-20", "-c", "main.cc"],
@@ -223,7 +228,7 @@ expectEq(gfortran.target, undefined, "gfortran target");
 
 identifier.registerCompilerRule("project-clang", {
   match: /(?:^|[\\/])clang$/,
-  dialect: cmd.CompilerDialect.Msvc,
+  dialect: CompilerDialect.Msvc,
 });
 const custom = identifier.identifyCompilerCommand({
   exe: "/project/bin/clang",

@@ -16,13 +16,13 @@ npm install --save-dev catter
 
 ```js
 // @ts-check
-import * as debug from "catter/debug";
-import * as fs from "catter/fs";
-import * as service from "catter/service";
+import { assertPrint } from "catter/debug";
+import { exists } from "catter/fs";
+import { register } from "catter/service";
 
-debug.assertPrint(await fs.async.exists("build"));
+assertPrint(await exists("build"));
 
-service.register({
+register({
   async onStart(config) {
     return config;
   },

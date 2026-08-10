@@ -1,5 +1,11 @@
 import * as cli from "catter/cli";
-import * as service from "catter/service";
+import {
+  create,
+  register,
+  type CatterContextService,
+  type CatterErr,
+  type CommandData,
+} from "catter/service";
 import { println, print } from "catter/io";
 import { FlatTree } from "catter/data";
 import { TreeRenderer } from "catter/view";
@@ -101,16 +107,13 @@ function formatCommand(
  *     └── ld main.o -o app
  * ```
  */
-function cmdTree(): service.CatterContextService {
-  const commandTree = new FlatTree<
-    number,
-    Result<service.CommandData, service.CatterErr>
-  >();
+function cmdTree(): CatterContextService {
+  const commandTree = new FlatTree<number, Result<CommandData, CatterErr>>();
   let maxDepth: number | undefined;
   let visibleArgCount = -1;
   let maxArgWidth = 10;
 
-  return service.create({
+  return create({
     onCommand(ctx) {
       const capture = ctx.capture;
       commandTree.justMergeNode({
@@ -199,4 +202,4 @@ function cmdTree(): service.CatterContextService {
   });
 }
 
-service.register(cmdTree());
+register(cmdTree());

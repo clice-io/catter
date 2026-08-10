@@ -1,19 +1,14 @@
-import * as debug from "catter/debug";
-import * as io from "catter/io";
-import * as os from "catter/os";
+import { assertThrow } from "catter/debug";
+import { println } from "catter/io";
+import { arch, platform } from "catter/os";
 
-debug.assertThrow(
-  os.platform() == "linux" ||
-    os.platform() == "windows" ||
-    os.platform() == "macos",
+assertThrow(
+  platform() == "linux" || platform() == "windows" || platform() == "macos",
 );
 
-debug.assertThrow(
-  os.arch() == "x86" ||
-    os.arch() == "x64" ||
-    os.arch() == "arm" ||
-    os.arch() == "arm64",
+assertThrow(
+  arch() == "x86" || arch() == "x64" || arch() == "arm" || arch() == "arm64",
 );
 
-io.println(`Operating System: ${os.platform()}`);
-io.println(`Architecture: ${os.arch()}`);
+println(`Operating System: ${platform()}`);
+println(`Architecture: ${arch()}`);

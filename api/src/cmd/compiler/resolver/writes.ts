@@ -1,4 +1,4 @@
-import * as fs from "catter/fs";
+import { path as fsPath } from "catter/fs";
 import {
   CompilerArtifact,
   CompilerDialect,
@@ -18,8 +18,8 @@ type ResolvedWrite = {
 };
 
 function pathStem(path: string): string {
-  const name = fs.path.filename(path);
-  const ext = fs.path.extension(name);
+  const name = fsPath.filename(path);
+  const ext = fsPath.extension(name);
 
   return name.slice(0, name.length - ext.length);
 }
@@ -348,8 +348,8 @@ function materializeOutputPaths(
   }
 
   return nameReads.map((read) =>
-    fs.path.lexicalNormal(
-      fs.path.joinAll(outputPath, pathStem(read.input.path) + extension),
+    fsPath.lexicalNormal(
+      fsPath.joinAll(outputPath, pathStem(read.input.path) + extension),
     ),
   );
 }
@@ -410,8 +410,8 @@ function resolveAssemblyListingWritesByPath(
 ): ResolvedWrite[] {
   if (isDirectoryLike(explicitPath)) {
     return sourceReads.map((read) => {
-      const path = fs.path.lexicalNormal(
-        fs.path.joinAll(explicitPath, pathStem(read.input.path) + ".asm"),
+      const path = fsPath.lexicalNormal(
+        fsPath.joinAll(explicitPath, pathStem(read.input.path) + ".asm"),
       );
       trace.inferredWrite(path, "assembly-listing");
       return {

@@ -9,10 +9,10 @@
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { ClangID, collect } from "catter/option";
  *
- * const parsed = option.collect("clang", ["input.file"]);
- * if (Array.isArray(parsed) && parsed[0].id === option.ClangID.ID_INPUT) {
+ * const parsed = collect("clang", ["input.file"]);
+ * if (Array.isArray(parsed) && parsed[0].id === ClangID.ID_INPUT) {
  *   println(parsed[0].key);
  * }
  * ```
@@ -3539,11 +3539,11 @@ export enum ClangID {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { ClangFlag, ClangID } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);
- * const isSet = (info.flags & option.ClangFlag.HelpHidden) !== 0;
+ * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
+ * const isSet = (info.flags & ClangFlag.HelpHidden) !== 0;
  * ```
  */
 export enum ClangFlag {
@@ -3567,11 +3567,11 @@ export enum ClangFlag {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { ClangID, ClangVisibility } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);
- * const isVisible = (info.visibility & option.ClangVisibility.DefaultVis) !== 0;
+ * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
+ * const isVisible = (info.visibility & ClangVisibility.DefaultVis) !== 0;
  * ```
  */
 export enum ClangVisibility {
@@ -3592,11 +3592,11 @@ export enum ClangVisibility {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { ClangDriverClass, ClangID } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("clang", option.ClangID.ID_UNKNOWN);
- * const matchesClass = (info.visibility & option.ClangDriverClass.DefaultVis) !== 0;
+ * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
+ * const matchesClass = (info.visibility & ClangDriverClass.DefaultVis) !== 0;
  * ```
  */
 export enum ClangDriverClass {

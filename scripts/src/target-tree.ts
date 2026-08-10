@@ -1,23 +1,31 @@
-import * as fs from "catter/fs";
-import * as service from "catter/service";
+import { path } from "catter/fs";
+import { create, register, type CatterContextService } from "catter/service";
 import * as cli from "catter/cli";
 import { println, print } from "catter/io";
 import { FlatTree } from "catter/data";
 import { TreeRenderer } from "catter/view";
-import { analyze } from "catter/cmd";
+import {
+  ArchiverAnalyzer,
+  CompilerAnalyzer,
+  Registry,
+  type CommandAnalysis,
+  type CommandAnalyzerError,
+} from "catter/cmd";
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
 
-function normalizePath(cwd: string, path: string): string | undefined {
-  if (path === "-") {
+function normalizePath(cwd: string, pathStr: string): string | undefined {
+  if (pathStr === "-") {
     return undefined;
   }
 
-  const base = fs.path.absolute(cwd);
-  const joined = fs.path.isAbsolute(path) ? path : fs.path.joinAll(base, path);
-  return fs.path.lexicalNormal(joined);
+  const base = path.absolute(cwd);
+  const joined = path.isAbsolute(pathStr)
+    ? pathStr
+    : path.joinAll(base, pathStr);
+  return path.lexicalNormal(joined);
 }
 
 const targetTreeCLI = cli.command({
@@ -49,11 +57,13 @@ const targetTreeCLI = cli.command({
  *     └── util.o
  * ```
  */
-function targetTree(): service.CatterContextService {
+function targetTree(): CatterContextService {
   const targetTree = new FlatTree<string, string>();
   let maxDepth: number | undefined;
-
-  return service.create({
+  const analyzerRegistry = new Registry<CommandAnalysis, CommandAnalyzerError>()
+    .register("compiler", new CompilerAnalyzer())
+    .register("archiver", new ArchiverAnalyzer());
+  return create({
     onStart(config) {
       const res = cli.run(targetTreeCLI, config.scriptArgs);
       if (res) {
@@ -88,7 +98,7 @@ function targetTree(): service.CatterContextService {
         renderer.output({
           type: "cli",
           maxDepth,
-          text: (_content, id) => fs.path.filename(id) || id,
+          text: (_content, id) => path.filename(id) || id,
         }),
       );
 
@@ -96,7 +106,7 @@ function targetTree(): service.CatterContextService {
         println("");
         println("Detected target cycles:");
         for (const cycle of cycles) {
-          const names = cycle.map((id) => fs.path.filename(id) || id);
+          const names = cycle.map((id) => path.filename(id) || id);
           println(`[cycle] ${names.join(" -> ")} -> ${names[0]}`);
         }
       }
@@ -108,7 +118,7 @@ function targetTree(): service.CatterContextService {
         return;
       }
 
-      const analysisResult = analyze({
+      const analysisResult = analyzerRegistry.analyze({
         exe: data.value.exe,
         argv: data.value.argv,
       });
@@ -153,4 +163,4 @@ function targetTree(): service.CatterContextService {
   });
 }
 
-service.register(targetTree());
+register(targetTree());

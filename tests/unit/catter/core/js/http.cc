@@ -257,28 +257,28 @@ TEST_CASE(run_http_client_js_file_through_async_loop) {
     auto f = [&]() {
         LocalHttpServer server{2};
         auto source = std::string{R"JS(
-            import * as debug from "catter/debug";
-            import * as http from "catter/http";
+            import { assertThrow } from "catter/debug";
+            import { Client, post } from "catter/http";
 
             const base = "__BASE_URL__";
-            const client = new http.Client();
+            const client = new Client();
             const res = await client.get(`${base}/payload`, {
               headers: [["X-From-JS", "yes"]],
               timeoutMs: 5_000,
             });
 
-            debug.assertThrow(res.ok);
-            debug.assertThrow(res.status === 200);
-            debug.assertThrow(res.header("content-type") === "application/json");
-            debug.assertThrow(res.header("x-catter-test") === "yes, again");
-            debug.assertThrow(!("rawHeaders" in res));
-            debug.assertThrow(res.json().ok === true);
-            debug.assertThrow(res.json().path === "/payload");
+            assertThrow(res.ok);
+            assertThrow(res.status === 200);
+            assertThrow(res.header("content-type") === "application/json");
+            assertThrow(res.header("x-catter-test") === "yes, again");
+            assertThrow(!("rawHeaders" in res));
+            assertThrow(res.json().ok === true);
+            assertThrow(res.json().path === "/payload");
 
-            const echoed = await http.post(`${base}/echo`, "hello async http", {
+            const echoed = await post(`${base}/echo`, "hello async http", {
               timeoutMs: 5_000,
             });
-            debug.assertThrow(echoed.text() === "POST /echo hello async http");
+            assertThrow(echoed.text() === "POST /echo hello async http");
 
             client.close();
         )JS"};

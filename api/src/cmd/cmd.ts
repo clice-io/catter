@@ -1,4 +1,4 @@
-import * as option from "catter/option";
+import { table2table } from "catter/option";
 
 /**
  * Filters an `nvcc` argument list down to the segments that are not valid
@@ -16,5 +16,5 @@ import * as option from "catter/option";
  * options.
  */
 export function nvcc2clang(args: string[]): string | string[] {
-  return option.table2table("clang", "nvcc", args);
+  return table2table("clang", "nvcc", args);
 }

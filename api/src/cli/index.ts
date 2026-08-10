@@ -1,4 +1,4 @@
-import * as io from "catter/io";
+import { println } from "catter/io";
 
 /**
  * Lightweight declarative command-line parser for catter QuickJS scripts.
@@ -1275,11 +1275,11 @@ export function run<
 ): CommandValues<Options, Positionals> | undefined {
   const res = parse(command, argv);
   if (!res.ok) {
-    io.println(formatError(res));
+    println(formatError(res));
     return undefined;
   }
   if (res.helpRequested) {
-    io.println(res.usage);
+    println(res.usage);
     return undefined;
   }
   return res.values;

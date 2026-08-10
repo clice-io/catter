@@ -1,5 +1,3 @@
-import * as io from "catter/io";
-
 /**
  * A comparable node identifier supported by `FlatTree`.
  */
@@ -42,9 +40,9 @@ export type FlatTreeRelation =
  *
  * @example
  * ```ts
- * import * as data from "catter/data";
+ * import { FlatTree } from "catter/data";
  *
- * const tree = new data.FlatTree<number, string>();
+ * const tree = new FlatTree<number, string>();
  * tree.justMergeNode({ id: 1, content: "root" });
  * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
  *
@@ -75,9 +73,9 @@ export interface FlatTreeWalker<Id extends FlatTreeId> {
  *
  * @example
  * ```ts
- * import * as data from "catter/data";
+ * import { FlatTree } from "catter/data";
  *
- * const tree = new data.FlatTree<string, string>();
+ * const tree = new FlatTree<string, string>();
  * tree.justMergeNode({ id: "app", content: "app" });
  * tree.justMergeNode({ id: "main.o", parent: ["app"], content: "main.o" });
  * tree.justMergeNode({ id: "util.o", parent: ["app"], content: "util.o" });
@@ -108,9 +106,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
    * tree.justMergeNode({ id: 2, parent: [3], content: "leaf" });
    *
@@ -254,9 +252,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, children: [2], content: "one" });
    * tree.justMergeNode({ id: 2, children: [1], content: "two" });
    *
@@ -431,9 +429,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });
    * tree.justMergeNode({ id: 2, parent: [99], content: "detached" });
    *
@@ -466,9 +464,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
    * tree.justMergeNode({ id: 3, content: "orphan" });
    *
@@ -502,9 +500,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });
    * tree.justMergeNode({ id: 2, parent: [1], content: "child" });
    *
@@ -568,9 +566,9 @@ export class FlatTree<Id extends FlatTreeId, Content> {
    *
    * @example
    * ```ts
-   * import * as data from "catter/data";
+   * import { FlatTree } from "catter/data";
    *
-   * const tree = new data.FlatTree<number, string>();
+   * const tree = new FlatTree<number, string>();
    * tree.justMergeNode({ id: 1, content: "root" });
    * tree.justMergeNode({ id: 2, parent: [1], content: "leaf" });
    *

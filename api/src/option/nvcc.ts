@@ -395,11 +395,11 @@ export enum NvccID {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { NvccFlag, NvccID } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("nvcc", option.NvccID.ID_UNKNOWN);
- * const hasCustomFlags = info.flags !== option.NvccFlag.None;
+ * const info = option_get_info("nvcc", NvccID.ID_UNKNOWN);
+ * const hasCustomFlags = info.flags !== NvccFlag.None;
  * ```
  */
 export enum NvccFlag {
@@ -413,11 +413,11 @@ export enum NvccFlag {
  *
  * @example
  * ```typescript
- * import * as option from "catter/option";
+ * import { NvccID, NvccVisibility } from "catter/option";
  * import { option_get_info } from "catter-c";
  *
- * const info = option_get_info("nvcc", option.NvccID.ID_UNKNOWN);
- * const isVisible = (info.visibility & option.NvccVisibility.DefaultVis) !== 0;
+ * const info = option_get_info("nvcc", NvccID.ID_UNKNOWN);
+ * const isVisible = (info.visibility & NvccVisibility.DefaultVis) !== 0;
  * ```
  */
 export enum NvccVisibility {

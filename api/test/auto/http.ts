@@ -1,7 +1,7 @@
-import * as debug from "catter/debug";
-import * as http from "catter/http";
+import { assertThrow } from "catter/debug";
+import { Client } from "catter/http";
 
-const client = new http.Client();
+const client = new Client();
 client.close();
 client.close();
 
@@ -12,4 +12,4 @@ try {
   closedClientRejected = String(error).includes("HTTP client is closed");
 }
 
-debug.assertThrow(closedClientRejected);
+assertThrow(closedClientRejected);
