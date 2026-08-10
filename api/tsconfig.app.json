@@ -10,9 +10,6 @@
         "declarationMap": true,
         "sourceMap": true,
         "paths": {
-            "catter": [
-                "./src/index.ts"
-            ],
             "catter/*": [
                 "./src/*/index.ts",
                 "./src/*.ts"

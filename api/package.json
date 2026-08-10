@@ -4,13 +4,7 @@
   "author": "clice-io",
   "description": "Catter QuickJS runtime API types and editor hints.",
   "type": "module",
-  "types": "./output/types/index.d.ts",
-  "main": "./output/lib/catter.js",
   "exports": {
-    ".": {
-      "types": "./output/types/index.d.ts",
-      "default": "./output/lib/catter.js"
-    },
     "./*": {
       "types": "./output/types/*.d.ts",
       "default": "./output/lib/*.js"
@@ -18,9 +12,6 @@
   },
   "typesVersions": {
     "*": {
-      "catter": [
-        "output/types/index.d.ts"
-      ],
       "catter/*": [
         "output/types/*"
       ]

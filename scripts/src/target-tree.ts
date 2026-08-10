@@ -1,6 +1,6 @@
 import { path } from "catter/fs";
 import { create, register, type CatterContextService } from "catter/service";
-import * as cli from "catter/cli";
+import { cli, run } from "catter/cli";
 import { println, print } from "catter/io";
 import { FlatTree } from "catter/data";
 import { TreeRenderer } from "catter/view";
@@ -65,7 +65,7 @@ function targetTree(): CatterContextService {
     .register("archiver", new ArchiverAnalyzer());
   return create({
     onStart(config) {
-      const res = cli.run(targetTreeCLI, config.scriptArgs);
+      const res = run(targetTreeCLI, config.scriptArgs);
       if (res) {
         maxDepth = res.depth;
         return config;

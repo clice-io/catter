@@ -113,7 +113,7 @@ function checkFile(file, owner, violations) {
       }
       return;
     }
-    if (spec === "catter" || spec === "catter-c") {
+    if (spec === "catter-c") {
       return;
     }
     if (spec.startsWith("catter/")) {

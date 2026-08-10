@@ -1,4 +1,11 @@
-import * as cli from "catter/cli";
+import {
+  CLIParseError,
+  cli,
+  formatError,
+  parse,
+  parseOrThrow,
+  run,
+} from "catter/cli";
 import { assertThrow } from "catter/debug";
 
 const commandOptions = [
@@ -45,7 +52,7 @@ const command = cli.command({
   ] as const,
 });
 
-const parsed = cli.parse(command, [
+const parsed = parse(command, [
   "-v",
   "-d",
   "2",
@@ -56,46 +63,46 @@ const parsed = cli.parse(command, [
   "util.cc",
 ]);
 
-assertThrow(parsed.ok);
-if (parsed.ok) {
-  assertThrow(!parsed.helpRequested);
-  assertThrow(parsed.values.verbose);
-  assertThrow(parsed.values.depth === 2);
-  assertThrow(parsed.values.include.length === 2);
-  assertThrow(parsed.values.include[0] === "inc");
-  assertThrow(parsed.values.include[1] === "generated");
-  assertThrow(parsed.values.input === "main.cc");
-  assertThrow(parsed.values.rest.length === 1);
-  assertThrow(parsed.values.rest[0] === "util.cc");
-  assertThrow(parsed.usage.includes("Usage:"));
-  assertThrow(parsed.usage.includes("--depth <n>"));
-  assertThrow(parsed.usage.includes("Examples:"));
+assertThrow(parsed.isOk());
+if (parsed.isOk()) {
+  assertThrow(!parsed.value.helpRequested);
+  assertThrow(parsed.value.values.verbose);
+  assertThrow(parsed.value.values.depth === 2);
+  assertThrow(parsed.value.values.include.length === 2);
+  assertThrow(parsed.value.values.include[0] === "inc");
+  assertThrow(parsed.value.values.include[1] === "generated");
+  assertThrow(parsed.value.values.input === "main.cc");
+  assertThrow(parsed.value.values.rest.length === 1);
+  assertThrow(parsed.value.values.rest[0] === "util.cc");
+  assertThrow(parsed.value.usage.includes("Usage:"));
+  assertThrow(parsed.value.usage.includes("--depth <n>"));
+  assertThrow(parsed.value.usage.includes("Examples:"));
 }
 
-const help = cli.parse(command, ["--help"]);
-assertThrow(help.ok);
-if (help.ok) {
-  assertThrow(help.helpRequested);
-  assertThrow(help.usage.includes("-h, --help"));
+const help = parse(command, ["--help"]);
+assertThrow(help.isOk());
+if (help.isOk()) {
+  assertThrow(help.value.helpRequested);
+  assertThrow(help.value.usage.includes("-h, --help"));
 }
 
-assertThrow(cli.run(command, ["--help"]) === undefined);
+assertThrow(run(command, ["--help"]) === undefined);
 
-const failure = cli.parse(command, ["--unknown"]);
-assertThrow(!failure.ok);
-if (!failure.ok) {
-  assertThrow(failure.error.includes("unknown option"));
-  assertThrow(cli.formatError(failure).includes("Usage:"));
+const failure = parse(command, ["--unknown"]);
+assertThrow(failure.isErr());
+if (failure.isErr()) {
+  assertThrow(failure.error.error.includes("unknown option"));
+  assertThrow(formatError(failure.error).includes("Usage:"));
 }
 
-assertThrow(cli.run(command, ["--unknown"]) === undefined);
+assertThrow(run(command, ["--unknown"]) === undefined);
 
 let parseErrorSeen = false;
 try {
-  cli.parseOrThrow(command, ["-d", "-1", "main.cc"]);
+  parseOrThrow(command, ["-d", "-1", "main.cc"]);
 } catch (error) {
-  assertThrow(error instanceof cli.CLIParseError);
-  if (error instanceof cli.CLIParseError) {
+  assertThrow(error instanceof CLIParseError);
+  if (error instanceof CLIParseError) {
     parseErrorSeen = true;
     assertThrow(error.format().includes(">= 0"));
   }

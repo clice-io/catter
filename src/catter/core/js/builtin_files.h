@@ -5,7 +5,7 @@
 namespace catter::js {
 
 /**
- * Returns the source of a builtin module such as "catter" or "catter/cdb",
+ * Returns the source of a builtin module such as "catter/cdb",
  * or an empty view when the module is unknown.
  */
 std::string_view load_builtin_module(std::string_view module_name);

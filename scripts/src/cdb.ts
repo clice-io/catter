@@ -4,7 +4,7 @@ import {
   type CatterContextService,
   type CommandData,
 } from "catter/service";
-import * as cli from "catter/cli";
+import { cli, run } from "catter/cli";
 import { path } from "catter/fs";
 import {
   CompilerAnalyzer,
@@ -324,7 +324,7 @@ function cdb(savePath = "build/compile_commands.json"): CatterContextService {
 
   return create({
     onStart(config) {
-      const parsed = cli.run(cdbCLI, config.scriptArgs);
+      const parsed = run(cdbCLI, config.scriptArgs);
       if (parsed === undefined) {
         config.execute = false;
         return config;

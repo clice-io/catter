@@ -1,4 +1,4 @@
-import * as cli from "catter/cli";
+import { cli, run } from "catter/cli";
 import {
   create,
   register,
@@ -127,7 +127,7 @@ function cmdTree(): CatterContextService {
     },
 
     onStart(config) {
-      const res = cli.run(cmdTreeCLI, config.scriptArgs);
+      const res = run(cmdTreeCLI, config.scriptArgs);
       if (res === undefined) {
         config.execute = false;
         return config;
