@@ -37,11 +37,11 @@ export function collectClangDriverOptions(
   visibility: number = ClangVisibility.DefaultVis,
 ): ClangDriverParsedOption[] {
   const collected = collect("clang", [...args], visibility);
-  if (!Array.isArray(collected)) {
-    throw new CompilerParseError(`fatal error in parsing: ${collected}`);
+  if (collected.isErr()) {
+    throw new CompilerParseError(`fatal error in parsing: ${collected.error}`);
   }
 
-  return collected.map((raw) => {
+  return collected.value.map((raw) => {
     const item = {
       ...raw,
       values: [...raw.values],

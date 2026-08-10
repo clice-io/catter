@@ -37,7 +37,9 @@ function optionDisplayName(option: CommandOption): string {
  * Validates a command definition and builds the lookup tables used by the
  * usage renderer and the parser.
  */
-export function normalizeCommand(command: CommandDefinition): NormalizedCommand {
+export function normalizeCommand(
+  command: CommandDefinition,
+): NormalizedCommand {
   const options = command.options ?? [];
   const positionals = command.positionals ?? [];
   const optionByLong = new Map<string, CommandOption>();

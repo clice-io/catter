@@ -77,10 +77,10 @@ function parseItemsFor(
     table,
     args,
     (parseRes) => {
-      if (typeof parseRes === "string") {
-        throw new Error(`${label}: unexpected parse error: ${parseRes}`);
+      if (parseRes.isErr()) {
+        throw new Error(`${label}: unexpected parse error: ${parseRes.error}`);
       }
-      parsed.push(parseRes);
+      parsed.push(parseRes.value);
       return true;
     },
     visibility,
@@ -103,8 +103,8 @@ function parseErrorsFor(
 ): string[] {
   const errors: string[] = [];
   parse(table, args, (parseRes) => {
-    if (typeof parseRes === "string") {
-      errors.push(parseRes);
+    if (parseRes.isErr()) {
+      errors.push(parseRes.error);
       return true;
     }
     throw new Error(`${label}: expected parse error`);
@@ -148,17 +148,21 @@ const errors = parseErrors(["-o"], "missing value");
 assertThrow(errors.length === 1 && errors[0].includes("missing"));
 
 const collected = collect("clang", ["--all-warnings", "-Iinclude", "main.cc"]);
-assertThrow(Array.isArray(collected));
-if (!Array.isArray(collected)) {
+assertThrow(collected.isOk());
+if (!collected.isOk()) {
   throw new Error("collect should return parsed items for valid args");
 }
-expectEq(collected.length, 3, "collect parsed length");
-expectEq(collected[0].key, "--all-warnings", "collect alias key");
-expectEq(collected[0].id, ClangID.ID_Wall, "collect alias id");
-expectEq(stringify("clang", collected[0]), "-Wall", "collect alias stringify");
-expectEq(collected[1].key, "-I", "collect include key");
-expectEq(collected[1].values[0], "include", "collect include value");
-expectEq(collected[2].key, "main.cc", "collect input key");
+expectEq(collected.value.length, 3, "collect parsed length");
+expectEq(collected.value[0].key, "--all-warnings", "collect alias key");
+expectEq(collected.value[0].id, ClangID.ID_Wall, "collect alias id");
+expectEq(
+  stringify("clang", collected.value[0]),
+  "-Wall",
+  "collect alias stringify",
+);
+expectEq(collected.value[1].key, "-I", "collect include key");
+expectEq(collected.value[1].values[0], "include", "collect include value");
+expectEq(collected.value[2].key, "main.cc", "collect input key");
 
 const clangClDefaultVisible = parseItems(
   ["/c", "main.cc"],
@@ -280,11 +284,11 @@ expectEq(
 );
 
 const collectError = collect("clang", ["-o"]);
-assertThrow(typeof collectError === "string");
-if (typeof collectError !== "string") {
+assertThrow(collectError.isErr());
+if (!collectError.isErr()) {
   throw new Error("collect should return an error string for invalid args");
 }
-assertThrow(collectError.includes("missing"));
+assertThrow(collectError.error.includes("missing"));
 
 const nvccParsed = parseItemsFor(
   "nvcc",
@@ -490,10 +494,10 @@ assertThrow(
 
 const stoppedKeys: string[] = [];
 parse("clang", ["-fsyntax-only", "-Winvalid-stop-check"], (parseRes) => {
-  if (typeof parseRes === "string") {
-    throw new Error(`stop parse: unexpected parse error: ${parseRes}`);
+  if (parseRes.isErr()) {
+    throw new Error(`stop parse: unexpected parse error: ${parseRes.error}`);
   }
-  stoppedKeys.push(parseRes.key);
+  stoppedKeys.push(parseRes.value.key);
   return false;
 });
 expectEq(stoppedKeys.length, 1, "stop parse length");
@@ -506,9 +510,9 @@ const command =
   );
 const demoParsed: OptionItem[] = [];
 parse("clang", command, (parseRes) => {
-  assertThrow(typeof parseRes !== "string");
-  if (typeof parseRes !== "string") {
-    demoParsed.push(parseRes);
+  assertThrow(parseRes.isOk());
+  if (parseRes.isOk()) {
+    demoParsed.push(parseRes.value);
   }
   return true;
 });
@@ -651,8 +655,10 @@ const newCmd = replace(
     " ",
   ),
   (parseRes) => {
-    assertThrow(typeof parseRes !== "string");
-    switch ((parseRes as OptionItem).id as ClangID) {
+    if (!parseRes.isOk()) {
+      throw new Error("replace: unexpected parse error");
+    }
+    switch (parseRes.value.id as ClangID) {
       case ClangID.ID_o:
         return "-o 233";
       case ClangID.ID_INPUT:
@@ -685,4 +691,8 @@ const nvccArgs = [
   "sgemm/main.cu",
 ];
 
-assertThrow(JSON.stringify(nvcc2clang(nvccArgs)).includes("-ccbin="));
+const nvccFiltered = nvcc2clang(nvccArgs);
+assertThrow(nvccFiltered.isOk());
+if (nvccFiltered.isOk()) {
+  assertThrow(nvccFiltered.value.some((arg) => arg.includes("-ccbin=")));
+}
