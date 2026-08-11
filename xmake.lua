@@ -679,7 +679,8 @@ xpack("catter")
     set_homepage("https://clice.io")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
-    add_installfiles("api/output/types/**.d.ts", {prefixdir = "types"})
+    add_installfiles("api/output/types/**.d.ts",
+                     {prefixdir = "types", rootdir = "api/output/types"})
     add_installfiles("api/output/package.json", {prefixdir = "."})
 
     before_package(function ()
