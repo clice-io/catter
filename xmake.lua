@@ -145,16 +145,17 @@ target("catter-js-types")
         js_inputs = {
             "api/src/**.ts",
             "api/modules.json",
-            "api/catter-c/**.d.ts",
+            "api/native/**.d.ts",
             "api/package.json",
             "api/tsconfig.app.json",
-            "api/tsconfig.types.json",
-            "api/scripts/build-types.mjs",
+            "api/scripts/copy-native.mjs",
             "api/scripts/check-modules.mjs",
-            "api/api-extractor.json",
             "tsconfig.base.json"
         },
-        js_outputs = {"api/output/types/**.d.ts"}
+        js_outputs = {
+            "api/output/types/**.d.ts",
+            "api/output/types/**.d.ts.map",
+        }
     })
 
 target("catter-js-runtime")
@@ -171,7 +172,7 @@ target("catter-js-runtime")
         js_inputs = {
             "api/src/**.ts",
             "api/modules.json",
-            "api/catter-c/**.d.ts",
+            "api/native/**.d.ts",
             "api/package.json",
             "api/rollup.config.js",
             "api/scripts/check-modules.mjs",
@@ -180,7 +181,8 @@ target("catter-js-runtime")
         },
         js_outputs = {
             "api/output/lib/manifest.json",
-            "api/output/lib/**.js"
+            "api/output/lib/**.js",
+            "api/output/package.json"
         }
     })
     add_rules("pack.js", {
@@ -212,7 +214,7 @@ target("catter-js-scripts")
     set_kind("object")
     set_default(false)
     -- Builds the builtin service scripts (scripts/) and embeds them as one
-    add_deps("catter-js-types")
+    add_deps("catter-js-runtime")
     add_rules("build.js", {
         js_dir = "scripts",
         js_script = "build",
@@ -222,7 +224,7 @@ target("catter-js-scripts")
             "scripts/package.json",
             "scripts/rollup.config.js",
             "scripts/tsconfig.json",
-            "api/catter-c/**.d.ts",
+            "api/native/**.d.ts",
             "tsconfig.base.json"
         },
         js_outputs = {
@@ -678,10 +680,11 @@ xpack("catter")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
     add_installfiles("api/output/types/**.d.ts", {prefixdir = "types"})
+    add_installfiles("api/output/package.json", {prefixdir = "."})
 
     before_package(function ()
-        assert(os.isfile("api/output/types/cli.d.ts"),
-            "Type declarations are missing; run `pixi run -e dev build-js-types` before packaging.")
+        assert(os.isfile("api/output/package.json"),
+            "Package metadata is missing; run `pixi run -e dev build-js` before packaging.")
     end)
 
     add_targets("catter", "catter-proxy")

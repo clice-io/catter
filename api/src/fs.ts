@@ -25,7 +25,7 @@ import {
   fs_pwd,
   fs_remove_recursively,
   fs_rename_if_exists,
-} from "catter-c";
+} from "catter/native";
 
 export {};
 

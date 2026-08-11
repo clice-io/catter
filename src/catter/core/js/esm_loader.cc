@@ -44,8 +44,8 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
 std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
                                         std::string_view module_name) {
     if(module_name.starts_with(kJsLibPrefix)) {
-        // Builtin specifiers (and the native "catter-c" module) keep their name as the canonical
-        // module name.
+        // Builtin specifiers (and the native "catter/native" module) keep their
+        // name as the canonical module name.
         return std::string(module_name);
     }
 

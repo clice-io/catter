@@ -4,19 +4,6 @@
   "author": "clice-io",
   "description": "Catter QuickJS runtime API types and editor hints.",
   "type": "module",
-  "exports": {
-    "./*": {
-      "types": "./output/types/*.d.ts",
-      "default": "./output/lib/*.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "catter/*": [
-        "output/types/*"
-      ]
-    }
-  },
   "files": [
     "output/lib",
     "output/types"
@@ -33,16 +20,15 @@
     "compile:test": "tsc --project tsconfig.test.json",
     "compile": "pnpm run check:modules && tsc --project tsconfig.app.json",
     "package:runtime": "rollup -c ./rollup.config.js",
-    "package:types": "node ./scripts/build-types.mjs",
+    "package:native": "node ./scripts/copy-native.mjs",
     "build:runtime": "run-s clean:lib compile:js package:runtime",
-    "build:types": "run-s clean:types compile:types package:types",
+    "build:types": "run-s clean:types compile:types package:native",
     "build:tests": "run-s clean:tests compile:test",
-    "build": "run-s clean compile && run-p package:runtime package:types && run-s compile:test"
+    "build": "run-s clean compile && run-p package:runtime package:native && run-s compile:test"
   },
   "keywords": [],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@microsoft/api-extractor": "^7.58.12",
     "@rollup/plugin-terser": "^0.4.4",
     "npm-run-all": "^4.1.5",
     "rollup": "^4.53.2",

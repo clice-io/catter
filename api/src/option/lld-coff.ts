@@ -216,7 +216,7 @@ export enum LldCoffID {
  * @example
  * ```typescript
  * import { LldCoffFlag, LldCoffID } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("lld-coff", LldCoffID.ID_UNKNOWN);
  * const hasCustomFlags = info.flags !== LldCoffFlag.None;
@@ -234,7 +234,7 @@ export enum LldCoffFlag {
  * @example
  * ```typescript
  * import { LldCoffID, LldCoffVisibility } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("lld-coff", LldCoffID.ID_UNKNOWN);
  * const isVisible = (info.visibility & LldCoffVisibility.DefaultVis) !== 0;

@@ -13,7 +13,7 @@ import {
   stdout_print_green,
   stdout_print_red,
   stdout_print_yellow,
-} from "catter-c";
+} from "catter/native";
 
 /**
  * Prints content to standard output without a trailing newline.

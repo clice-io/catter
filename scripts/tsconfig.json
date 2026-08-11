@@ -7,15 +7,7 @@
     "outDir": "./build",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true,
-    "paths": {
-      "catter/*": [
-        "../api/output/types/*.d.ts"
-      ],
-      "catter-c": [
-        "../api/catter-c/capi.d.ts"
-      ]
-    }
+    "sourceMap": true
   },
   "include": [
     "src/**/*.ts"

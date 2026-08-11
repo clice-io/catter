@@ -4,7 +4,7 @@ import type {
   CatterConfig,
   CommandData,
   ProcessResult,
-} from "catter-c";
+} from "catter/native";
 import type { Result } from "catter/neverthrow";
 
 export type MaybePromise<T> = T | Promise<T>;

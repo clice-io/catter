@@ -6,17 +6,17 @@
         "rootDir": "./src",
         "outDir": "./build/lib",
         "declaration": true,
-        "declarationDir": "./build/types",
+        "declarationDir": "./output/types",
         "declarationMap": true,
         "sourceMap": true,
         "paths": {
+            "catter/native": [
+                "./native/index.d.ts"
+            ],
             "catter/*": [
                 "./src/*/index.ts",
                 "./src/*.ts"
-            ],
-            "catter-c": [
-                "./catter-c/capi.d.ts"
-            ],
+            ]
         }
     },
     "include": [

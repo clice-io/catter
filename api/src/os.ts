@@ -1,4 +1,4 @@
-import { os_arch, os_name } from "catter-c";
+import { os_arch, os_name } from "catter/native";
 
 export {};
 

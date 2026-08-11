@@ -4,8 +4,9 @@
  *
  * Rules:
  *  - Cross-module dependencies must use the public bare specifier
- *    "catter/<mod>" (or "catter-c" for the native capi), and the specifier
- *    must name a module entry from modules.json, not an internal file.
+ *    "catter/<mod>" (or "catter/native" for the native capi), and the
+ *    specifier must name a module entry from modules.json, not an internal
+ *    file.
  *  - Relative imports ("./x", "../x") are only allowed within the same module.
  *
  * Module membership:
@@ -113,7 +114,7 @@ function checkFile(file, owner, violations) {
       }
       return;
     }
-    if (spec === "catter-c") {
+    if (spec === "catter/native") {
       return;
     }
     if (spec.startsWith("catter/")) {

@@ -90,6 +90,7 @@ clang = { features = ["dev", "clang"] }
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
   "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "package.json",
   "api/package.json",
   "scripts/package.json"

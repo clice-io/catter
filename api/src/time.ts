@@ -4,7 +4,7 @@ import {
   time_unix_ms,
   time_unix_seconds,
   time_unix_us,
-} from "catter-c";
+} from "catter/native";
 
 export {};
 

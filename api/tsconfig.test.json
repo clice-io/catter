@@ -8,11 +8,9 @@
         "declaration": false,
         "paths": {
             "catter/*": [
-                "./output/types/*"
-            ],
-            "catter-c": [
-                "./catter-c/capi.d.ts"
-            ],
+                "./output/types/*/index.d.ts",
+                "./output/types/*.d.ts"
+            ]
         }
     },
     "include": [

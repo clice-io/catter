@@ -3527,7 +3527,7 @@ export enum ClangID {
  * @example
  * ```typescript
  * import { ClangFlag, ClangID } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
  * const isSet = (info.flags & ClangFlag.HelpHidden) !== 0;
@@ -3555,7 +3555,7 @@ export enum ClangFlag {
  * @example
  * ```typescript
  * import { ClangID, ClangVisibility } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
  * const isVisible = (info.visibility & ClangVisibility.DefaultVis) !== 0;
@@ -3580,7 +3580,7 @@ export enum ClangVisibility {
  * @example
  * ```typescript
  * import { ClangDriverClass, ClangID } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("clang", ClangID.ID_UNKNOWN);
  * const matchesClass = (info.visibility & ClangDriverClass.DefaultVis) !== 0;

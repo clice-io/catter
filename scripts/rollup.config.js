@@ -42,6 +42,7 @@ export default {
       dir: "output",
       format: "es",
       entryFileNames: "[name].js",
+      sourcemap: true
     },
   ],
   plugins: [
