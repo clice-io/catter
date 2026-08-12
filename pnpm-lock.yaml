@@ -24,7 +24,7 @@ importers:
         specifier: ^8.46.4
         version: 8.46.4(eslint@9.39.1)(typescript@5.9.3)
 
-  api:
+  api/dev:
     devDependencies:
       '@rollup/plugin-terser':
         specifier: ^0.4.4
@@ -45,8 +45,8 @@ importers:
   scripts:
     dependencies:
       catter:
-        specifier: link:../api/output
-        version: link:../api/output
+        specifier: link:../api
+        version: link:../api
     devDependencies:
       '@rollup/plugin-terser':
         specifier: ^0.4.4

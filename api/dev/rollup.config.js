@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
+const pkgRoot = path.resolve(root, "..");
 const modules = JSON.parse(fs.readFileSync(path.join(root, "modules.json"), "utf-8"));
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
 
@@ -11,12 +12,12 @@ const input = {};
 const specToFile = {};
 for (const [spec, entry] of Object.entries(modules)) {
   const name = spec.slice("catter/".length);
-  input[name] = `build/lib/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
+  input[name] = path.join(pkgRoot, "build", "lib", entry.replace(/^src\//, "").replace(/\.ts$/, ".js"));
   specToFile[spec] = `${name}.js`;
 }
 
 /**
- * Emits output/lib/manifest.json so the native build can pack every module
+ * Emits dist/manifest.json so the native build can pack every module
  * file into a single embedded blob without maintaining a duplicate list.
  */
 function writeManifest() {
@@ -25,12 +26,12 @@ function writeManifest() {
     generateBundle(outputOptions, bundle) {
       const files = Object.keys(bundle)
         .filter((fileName) => fileName.endsWith(".js"))
-        .map((fileName) => fileName.replace(/^lib\//, ""))
+        .map((fileName) => fileName.replace(/^dist\//, ""))
         .sort();
       const manifest = { modules: specToFile, files };
       this.emitFile({
         type: "asset",
-        fileName: "lib/manifest.json",
+        fileName: "dist/manifest.json",
         source: JSON.stringify(manifest, null, 2),
       });
     },
@@ -39,9 +40,10 @@ function writeManifest() {
 
 /**
  * Assembles the package metadata for the output artifact:
- *  - output/package.json describes every module's ESM entry plus its raw
- *    declaration file (types) derived from modules.json. The native C API
- *    lives at "catter/native" and resolves to output/types/native/index.d.ts.
+ *  - package.json (at the api package root) describes every module's ESM
+ *    entry plus its raw declaration file (types) derived from modules.json.
+ *    The native C API lives at "catter/native" and resolves to
+ *    native/index.d.ts.
  */
 function writePackageMetadata() {
   const dtsPathFor = (entry) =>
@@ -55,10 +57,10 @@ function writePackageMetadata() {
         const mod = spec.slice("catter/".length);
         exports[`./${mod}`] = {
           types: `./${dtsPathFor(entry)}`,
-          default: `./lib/${mod}.js`,
+          default: `./dist/${mod}.js`,
         };
       }
-      exports["./native"] = { types: "./types/native/index.d.ts" };
+      exports["./native"] = { types: "./native/index.d.ts" };
       exports["./package.json"] = "./package.json";
 
       const artifactPkg = {
@@ -68,7 +70,7 @@ function writePackageMetadata() {
         license: pkg.license,
         type: "module",
         exports,
-        files: ["lib", "types"],
+        files: ["native", "src", "types", "dist"],
       };
       this.emitFile({
         type: "asset",
@@ -84,9 +86,9 @@ export default {
   input,
   output: [
     {
-      dir: "output",
+      dir: pkgRoot,
       format: "es",
-      entryFileNames: "lib/[name].js",
+      entryFileNames: "dist/[name].js",
       sourcemap: true,
     },
   ],

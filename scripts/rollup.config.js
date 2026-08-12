@@ -39,7 +39,7 @@ export default {
   input,
   output: [
     {
-      dir: "output",
+      dir: "dist",
       format: "es",
       entryFileNames: "[name].js",
       sourcemap: true

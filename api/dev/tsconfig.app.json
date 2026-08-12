@@ -1,26 +1,26 @@
 {
-    "extends": "../tsconfig.base.json",
+    "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "module": "nodenext",
         "moduleResolution": "nodenext",
-        "rootDir": "./src",
-        "outDir": "./build/lib",
+        "rootDir": "../src",
+        "outDir": "../build/lib",
         "declaration": true,
-        "declarationDir": "./output/types",
+        "declarationDir": "../types",
         "declarationMap": true,
         "sourceMap": true,
         "paths": {
             "catter/native": [
-                "./native/index.d.ts"
+                "../native/index.d.ts"
             ],
             "catter/*": [
-                "./src/*/index.ts",
-                "./src/*.ts"
+                "../src/*/index.ts",
+                "../src/*.ts"
             ]
         }
     },
     "include": [
-        "src/**/*.ts",
+        "../src/**/*.ts",
     ],
     "exclude": [
         "node_modules"
