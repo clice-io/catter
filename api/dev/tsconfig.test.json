@@ -1,0 +1,25 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "rootDir": "../test",
+        "outDir": "../build/test/",
+        "declaration": false,
+        "paths": {
+            "catter/native": [
+                "../native/index.d.ts"
+            ],
+            "catter/*": [
+                "../types/*/index.d.ts",
+                "../types/*.d.ts"
+            ]
+        }
+    },
+    "include": [
+        "../test/**/*.ts",
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+}

@@ -4,9 +4,12 @@
   "private": true,
   "description": "Catter built-in service scripts.",
   "type": "module",
+  "dependencies": {
+    "catter": "link:../api"
+  },
   "scripts": {
     "rm": "xmake l os.tryrm",
-    "clean": "pnpm run rm ./output && pnpm run rm ./build",
+    "clean": "pnpm run rm ./dist && pnpm run rm ./build",
     "build": "pnpm run clean && tsc --project tsconfig.json && rollup -c ./rollup.config.js"
   },
   "keywords": [],

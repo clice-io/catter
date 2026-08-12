@@ -90,8 +90,9 @@ clang = { features = ["dev", "clang"] }
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
   "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "package.json",
-  "api/package.json",
+  "api/dev/package.json",
   "scripts/package.json"
 ] }
 build = "xmake --verbose --diagnosis"
@@ -123,26 +124,26 @@ depends-on = [
 ]
 
 [tasks.build-js]
-cmd = "pnpm --dir api run build"
+cmd = "pnpm --dir api/dev run build"
 
 [tasks.build-js-runtime]
-cmd = "pnpm --dir api run build:runtime"
+cmd = "pnpm --dir api/dev run build:runtime"
 
 [tasks.build-js-scripts]
 cmd = "pnpm --dir scripts run build"
 
 [tasks.build-js-types]
-cmd = "pnpm --dir api run build:types"
+cmd = "pnpm --dir api/dev run build:types"
 
 [tasks.build-js-tests]
-cmd = "pnpm --dir api run build:tests"
+cmd = "pnpm --dir api/dev run build:tests"
 depends-on = "build-js-types"
 
 [tasks.check-js-modules]
-cmd = "pnpm --dir api run check:modules"
+cmd = "pnpm --dir api/dev run check:modules"
 
 [tasks.clean-js]
-cmd = "pnpm --dir api run clean"
+cmd = "pnpm --dir api/dev run clean"
 
 [tasks.package]
 args = [

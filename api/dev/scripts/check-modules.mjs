@@ -4,8 +4,9 @@
  *
  * Rules:
  *  - Cross-module dependencies must use the public bare specifier
- *    "catter/<mod>" (or "catter-c" for the native capi), and the specifier
- *    must name a module entry from modules.json, not an internal file.
+ *    "catter/<mod>" (or "catter/native" for the native capi), and the
+ *    specifier must name a module entry from modules.json, not an internal
+ *    file.
  *  - Relative imports ("./x", "../x") are only allowed within the same module.
  *
  * Module membership:
@@ -21,9 +22,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const srcDir = path.join(root, "src");
-const modulesJson = JSON.parse(fs.readFileSync(path.join(root, "modules.json"), "utf-8"));
+const toolRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const pkgRoot = path.resolve(toolRoot, "..");
+const srcDir = path.join(pkgRoot, "src");
+const modulesJson = JSON.parse(fs.readFileSync(path.join(toolRoot, "modules.json"), "utf-8"));
 const moduleSpecs = new Set(Object.keys(modulesJson));
 
 function walkTs(dir, out = []) {
@@ -46,14 +48,14 @@ function buildOwnerMap() {
     const existing = owner.get(abs);
     if (existing !== undefined && existing !== spec) {
       throw new Error(
-        `[check-modules] ${path.relative(root, abs)} is claimed by both "${existing}" and "${spec}"`,
+        `[check-modules] ${path.relative(pkgRoot, abs)} is claimed by both "${existing}" and "${spec}"`,
       );
     }
     owner.set(abs, spec);
   };
 
   for (const [spec, entry] of Object.entries(modulesJson)) {
-    const absEntry = path.join(root, entry);
+    const absEntry = path.join(pkgRoot, entry);
     const rel = path.relative(srcDir, absEntry);
     if (rel.includes(path.sep)) {
       // Directory module: the whole subtree belongs to it.
@@ -92,7 +94,7 @@ function checkFile(file, owner, violations) {
   const sourceFile = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const location = (pos) => {
     const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
-    return `${path.relative(root, file)}:${line + 1}:${character + 1}`;
+    return `${path.relative(pkgRoot, file)}:${line + 1}:${character + 1}`;
   };
 
   const check = (spec, pos) => {
@@ -113,7 +115,7 @@ function checkFile(file, owner, violations) {
       }
       return;
     }
-    if (spec === "catter-c") {
+    if (spec === "catter/native") {
       return;
     }
     if (spec.startsWith("catter/")) {

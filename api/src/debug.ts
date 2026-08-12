@@ -2,7 +2,7 @@
  * Debug helpers for assertions inside catter scripts and tests.
  */
 
-import { stdout_print } from "catter-c";
+import { stdout_print } from "catter/native";
 
 /**
  * Runs a fallback callback when a condition is false.

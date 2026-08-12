@@ -1,4 +1,4 @@
-import { option_get_info, option_parse } from "catter-c";
+import { option_get_info, option_parse } from "catter/native";
 import { err, ok, type Result } from "catter/neverthrow";
 import { OptionKindClass } from "./types.js";
 import type { OptionInfo, OptionItem, OptionTable } from "./types.js";

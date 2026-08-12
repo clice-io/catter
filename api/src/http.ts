@@ -2,7 +2,7 @@ import {
   http_client_close,
   http_client_create,
   http_client_request,
-} from "catter-c";
+} from "catter/native";
 
 export {};
 

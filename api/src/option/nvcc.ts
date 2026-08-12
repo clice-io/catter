@@ -396,7 +396,7 @@ export enum NvccID {
  * @example
  * ```typescript
  * import { NvccFlag, NvccID } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("nvcc", NvccID.ID_UNKNOWN);
  * const hasCustomFlags = info.flags !== NvccFlag.None;
@@ -414,7 +414,7 @@ export enum NvccFlag {
  * @example
  * ```typescript
  * import { NvccID, NvccVisibility } from "catter/option";
- * import { option_get_info } from "catter-c";
+ * import { option_get_info } from "catter/native";
  *
  * const info = option_get_info("nvcc", NvccID.ID_UNKNOWN);
  * const isVisible = (info.visibility & NvccVisibility.DefaultVis) !== 0;

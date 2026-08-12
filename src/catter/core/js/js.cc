@@ -89,7 +89,7 @@ void RuntimeScope::start(RuntimeConfig config) {
     loop.schedule(std::move(loop_task));
 
     const auto& ctx = state.runtime.context();
-    auto& mod = ctx.cmodule("catter-c");
+    auto& mod = ctx.cmodule("catter/native");
     for(auto& reg: catter::apitool::api_registers()) {
         reg(mod, ctx);
     }

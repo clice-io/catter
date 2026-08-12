@@ -3,9 +3,13 @@ import {
   service_on_execution,
   service_on_finish,
   service_on_start,
-} from "catter-c";
+} from "catter/native";
 import { err, ok, type Result } from "catter/neverthrow";
-import type { CatterErr, CommandCaptureResult, CommandData } from "catter-c";
+import type {
+  CatterErr,
+  CommandCaptureResult,
+  CommandData,
+} from "catter/native";
 
 import {
   ServiceRuntime,
@@ -32,9 +36,9 @@ export type {
   CatterRuntime,
   CommandData,
   ProcessResult,
-} from "catter-c";
+} from "catter/native";
 
-import type { ActionType } from "catter-c";
+import type { ActionType } from "catter/native";
 
 /**
  * Supported command actions.
