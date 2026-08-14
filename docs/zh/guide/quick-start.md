@@ -74,6 +74,7 @@ catter ./my-script.js -- cmake --build build
 `api/` 构建后会生成一个完整的 npm 包，包含 `api/package.json`、`api/dist/`（运行时 JS 模块）和 `api/types/`（TypeScript 类型声明）。先在仓库根目录构建它：
 
 ```bash
+pixi run -e dev npm-install
 pixi run -e dev build-js
 ```
 

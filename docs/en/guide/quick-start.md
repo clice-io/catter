@@ -74,6 +74,7 @@ catter ./my-script.js -- cmake --build build
 After building, `api/` is a complete npm package: `api/package.json`, `api/dist/` (runtime JS modules), and `api/types/` (TypeScript declarations). Build it from the repository root:
 
 ```bash
+pixi run -e dev npm-install
 pixi run -e dev build-js
 ```
 
