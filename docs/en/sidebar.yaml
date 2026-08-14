@@ -23,8 +23,11 @@ design:
   label: Design
   items:
     - architecture
-    - hook-mechanism
-    - ipc-protocol
+    - runtime
+    - file: hook-mechanism
+      label: "inject implementation: hook mechanism"
+    - file: ipc-protocol
+      label: "inject implementation: IPC protocol"
 
 dev:
   label: Development

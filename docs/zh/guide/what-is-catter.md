@@ -40,10 +40,8 @@ Catter 的方式类似于 [Bear](https://github.com/rizsotto/Bear) 和 [scan-bui
 
 ## 架构概览
 
-Catter 由三个部分组成：
+Catter 围绕 **runtime**（运行机制）展开：runtime 是实际捕获构建进程创建行为的机制。默认的 `inject` runtime 通过平台钩子（Linux 的 `LD_PRELOAD`、macOS 的 `DYLD_INSERT_LIBRARIES`、Windows 的 DLL 注入）拦截子进程创建；捕获到的每条命令都会交给运行着用户脚本的守护进程处理。
 
-- **HOOK** -- 注入到进程中的平台特定库，用于拦截子进程创建。
-- **PROXY**（`catter-proxy`）-- 管理钩子注入并充当编译器包装器，将被拦截的命令转发给决策守护进程。
-- **DECISION**（`catter`）-- 主守护进程。运行 JS 运行时，接收来自 proxy 的被拦截命令，并决定如何处理每条命令。
+脚本通过四个回调参与整个过程：构建开始前的 `onStart`、每条命令执行前的 `onCommand`、每条命令结束后的 `onExecution`，以及整个构建结束后的 `onFinish`。脚本可以决定每条命令原样执行、修改后执行、跳过或中止，并使用 `config.runtime` 提供的能力信息适配不同的运行机制。
 
-关于架构和 IPC 流程的详细介绍，请参阅[设计文档](../design/architecture)。
+关于架构概念、运行机制和 IPC 流程的详细介绍，请参阅[设计文档](../design/architecture)与[运行机制](../design/runtime)。

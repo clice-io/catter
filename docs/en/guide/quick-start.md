@@ -2,19 +2,22 @@
 
 ## Prerequisites
 
-- [pixi](https://pixi.sh) for environment management
 - A C++ project with any build system (Make, Ninja, CMake, Meson, etc.)
 
 ## Installation
 
-Catter uses pixi for distribution. Install it with:
+Catter is distributed as prebuilt packages on [GitHub Releases](https://github.com/clice-io/catter/releases). Download the archive for your platform, extract it, and add the directory containing the `catter` executable to your `PATH`.
 
-```bash
-pixi global install catter
-```
+Prebuilt packages are currently available for:
+
+| Platform | Architecture |
+|----------|--------------|
+| Windows  | x64 |
+| Linux    | x64 |
+| macOS    | arm64 |
 
 ::: info
-Catter is at v0.1.0 and under active development. The installation method may change in future releases.
+Catter is under active development; always use the latest package from the Releases page. If there is no prebuilt package for your platform, see [Building from Source](../dev/build).
 :::
 
 ## Generate a Compilation Database
@@ -68,10 +71,31 @@ catter ./my-script.js -- cmake --build build
 
 ## IDE Support for Script Development
 
-Install the catter npm package to get TypeScript type definitions when writing custom scripts:
+After building, `api/` is a complete npm package: `api/package.json`, `api/dist/` (runtime JS modules), and `api/types/` (TypeScript declarations). Build it from the repository root:
 
 ```bash
-npm install --save-dev catter
+pixi run -e dev npm-install
+pixi run -e dev build-js
 ```
 
-This provides IDE autocompletion and type checking for the catter scripting API.
+Then add `api/` to your script project as a local dependency (npm / pnpm / yarn):
+
+```bash
+npm install --save-dev /path/to/catter/api
+```
+
+Or declare it in `package.json`:
+
+```json
+{
+  "devDependencies": {
+    "catter": "file:../path/to/catter/api"
+  }
+}
+```
+
+This lets your script project import `catter/*` modules with full IDE autocompletion and type checking.
+
+::: info
+The `catter` npm package is not published to the registry yet; use the local dependency approach above until then. Once published, you can simply `npm install --save-dev catter`.
+:::

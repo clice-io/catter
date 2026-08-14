@@ -40,10 +40,8 @@ With the embedded QuickJS engine, users can write JavaScript scripts to dynamica
 
 ## Architecture at a Glance
 
-Catter is a three-part system:
+Catter is organized around **runtimes**: a runtime is the mechanism that actually captures build process creation. The default `inject` runtime intercepts child process creation through platform hooks (Linux `LD_PRELOAD`, macOS `DYLD_INSERT_LIBRARIES`, Windows DLL injection); every captured command is handed to a daemon running your JavaScript script.
 
-- **HOOK** -- Platform-specific library injected into processes to intercept child process creation.
-- **PROXY** (`catter-proxy`) -- Manages hook injection and acts as a compiler wrapper. Relays intercepted commands to the decision daemon.
-- **DECISION** (`catter`) -- The main daemon. Runs the JS runtime, receives intercepted commands from the proxy, and decides how to handle each one.
+Scripts participate through four callbacks: `onStart` before the build, `onCommand` before each command, `onExecution` after each command, and `onFinish` after the whole build. A script can run a command as-is, run it modified, skip it, or abort; it can use the capability information in `config.runtime` to adapt to different runtimes.
 
-For a detailed walkthrough of the architecture and IPC flow, see the [design documentation](../design/architecture).
+For details on the architecture concepts, runtimes, and the IPC flow, see the [design documentation](../design/architecture) and [Runtime](../design/runtime).

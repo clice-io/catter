@@ -2,19 +2,22 @@
 
 ## 前置条件
 
-- [pixi](https://pixi.sh) 环境管理工具
 - 使用任意构建系统（Make、Ninja、CMake、Meson 等）的 C++ 项目
 
 ## 安装
 
-Catter 通过 pixi 分发，使用以下命令安装：
+Catter 通过 GitHub Releases 分发预编译包。前往 [GitHub Releases](https://github.com/clice-io/catter/releases) 页面，下载对应平台的压缩包，解压后将 `catter` 可执行文件所在目录加入 `PATH` 即可。
 
-```bash
-pixi global install catter
-```
+预编译包当前支持的平台：
+
+| 平台 | 架构 |
+|------|------|
+| Windows | x64 |
+| Linux | x64 |
+| macOS | arm64 |
 
 ::: info
-Catter 目前处于 v0.1.0 阶段，仍在积极开发中，安装方式可能在后续版本中发生变化。
+Catter 目前仍在积极开发中，请以 Releases 页面为准获取最新版本。如果您的平台没有预编译包，可以参阅[从源码构建](../dev/build)自行编译。
 :::
 
 ## 生成编译数据库
@@ -68,10 +71,31 @@ catter ./my-script.js -- cmake --build build
 
 ## 脚本开发的 IDE 支持
 
-安装 catter npm 包以获取 TypeScript 类型定义，方便编写自定义脚本时使用 IDE 自动补全：
+`api/` 构建后会生成一个完整的 npm 包，包含 `api/package.json`、`api/dist/`（运行时 JS 模块）和 `api/types/`（TypeScript 类型声明）。先在仓库根目录构建它：
 
 ```bash
-npm install --save-dev catter
+pixi run -e dev npm-install
+pixi run -e dev build-js
 ```
 
-这将提供 catter 脚本 API 的 IDE 自动补全和类型检查支持。
+然后将 `api/` 作为本地依赖直接添加到你的脚本项目中（npm / pnpm / yarn 均可）：
+
+```bash
+npm install --save-dev /path/to/catter/api
+```
+
+或在 `package.json` 中声明：
+
+```json
+{
+  "devDependencies": {
+    "catter": "file:../path/to/catter/api"
+  }
+}
+```
+
+这样脚本项目即可通过 `catter/*` 导入模块，并获得完整的 IDE 自动补全和类型检查。
+
+::: info
+`catter` 尚未发布到 npm registry，在此之前请使用上面的本地依赖方式；发布后可直接 `npm install --save-dev catter`。
+:::

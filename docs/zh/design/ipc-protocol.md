@@ -1,4 +1,6 @@
-# IPC 协议
+# IPC 协议（inject runtime 实现）
+
+> 本文描述 catter 守护进程与 `catter-proxy` 之间的通信协议。它是所有 runtime 共用的传输层，目前由 inject runtime 使用；脚本作者通常不需要阅读本文。
 
 Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catter-proxy`）之间传递信息。守护进程作为服务端，每个代理实例作为客户端连接。
 
@@ -8,7 +10,7 @@ Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catt
 
 | 平台 | 机制 | 路径 / 名称 |
 |------|------|-------------|
-| Linux / macOS | Unix 域套接字 | `$XDG_DATA_HOME/pipe-catter-ipc.sock`（通常为 `~/.local/share/pipe-catter-ipc.sock`） |
+| Linux / macOS | Unix 域套接字 | `$HOME/.catter/pipe-catter-ipc.sock` |
 | Windows | 命名管道 | `\\.\pipe\catter-ipc` |
 
 守护进程在启动时创建监听套接字/管道。每个 `catter-proxy` 实例启动时作为客户端连接。连接在代理进程的整个生命周期内持续存在。
@@ -88,6 +90,8 @@ enum class RequestType : uint8_t {
 - **`WRAP`（2）** -- 直接执行命令，不挂载钩子。代理运行命令并捕获标准输出/标准错误，但不注入钩子。用于叶子命令（如实际的编译器调用），这些命令不会生成更多的构建子进程。
 
 守护进程可能会修改返回动作中的命令。例如，脚本可以更改编译器标志、重定向输出路径或替换可执行文件。
+
+> 这里的动作是**协议层**概念，与脚本看到的 `skip` / `drop` / `abort` / `modify` 不是同一层：脚本动作由 runtime 驱动映射为协议动作。映射关系与语义见[系统架构](architecture.md)的 Action 一节。
 
 ### REPORT_ERROR
 
