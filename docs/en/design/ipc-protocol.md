@@ -1,4 +1,6 @@
-# IPC Protocol
+# IPC Protocol (inject runtime implementation)
+
+> This page describes the communication protocol between the catter daemon and `catter-proxy`. It is the shared transport layer for all runtimes and is currently used by the inject runtime; script authors usually do not need to read it.
 
 Catter uses inter-process communication between the daemon (`catter`) and proxy instances (`catter-proxy`). The daemon acts as a server, and each proxy instance connects as a client.
 
@@ -8,7 +10,7 @@ The transport layer is platform-specific:
 
 | Platform | Mechanism | Path / Name |
 |----------|-----------|-------------|
-| Linux / macOS | Unix domain socket | `$XDG_DATA_HOME/pipe-catter-ipc.sock` (typically `~/.local/share/pipe-catter-ipc.sock`) |
+| Linux / macOS | Unix domain socket | `$HOME/.catter/pipe-catter-ipc.sock` |
 | Windows | Named pipe | `\\.\pipe\catter-ipc` |
 
 The daemon creates the listening socket/pipe at startup. Each `catter-proxy` instance connects to it as a client when it starts. The connection persists for the lifetime of the proxy process.
@@ -88,6 +90,8 @@ The core request. The proxy sends a captured command and the daemon decides what
 - **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command and captures its stdout/stderr, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
 
 The daemon may modify the command in the returned action. For example, a script could change compiler flags, redirect output paths, or substitute a different executable.
+
+> These actions belong to the **protocol layer** and are not the same layer as the `skip` / `drop` / `abort` / `modify` actions scripts see: script actions are mapped to protocol actions by the runtime driver. See the Actions section of [System Architecture](architecture.md) for the mapping and semantics.
 
 ### REPORT_ERROR
 

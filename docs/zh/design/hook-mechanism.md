@@ -1,6 +1,8 @@
-# 钩子机制
+# 钩子机制（inject runtime 实现）
 
-钩子是 catter 最底层的组件。它是一个共享库，会被加载到构建系统生成的每个进程中。它的唯一职责是拦截进程创建调用，并将其重写，使每个子进程都通过 `catter-proxy` 中转，而非直接执行。
+> 本文描述 **inject runtime** 的底层实现，脚本作者通常不需要阅读。它解答的是"命令是如何被捕获的"这一平台细节；脚本关心的能力与限制见[运行机制](runtime.md)。
+
+钩子是 inject runtime 的捕获载体：一个共享库，被加载到构建系统生成的每个进程中。它的唯一职责是拦截进程创建调用，并将其重写，使每个子进程都通过 `catter-proxy` 中转，而非直接执行。
 
 钩子的实现完全依赖于平台特性。Unix 和 Windows 使用了截然不同的拦截技术。
 
@@ -32,19 +34,18 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 钩子由一组协作的类实现：
 
-- **`Session`** -- 从环境变量中读取并存储会话信息。提供代理路径和父进程会话 ID。
+- **`Session`** -- 从环境变量中读取并存储会话信息（代理路径和自身命令 ID）。
 - **`Resolver`** -- 解析目标可执行文件的路径。处理 PATH 查找、相对路径解析及可执行文件缺失等边界情况。
-- **`CmdBuilder`** -- 构造重写后的命令，将 `catter-proxy` 替换原始可执行文件。
-- **`EnvGuard`** -- RAII 守卫，在调用真正的 `execve` 之前清理环境。移除 catter 相关变量，并从 `LD_PRELOAD` 中剥离钩子库。
-- **`Executor`** -- 协调整个拦截过程。验证会话、解析可执行文件、构建代理命令、清理环境、调用原始函数。
-- **`Linker`** -- 真实系统调用的抽象层。封装 `dlsym(RTLD_NEXT, ...)` 以调用原始的 `execve` 或 `posix_spawn`。
+- **`Command` / `build_proxy_command()`** -- 构造重写后的代理命令，将 `catter-proxy` 替换原始可执行文件。
+- **`SanitizedEnv` / `sanitize_environment()`** -- 在调用真正的 `execve` 之前清理环境。移除 catter 相关变量，并从预加载变量中剥离钩子库。
+- **`Executor`** -- 协调整个拦截过程。验证会话、解析可执行文件、构造代理命令、清理环境、调用原始函数；并持有真实 `execve` / `posix_spawn` 的函数指针（早期独立的 `Linker` 类已并入其中）。
 
 ### 钩子初始化
 
-钩子库通过动态链接器的构造函数机制（`__attribute__((constructor))` 或等效方式）加载。初始化期间，库会：
+钩子库通过动态链接器的构造函数机制（`on_load`，`__attribute__((constructor))`）加载。初始化期间，库会：
 
-1. 设置日志（输出到 catter 数据目录下的 `log/catter-hook.log`）
-2. 准备就绪等待拦截 -- `Executor` 在首次拦截时惰性读取环境中的会话状态
+1. 设置日志（调试构建下输出到 catter 数据目录下的 `log/catter-hook.log`）
+2. 调用 `Executor::init()`：从环境变量中读取会话状态，并解析真实的 `execve` / `posix_spawn` 函数指针（Linux 上经 `dlsym(RTLD_NEXT, ...)`，macOS 上直接引用系统符号）
 
 ### 环境变量
 
@@ -65,18 +66,18 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 3. **`Resolver`** 将目标可执行文件解析为绝对路径。对于 `execvp()` 和 `execvpe()` 等函数，它会搜索 `PATH` 中的目录。对于 `execve()`，则相对于当前目录解析。
 
-4. **`CmdBuilder`** 构造代理命令：
+4. **`Command`**（`build_proxy_command()`）构造代理命令：
    ```
    <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
    ```
    原始的 `argv[0]` 及所有后续参数保留在 `--` 分隔符之后。
 
-5. **`EnvGuard`**（RAII）修改环境数组：
+5. **`SanitizedEnv`**（`sanitize_environment()`）修改环境数组：
    - 移除 `__key_catter_proxy_path_v1` 和 `__key_catter_command_id_v1`
    - 从 `LD_PRELOAD`（或 `DYLD_INSERT_LIBRARIES`）中剥离钩子库名称
    - 如果剥离后 `LD_PRELOAD` 变为空，则将其完全移除
 
-6. **`Linker`** 使用重写后的命令调用**真正的** `execve()`（通过 `dlsym(RTLD_NEXT, ...)` 获取）。
+6. **`Executor`** 使用重写后的命令调用**真正的** `execve()`（通过初始化时解析得到的函数指针）。
 
 7. 如果 `execve` 成功，当前进程镜像被替换，函数不会返回。如果失败，钩子恢复 `errno` 并将错误返回给调用者。
 

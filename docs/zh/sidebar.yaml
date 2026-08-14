@@ -23,8 +23,11 @@ design:
   label: 设计
   items:
     - architecture
-    - hook-mechanism
-    - ipc-protocol
+    - runtime
+    - file: hook-mechanism
+      label: inject 实现：钩子机制
+    - file: ipc-protocol
+      label: inject 实现：IPC 协议
 
 dev:
   label: 开发

@@ -1,6 +1,8 @@
-# Hook Mechanism
+# Hook Mechanism (inject runtime implementation)
 
-The hook is the lowest-level component of catter. It is a shared library that gets loaded into every process spawned by the build system. Its sole job is to intercept process creation calls and rewrite them so that every child process goes through `catter-proxy` instead of executing directly.
+> This page describes the internals of the **inject runtime**. Script authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations scripts care about, see [Runtime](runtime.md).
+
+The hook is the capture carrier of the inject runtime: a shared library loaded into every process spawned by the build system. Its sole job is to intercept process creation calls and rewrite them so that every child process goes through `catter-proxy` instead of executing directly.
 
 The hook implementation is entirely platform-specific. Unix and Windows use fundamentally different interception techniques.
 
@@ -32,19 +34,18 @@ On macOS, the hook uses the `DYLD_INTERPOSE` macro to replace functions at the d
 
 The hook is implemented as a set of cooperating classes:
 
-- **`Session`** -- Reads and stores session information from the environment. Provides the proxy path and parent session ID.
+- **`Session`** -- Reads and stores session information from the environment (proxy path and the self command ID).
 - **`Resolver`** -- Resolves the target executable path. Handles PATH lookups, relative path resolution, and edge cases like missing executables.
-- **`CmdBuilder`** -- Constructs the rewritten command that invokes `catter-proxy` instead of the original executable.
-- **`EnvGuard`** -- RAII guard that scrubs the environment before the real `execve` is called. Removes catter variables and strips the hook library from `LD_PRELOAD`.
-- **`Executor`** -- Orchestrates the interception. Validates the session, resolves the executable, builds the proxy command, cleans the environment, and calls the original function.
-- **`Linker`** -- Abstraction for the real system call. Wraps `dlsym(RTLD_NEXT, ...)` to call the original `execve` or `posix_spawn`.
+- **`Command` / `build_proxy_command()`** -- Builds the rewritten proxy command, substituting `catter-proxy` for the original executable.
+- **`SanitizedEnv` / `sanitize_environment()`** -- Scrubs the environment before the real `execve` is called. Removes catter variables and strips the hook library from the preload variable.
+- **`Executor`** -- Orchestrates the interception. Validates the session, resolves the executable, builds the proxy command, cleans the environment, and calls the original function; it also holds the real `execve` / `posix_spawn` function pointers (the earlier standalone `Linker` class has been folded into it).
 
 ### Hook Initialization
 
-The hook library is loaded via the dynamic linker's constructor mechanism (`__attribute__((constructor))` or equivalent). During initialization, the library:
+The hook library is loaded via the dynamic linker's constructor mechanism (`on_load`, `__attribute__((constructor))`). During initialization, the library:
 
-1. Sets up logging (to `log/catter-hook.log` in the catter data directory)
-2. Is ready to intercept -- the `Executor` lazily reads session state from the environment on first interception
+1. Sets up logging (in debug builds, to `log/catter-hook.log` in the catter data directory)
+2. Calls `Executor::init()`: reads session state from the environment and resolves the real `execve` / `posix_spawn` function pointers (`dlsym(RTLD_NEXT, ...)` on Linux, direct system symbols on macOS)
 
 ### Environment Variables
 
@@ -65,18 +66,18 @@ When any process creation function is called (e.g., `execve("/usr/bin/g++", argv
 
 3. **`Resolver`** resolves the target executable to an absolute path. For functions like `execvp()` and `execvpe()`, it searches directories in `PATH`. For `execve()`, it resolves relative to the current directory.
 
-4. **`CmdBuilder`** constructs the proxy command:
+4. **`Command`** (`build_proxy_command()`) constructs the proxy command:
    ```
    <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
    ```
    The original `argv[0]` and all subsequent arguments are preserved after the `--` separator.
 
-5. **`EnvGuard`** (RAII) modifies the environment array:
+5. **`SanitizedEnv`** (`sanitize_environment()`) modifies the environment array:
    - Removes `__key_catter_proxy_path_v1` and `__key_catter_command_id_v1`
    - Strips the hook library name from `LD_PRELOAD` (or `DYLD_INSERT_LIBRARIES`)
    - If `LD_PRELOAD` becomes empty after stripping, removes it entirely
 
-6. **`Linker`** calls the **real** `execve()` (obtained via `dlsym(RTLD_NEXT, ...)`) with the rewritten command.
+6. **`Executor`** calls the **real** `execve()` with the rewritten command (through the function pointers resolved during initialization).
 
 7. If `execve` succeeds, it does not return (the current process image is replaced). If it fails, the hook restores `errno` and returns the error to the caller.
 
