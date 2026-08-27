@@ -14,7 +14,7 @@ import {
  *
  * @example
  * ```ts
- * const registry = new cmd.Registry().register("compiler", new cmd.CompilerAnalyzer());
+ * const registry = new Registry().register("compiler", new CompilerAnalyzer());
  * const analysis = registry.analyze({ exe: "clang", argv: ["clang", "-c", "main.c"] });
  * ```
  */
@@ -29,8 +29,8 @@ export class Registry<
    *
    * @example
    * ```ts
-   * const registry = new cmd.Registry();
-   * registry.register("compiler", new cmd.CompilerAnalyzer());
+   * const registry = new Registry();
+   * registry.register("compiler", new CompilerAnalyzer());
    * ```
    */
   register(key: string, analyzer: IAnalyzer<T, R>): this {
@@ -44,8 +44,8 @@ export class Registry<
    *
    * @example
    * ```ts
-   * const analyzer = new cmd.CompilerAnalyzer();
-   * const registry = new cmd.Registry().register("compiler", analyzer);
+   * const analyzer = new CompilerAnalyzer();
+   * const registry = new Registry().register("compiler", analyzer);
    * registry.unregister("compiler");
    * ```
    */
@@ -59,8 +59,8 @@ export class Registry<
    *
    * @example
    * ```ts
-   * const analyzers = new cmd.Registry()
-   *   .register("compiler", new cmd.CompilerAnalyzer())
+   * const analyzers = new Registry()
+   *   .register("compiler", new CompilerAnalyzer())
    *   .analyzers();
    * ```
    */

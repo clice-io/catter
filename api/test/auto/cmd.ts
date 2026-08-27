@@ -1,7 +1,5 @@
 import {
-  Analysis,
   AnalysisError,
-  AnalyzedData,
   Analyzer,
   ArchiverAnalysis,
   ArchiverAnalyzer,
@@ -11,10 +9,14 @@ import {
   CompilerAnalyzer,
   CompilerArtifact,
   CompilerPhase,
-  Edge,
   Registry,
-  type CommandAnalysis,
-  type CommandAnalyzerError,
+} from "catter/cmd";
+import type {
+  Analysis,
+  AnalyzedData,
+  CommandAnalysis,
+  CommandAnalyzerError,
+  Edge,
 } from "catter/cmd";
 import { assertThrow } from "catter/debug";
 import { err, ok, type Result } from "catter/neverthrow";
@@ -270,23 +272,26 @@ assertThrow(
   ) instanceof ArchiverUnsupportedError,
 );
 
-class ToyAnalysis extends Analysis {
+class ToyAnalysis implements Analysis {
   readonly stage = "bundle";
   readonly kind = "toy" as const;
+  readonly exe: string;
+  readonly argv: readonly string[];
+  readonly reads: readonly string[];
+  readonly writes: readonly string[];
+  readonly edges: readonly Edge[];
 
   constructor(command: AnalyzedData, input: string, output: string) {
-    super({
-      exe: command.exe,
-      argv: command.argv,
-      reads: [input],
-      writes: [output],
-      edges: [
-        {
-          output,
-          inputs: [input],
-        },
-      ],
-    });
+    this.exe = command.exe;
+    this.argv = command.argv;
+    this.reads = [input];
+    this.writes = [output];
+    this.edges = [
+      {
+        output,
+        inputs: [input],
+      },
+    ];
   }
 }
 

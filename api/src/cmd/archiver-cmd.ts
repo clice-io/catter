@@ -1,5 +1,6 @@
 import { fromThrowable, type Result } from "catter/neverthrow";
-import { Analysis, AnalysisError, Analyzer, AnalyzedData } from "./model.js";
+import { AnalysisError, Analyzer } from "./model.js";
+import type { Analysis, AnalyzedData, Edge } from "./model.js";
 
 export class ArchiverNotRecognizedError extends AnalysisError {
   readonly kind = "archiver-not-recognized" as const;
@@ -42,7 +43,7 @@ function toArchiverAnalysisError(
  *
  * @example
  * ```ts
- * const op = cmd.ArchiverOperation.ReplaceOrInsert;
+ * const op = ArchiverOperation.ReplaceOrInsert;
  * ```
  */
 export const ArchiverOperation = {
@@ -61,7 +62,7 @@ export const ArchiverOperation = {
  *
  * @example
  * ```ts
- * const op: cmd.ArchiverOperation = cmd.ArchiverOperation.QuickAppend;
+ * const op: ArchiverOperation = ArchiverOperation.QuickAppend;
  * ```
  */
 export type ArchiverOperation =
@@ -72,7 +73,7 @@ export type ArchiverOperation =
  *
  * @example
  * ```ts
- * const exe: cmd.ArchiverExe = "llvm-ar";
+ * const exe: ArchiverExe = "llvm-ar";
  * ```
  */
 export type ArchiverExe = "ar" | "llvm-ar" | "gcc-ar";
@@ -287,9 +288,19 @@ function analyzeArchiverModel(command: AnalyzedData): ArchiverModel {
   };
 }
 
-export class ArchiverAnalysis extends Analysis {
+export class ArchiverAnalysis implements Analysis {
   /** Discriminator for command analysis unions. */
   readonly kind = "archiver" as const;
+  /** Executable path or name used for analysis. */
+  readonly exe: string;
+  /** Full argument vector used for analysis. */
+  readonly argv: readonly string[];
+  /** Files read by the command. */
+  readonly reads: readonly string[];
+  /** Files written by the command. */
+  readonly writes: readonly string[];
+  /** Explicit output-to-input dependency edges for this analysis. */
+  readonly edges: readonly Edge[];
   /** The parsed archive operation. */
   readonly operation: ArchiverOperation;
   /** Extra modifier letters attached to the operation token. */
@@ -304,16 +315,14 @@ export class ArchiverAnalysis extends Analysis {
   readonly scriptMode: boolean;
 
   constructor(model: ArchiverModel, command: AnalyzedData) {
-    super({
-      exe: command.exe,
-      argv: command.argv,
-      reads: model.reads,
-      writes: model.writes,
-      edges: model.writes.map((output) => ({
-        output,
-        inputs: [...model.reads],
-      })),
-    });
+    this.exe = command.exe;
+    this.argv = command.argv;
+    this.reads = model.reads;
+    this.writes = model.writes;
+    this.edges = model.writes.map((output) => ({
+      output,
+      inputs: [...model.reads],
+    }));
     this.operation = model.operation;
     this.modifiers = [...model.modifiers];
     this.thin = model.thin;

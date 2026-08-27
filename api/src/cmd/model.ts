@@ -1,10 +1,3 @@
-import type { CompilerAnalysis, CompilerAnalyzer } from "./compiler-cmd.js";
-import type {
-  ArchiverAnalysis,
-  ArchiverAnalysisError,
-  ArchiverAnalyzer,
-} from "./archiver-cmd.js";
-import type { CompilerAnalysisError } from "./compiler-cmd.js";
 import type { Result } from "catter/neverthrow";
 
 /**
@@ -12,7 +5,7 @@ import type { Result } from "catter/neverthrow";
  *
  * @example
  * ```ts
- * const edge: cmd.Edge = {
+ * const edge: Edge = {
  *   output: "app.o",
  *   inputs: ["app.c"],
  * };
@@ -48,33 +41,24 @@ export abstract class AnalysisError extends Error {
  * `exe` and `argv` preserve the command invocation facts used for analysis.
  * `reads` records the files the command reads, `writes` records the files it
  * writes, and `edges` refines that into explicit output-to-input mappings when
- * an analyzer knows more.
+ * an analyzer knows more. Concrete analyses add their own fields and narrow
+ * `kind` to a literal for discriminated-union narrowing.
  *
  * @example
  * ```ts
- * class ToyAnalysis extends cmd.Analysis {
- *   readonly kind = "toy" as const;
- *
- *   constructor() {
- *     super({
- *       exe: "toy",
- *       argv: ["toy", "in.dat", "out.pkg"],
- *       reads: ["in.dat"],
- *       writes: ["out.pkg"],
- *       edges: [
- *         {
- *           output: "out.pkg",
- *           inputs: ["in.dat"],
- *         },
- *       ],
- *     });
- *   }
- * }
+ * const analysis: Analysis = {
+ *   kind: "toy",
+ *   exe: "toy",
+ *   argv: ["toy", "in.dat", "out.pkg"],
+ *   reads: ["in.dat"],
+ *   writes: ["out.pkg"],
+ *   edges: [{ output: "out.pkg", inputs: ["in.dat"] }],
+ * };
  * ```
  */
-export abstract class Analysis {
+export interface Analysis {
   /** Discriminator used to narrow concrete analysis variants. */
-  abstract readonly kind: string;
+  readonly kind: string;
   /** Executable path or name used for analysis. */
   readonly exe: string;
   /** Full argument vector used for analysis. */
@@ -85,76 +69,69 @@ export abstract class Analysis {
   readonly writes: readonly string[];
   /** Explicit output-to-input dependency edges for this analysis. */
   readonly edges: readonly Edge[];
-
-  protected constructor(data: {
-    exe: string;
-    argv: readonly string[];
-    reads: readonly string[];
-    writes: readonly string[];
-    edges: readonly Edge[];
-  }) {
-    this.exe = data.exe;
-    this.argv = [...data.argv];
-    this.reads = [...data.reads];
-    this.writes = [...data.writes];
-    this.edges = [...data.edges];
-  }
 }
 
 /**
- * Pluggable analyzer contract used by `Registry`.
+ * Consumer-side analyzer contract.
  *
- * Concrete analyzers are stateful objects registered into a `Registry`.
+ * Structural view of an analyzer with typed analysis and error results.
+ * `Registry` stores this contract, so registered analyzers may be duck-typed
+ * implementations rather than `Analyzer` subclasses.
+ */
+export interface IAnalyzer<
+  T extends Analysis = Analysis,
+  R extends AnalysisError = AnalysisError,
+> {
+  /** Stable identity of the analyzer, used for diagnostics and reporting. */
+  readonly kind: string;
+  /** Performs analysis and returns a typed result when successful. */
+  analyze(command: AnalyzedData): Result<T, R>;
+}
+
+/**
+ * Implementation-side analyzer contract used by `Registry`.
+ *
+ * Concrete analyzers extend this class and provide a stable `kind` plus
+ * `analyze`. It implements the consumer-side `IAnalyzer` contract, so
+ * instances are directly registrable.
  *
  * @example
  * ```ts
- * class ToyAnalysisError extends cmd.AnalysisError {
+ * class ToyAnalysisError extends AnalysisError {
  *   readonly kind = "toy" as const;
  * }
  *
- * class ToyAnalyzer extends cmd.Analyzer {
+ * class ToyAnalysis implements Analysis {
+ *   readonly kind = "toy" as const;
+ *   readonly exe: string;
+ *   readonly argv: readonly string[];
+ *   readonly reads: readonly string[];
+ *   readonly writes: readonly string[];
+ *   readonly edges: readonly Edge[];
+ *
+ *   constructor(command: AnalyzedData, input: string, output: string) {
+ *     this.exe = command.exe;
+ *     this.argv = command.argv;
+ *     this.reads = [input];
+ *     this.writes = [output];
+ *     this.edges = [{ output, inputs: [input] }];
+ *   }
+ * }
+ *
+ * class ToyAnalyzer extends Analyzer {
  *   readonly kind = "toy" as const;
  *
- *   analyze(command: cmd.AnalyzedData) {
+ *   analyze(command: AnalyzedData) {
  *     if (command.exe === "toy") {
  *       return neverthrow.ok(new ToyAnalysis(command, "in.dat", "out.pkg"));
  *     }
  *     return neverthrow.err(new ToyAnalysisError("not a toy command"));
  *   }
  * }
- *
- * class ToyAnalysis extends cmd.Analysis {
- *   constructor(command: cmd.AnalyzedData, input: string, output: string) {
- *     super({
- *       exe: command.exe,
- *       argv: command.argv,
- *       reads: [input],
- *       writes: [output],
- *       edges: [{ output, inputs: [input] }],
- *     });
- *   }
- * }
  * ```
  */
-export abstract class Analyzer {
+export abstract class Analyzer implements IAnalyzer<Analysis, AnalysisError> {
   abstract readonly kind: string;
   /** Performs analysis and returns a typed result when successful. */
   abstract analyze(command: AnalyzedData): Result<Analysis, AnalysisError>;
 }
-
-export interface IAnalyzer<
-  T extends Analysis = Analysis,
-  R extends AnalysisError = AnalysisError,
-> {
-  analyze(command: AnalyzedData): Result<T, R>;
-}
-
-/** Built-in command analysis result variants. */
-export type CommandAnalysis = CompilerAnalysis | ArchiverAnalysis;
-
-/** Built-in command analyzer error variants. */
-export type CommandAnalyzerError =
-  | CompilerAnalysisError
-  | ArchiverAnalysisError;
-
-export type CommandAnalyzer = CompilerAnalyzer | ArchiverAnalyzer;

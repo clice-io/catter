@@ -5,7 +5,7 @@ import type { CDBItem } from "./cdb-manager.js";
  *
  * @example
  * ```ts
- * const command: cmd.CDBCommand = {
+ * const command: CDBCommand = {
  *   cwd: "/tmp/build",
  *   argv: ["clang", "-c", "src/main.c"],
  * };
@@ -23,7 +23,7 @@ export type CDBCommand = {
  *
  * @example
  * ```ts
- * const entry: cmd.CDBEntry = {
+ * const entry: CDBEntry = {
  *   file: "src/main.c",
  *   output: "main.o",
  * };
@@ -41,7 +41,7 @@ export type CDBEntry = {
  *
  * @example
  * ```ts
- * const items = cmd.cdbItemsOf({
+ * const items = cdbItemsOf({
  *   cwd: "/tmp/build",
  *   argv: ["clang", "-c", "src/main.c"],
  * }, [{ file: "src/main.c", output: "main.o" }]);
