@@ -59,9 +59,14 @@ int main(int argc, char* argv[]) {
     } catch(const qjs::JSException& ex) {
         std::println("Eval JavaScript file failed: \n{}", ex.what());
         return 1;
-    } catch(const std::exception& ex) {
-        std::println("Fatal error: {}", ex.what());
+    } catch(const cpptrace::exception& ex) {
+        std::println("Fatal error: \n    {}\nStack trace:", ex.message());
+        for(const auto& frame: ex.trace()) {
+            std::println("    {}", frame);
+        }
         return 1;
+    } catch(const std::exception& ex) {
+        std::println("Fatal error: \n    {}", ex.what());
     } catch(...) {
         std::println("Unknown fatal error.");
         return 1;
