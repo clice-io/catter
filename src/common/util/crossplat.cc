@@ -135,7 +135,7 @@ std::filesystem::path get_catter_data_path() {
 
     CoTaskMemFree(path);
 
-    return result;
+    return result / "catter";
 }
 
 }  // namespace catter::util

@@ -51,8 +51,7 @@ int main(int argc, char* argv[]) {
             return ret;
         }
         if(!res) {
-            std::println("{}\nUse -h or --help for usage",
-                         res.error().message);
+            std::println("{}\nUse -h or --help for usage", res.error().message);
             return 1;
         }
         kota::run(app::async_run(res->options));
