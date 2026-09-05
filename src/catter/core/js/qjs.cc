@@ -654,7 +654,12 @@ void Runtime::set_module_loader(std::unique_ptr<ModuleLoader> loader) const noex
                     qjs::Error::throw_internal_error(js_ctx, "{}", e.message());
                 } else {
                     auto& frame = e.trace().frames.back();
-                    qjs::Error::throw_internal_error(js_ctx, "{}", e.message());
+                    qjs::Error::throw_internal_error(js_ctx,
+                                                     "{} at {}:{}:{}",
+                                                     e.message(),
+                                                     frame.filename,
+                                                     frame.line.value_or(0),
+                                                     frame.column.value_or(0));
                 }
                 return nullptr;
             } catch(const std::exception& e) {
