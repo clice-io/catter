@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <utility>
 #include <quickjs.h>
+#include <cpptrace/exceptions.hpp>
 
 namespace catter::qjs {
 
@@ -22,9 +23,10 @@ Exception::Exception(const std::string& details) : cpptrace::runtime_error(std::
 Exception::Exception(std::string&& details) : cpptrace::runtime_error(std::move(details)) {}
 
 TypeException::TypeException(const std::string& details) :
-    Exception(std::format("TypeError: {}", details)) {}
+    Exception(std::format("TypeError `{}`", details)) {}
 
-JSException::JSException(const Error& error) : Exception(error.format()) {}
+JSException::JSException(const Error& error) :
+    Exception(error.message()), stack(error.stack()), name(error.name()) {}
 
 JSException JSException::dump(JSContext* ctx) {
     auto exception = Value{ctx, JS_GetException(ctx)};
@@ -32,7 +34,7 @@ JSException JSException::dump(JSContext* ctx) {
         return JSException(Error(ctx, exception.value()));
     } else {
         return JSException(
-            Error::internal_error(ctx, "Non-error exception: {}", json::stringify(exception)));
+            Error::internal_error(ctx, "Non-error exception `{}`", json::stringify(exception)));
     }
 }
 
@@ -459,7 +461,7 @@ const CModule& CModule::export_bare_functor(const std::string& export_name,
         Value{this->ctx, JS_NewCFunction(this->ctx, func, export_name.c_str(), argc)}
     });
     if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
-        throw qjs::Exception("Failed to add export '{}' to module '{}'", export_name, this->name);
+        throw qjs::Exception("Failed to add export `{}` to module `{}`", export_name, this->name);
     }
     return *this;
 }
@@ -471,7 +473,7 @@ const CModule& CModule::export_functor_value(const std::string& export_name,
         Value{this->ctx, value}
     });
     if(JS_AddModuleExport(this->ctx, m, export_name.c_str()) < 0) {
-        throw qjs::Exception("Failed to add export '{}' to module '{}'", export_name, this->name);
+        throw qjs::Exception("Failed to add export `{}` to module `{}`", export_name, this->name);
     }
     return *this;
 }
@@ -647,8 +649,21 @@ void Runtime::set_module_loader(std::unique_ptr<ModuleLoader> loader) const noex
             assert(raw && raw->module_loader && "Module loader is not set");
             try {
                 return raw->module_loader->loader(js_ctx, module_name).module_def();
+            } catch(const cpptrace::exception& e) {
+                if(e.trace().frames.empty()) {
+                    JS_ThrowInternalError(js_ctx, "%s", e.message());
+                } else {
+                    auto& frame = e.trace().frames.back();
+                    JS_ThrowInternalError(js_ctx,
+                                          "%s at %s:%d:%d",
+                                          e.message(),
+                                          frame.filename.c_str(),
+                                          frame.line.value_or(0),
+                                          frame.column.value_or(0));
+                }
+                return nullptr;
             } catch(const std::exception& e) {
-                JS_ThrowInternalError(js_ctx, "Exception in module loader: %s", e.what());
+                JS_ThrowInternalError(js_ctx, "%s", e.what());
                 return nullptr;
             } catch(...) {
                 JS_ThrowInternalError(js_ctx, "Unknown exception in module loader");

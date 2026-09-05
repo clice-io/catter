@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <span>
 #include <string>
@@ -101,8 +102,9 @@ CAPI(fs_exists, (std::string path)->bool) {
     std::error_code ec;
     bool res = fs::exists(absolute_of(path), ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to check existence of path: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to check existence of path `{}`, because `{}`",
+                                     path,
+                                     ec.message());
     }
     return res;
 }
@@ -111,8 +113,9 @@ CAPI(fs_is_file, (std::string path)->bool) {
     std::error_code ec;
     auto res = fs::is_regular_file(absolute_of(path), ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to check if path is file: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to check if path is file `{}`, because `{}`",
+                                     path,
+                                     ec.message());
     }
     return res;
 }
@@ -121,8 +124,9 @@ CAPI(fs_is_dir, (std::string path)->bool) {
     std::error_code ec;
     auto res = fs::is_directory(absolute_of(path), ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to check if path is directory: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to check if path is directory `{}`, because `{}`",
+                                     path,
+                                     ec.message());
     }
     return res;
 }
@@ -184,8 +188,9 @@ CAPI(fs_create_dir_recursively, (std::string path)->bool) {
     std::error_code ec;
     auto res = fs::create_directories(absolute_of(path), ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to create directory: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to create directories for path `{}`, because `{}`",
+                                     path,
+                                     ec.message());
     }
     return res;
 }
@@ -198,8 +203,10 @@ CAPI(fs_create_empty_file_recursively, (std::string path)->bool) {
         fs::create_directories(parent, ec);
     }
     if(ec) {
-        throw catter::qjs::Exception("Failed to create parent directories for file: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception(
+            "Failed to create parent directories for file: `{}`, because `{}`",
+            path,
+            ec.message());
     }
     std::ofstream ofs(p.string(), std::ios::app);
     if(!ofs.is_open()) {
@@ -212,7 +219,9 @@ CAPI(fs_remove_recursively, (std::string path)->void) {
     std::error_code ec;
     fs::remove_all(absolute_of(path), ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to remove path: " + path + ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to remove path: `{}`, because `{}`",
+                                     path,
+                                     ec.message());
     }
 }
 
@@ -225,8 +234,10 @@ CAPI(fs_rename_if_exists, (std::string js_old_path, std::string js_new_path)->bo
     }
     fs::rename(old_path, new_path, ec);
     if(ec) {
-        throw catter::qjs::Exception("Failed to rename path from: " + js_old_path + " to " +
-                                     js_new_path + ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to rename path from: `{}` to `{}`, because `{}`",
+                                     js_old_path,
+                                     js_new_path,
+                                     ec.message());
     }
     return true;
 }
@@ -235,15 +246,16 @@ CTX_CAPI(fs_list_dir, (JSContext * ctx, std::string path)->catter::qjs::Object) 
     fs::path p = absolute_of(path);
     std::error_code ec;
     if(!fs::is_directory(p, ec)) {
-        throw catter::qjs::Exception("Path is not a directory: " + path);
+        throw catter::qjs::Exception("Path `{}` is not a directory", path);
     }
     auto res_arr = catter::qjs::Array<std::string>::empty_one(ctx);
     for(const auto& entry: fs::directory_iterator(p, ec)) {
         res_arr.push(entry.path().string());
     }
     if(ec) {
-        throw catter::qjs::Exception("Failed to list directory: " + path +
-                                     ", error: " + ec.message());
+        throw catter::qjs::Exception("Failed to list directory `{}` because `{}`",
+                                     path,
+                                     ec.message());
     }
     return catter::qjs::Object::from(std::move(res_arr));
 }

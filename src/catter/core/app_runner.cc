@@ -42,7 +42,7 @@ struct RunContext {
 std::string load_script_content(const std::string& script_path) {
     std::ifstream ifs{script_path};
     if(!ifs.good()) {
-        throw cpptrace::runtime_error(std::format("Failed to open script file: {}", script_path));
+        throw cpptrace::runtime_error(std::format("Failed to open script file `{}`", script_path));
     }
 
     return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
@@ -62,7 +62,7 @@ kota::task<> async_run(const core::CatterConfig& config) {
             const auto source = js::load_builtin_script(script_path);
             if(source.empty()) {
                 throw cpptrace::runtime_error(
-                    std::format("Unknown builtin script '{}'", context.script_config.scriptPath));
+                    std::format("Unknown builtin script `{}`", context.script_config.scriptPath));
             }
 
             co_await js::run_script(source, script_path);

@@ -43,7 +43,7 @@ CAPI(file_open, (std::string path)->int64_t) {
     fs.exceptions(std::fstream::badbit);
     fs.open(catter::capi::util::absolute_of(path), std::ios::in | std::ios::out | std::ios::binary);
     if(!fs.is_open()) {
-        throw catter::qjs::Exception("Failed to open file: " + path);
+        throw catter::qjs::Exception("Failed to open file `{}`", path);
     }
     auto id = file_id_cnt++;
     open_files.emplace(id, std::move(fs));
@@ -53,7 +53,7 @@ CAPI(file_open, (std::string path)->int64_t) {
 CAPI(file_close, (int64_t file_id)->void) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     it->second.close();
     open_files.erase(it);
@@ -63,14 +63,14 @@ CAPI(file_close, (int64_t file_id)->void) {
 CAPI(file_seek_read, (int64_t file_id, int64_t offset, uint32_t whence)->void) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     std::ios_base::seekdir dir;
     switch(whence) {
         case 0: dir = std::ios::beg; break;
         case 1: dir = std::ios::cur; break;
         case 2: dir = std::ios::end; break;
-        default: throw catter::qjs::Exception("Invalid whence: " + std::to_string(whence));
+        default: throw catter::qjs::Exception("Invalid whence `{}`", whence);
     }
     it->second.clear();
     it->second.seekg(offset, dir);
@@ -79,14 +79,14 @@ CAPI(file_seek_read, (int64_t file_id, int64_t offset, uint32_t whence)->void) {
 CAPI(file_seek_write, (int64_t file_id, int64_t offset, uint32_t whence)->void) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     std::ios_base::seekdir dir;
     switch(whence) {
         case 0: dir = std::ios::beg; break;
         case 1: dir = std::ios::cur; break;
         case 2: dir = std::ios::end; break;
-        default: throw catter::qjs::Exception("Invalid whence: " + std::to_string(whence));
+        default: throw catter::qjs::Exception("Invalid whence `{}`", whence);
     }
     it->second.clear();
     it->second.seekp(offset, dir);
@@ -95,7 +95,7 @@ CAPI(file_seek_write, (int64_t file_id, int64_t offset, uint32_t whence)->void) 
 CAPI(file_tell_read, (int64_t file_id)->int64_t) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     it->second.clear();
     return it->second.tellg();
@@ -104,7 +104,7 @@ CAPI(file_tell_read, (int64_t file_id)->int64_t) {
 CAPI(file_tell_write, (int64_t file_id)->int64_t) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     it->second.clear();
     return it->second.tellp();
@@ -119,7 +119,7 @@ CAPI(file_read_n, (int64_t file_id, uint32_t buf_size, catter::qjs::Object array
     }
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     if(!JS_IsArrayBuffer(array_buffer.value())) {
         throw catter::qjs::Exception("Third argument must be an ArrayBuffer");
@@ -139,7 +139,7 @@ CAPI(file_read_n, (int64_t file_id, uint32_t buf_size, catter::qjs::Object array
 CAPI(file_write_n, (int64_t file_id, uint32_t buf_size, catter::qjs::Object array_buffer)->void) {
     auto it = open_files.find(file_id);
     if(it == open_files.end()) {
-        throw catter::qjs::Exception("Invalid file id: " + std::to_string(file_id));
+        throw catter::qjs::Exception("Invalid file id `{}`", file_id);
     }
     if(!JS_IsArrayBuffer(array_buffer.value())) {
         throw catter::qjs::Exception("Third argument must be an ArrayBuffer");

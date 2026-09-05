@@ -31,7 +31,7 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
 
     if(!acc_ret) {
         throw cpptrace::runtime_error(
-            std::format("Failed to create acceptor: {}", acc_ret.error().message()));
+            std::format("Failed to create acceptor `{}`", acc_ret.error().message()));
     }
 
     this->acc = std::make_unique<PipeAcceptor>(std::move(*acc_ret));
@@ -67,7 +67,7 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
         try {
             client_task.result();  // Await completion and propagate exceptions
         } catch(const std::exception& ex) {
-            error_msg += std::format("Exception in client task: {}\n", ex.what());
+            error_msg += std::format("|| {} ||", ex.what());
         }
     }
     if(!error_msg.empty()) {

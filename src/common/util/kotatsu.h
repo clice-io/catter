@@ -26,8 +26,9 @@ inline process_event make_process_event(kota::process::options& opts) {
     return [opts = std::move(opts)](kota::event_loop& loop) -> process_info {
         auto spawn_ret = kota::process::spawn(opts, loop);
         if(!spawn_ret) {
-            throw cpptrace::runtime_error(
-                std::format("process spawn failed: {}", spawn_ret.error().message()));
+            throw cpptrace::runtime_error(std::format("Process `{}` spawn failed, because `{}`",
+                                                      opts.file,
+                                                      spawn_ret.error().message()));
         }
 
         return {
@@ -59,7 +60,7 @@ inline kota::task<data::process_result> capture_process_result(process_event pro
 
     if(!ret) {
         throw cpptrace::runtime_error(
-            std::format("process wait failed: {}", ret.error().message()));
+            std::format("Process wait failed `{}`", ret.error().message()));
     }
 
     auto [code, _1, _2] = *ret;

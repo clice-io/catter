@@ -73,7 +73,7 @@ void validate_replay_file(const ReplayFile& replay) {
     for(const auto& event: replay.events) {
         if(event.type.has_value() && *event.type != "command") {
             throw cpptrace::runtime_error(
-                std::format("Unsupported replay event type: '{}'", *event.type));
+                std::format("Unsupported replay event type: `{}`", *event.type));
         }
         if(event.error.has_value() && event.execution.has_value()) {
             throw cpptrace::runtime_error(

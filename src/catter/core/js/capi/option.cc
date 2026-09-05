@@ -51,7 +51,7 @@ const kota_opt::OptTable& resolve_table(std::string_view table_name) {
     CAPI_OPTION_TABLES(RESOLVE_OPTION_TABLE)
 #undef RESOLVE_OPTION_TABLE
 
-    throw qjs::Exception(std::format("Unknown option table: {}", table_name));
+    throw qjs::Exception("Unknown option table `{}`", table_name);
 }
 
 std::vector<std::string> copy_values(std::span<const std::string_view> values) {
@@ -91,13 +91,13 @@ CTX_CAPI(option_get_info, (JSContext * ctx, std::string table_name, unsigned int
     auto& table = resolve_table(table_name);
 
     if(id == 0 || id > table.option_infos.size()) {
-        throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
+        throw qjs::Exception("Invalid option id `{}` for table `{}`", id, table_name);
     }
 
     const auto& option = table.option(id);
 
     if(!option.has_value()) {
-        throw qjs::Exception(std::format("Invalid option id {} for table {}", id, table_name));
+        throw qjs::Exception("Invalid option id `{}` for table `{}`", id, table_name);
     }
 
     const auto& info = *option;
@@ -123,8 +123,7 @@ CTX_CAPI(option_get_info, (JSContext * ctx, std::string table_name, unsigned int
 
 CTX_CAPI(option_parse, (JSContext * ctx, qjs::Parameters params)->void) {
     if(params.size() != 3 && params.size() != 4) {
-        throw qjs::Exception(
-            std::format("option_parse expects 3 or 4 arguments, got {}", params.size()));
+        throw qjs::Exception("option_parse expects 3 or 4 arguments, got {}", params.size());
     }
 
     auto table_name = params[0].as<std::string>();
@@ -151,7 +150,7 @@ CTX_CAPI(option_parse, (JSContext * ctx, qjs::Parameters params)->void) {
             const auto reason = error.message != nullptr ? error.message : "missing argument";
 
             callback({qjs::Value::from(ctx,
-                                       std::format("failed to parse '{}' (arg #{}) : {}",
+                                       std::format("failed to parse `{}` (arg #{}) : {}",
                                                    failing_arg,
                                                    error.index,
                                                    reason))});

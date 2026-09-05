@@ -34,7 +34,7 @@ kota::http::client& default_http_client() {
 kota::http::client& client_by_id(int64_t client_id) {
     auto it = http_clients.find(client_id);
     if(it == http_clients.end()) {
-        throw qjs::Exception("Invalid HTTP client id: " + std::to_string(client_id));
+        throw qjs::Exception("Invalid HTTP client id `{}`", client_id);
     }
     return it->second;
 }
@@ -147,7 +147,7 @@ CAPI(http_client_create, ()->int64_t) {
 CAPI(http_client_close, (int64_t client_id)->void) {
     auto erased = http_clients.erase(client_id);
     if(erased == 0) {
-        throw qjs::Exception("Invalid HTTP client id: " + std::to_string(client_id));
+        throw qjs::Exception("Invalid HTTP client id: `{}`", client_id);
     }
 }
 

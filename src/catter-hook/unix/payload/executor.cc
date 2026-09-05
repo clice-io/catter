@@ -34,7 +34,7 @@ catter::ArgvRef argv_span(const char* const argv[]) noexcept {
 
 void require_path_arg(const char* value, std::string_view name) {
     if(value == nullptr) {
-        throw catter::PayloadError(EFAULT, std::format("{} must not be null", name));
+        throw catter::PayloadError(EFAULT, std::format("Argument `{}` must not be null", name));
     }
 }
 

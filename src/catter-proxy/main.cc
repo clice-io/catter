@@ -164,7 +164,7 @@ kota::task<int> proxy_main(const catter::proxy::ProxyOption& opt) noexcept {
                                std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
     };
 
-    auto [code, _] = co_await kota::when_all{peer.run(), handle_proxy_request(opt, peer)};
+    auto [_, code] = co_await kota::when_all{peer.run(), handle_proxy_request(opt, peer)};
 
     co_return code;
 }

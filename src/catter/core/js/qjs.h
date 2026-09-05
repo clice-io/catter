@@ -73,6 +73,18 @@ class JSException : public Exception {
 public:
     JSException(const Error& error);
     static JSException dump(JSContext* ctx);
+
+    std::string_view js_error_name() const noexcept {
+        return this->name;
+    }
+
+    std::string_view js_stack() const noexcept {
+        return this->stack;
+    }
+
+private:
+    std::string name;
+    std::string stack;
 };
 
 /**

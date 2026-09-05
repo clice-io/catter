@@ -31,7 +31,7 @@ kota::task<data::process_result> run(data::command command,
     // check hook_lib exists
     if(!std::filesystem::exists(lib_path)) {
         throw cpptrace::runtime_error(
-            std::format("Catter-Proxy Hook library not found at path: {}", lib_path.string()));
+            std::format("Catter-Proxy Hook library not found at path `{}`", lib_path.string()));
     }
 
     bool preload_injected = false;
