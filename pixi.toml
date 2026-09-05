@@ -60,7 +60,7 @@ compiler-rt = "==20.1.8"
 [feature.clang.tasks.cfg]
 args = [
   { arg = "mode", choices = ["debug", "release"] },
-  { arg = "toolchain", choices = ["msvc", "clang", "gcc"], default = "clang" },
+  { arg = "toolchain", choices = ["msvc","clang", "clang-cl", "gcc"], default = "clang" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ toolchain }}"""
 
@@ -100,7 +100,7 @@ build = "xmake --verbose --diagnosis"
 [tasks.cfg]
 args = [
   { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-  { arg = "toolchain", choices = ["msvc", "clang", "gcc", "default"], default = "default" },
+  { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc", "default"], default = "default" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""

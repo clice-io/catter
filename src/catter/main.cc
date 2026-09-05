@@ -61,17 +61,18 @@ int main(int argc, char* argv[]) {
         std::println("JavaScript Stack trace:\n{}", ex.js_stack());
         std::println("Native Stack trace:");
         for(const auto& frame: ex.trace()) {
-            std::println("    {}", frame);
+            std::println("    {}", frame.to_string());
         }
         return 1;
     } catch(const cpptrace::exception& ex) {
         std::println("{}\nStack trace:", ex.message());
         for(const auto& frame: ex.trace()) {
-            std::println("    {}", frame);
+            std::println("    {}", frame.to_string());
         }
         return 1;
     } catch(const std::exception& ex) {
         std::println("{}", ex.what());
+        return 1;
     } catch(...) {
         std::println("Unknown fatal error.");
         return 1;

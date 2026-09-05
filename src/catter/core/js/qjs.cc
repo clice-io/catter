@@ -637,10 +637,10 @@ void Runtime::set_module_loader(std::unique_ptr<ModuleLoader> loader) const noex
 
                 return js_strdup(ctx, normalized_name.c_str());
             } catch(const std::exception& e) {
-                JS_ThrowInternalError(ctx, "Exception in module normalizer: %s", e.what());
+                qjs::Error::throw_internal_error(ctx, "{}", e.what());
                 return nullptr;
             } catch(...) {
-                JS_ThrowInternalError(ctx, "Unknown exception in module normalizer");
+                qjs::Error::throw_internal_error(ctx, "Unknown exception in module normalizer");
                 return nullptr;
             }
         },
@@ -651,22 +651,17 @@ void Runtime::set_module_loader(std::unique_ptr<ModuleLoader> loader) const noex
                 return raw->module_loader->loader(js_ctx, module_name).module_def();
             } catch(const cpptrace::exception& e) {
                 if(e.trace().frames.empty()) {
-                    JS_ThrowInternalError(js_ctx, "%s", e.message());
+                    qjs::Error::throw_internal_error(js_ctx, "{}", e.message());
                 } else {
                     auto& frame = e.trace().frames.back();
-                    JS_ThrowInternalError(js_ctx,
-                                          "%s at %s:%d:%d",
-                                          e.message(),
-                                          frame.filename.c_str(),
-                                          frame.line.value_or(0),
-                                          frame.column.value_or(0));
+                    qjs::Error::throw_internal_error(js_ctx, "{}", e.message());
                 }
                 return nullptr;
             } catch(const std::exception& e) {
-                JS_ThrowInternalError(js_ctx, "%s", e.what());
+                qjs::Error::throw_internal_error(js_ctx, "{}", e.what());
                 return nullptr;
             } catch(...) {
-                JS_ThrowInternalError(js_ctx, "Unknown exception in module loader");
+                qjs::Error::throw_internal_error(js_ctx, "Unknown exception in module loader");
                 return nullptr;
             }
         },

@@ -393,6 +393,22 @@ public:
         return Error{ctx, JS_NewTypeError(ctx, "%s", error_message.c_str())};
     }
 
+    template <typename... Args>
+    static JSValue throw_internal_error(JSContext* ctx,
+                                        std::format_string<Args...> fmt,
+                                        Args&&... args) {
+        auto error_message = std::format(fmt, std::forward<Args>(args)...);
+        return JS_ThrowInternalError(ctx, "%s", error_message.c_str());
+    }
+
+    template <typename... Args>
+    static JSValue throw_type_error(JSContext* ctx,
+                                    std::format_string<Args...> fmt,
+                                    Args&&... args) {
+        auto error_message = std::format(fmt, std::forward<Args>(args)...);
+        return JS_ThrowTypeError(ctx, "%s", error_message.c_str());
+    }
+
     JSException to_exception() const {
         return JSException(*this);
     }
@@ -572,7 +588,7 @@ private:
     template <typename Invocable>
     static JSValue invoke_helper(JSContext* ctx, int argc, JSValueConst* argv, Invocable&& fn) {
         if(argc != sizeof...(Args)) {
-            return JS_ThrowTypeError(ctx, "Incorrect number of arguments");
+            return qjs::Error::throw_type_error(ctx, "Incorrect number of arguments");
         }
 
         return [&]<size_t... Is>(std::index_sequence<Is...>) -> JSValue {
@@ -589,9 +605,11 @@ private:
                         .release();
                 }
             } catch(const qjs::Exception& e) {
-                return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
+                return qjs::Error::throw_internal_error(ctx,
+                                                        "Exception in C++ function `{}`",
+                                                        e.what());
             } catch(const std::exception& e) {
-                return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
+                return qjs::Error::throw_internal_error(ctx, "Unexpected exception `{}`", e.what());
             }
         }(std::make_index_sequence<sizeof...(Args)>{});
     }
@@ -607,7 +625,7 @@ private:
         auto* ptr = static_cast<Opaque*>(JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))));
 
         if(!ptr) {
-            return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
+            return qjs::Error::throw_internal_error(ctx, "C++ functor is null");
         }
 
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {
@@ -791,9 +809,11 @@ private:
                 }
             }
         } catch(const qjs::Exception& e) {
-            return JS_ThrowInternalError(ctx, "Exception in C++ function: %s", e.what());
+            return qjs::Error::throw_internal_error(ctx,
+                                                    "Exception in C++ function `{}`",
+                                                    e.what());
         } catch(const std::exception& e) {
-            return JS_ThrowInternalError(ctx, "Unexpected exception: %s", e.what());
+            return qjs::Error::throw_internal_error(ctx, "Unexpected exception `{}`", e.what());
         }
     }
 
@@ -808,7 +828,7 @@ private:
         auto* ptr = static_cast<Opaque*>(JS_GetOpaque(func_obj, Register::get(JS_GetRuntime(ctx))));
 
         if(!ptr) {
-            return JS_ThrowInternalError(ctx, "Internal error: C++ functor is null");
+            return qjs::Error::throw_internal_error(ctx, "C++ functor is null");
         }
 
         return invoke_helper(ctx, argc, argv, [&]<typename... Ts>(Ts&&... args) -> decltype(auto) {

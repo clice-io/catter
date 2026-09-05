@@ -28,6 +28,18 @@ bool throws_with_message(Fn&& fn, std::string_view needle) {
     return false;
 }
 
+template <typename Fn>
+bool throws_with_jserror(Fn&& fn, std::string_view error_name) {
+    try {
+        fn();
+    } catch(const qjs::JSException& e) {
+        return e.js_error_name().contains(error_name);
+    } catch(...) {
+        return false;
+    }
+    return false;
+}
+
 int64_t add_one_raw(int64_t value) {
     return value + 1;
 }
@@ -143,7 +155,7 @@ TEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
 
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
-    EXPECT_TRUE(throws_with_message(
+    EXPECT_TRUE(throws_with_jserror(
         [&]() { ctx.eval("throw new TypeError('boom')", "<eval>", eval_flags); },
         "TypeError"));
     EXPECT_TRUE(!ctx.has_exception());
@@ -199,7 +211,7 @@ TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
     auto sync_result = ctx.eval_script(sync_source.data(), sync_source.size(), "sync-script.js");
     EXPECT_TRUE(sync_result.as<int64_t>() == 42);
     EXPECT_TRUE(global["syncResult"].as<int64_t>() == 42);
-    EXPECT_TRUE(throws_with_message(
+    EXPECT_TRUE(throws_with_jserror(
         [&]() { (void)ctx.eval_script("undeclaredValue = 1", "strict-script.js"); },
         "ReferenceError"));
 
@@ -329,7 +341,7 @@ TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
         ctx.eval("const arr = []; Object.preventExtensions(arr); arr", "<eval>", eval_flags)
             .as<qjs::Object>()
             .as<qjs::Array<int64_t>>();
-    EXPECT_TRUE(throws_with_message([&]() { frozen_array.push(1); }, "TypeError"));
+    EXPECT_TRUE(throws_with_jserror([&]() { frozen_array.push(1); }, "TypeError"));
 };
 
 TEST_CASE(array_conversions_cover_string_roundtrip) {
@@ -462,9 +474,9 @@ TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
     EXPECT_TRUE(throws_with_message([&]() { ctx.eval("expectNumber()", "<eval>", eval_flags); },
                                     "Incorrect number of arguments"));
     EXPECT_TRUE(throws_with_message([&]() { ctx.eval("qjsThrower()", "<eval>", eval_flags); },
-                                    "Exception in C++ function: custom boom"));
-    EXPECT_TRUE(throws_with_message([&]() { ctx.eval("stdThrower()", "<eval>", eval_flags); },
-                                    "Unexpected exception: std boom"));
+                                    "custom boom"));
+    EXPECT_TRUE(
+        throws_with_message([&]() { ctx.eval("stdThrower()", "<eval>", eval_flags); }, "std boom"));
 };
 
 TEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
@@ -594,7 +606,7 @@ TEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_a
         auto cyclic =
             ctx.eval("const x = {}; x.self = x; x;", "<eval>", eval_flags).as<qjs::Object>();
         EXPECT_TRUE(
-            throws_with_message([&]() { (void)qjs::json::stringify(cyclic); }, "TypeError"));
+            throws_with_jserror([&]() { (void)qjs::json::stringify(cyclic); }, "TypeError"));
 
         auto count_args = qjs::Function<int64_t(qjs::Parameters)>::from(
             ctx.js_context(),
