@@ -84,6 +84,7 @@ std::filesystem::path get_executable_path() {
 
 #elif defined(CATTER_WINDOWS)
 
+#include <ShlObj.h>
 #include <windows.h>
 
 namespace catter::util {
@@ -123,7 +124,18 @@ std::filesystem::path get_executable_path() {
 }
 
 std::filesystem::path get_catter_data_path() {
-    return get_catter_root_path();
+    PWSTR path = nullptr;
+
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &path);
+
+    if(FAILED(hr))
+        throw cpptrace::runtime_error("SHGetKnownFolderPath failed");
+
+    std::filesystem::path result(path);
+
+    CoTaskMemFree(path);
+
+    return result;
 }
 
 }  // namespace catter::util

@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
             return ret;
         }
         if(!res) {
-            std::println("Error when parsing: \n{}\nUse -h or --help for usage",
+            std::println("{}\nUse -h or --help for usage",
                          res.error().message);
             return 1;
         }
