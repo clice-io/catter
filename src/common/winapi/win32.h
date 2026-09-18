@@ -2,6 +2,7 @@
 #ifdef CATTER_WINDOWS
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 // clang-format off

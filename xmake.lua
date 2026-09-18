@@ -162,7 +162,10 @@ target("common-resolver")
     else
         add_files("src/common/resolver/unix.cc")
     end
-    add_deps("common-winapi", {public = true})
+
+    if is_plat("windows") then
+        add_deps("common-winapi", {public = true})
+    end
 
 target("common")
     set_kind("static")
