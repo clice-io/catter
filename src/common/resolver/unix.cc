@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 
 namespace catter::hook::shared::resolver {
 namespace {

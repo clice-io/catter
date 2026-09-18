@@ -1,25 +1,52 @@
-#pragma once
-#ifdef CATTER_WINDOWS
-#include <filesystem>
-#include <limits>
-#include <string>
-#include <string_view>
-#include <type_traits>
-
-// clang-format off
-// Windows SDK headers are order-sensitive: <windows.h> defines the macros and
-// types (HANDLE, DWORD, BOOL, HMODULE, ...) that the others depend on, so it
-// must come first. Do not let clang-format alphabetize this block.
-#include <windows.h>
-#include <Psapi.h>
-#include <libloaderapi.h>
-#include <minwindef.h>
-// clang-format on
+#include "winapi/win32.h"
 
 namespace catter::win {
+std::error_code wait_for_object(HANDLE handle, std::chrono::milliseconds ms) noexcept {
 
-template <typename char_t>
-concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
+    switch(WaitForSingleObject(handle, static_cast<DWORD>(ms.count()))) {
+        case WAIT_OBJECT_0: return {};
+
+        case WAIT_TIMEOUT: return std::make_error_code(std::errc::timed_out);
+        case WAIT_FAILED:
+        default: return std::error_code(GetLastError(), std::system_category());
+    }
+}
+
+std::string quote_win32_arg(std::string_view arg) noexcept {
+    // No quoting needed if it's empty or has no special characters.
+    if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
+        return std::string(arg);
+    }
+
+    std::string quoted_arg;
+    quoted_arg.push_back('"');
+
+    for(auto it = arg.begin();; ++it) {
+        int num_backslashes = 0;
+        while(it != arg.end() && *it == '\\') {
+            ++it;
+            ++num_backslashes;
+        }
+
+        if(it == arg.end()) {
+            // End of string; append backslashes and a closing quote.
+            quoted_arg.append(num_backslashes * 2, '\\');
+            break;
+        }
+
+        if(*it == '"') {
+            // Escape all backslashes and the following double quote.
+            quoted_arg.append(num_backslashes * 2 + 1, '\\');
+            quoted_arg.push_back(*it);
+        } else {
+            // Backslashes aren't special here.
+            quoted_arg.append(num_backslashes, '\\');
+            quoted_arg.push_back(*it);
+        }
+    }
+    quoted_arg.push_back('"');
+    return quoted_arg;
+}
 
 struct WinApiBufferDecision {
     bool done = false;
@@ -143,8 +170,7 @@ UINT FixGetWindowsDirectory(char_t* buffer, UINT size) {
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetEnvironmentVariableDynamic(const char_t* name,
-                                                        size_t initial_size = 256) {
+std::basic_string<char_t> GetEnvironmentVariableDynamic(const char_t* name, size_t initial_size) {
     return CallWinApiWithGrowingBuffer<char_t, DWORD>(
         initial_size,
         [&](char_t* buffer, DWORD size) {
@@ -160,7 +186,7 @@ std::basic_string<char_t> GetEnvironmentVariableDynamic(const char_t* name,
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetCurrentDirectoryDynamic(size_t initial_size = MAX_PATH) {
+std::basic_string<char_t> GetCurrentDirectoryDynamic(size_t initial_size) {
     return CallWinApiWithGrowingBuffer<char_t, DWORD>(
         initial_size,
         [&](char_t* buffer, DWORD size) { return FixGetCurrentDirectory<char_t>(size, buffer); },
@@ -174,7 +200,7 @@ std::basic_string<char_t> GetCurrentDirectoryDynamic(size_t initial_size = MAX_P
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetModulePathDynamic(HMODULE module, size_t initial_size = MAX_PATH) {
+std::basic_string<char_t> GetModulePathDynamic(HMODULE module, size_t initial_size) {
     return CallWinApiWithGrowingBuffer<char_t, DWORD>(
         initial_size,
         [&](char_t* buffer, DWORD size) {
@@ -190,7 +216,7 @@ std::basic_string<char_t> GetModulePathDynamic(HMODULE module, size_t initial_si
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetModuleDirectory(HMODULE module, size_t initial_size = MAX_PATH) {
+std::basic_string<char_t> GetModuleDirectory(HMODULE module, size_t initial_size) {
     auto module_path = GetModulePathDynamic<char_t>(module, initial_size);
     if(module_path.empty()) {
         return {};
@@ -203,7 +229,7 @@ std::basic_string<char_t> GetModuleDirectory(HMODULE module, size_t initial_size
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetSystemDirectoryDynamic(size_t initial_size = MAX_PATH) {
+std::basic_string<char_t> GetSystemDirectoryDynamic(size_t initial_size) {
     return CallWinApiWithGrowingBuffer<char_t, UINT>(
         initial_size,
         [&](char_t* buffer, UINT size) { return FixGetSystemDirectory<char_t>(buffer, size); },
@@ -217,7 +243,7 @@ std::basic_string<char_t> GetSystemDirectoryDynamic(size_t initial_size = MAX_PA
 }
 
 template <CharT char_t>
-std::basic_string<char_t> GetWindowsDirectoryDynamic(size_t initial_size = MAX_PATH) {
+std::basic_string<char_t> GetWindowsDirectoryDynamic(size_t initial_size) {
     return CallWinApiWithGrowingBuffer<char_t, UINT>(
         initial_size,
         [&](char_t* buffer, UINT size) { return FixGetWindowsDirectory<char_t>(buffer, size); },
@@ -232,7 +258,7 @@ std::basic_string<char_t> GetWindowsDirectoryDynamic(size_t initial_size = MAX_P
 
 template <CharT char_t>
 std::basic_string<char_t> GetFullPathNameDynamic(std::basic_string_view<char_t> path,
-                                                 size_t initial_size = MAX_PATH) {
+                                                 size_t initial_size) {
     auto input = std::basic_string<char_t>(path);
     return CallWinApiWithGrowingBuffer<char_t, DWORD>(
         initial_size,
@@ -251,8 +277,8 @@ std::basic_string<char_t> GetFullPathNameDynamic(std::basic_string_view<char_t> 
 template <CharT char_t>
 std::basic_string<char_t> SearchPathDynamic(const char_t* path,
                                             std::basic_string_view<char_t> file_name,
-                                            const char_t* extension = nullptr,
-                                            size_t initial_size = MAX_PATH) {
+                                            const char_t* extension,
+                                            size_t initial_size) {
     auto input = std::basic_string<char_t>(file_name);
     return CallWinApiWithGrowingBuffer<char_t, DWORD>(
         initial_size,
@@ -267,6 +293,125 @@ std::basic_string<char_t> SearchPathDynamic(const char_t* path,
             return WinApiBufferDecision{.next_size = static_cast<size_t>(result) + 1};
         });
 }
-}  // namespace catter::win
 
-#endif
+template <>
+DWORD FixGetEnvironmentVariable<char>(const char* name, char* buffer, DWORD size);
+
+template <>
+DWORD FixGetEnvironmentVariable<wchar_t>(const wchar_t* name, wchar_t* buffer, DWORD size);
+
+template <>
+DWORD FixGetFullPathName<char>(const char* file_name,
+                               DWORD buffer_size,
+                               char* buffer,
+                               char** file_part);
+
+template <>
+DWORD FixGetFullPathName<wchar_t>(const wchar_t* file_name,
+                                  DWORD buffer_size,
+                                  wchar_t* buffer,
+                                  wchar_t** file_part);
+
+template <>
+DWORD FixGetFileAttributes<char>(const char* path);
+
+template <>
+DWORD FixGetFileAttributes<wchar_t>(const wchar_t* path);
+
+template <>
+DWORD FixGetCurrentDirectory<char>(DWORD size, char* buffer);
+
+template <>
+DWORD FixGetCurrentDirectory<wchar_t>(DWORD size, wchar_t* buffer);
+
+template <>
+DWORD FixGetModuleFileName<char>(HMODULE module, char* buffer, DWORD size);
+
+template <>
+DWORD FixGetModuleFileName<wchar_t>(HMODULE module, wchar_t* buffer, DWORD size);
+
+template <>
+DWORD FixSearchPath<char>(const char* path,
+                          const char* file_name,
+                          const char* extension,
+                          DWORD buffer_size,
+                          char* buffer,
+                          char** file_part);
+
+template <>
+DWORD FixSearchPath<wchar_t>(const wchar_t* path,
+                             const wchar_t* file_name,
+                             const wchar_t* extension,
+                             DWORD buffer_size,
+                             wchar_t* buffer,
+                             wchar_t** file_part);
+
+template <>
+UINT FixGetSystemDirectory<char>(char* buffer, UINT size);
+
+template <>
+UINT FixGetSystemDirectory<wchar_t>(wchar_t* buffer, UINT size);
+
+template <>
+UINT FixGetWindowsDirectory<char>(char* buffer, UINT size);
+
+template <>
+UINT FixGetWindowsDirectory<wchar_t>(wchar_t* buffer, UINT size);
+
+template <>
+std::basic_string<char> GetEnvironmentVariableDynamic<char>(const char* name, size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetEnvironmentVariableDynamic<wchar_t>(const wchar_t* name,
+                                                                  size_t initial_size);
+
+template <>
+std::basic_string<char> GetCurrentDirectoryDynamic<char>(size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetCurrentDirectoryDynamic<wchar_t>(size_t initial_size);
+
+template <>
+std::basic_string<char> GetModulePathDynamic<char>(HMODULE module, size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetModulePathDynamic<wchar_t>(HMODULE module, size_t initial_size);
+
+template <>
+std::basic_string<char> GetModuleDirectory<char>(HMODULE module, size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetModuleDirectory<wchar_t>(HMODULE module, size_t initial_size);
+
+template <>
+std::basic_string<char> GetSystemDirectoryDynamic<char>(size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetSystemDirectoryDynamic<wchar_t>(size_t initial_size);
+
+template <>
+std::basic_string<char> GetWindowsDirectoryDynamic<char>(size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetWindowsDirectoryDynamic<wchar_t>(size_t initial_size);
+
+template <>
+std::basic_string<char> GetFullPathNameDynamic<char>(std::basic_string_view<char> path,
+                                                     size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> GetFullPathNameDynamic<wchar_t>(std::basic_string_view<wchar_t> path,
+                                                           size_t initial_size);
+
+template <>
+std::basic_string<char> SearchPathDynamic<char>(const char* path,
+                                                std::basic_string_view<char> file_name,
+                                                const char* extension,
+                                                size_t initial_size);
+
+template <>
+std::basic_string<wchar_t> SearchPathDynamic<wchar_t>(const wchar_t* path,
+                                                      std::basic_string_view<wchar_t> file_name,
+                                                      const wchar_t* extension,
+                                                      size_t initial_size);
+}  // namespace catter::win

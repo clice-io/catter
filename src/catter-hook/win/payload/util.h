@@ -4,10 +4,9 @@
 #include <string_view>
 #include <type_traits>
 
-namespace catter::win::payload {
+#include "winapi/win32.h"
 
-template <typename char_t>
-concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
+namespace catter::win::payload {
 
 template <CharT char_t>
 std::basic_string<char_t> resolve_abspath(const char_t* application_name,

@@ -1,16 +1,13 @@
-
 #pragma once
+#ifdef CATTER_WINDOWS
 #include <chrono>
+#include <filesystem>
 #include <format>
+#include <limits>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <type_traits>
-#include <cpptrace/exceptions.hpp>
-
-#include "util/exception.h"
 
 // clang-format off
 // Windows SDK headers are order-sensitive: <windows.h> defines the macros and
@@ -23,6 +20,70 @@
 // clang-format on
 
 namespace catter::win {
+
+template <typename char_t>
+concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
+
+template <CharT char_t>
+DWORD FixGetEnvironmentVariable(const char_t* name, char_t* buffer, DWORD size);
+
+template <CharT char_t>
+DWORD FixGetFullPathName(const char_t* file_name,
+                         DWORD buffer_size,
+                         char_t* buffer,
+                         char_t** file_part);
+
+template <CharT char_t>
+DWORD FixGetFileAttributes(const char_t* path);
+
+template <CharT char_t>
+DWORD FixGetCurrentDirectory(DWORD size, char_t* buffer);
+
+template <CharT char_t>
+DWORD FixGetModuleFileName(HMODULE module, char_t* buffer, DWORD size);
+
+template <CharT char_t>
+DWORD FixSearchPath(const char_t* path,
+                    const char_t* file_name,
+                    const char_t* extension,
+                    DWORD buffer_size,
+                    char_t* buffer,
+                    char_t** file_part);
+
+template <CharT char_t>
+UINT FixGetSystemDirectory(char_t* buffer, UINT size);
+
+template <CharT char_t>
+UINT FixGetWindowsDirectory(char_t* buffer, UINT size);
+
+template <CharT char_t>
+std::basic_string<char_t> GetEnvironmentVariableDynamic(const char_t* name,
+                                                        size_t initial_size = 256);
+template <CharT char_t>
+std::basic_string<char_t> GetCurrentDirectoryDynamic(size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> GetModulePathDynamic(HMODULE module, size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> GetModuleDirectory(HMODULE module, size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> GetSystemDirectoryDynamic(size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> GetWindowsDirectoryDynamic(size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> GetFullPathNameDynamic(std::basic_string_view<char_t> path,
+                                                 size_t initial_size = MAX_PATH);
+
+template <CharT char_t>
+std::basic_string<char_t> SearchPathDynamic(const char_t* path,
+                                            std::basic_string_view<char_t> file_name,
+                                            const char_t* extension = nullptr,
+                                            size_t initial_size = MAX_PATH);
+
 class Handle {
 public:
     Handle(HANDLE handle = nullptr) : h(handle) {}
@@ -82,7 +143,7 @@ public:
                  DWORD flProtect) : process(hProcess) {
         space = VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
         if(!space)
-            throw cpptrace::runtime_error("VirtualAllocEx failed");
+            throw std::runtime_error("VirtualAllocEx failed");
     }
 
     RemoteMemory(const RemoteMemory&) = delete;
@@ -122,72 +183,11 @@ private:
     LPVOID space = nullptr;
 };
 
-template <typename F>
-    requires std::is_function_v<F>
-F* get_function_from_ntdll(const char* name) {
-    HMODULE hNtDllModule = GetModuleHandleA("ntdll.dll");
-    if(hNtDllModule == NULL) {
-        throw catter::system_error(
-            GetLastError(),
-            std::system_category(),
-            std::format("Failed to get handle of ntdll.dll when looking for function {}", name));
-    }
+std::error_code wait_for_object(HANDLE handle,
+                                std::chrono::milliseconds ms = std::chrono::milliseconds{
+                                    INFINITE}) noexcept;
 
-    auto* fn = reinterpret_cast<F*>(GetProcAddress(hNtDllModule, name));
-    if(fn == nullptr) {
-        throw catter::system_error(ERROR_PROC_NOT_FOUND,
-                                   std::system_category(),
-                                   std::format("Failed to find {} in ntdll.dll", name));
-    }
-    return fn;
-}
-
-inline std::error_code wait_for_object(HANDLE handle,
-                                       std::chrono::milliseconds ms = std::chrono::milliseconds{
-                                           INFINITE}) {
-
-    switch(WaitForSingleObject(handle, static_cast<DWORD>(ms.count()))) {
-        case WAIT_OBJECT_0: return {};
-
-        case WAIT_TIMEOUT: return std::make_error_code(std::errc::timed_out);
-        case WAIT_FAILED:
-        default: return std::error_code(GetLastError(), std::system_category());
-    }
-}
-
-inline std::string quote_win32_arg(std::string_view arg) noexcept {
-    // No quoting needed if it's empty or has no special characters.
-    if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
-        return std::string(arg);
-    }
-
-    std::string quoted_arg;
-    quoted_arg.push_back('"');
-
-    for(auto it = arg.begin();; ++it) {
-        int num_backslashes = 0;
-        while(it != arg.end() && *it == '\\') {
-            ++it;
-            ++num_backslashes;
-        }
-
-        if(it == arg.end()) {
-            // End of string; append backslashes and a closing quote.
-            quoted_arg.append(num_backslashes * 2, '\\');
-            break;
-        }
-
-        if(*it == '"') {
-            // Escape all backslashes and the following double quote.
-            quoted_arg.append(num_backslashes * 2 + 1, '\\');
-            quoted_arg.push_back(*it);
-        } else {
-            // Backslashes aren't special here.
-            quoted_arg.append(num_backslashes, '\\');
-            quoted_arg.push_back(*it);
-        }
-    }
-    quoted_arg.push_back('"');
-    return quoted_arg;
-}
+std::string quote_win32_arg(std::string_view arg) noexcept;
 }  // namespace catter::win
+
+#endif

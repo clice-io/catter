@@ -9,11 +9,32 @@
 
 #include "util/exception.h"
 #include "util/log.h"
-#include "win/win32.h"
+#include "winapi/win32.h"
 
 using namespace std::literals;
 
 namespace catter::proxy::hook {
+
+template <typename F>
+    requires std::is_function_v<F>
+F* get_function_from_ntdll(const char* name) {
+    HMODULE hNtDllModule = GetModuleHandleA("ntdll.dll");
+    if(hNtDllModule == NULL) {
+        throw catter::system_error(
+            GetLastError(),
+            std::system_category(),
+            std::format("Failed to get handle of ntdll.dll when looking for function {}", name));
+    }
+
+    auto* fn = reinterpret_cast<F*>(GetProcAddress(hNtDllModule, name));
+    if(fn == nullptr) {
+        throw catter::system_error(ERROR_PROC_NOT_FOUND,
+                                   std::system_category(),
+                                   std::format("Failed to find {} in ntdll.dll", name));
+    }
+    return fn;
+}
+
 win::Handle RtlCreateUserThread(HANDLE hProcess,
                                 LPTHREAD_START_ROUTINE lpBaseAddress,
                                 LPVOID lpSpace) {
@@ -32,16 +53,16 @@ win::Handle RtlCreateUserThread(HANDLE hProcess,
     HANDLE hRemoteThread = NULL;
 
     const auto status =
-        win::get_function_from_ntdll<RtlCreateUserThreadType>("RtlCreateUserThread")(hProcess,
-                                                                                     NULL,
-                                                                                     0,
-                                                                                     0,
-                                                                                     0,
-                                                                                     0,
-                                                                                     lpBaseAddress,
-                                                                                     lpSpace,
-                                                                                     &hRemoteThread,
-                                                                                     NULL);
+        get_function_from_ntdll<RtlCreateUserThreadType>("RtlCreateUserThread")(hProcess,
+                                                                                NULL,
+                                                                                0,
+                                                                                0,
+                                                                                0,
+                                                                                0,
+                                                                                lpBaseAddress,
+                                                                                lpSpace,
+                                                                                &hRemoteThread,
+                                                                                NULL);
     if(status < 0) {
         throw cpptrace::runtime_error(std::format(
             "Failed to create remote thread with RtlCreateUserThread, NTSTATUS=0x{:08X}",
@@ -69,17 +90,17 @@ win::Handle NtCreateThreadEx(HANDLE hProcess,
     HANDLE hRemoteThread = NULL;
 
     const auto status =
-        win::get_function_from_ntdll<NtCreateThreadExType>("NtCreateThreadEx")(&hRemoteThread,
-                                                                               GENERIC_ALL,
-                                                                               NULL,
-                                                                               hProcess,
-                                                                               lpBaseAddress,
-                                                                               lpSpace,
-                                                                               FALSE,
-                                                                               0,
-                                                                               0,
-                                                                               0,
-                                                                               NULL);
+        get_function_from_ntdll<NtCreateThreadExType>("NtCreateThreadEx")(&hRemoteThread,
+                                                                          GENERIC_ALL,
+                                                                          NULL,
+                                                                          hProcess,
+                                                                          lpBaseAddress,
+                                                                          lpSpace,
+                                                                          FALSE,
+                                                                          0,
+                                                                          0,
+                                                                          0,
+                                                                          NULL);
     if(status < 0) {
         throw cpptrace::runtime_error(
             std::format("Failed to create remote thread with NtCreateThreadEx, NTSTATUS=0x{:08X}",

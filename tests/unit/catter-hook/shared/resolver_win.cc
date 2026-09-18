@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <kota/zest/zest.h>
 
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 
 namespace fs = std::filesystem;
 namespace resolver = catter::hook::shared::resolver;

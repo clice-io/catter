@@ -16,7 +16,7 @@
 #include "environment.h"
 #include "error.h"
 #include "session.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 
 namespace {
 

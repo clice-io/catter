@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <vector>
 
-#include "shared/winapi.h"
+#include "winapi/win32.h"
 
 namespace catter::win {
 

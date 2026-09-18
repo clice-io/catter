@@ -27,7 +27,7 @@
 #include "util/log.h"
 #include "win/env.h"
 #include "win/inject.h"
-#include "win/win32.h"
+#include "winapi/win32.h"
 
 namespace catter::proxy::hook {
 

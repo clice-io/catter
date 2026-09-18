@@ -14,7 +14,7 @@
 #include "ipc.h"
 #include "option.h"
 #include "config/catter-proxy.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 #include "util/crossplat.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"

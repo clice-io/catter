@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "winapi.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
+#include "winapi/win32.h"
 
 namespace catter::hook::shared::resolver {
 using namespace catter::win;
