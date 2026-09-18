@@ -167,7 +167,12 @@ target("common-resolver")
 target("common")
     set_kind("static")
     add_includedirs("src/common", {public = true})
-    add_deps("common-option", "common-util", "common-config", "common-winapi", "common-resolver", { public = true })
+
+    if is_plat("windows") then
+        add_deps("common-winapi", {public = true})
+    end
+
+    add_deps("common-option", "common-util", "common-config", "common-resolver", { public = true })
 
 target("catter-js-types")
     set_kind("phony")

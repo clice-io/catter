@@ -1,5 +1,8 @@
 #include "winapi/win32.h"
 
+#include <filesystem>
+#include <limits>
+
 namespace catter::win {
 std::error_code wait_for_object(HANDLE handle, std::chrono::milliseconds ms) noexcept {
 
@@ -294,124 +297,96 @@ std::basic_string<char_t> SearchPathDynamic(const char_t* path,
         });
 }
 
-template <>
-DWORD FixGetEnvironmentVariable<char>(const char* name, char* buffer, DWORD size);
+template DWORD FixGetEnvironmentVariable<char>(const char* name, char* buffer, DWORD size);
 
-template <>
-DWORD FixGetEnvironmentVariable<wchar_t>(const wchar_t* name, wchar_t* buffer, DWORD size);
+template DWORD FixGetEnvironmentVariable<wchar_t>(const wchar_t* name, wchar_t* buffer, DWORD size);
 
-template <>
-DWORD FixGetFullPathName<char>(const char* file_name,
-                               DWORD buffer_size,
-                               char* buffer,
-                               char** file_part);
+template DWORD FixGetFullPathName<char>(const char* file_name,
+                                        DWORD buffer_size,
+                                        char* buffer,
+                                        char** file_part);
 
-template <>
-DWORD FixGetFullPathName<wchar_t>(const wchar_t* file_name,
-                                  DWORD buffer_size,
-                                  wchar_t* buffer,
-                                  wchar_t** file_part);
+template DWORD FixGetFullPathName<wchar_t>(const wchar_t* file_name,
+                                           DWORD buffer_size,
+                                           wchar_t* buffer,
+                                           wchar_t** file_part);
 
-template <>
-DWORD FixGetFileAttributes<char>(const char* path);
+template DWORD FixGetFileAttributes<char>(const char* path);
 
-template <>
-DWORD FixGetFileAttributes<wchar_t>(const wchar_t* path);
+template DWORD FixGetFileAttributes<wchar_t>(const wchar_t* path);
 
-template <>
-DWORD FixGetCurrentDirectory<char>(DWORD size, char* buffer);
+template DWORD FixGetCurrentDirectory<char>(DWORD size, char* buffer);
 
-template <>
-DWORD FixGetCurrentDirectory<wchar_t>(DWORD size, wchar_t* buffer);
+template DWORD FixGetCurrentDirectory<wchar_t>(DWORD size, wchar_t* buffer);
 
-template <>
-DWORD FixGetModuleFileName<char>(HMODULE module, char* buffer, DWORD size);
+template DWORD FixGetModuleFileName<char>(HMODULE module, char* buffer, DWORD size);
 
-template <>
-DWORD FixGetModuleFileName<wchar_t>(HMODULE module, wchar_t* buffer, DWORD size);
+template DWORD FixGetModuleFileName<wchar_t>(HMODULE module, wchar_t* buffer, DWORD size);
 
-template <>
-DWORD FixSearchPath<char>(const char* path,
-                          const char* file_name,
-                          const char* extension,
-                          DWORD buffer_size,
-                          char* buffer,
-                          char** file_part);
+template DWORD FixSearchPath<char>(const char* path,
+                                   const char* file_name,
+                                   const char* extension,
+                                   DWORD buffer_size,
+                                   char* buffer,
+                                   char** file_part);
 
-template <>
-DWORD FixSearchPath<wchar_t>(const wchar_t* path,
-                             const wchar_t* file_name,
-                             const wchar_t* extension,
-                             DWORD buffer_size,
-                             wchar_t* buffer,
-                             wchar_t** file_part);
+template DWORD FixSearchPath<wchar_t>(const wchar_t* path,
+                                      const wchar_t* file_name,
+                                      const wchar_t* extension,
+                                      DWORD buffer_size,
+                                      wchar_t* buffer,
+                                      wchar_t** file_part);
 
-template <>
-UINT FixGetSystemDirectory<char>(char* buffer, UINT size);
+template UINT FixGetSystemDirectory<char>(char* buffer, UINT size);
 
-template <>
-UINT FixGetSystemDirectory<wchar_t>(wchar_t* buffer, UINT size);
+template UINT FixGetSystemDirectory<wchar_t>(wchar_t* buffer, UINT size);
 
-template <>
-UINT FixGetWindowsDirectory<char>(char* buffer, UINT size);
+template UINT FixGetWindowsDirectory<char>(char* buffer, UINT size);
 
-template <>
-UINT FixGetWindowsDirectory<wchar_t>(wchar_t* buffer, UINT size);
+template UINT FixGetWindowsDirectory<wchar_t>(wchar_t* buffer, UINT size);
 
-template <>
-std::basic_string<char> GetEnvironmentVariableDynamic<char>(const char* name, size_t initial_size);
+template std::basic_string<char> GetEnvironmentVariableDynamic<char>(const char* name,
+                                                                     size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetEnvironmentVariableDynamic<wchar_t>(const wchar_t* name,
+template std::basic_string<wchar_t> GetEnvironmentVariableDynamic<wchar_t>(const wchar_t* name,
+                                                                           size_t initial_size);
+
+template std::basic_string<char> GetCurrentDirectoryDynamic<char>(size_t initial_size);
+
+template std::basic_string<wchar_t> GetCurrentDirectoryDynamic<wchar_t>(size_t initial_size);
+
+template std::basic_string<char> GetModulePathDynamic<char>(HMODULE module, size_t initial_size);
+
+template std::basic_string<wchar_t> GetModulePathDynamic<wchar_t>(HMODULE module,
                                                                   size_t initial_size);
 
-template <>
-std::basic_string<char> GetCurrentDirectoryDynamic<char>(size_t initial_size);
+template std::basic_string<char> GetModuleDirectory<char>(HMODULE module, size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetCurrentDirectoryDynamic<wchar_t>(size_t initial_size);
+template std::basic_string<wchar_t> GetModuleDirectory<wchar_t>(HMODULE module,
+                                                                size_t initial_size);
 
-template <>
-std::basic_string<char> GetModulePathDynamic<char>(HMODULE module, size_t initial_size);
+template std::basic_string<char> GetSystemDirectoryDynamic<char>(size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetModulePathDynamic<wchar_t>(HMODULE module, size_t initial_size);
+template std::basic_string<wchar_t> GetSystemDirectoryDynamic<wchar_t>(size_t initial_size);
 
-template <>
-std::basic_string<char> GetModuleDirectory<char>(HMODULE module, size_t initial_size);
+template std::basic_string<char> GetWindowsDirectoryDynamic<char>(size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetModuleDirectory<wchar_t>(HMODULE module, size_t initial_size);
+template std::basic_string<wchar_t> GetWindowsDirectoryDynamic<wchar_t>(size_t initial_size);
 
-template <>
-std::basic_string<char> GetSystemDirectoryDynamic<char>(size_t initial_size);
+template std::basic_string<char> GetFullPathNameDynamic<char>(std::basic_string_view<char> path,
+                                                              size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetSystemDirectoryDynamic<wchar_t>(size_t initial_size);
+template std::basic_string<wchar_t>
+    GetFullPathNameDynamic<wchar_t>(std::basic_string_view<wchar_t> path, size_t initial_size);
 
-template <>
-std::basic_string<char> GetWindowsDirectoryDynamic<char>(size_t initial_size);
+template std::basic_string<char> SearchPathDynamic<char>(const char* path,
+                                                         std::basic_string_view<char> file_name,
+                                                         const char* extension,
+                                                         size_t initial_size);
 
-template <>
-std::basic_string<wchar_t> GetWindowsDirectoryDynamic<wchar_t>(size_t initial_size);
-
-template <>
-std::basic_string<char> GetFullPathNameDynamic<char>(std::basic_string_view<char> path,
-                                                     size_t initial_size);
-
-template <>
-std::basic_string<wchar_t> GetFullPathNameDynamic<wchar_t>(std::basic_string_view<wchar_t> path,
-                                                           size_t initial_size);
-
-template <>
-std::basic_string<char> SearchPathDynamic<char>(const char* path,
-                                                std::basic_string_view<char> file_name,
-                                                const char* extension,
-                                                size_t initial_size);
-
-template <>
-std::basic_string<wchar_t> SearchPathDynamic<wchar_t>(const wchar_t* path,
-                                                      std::basic_string_view<wchar_t> file_name,
-                                                      const wchar_t* extension,
-                                                      size_t initial_size);
+template std::basic_string<wchar_t>
+    SearchPathDynamic<wchar_t>(const wchar_t* path,
+                               std::basic_string_view<wchar_t> file_name,
+                               const wchar_t* extension,
+                               size_t initial_size);
 }  // namespace catter::win

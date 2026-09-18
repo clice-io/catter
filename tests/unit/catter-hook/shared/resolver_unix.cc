@@ -9,7 +9,7 @@
 #include "resolver/resolver.h"
 
 namespace fs = std::filesystem;
-namespace resolver = catter::hook::shared::resolver;
+namespace resolver = catter::resolver;
 
 namespace {
 
