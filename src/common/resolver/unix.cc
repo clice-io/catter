@@ -9,9 +9,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 
-namespace catter::hook::shared::resolver {
+namespace catter::resolver {
 namespace {
 
 constexpr char k_dir_separator = '/';
@@ -87,6 +87,6 @@ std::expected<fs::path, int> resolve_from_path_env(std::string_view file, const 
     }
 }
 
-}  // namespace catter::hook::shared::resolver
+}  // namespace catter::resolver
 
 #endif

@@ -16,7 +16,7 @@
 #include "environment.h"
 #include "error.h"
 #include "session.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 
 namespace {
 
@@ -61,7 +61,7 @@ char** collect_variadic_envp(va_list* ap) {
 }
 
 std::filesystem::path resolve_path_like(const char* path) {
-    auto resolved = catter::hook::shared::resolver::resolve_path_like(path);
+    auto resolved = catter::resolver::resolve_path_like(path);
     if(!resolved.has_value()) {
         throw catter::PayloadError(resolved.error(),
                                    std::format("failed to resolve executable: {}", path));
@@ -71,7 +71,7 @@ std::filesystem::path resolve_path_like(const char* path) {
 
 std::filesystem::path resolve_from_path(const char* file, const char* const envp[]) {
     auto path_env = envp == nullptr ? nullptr : catter::env::get_env_value(envp, "PATH");
-    auto resolved = catter::hook::shared::resolver::resolve_from_path_env(file, path_env);
+    auto resolved = catter::resolver::resolve_from_path_env(file, path_env);
     if(!resolved.has_value()) {
         throw catter::PayloadError(resolved.error(),
                                    std::format("failed to resolve executable from PATH: {}", file));
@@ -80,7 +80,7 @@ std::filesystem::path resolve_from_path(const char* file, const char* const envp
 }
 
 std::filesystem::path resolve_from_search_path(const char* file, const char* search_path) {
-    auto resolved = catter::hook::shared::resolver::resolve_from_search_path(file, search_path);
+    auto resolved = catter::resolver::resolve_from_search_path(file, search_path);
     if(!resolved.has_value()) {
         throw catter::PayloadError(
             resolved.error(),

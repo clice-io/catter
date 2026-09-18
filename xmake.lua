@@ -127,14 +127,55 @@ add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_
 add_requires("kotatsu")
 
 
-target("common")
+target("common-option")
     set_kind("static")
     add_local_prefix_includedirs()
     add_includedirs("src/common", {public = true})
-    add_files("src/common/**.cc")
+    add_files("src/common/option/**.cc")
+    add_packages("kotatsu", {public = true})
 
+target("common-util")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/util/**.cc")
     add_packages("spdlog", {public = true})
     add_packages("kotatsu", {public = true})
+
+target("common-config")
+    set_kind("headeronly")
+    add_includedirs("src/common", {public = true})
+    add_packages("kotatsu", {public = true})
+
+target("common-winapi")
+    set_default(is_plat("windows"))
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+    add_files("src/common/winapi/**.cc")
+    add_syslinks("user32", "advapi32")
+
+target("common-resolver")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_includedirs("src/common", {public = true})
+    if is_plat("windows") then
+        add_files("src/common/resolver/win.cc")
+    else
+        add_files("src/common/resolver/unix.cc")
+    end
+
+    if is_plat("windows") then
+        add_deps("common-winapi", {public = true})
+    end
+
+target("common")
+    set_kind("static")
+    add_includedirs("src/common", {public = true})
+
+    if is_plat("windows") then
+        add_deps("common-winapi", {public = true})
+    end
+
+    add_deps("common-option", "common-util", "common-config", "common-resolver", { public = true })
 
 target("catter-js-types")
     set_kind("phony")
@@ -255,16 +296,6 @@ target("catter")
     add_deps("catter-core")
     add_files("src/catter/main.cc")
 
-target("hook-resolver")
-    set_kind("static")
-    add_local_prefix_includedirs()
-    add_includedirs("src/catter-hook/", {public = true})
-    if is_plat("windows") then
-        add_syslinks("user32", "advapi32")
-        add_files("src/catter-hook/shared/resolver_win.cc")
-    else
-        add_files("src/catter-hook/shared/resolver_unix.cc")
-    end
 
 target("catter-hook-win64")
     set_default(is_plat("windows"))
@@ -273,7 +304,7 @@ target("catter-hook-win64")
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
     add_packages("minhook")
-    add_deps("hook-resolver")
+    add_deps("common-resolver")
     local toolchain = get_config("toolchain")
     if toolchain == "msvc" or toolchain == "clang-cl" then
         add_cxxflags("/GR-")
@@ -288,7 +319,7 @@ target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
     add_local_prefix_includedirs()
-    add_deps("hook-resolver")
+    add_deps("common-resolver")
 
     if is_mode("debug") then
         add_deps("common")
@@ -340,7 +371,7 @@ target("catter-hook")
 target("catter-proxy")
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_deps("common", "catter-hook", "hook-resolver")
+    add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
 
@@ -392,7 +423,7 @@ target("ut-catter-hook-unix")
     add_files("tests/unit/catter-hook/unix/**.cc")
     add_files("tests/unit/catter-hook/shared/**.cc")
 
-    add_deps("common", "hook-resolver")
+    add_deps("common")
 
     if is_plat("linux", "macosx") then
         add_tests("default")
@@ -408,7 +439,7 @@ target("ut-catter-hook-win64")
     add_files("tests/unit/catter-hook/win/**.cc")
     add_files("tests/unit/catter-hook/shared/**.cc")
 
-    add_deps("common", "hook-resolver")
+    add_deps("common")
 
     if is_plat("windows") then
         add_tests("default")

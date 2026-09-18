@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace catter::hook::shared::resolver {
+namespace catter::resolver {
 
 #ifdef CATTER_WINDOWS
 
@@ -73,4 +73,4 @@ std::expected<std::filesystem::path, int> resolve_from_path_env(std::string_view
 
 #endif
 
-}  // namespace catter::hook::shared::resolver
+}  // namespace catter::resolver

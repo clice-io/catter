@@ -14,7 +14,7 @@
 #include "ipc.h"
 #include "option.h"
 #include "config/catter-proxy.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
 #include "util/crossplat.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"
@@ -29,7 +29,7 @@ using catter::data::action;
 std::string resolve_executable(std::string_view exe, const std::vector<std::string>& env) {
 
 #ifdef CATTER_WINDOWS
-    return catter::hook::shared::resolver::resolve_command_line_token<char>(exe);
+    return catter::resolver::resolve_command_line_token<char>(exe);
 #else
     std::string path_env;
     for(const auto& env_var: env) {
@@ -41,7 +41,7 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
     if(path_env.empty()) {
         throw cpptrace::runtime_error("PATH environment variable not found");
     }
-    auto resolved = catter::hook::shared::resolver::resolve_from_path_env(exe, path_env.c_str());
+    auto resolved = catter::resolver::resolve_from_path_env(exe, path_env.c_str());
     if(!resolved.has_value()) {
         // if not found, just return the original string and let the system handle it, which will
         // produce the same error as if we did not resolve it.

@@ -7,10 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include "winapi.h"
-#include "shared/resolver.h"
+#include "resolver/resolver.h"
+#include "winapi/win32.h"
 
-namespace catter::hook::shared::resolver {
+namespace catter::resolver {
 using namespace catter::win;
 
 namespace {
@@ -205,6 +205,6 @@ template std::basic_string<wchar_t> resolve_application_name(std::basic_string_v
 template std::basic_string<char> resolve_command_line_token(std::basic_string_view<char>);
 template std::basic_string<wchar_t> resolve_command_line_token(std::basic_string_view<wchar_t>);
 
-}  // namespace catter::hook::shared::resolver
+}  // namespace catter::resolver
 
 #endif
