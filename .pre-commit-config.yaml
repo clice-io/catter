@@ -29,7 +29,7 @@ repos:
       - id: eslint
         name: ESLint
         entry: pnpm run eslint
-        language: node
+        language: system
         files: '\.(ts)$'
         types: [file]
         require_serial: true
@@ -37,7 +37,7 @@ repos:
       - id: prettier
         name: Prettier
         entry: pnpm exec prettier --write
-        language: node
+        language: system
         files: '\.(ts)$'
         types: [file]
         require_serial: true
