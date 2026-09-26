@@ -383,6 +383,9 @@ def timeout(seconds: float, command: list[str]) -> int:
 
 
 def main() -> None:
+    # Failure details quote non-ASCII input, which a Windows console encoding
+    # cannot print.
+    sys.stdout.reconfigure(errors="backslashreplace")
     match sys.argv[1:]:
         case ["prepare", project, dest]:
             prepare(project, dest)

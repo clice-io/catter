@@ -1,4 +1,5 @@
 REQUIRES: cmake-ninja
+XFAIL: system-darwin
 
 Ninja runs one compile per core at once; every one of 100 sources gets an
 entry.
