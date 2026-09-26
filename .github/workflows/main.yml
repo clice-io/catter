@@ -10,11 +10,8 @@ on:
   # docs-only commit the package artifacts a release tag needs.
   workflow_dispatch:
 
-# Every main commit gets a group of its own: a shared group would still drop
-# queued runs when pushes land close together, and a commit without a green
-# run has no packages for a release to promote.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
