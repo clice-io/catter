@@ -39,13 +39,21 @@ jobs:
           # the branch tip for a manual dispatch.
           SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
           # A tag pushed right after its commit lands on main arrives while
-          # that commit's main run is still building; wait for it.
-          for _ in $(seq 90); do
-            PENDING=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
-              --workflow main.yml --branch main --json status \
-              -q '[.[] | select(.status != "completed")] | length')
-            [ "$PENDING" -eq 0 ] && break
-            echo "waiting for $PENDING main run(s) on $SHA"
+          # that commit's main run is still building, or before GitHub has
+          # even registered it; wait for it. A commit that never reached main
+          # has no run at all, so the wait for one to appear is short.
+          for I in $(seq 90); do
+            STATUSES=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
+              --workflow main.yml --branch main --json status -q '.[].status')
+            TOTAL=$(echo "$STATUSES" | grep -c . || true)
+            PENDING=$(echo "$STATUSES" | grep -vc -e '^completed$' -e '^$' || true)
+            if [ "$TOTAL" -eq 0 ] && [ "$I" -le 5 ]; then
+              echo "waiting for a main run on $SHA to appear"
+            elif [ "$PENDING" -gt 0 ]; then
+              echo "waiting for $PENDING main run(s) on $SHA"
+            else
+              break
+            fi
             sleep 60
           done
           RUN_IDS=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
@@ -86,12 +94,13 @@ jobs:
 
       # xpack names packages after the version in xmake.lua
       # (catter-<version>-<plat>-<arch>.<ext>); the release carries the tag's.
+      # The platform anchors the match, since either version may contain '-'.
       - name: Rename to the tag version
         working-directory: pkg
         run: |
           VERSION="${TAG#v}"
           for FILE in catter-*; do
-            NEW="catter-${VERSION}-${FILE#catter-*-}"
+            NEW=$(echo "$FILE" | sed -E "s/^catter-.*-(linux|macosx|windows)-/catter-${VERSION}-\1-/")
             [ "$FILE" = "$NEW" ] || mv "$FILE" "$NEW"
           done
           ls -l

@@ -31,6 +31,13 @@ jobs:
           else
             subject=$(echo "$COMMIT_MSG" | head -n1)
             label="Commit message"
+            if [[ "$subject" == "Merge "* ]]; then
+              exit 0
+            fi
+          fi
+          # GitHub's revert button titles its PR 'Revert "<original title>"'.
+          if [[ "$subject" == 'Revert "'* ]]; then
+            exit 0
           fi
           if [[ ! "$subject" =~ $pattern ]]; then
             echo "::error::$label must follow conventional commit format: type(scope)?: description"
