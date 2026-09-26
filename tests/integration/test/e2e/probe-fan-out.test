@@ -1,4 +1,4 @@
-XFAIL: debug-build, system-darwin
+XFAIL: system-darwin, system-linux && debug-build
 
 128 commands started at once all run and report their output and exit codes
 through catter.
