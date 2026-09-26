@@ -587,7 +587,12 @@ def timeout(seconds: float, command: list[str]) -> int:
         if WINDOWS:
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)])
         else:
-            subprocess.run(["pkill", "-KILL", "-s", str(process.pid)])
+            # BSD pkill wants a pattern besides the session.
+            subprocess.run(["pkill", "-KILL", "-s", str(process.pid), "."])
+            try:
+                os.killpg(process.pid, 9)
+            except ProcessLookupError:
+                pass
         process.wait()
         print(f"TIMEOUT after {seconds}s: {command}", flush=True)
         return 124
