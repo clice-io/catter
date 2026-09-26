@@ -1,8 +1,8 @@
 script::cdb -o into a directory that does not exist yet creates it.
 
 RUN: %e2e prepare hello %t
-RUN: %if !system-windows %{ cd %t && %catter script::cdb -q -o %t/new/dir/compile_commands.json -- %cxx -c -DCATTER_E2E=1 -Iinclude src/main.cc -o main.o %}
-RUN: %if system-windows %{ cd %t && %catter script::cdb -q -o %t/new/dir/compile_commands.json -- %cxx /nologo /c /DCATTER_E2E=1 /Iinclude src/main.cc %}
+RUN: %if !system-windows %{ cd %t && %catter script::cdb -o %t/new/dir/compile_commands.json -- %cxx -c -DCATTER_E2E=1 -Iinclude src/main.cc -o main.o %}
+RUN: %if system-windows %{ cd %t && %catter script::cdb -o %t/new/dir/compile_commands.json -- %cxx /nologo /c /DCATTER_E2E=1 /Iinclude src/main.cc %}
 RUN: %e2e summarize %t/new/dir/compile_commands.json %t | FileCheck %s
 
 CHECK: entries: 1

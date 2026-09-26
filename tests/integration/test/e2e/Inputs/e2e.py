@@ -501,7 +501,7 @@ def probe(scenario: str, args: list[str]) -> str | None:
             start = time.perf_counter()
             for _ in range(count):
                 subprocess.run(
-                    [sys.executable, "-S", "-c", ""], check=True, timeout=300
+                    [sys.executable, "-S", "-c", "pass"], check=True, timeout=300
                 )
             per = (time.perf_counter() - start) / count * 1000
             print(f"spawn-many: {per:.1f} ms per process over {count}", flush=True)
@@ -571,17 +571,23 @@ def report(scenario: str, failure: str | None) -> None:
 
 
 def timeout(seconds: float, command: list[str]) -> int:
-    # Its own process group, so the whole tree can go: a leftover child
-    # holding the output pipe would keep the test waiting.
+    if not WINDOWS and os.environ.get("CATTER_E2E_TIMEOUT"):
+        # Nested under another timeout: stay in its session so that one kill
+        # reaches everything.
+        os.execvp(command[0], command)
+    # A session of its own, so the whole tree can go, including processes
+    # that moved to process groups of their own (as Ninja's children do): a
+    # leftover holding the output pipe would keep the test waiting.
     options = {} if WINDOWS else {"start_new_session": True}
-    process = subprocess.Popen(command, **options)
+    env = dict(os.environ, CATTER_E2E_TIMEOUT="1")
+    process = subprocess.Popen(command, env=env, **options)
     try:
         return process.wait(timeout=seconds)
     except subprocess.TimeoutExpired:
         if WINDOWS:
             subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)])
         else:
-            os.killpg(process.pid, 9)
+            subprocess.run(["pkill", "-KILL", "-s", str(process.pid)])
         process.wait()
         print(f"TIMEOUT after {seconds}s: {command}", flush=True)
         return 124

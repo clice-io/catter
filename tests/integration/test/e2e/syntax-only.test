@@ -2,8 +2,8 @@ A compile that only checks syntax (-fsyntax-only, /Zs), as linters and
 editors run, still describes how the source is compiled.
 
 RUN: %e2e prepare hello %t
-RUN: %if !system-windows %{ cd %t && %catter script::cdb -q -o %t/compile_commands.json -- %cxx -fsyntax-only -DCATTER_E2E=1 -Iinclude src/main.cc %}
-RUN: %if system-windows %{ cd %t && %catter script::cdb -q -o %t/compile_commands.json -- %cxx /nologo /Zs /DCATTER_E2E=1 /Iinclude src/main.cc %}
+RUN: %if !system-windows %{ cd %t && %catter script::cdb -o %t/compile_commands.json -- %cxx -fsyntax-only -DCATTER_E2E=1 -Iinclude src/main.cc %}
+RUN: %if system-windows %{ cd %t && %catter script::cdb -o %t/compile_commands.json -- %cxx /nologo /Zs /DCATTER_E2E=1 /Iinclude src/main.cc %}
 RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
 
 CHECK: entries: 1
