@@ -12,3 +12,4 @@ CHECK: entries: 100
 CHECK-NEXT: other entries: 0
 CHECK-NEXT: missing sources: 0
 CHECK-NEXT: without define: 0
+CHECK-NEXT: unexpanded response files: 0

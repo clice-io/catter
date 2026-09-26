@@ -29,6 +29,9 @@ concurrent -- <catter command...>
 absent <path>
     Print "PASS absent" if <path> does not exist.
 
+time <label> -- <command...>
+    Run a command and print how long it took; its exit code is kept.
+
 timeout <seconds> -- <command...>
     Run a command, killing it after <seconds>; its exit code is kept.
 """
@@ -105,7 +108,7 @@ def summarize(database: str, root: str, brief: bool) -> None:
         entries = json.load(f)
 
     lines = []
-    others = missing = undefined = 0
+    others = missing = undefined = unexpanded = 0
     for entry in entries:
         directory = entry["directory"]
         file = os.path.join(directory, entry["file"])
@@ -117,6 +120,7 @@ def summarize(database: str, root: str, brief: bool) -> None:
         defined = has_define(entry["arguments"])
         missing += not exists
         undefined += not defined
+        unexpanded += any(arg.startswith("@") for arg in entry["arguments"])
         output = entry.get("output")
         if output:
             output = os.path.join(directory, output)
@@ -135,6 +139,7 @@ def summarize(database: str, root: str, brief: bool) -> None:
     if brief:
         print(f"missing sources: {missing}")
         print(f"without define: {undefined}")
+        print(f"unexpanded response files: {unexpanded}")
         return
     for line in sorted(lines):
         print(line)
@@ -203,8 +208,51 @@ def run_child(mode: str, args: list[str]) -> None:
             open(args[0], "w").close()
         case "tag":
             pass
+        case "argv0":
+            out.write(sys.orig_argv[0].encode())
+        case "echo":
+            out.write(args[0].encode())
+        case "binary":
+            out.write(bytes(range(256)) * 4096)
+            sys.stderr.buffer.write(bytes(range(255, -1, -1)) * 1024)
+        case "write-fd":
+            os.write(int(args[0]), b"through fd")
+        case "sleep-pid":
+            path, seconds = args
+            with open(path + ".tmp", "w") as f:
+                f.write(str(os.getpid()))
+            os.replace(path + ".tmp", path)
+            time.sleep(float(seconds))
         case _:
             sys.exit(f"unknown child mode {mode}")
+
+
+def pid_alive(pid: int) -> bool:
+    if WINDOWS:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        code = ctypes.c_ulong()
+        kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+        kernel32.CloseHandle(handle)
+        return code.value == 259  # STILL_ACTIVE
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def kill_pid(pid: int) -> None:
+    if WINDOWS:
+        subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+    else:
+        os.kill(pid, 9)
 
 
 def probe(scenario: str, args: list[str]) -> str | None:
@@ -314,6 +362,163 @@ def probe(scenario: str, args: list[str]) -> str | None:
             time.sleep(2)
             child("touch", args[0])
 
+        case "missing-program":
+            try:
+                result = subprocess.run(
+                    ["catter-e2e-no-such-program"], capture_output=True, timeout=300
+                )
+            except FileNotFoundError:
+                pass
+            else:
+                return (
+                    f"starting a missing program did not fail; it ran and exited with "
+                    f"{result.returncode}: {result.stderr[-300:]!r}"
+                )
+
+        case "not-executable":
+            directory = tempfile.mkdtemp()
+            path = os.path.join(directory, "not-executable")
+            with open(path, "w") as f:
+                f.write("#!/bin/sh\necho ran\n")
+            os.chmod(path, 0o644)
+            try:
+                result = subprocess.run([path], capture_output=True, timeout=300)
+            except PermissionError:
+                result = None
+            shutil.rmtree(directory)
+            if result is not None:
+                return (
+                    f"starting a file without execute permission did not fail; it exited "
+                    f"with {result.returncode}: {result.stdout!r} {result.stderr[-300:]!r}"
+                )
+
+        case "argv0":
+            result = subprocess.run(
+                ["custom-argv0", HERE, "child", "argv0"],
+                executable=sys.executable,
+                capture_output=True,
+                timeout=300,
+            )
+            if result.stdout != b"custom-argv0":
+                return (
+                    f"started with argv[0] 'custom-argv0', child saw {result.stdout!r}"
+                )
+
+        case "kill-child":
+            # A build tool killing a command it started (a timeout, a cancelled
+            # job) must stop the command itself.
+            pidfile = os.path.join(tempfile.mkdtemp(), "pid")
+            process = subprocess.Popen(
+                [sys.executable, HERE, "child", "sleep-pid", pidfile, "120"]
+            )
+            deadline = time.time() + 120
+            while not os.path.exists(pidfile) and time.time() < deadline:
+                time.sleep(0.1)
+            if not os.path.exists(pidfile):
+                process.kill()
+                return "the child never started"
+            pid = int(open(pidfile).read())
+            process.kill()
+            process.wait()
+            time.sleep(2)
+            if pid_alive(pid):
+                kill_pid(pid)
+                return f"killed the command started as pid {process.pid}, but the program (pid {pid}) kept running"
+
+        case "fan-out":
+            count = int(args[0])
+            if WINDOWS:
+                command = [
+                    os.path.join(os.environ["SYSTEMROOT"], "System32", "cmd.exe"),
+                    "/d",
+                    "/c",
+                    "echo",
+                ]
+            else:
+                command = ["/bin/echo"] if os.path.exists("/bin/echo") else ["echo"]
+            processes = [
+                subprocess.Popen(
+                    [*command, f"n{i}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                for i in range(count)
+            ]
+            failures = []
+            for i, process in enumerate(processes):
+                out, err = process.communicate(timeout=300)
+                if process.returncode != 0 or out.strip() != f"n{i}".encode():
+                    failures.append((i, process.returncode, out[-80:], err[-200:]))
+            if failures:
+                return f"{len(failures)} of {count} simultaneous children failed, e.g. {failures[:3]!r}"
+
+        case "binary-output":
+            result = child("binary")
+            if result.stdout != bytes(range(256)) * 4096:
+                return f"stdout: expected 1 MiB of all byte values, received {len(result.stdout)} bytes"
+            if result.stderr != bytes(range(255, -1, -1)) * 1024:
+                return f"stderr: expected 256 KiB of all byte values, received {len(result.stderr)} bytes"
+
+        case "big-env":
+            value = "v" * (30000 if WINDOWS else 100_000)
+            env = dict(os.environ, CATTER_PROBE_BIG=value)
+            result = child("env", "CATTER_PROBE_BIG", env=env)
+            got = json.loads(result.stdout or b"null")
+            if got != {"CATTER_PROBE_BIG": value}:
+                size = len((got or {}).get("CATTER_PROBE_BIG") or "")
+                return f"sent a {len(value)}-character variable, child saw {size} characters (exit {result.returncode})"
+
+        case "pass-fds":
+            read, write = os.pipe()
+            result = child("write-fd", str(write), pass_fds=(write,))
+            os.close(write)
+            data = os.read(read, 100)
+            os.close(read)
+            if data != b"through fd":
+                return f"child could not write to an inherited fd: exit {result.returncode}, {result.stderr[-300:]!r}"
+
+        case "batch":
+            directory = tempfile.mkdtemp()
+            script = os.path.join(directory, "probe.bat")
+            with open(script, "w") as f:
+                f.write("@echo %*\n")
+            result = subprocess.run(
+                [script, "a b", "c"], capture_output=True, timeout=300
+            )
+            shutil.rmtree(directory)
+            if result.stdout.strip() != b'"a b" c':
+                return f"batch file printed {result.stdout!r}, exit {result.returncode}, {result.stderr[-300:]!r}"
+
+        case "cmd-quoting":
+            # cmd.exe does not split its command line like other programs, so
+            # it must receive the caller's command line as written.
+            line = 'cmd.exe /d /c "echo first&& echo "quoted arg"&& echo third"'
+            result = subprocess.run(line, capture_output=True, timeout=300)
+            got = result.stdout.decode(errors="replace").split()
+            if got != ["first", '"quoted', 'arg"', "third"]:
+                return f"cmd.exe printed {result.stdout!r}, exit {result.returncode}"
+
+        case "spawn-many":
+            count = int(args[0])
+            start = time.perf_counter()
+            for _ in range(count):
+                subprocess.run(
+                    [sys.executable, "-S", "-c", ""], check=True, timeout=300
+                )
+            per = (time.perf_counter() - start) / count * 1000
+            print(f"spawn-many: {per:.1f} ms per process over {count}", flush=True)
+
+        case "modify":
+            result = child("argv", "modify-me")
+            got = json.loads(result.stdout or b"null")
+            if got != ["modify-me", "added-by-script"]:
+                return (
+                    f"the script's modify() did not take effect; child received {got!r}"
+                )
+
+        case "drop":
+            result = child("argv", "drop-me")
+            if result.returncode != 0 or result.stdout != b"":
+                return f"the script dropped the command, but it ran: exit {result.returncode}, output {result.stdout!r}"
+
         case "tagged":
             tag, count = args
             for i in range(int(count)):
@@ -382,6 +587,13 @@ def timeout(seconds: float, command: list[str]) -> int:
         return 124
 
 
+def timed(label: str, command: list[str]) -> int:
+    start = time.perf_counter()
+    code = subprocess.run(command).returncode
+    print(f"{label}: {time.perf_counter() - start:.2f} s", flush=True)
+    return code
+
+
 def main() -> None:
     # Failure details quote non-ASCII input, which a Windows console encoding
     # cannot print.
@@ -403,6 +615,8 @@ def main() -> None:
             report("concurrent", concurrent(catter))
         case ["absent", path]:
             report("absent", f"{path} exists" if os.path.exists(path) else None)
+        case ["time", label, "--", *command]:
+            sys.exit(timed(label, command))
         case ["timeout", seconds, "--", *command]:
             sys.exit(timeout(float(seconds), command))
         case _:

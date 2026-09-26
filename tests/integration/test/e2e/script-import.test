@@ -1,0 +1,6 @@
+A script imports a module next to it by relative path.
+
+RUN: %catter %S/Inputs/import-relative.js -- %e2e probe nested | FileCheck %s
+
+CHECK: imported from a relative module
+CHECK: PASS nested

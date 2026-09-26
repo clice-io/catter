@@ -1,0 +1,6 @@
+An unknown builtin script is reported before the build starts.
+
+RUN: not %catter script::no-such-script -- %e2e probe nested 2>&1 | FileCheck %s
+
+CHECK: Unknown builtin script
+CHECK-NOT: PASS nested

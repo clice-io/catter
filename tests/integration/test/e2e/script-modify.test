@@ -1,0 +1,6 @@
+A script's modify() changes the command that runs: modify.js appends an
+argument to the command carrying "modify-me".
+
+RUN: %catter %S/Inputs/modify.js -- %e2e probe modify | FileCheck %s
+
+CHECK: PASS modify

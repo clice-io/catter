@@ -1,0 +1,12 @@
+One command that compiles and links two sources, as small Makefiles and
+scripts do, gives an entry for each source.
+
+RUN: %e2e prepare hello %t
+RUN: %if !system-windows %{ cd %t && %catter script::cdb -q -o %t/compile_commands.json -- %cxx -DCATTER_E2E=1 -Iinclude src/main.cc src/util.cc -o hello %}
+RUN: %if system-windows %{ cd %t && %catter script::cdb -q -o %t/compile_commands.json -- %cxx /nologo /EHsc /DCATTER_E2E=1 /Iinclude src/main.cc src/util.cc /Fehello.exe %}
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: 0
+CHECK-NEXT: src/main.cc exists dir=. output={{.*}} define=yes
+CHECK-NEXT: src/util.cc exists dir=. output={{.*}} define=yes

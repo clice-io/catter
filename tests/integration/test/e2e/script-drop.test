@@ -1,0 +1,5 @@
+A script's drop() keeps the command from running and reports success.
+
+RUN: %catter %S/Inputs/drop.js -- %e2e probe drop | FileCheck %s
+
+CHECK: PASS drop

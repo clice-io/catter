@@ -1,0 +1,10 @@
+REQUIRES: cmake-ninja
+
+Prints how long a 100-source build takes directly and under catter (see the
+test output).
+
+RUN: %e2e generate 100 %t
+RUN: cmake -S %t -B %t/direct -G Ninja
+RUN: cmake -S %t -B %t/catter -G Ninja
+RUN: %e2e time direct -- cmake --build %t/direct
+RUN: %e2e time catter -- %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/catter

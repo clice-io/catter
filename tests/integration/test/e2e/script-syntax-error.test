@@ -1,0 +1,7 @@
+A script that does not parse fails with the syntax error before the build
+starts.
+
+RUN: not %e2e timeout 90 -- %catter %S/Inputs/syntax-error.js -- %e2e probe nested 2>&1 | FileCheck %s
+
+CHECK: SyntaxError
+CHECK-NOT: PASS nested

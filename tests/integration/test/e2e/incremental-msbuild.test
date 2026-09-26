@@ -1,0 +1,13 @@
+REQUIRES: msbuild
+
+MSBuild records which files each compile read and wrote (its tracker injects
+itself into cl.exe) and skips up-to-date projects on the next build. After
+a build under catter, building again compiles nothing.
+
+RUN: %e2e prepare hello %t
+RUN: env -u CMAKE_GENERATOR cmake -S %t -B %t/build
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build --config Debug
+RUN: cmake --build %t/build --config Debug | FileCheck %s
+
+CHECK-NOT: main.cc
+CHECK: hello.vcxproj ->

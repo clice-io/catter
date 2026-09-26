@@ -1,0 +1,9 @@
+REQUIRES: system-windows
+
+cmd.exe parses its own command line, so it must receive the command line
+its caller wrote, not one rebuilt from split arguments.
+
+RUN: %e2e probe cmd-quoting | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe cmd-quoting | FileCheck %s
+
+CHECK: PASS cmd-quoting

@@ -1,0 +1,7 @@
+A program started with an argv[0] of the caller's choosing sees that argv[0]
+(clang++ and other multi-call programs choose their mode from it).
+
+RUN: %e2e probe argv0 | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe argv0 | FileCheck %s
+
+CHECK: PASS argv0

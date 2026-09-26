@@ -1,0 +1,13 @@
+REQUIRES: cmake-ninja
+XFAIL: system-darwin
+
+script::target-tree shows the executable of a real build with the objects
+and sources it is made of.
+
+RUN: %e2e prepare hello %t
+RUN: cmake -S %t -B %t/build -G Ninja
+RUN: %catter script::target-tree -- cmake --build %t/build | FileCheck %s
+
+CHECK: {{^}}hello
+CHECK-DAG: main.cc.{{o|obj}}
+CHECK-DAG: util.cc.{{o|obj}}

@@ -1,0 +1,14 @@
+REQUIRES: cmake-ninja
+
+Building again into the same database (the default merges with the existing
+file) keeps one entry per compile instead of adding duplicates.
+
+RUN: %e2e prepare hello %t
+RUN: cmake -S %t -B %t/build -G Ninja
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
+RUN: cmake --build %t/build --target clean
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: 0

@@ -1,0 +1,8 @@
+When a build tool kills a command it started (a timeout, a cancelled job),
+the program itself stops, rather than only the process catter put in
+between.
+
+RUN: %e2e probe kill-child | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe kill-child | FileCheck %s
+
+CHECK: PASS kill-child

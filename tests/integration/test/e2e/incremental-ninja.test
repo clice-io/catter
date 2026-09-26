@@ -1,0 +1,12 @@
+REQUIRES: cmake-ninja
+XFAIL: system-darwin
+
+A build under catter leaves Ninja's dependency records as a direct build
+does: building again right after has nothing to do.
+
+RUN: %e2e prepare hello %t
+RUN: cmake -S %t -B %t/build -G Ninja
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
+RUN: cmake --build %t/build | FileCheck %s
+
+CHECK: no work to do

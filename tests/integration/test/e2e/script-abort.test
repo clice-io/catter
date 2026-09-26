@@ -1,0 +1,7 @@
+A script's abort() stops the build with an error, instead of hanging or
+running the command.
+
+RUN: not %e2e timeout 90 -- %catter %S/Inputs/abort.js -- %e2e probe drop 2>&1 | FileCheck %s
+
+CHECK-NOT: TIMEOUT
+CHECK-NOT: PASS drop

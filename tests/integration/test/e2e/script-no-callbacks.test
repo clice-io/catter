@@ -1,0 +1,6 @@
+A script that registers no callbacks still lets the build run.
+
+RUN: %e2e timeout 90 -- %catter %S/Inputs/no-callbacks.js -- %e2e probe nested | FileCheck %s
+
+CHECK: a script without callbacks
+CHECK: PASS nested
