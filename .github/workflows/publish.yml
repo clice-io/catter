@@ -38,6 +38,16 @@ jobs:
           # Resolve the tag itself rather than trusting GITHUB_SHA, which is
           # the branch tip for a manual dispatch.
           SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          # A tag pushed right after its commit lands on main arrives while
+          # that commit's main run is still building; wait for it.
+          for _ in $(seq 90); do
+            PENDING=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
+              --workflow main.yml --branch main --json status \
+              -q '[.[] | select(.status != "completed")] | length')
+            [ "$PENDING" -eq 0 ] && break
+            echo "waiting for $PENDING main run(s) on $SHA"
+            sleep 60
+          done
           RUN_IDS=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
             --workflow main.yml --branch main --status success \
             --json databaseId -q '.[].databaseId')
@@ -64,7 +74,7 @@ jobs:
             fi
             echo "run $RUN_ID is missing:$MISSING"
           done
-          echo "::error::no green main run for $TAG ($SHA) has live package artifacts (path-filtered build, or expired after 30 days) — run the main workflow manually on that commit first"
+          echo "::error::no green main run for $TAG ($SHA) has live package artifacts (path-filtered build, or expired after 30 days) — if that commit is main's tip, run the main workflow manually, then dispatch this workflow for $TAG"
           exit 1
 
       - name: Download packages
@@ -81,7 +91,8 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           for FILE in catter-*; do
-            mv "$FILE" "catter-${VERSION}-${FILE#catter-*-}"
+            NEW="catter-${VERSION}-${FILE#catter-*-}"
+            [ "$FILE" = "$NEW" ] || mv "$FILE" "$NEW"
           done
           ls -l
 

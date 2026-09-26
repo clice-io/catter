@@ -74,7 +74,8 @@ jobs:
             git --no-pager diff --stat
             git --no-pager diff
             failed=1
-          elif [[ "$CHECK_OUTCOME" == "failure" ]]; then
+          fi
+          if [[ "$CHECK_OUTCOME" == "failure" ]]; then
             echo "::error::'pixi run -e dev ci-check' failed; see the step log above."
             failed=1
           fi
@@ -84,8 +85,10 @@ jobs:
           fi
           exit $failed
 
+  # Labels are synced from main only: skip-delete is off, so a branch's
+  # labels.yml would otherwise rewrite the repository's labels.
   sync-labels:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
