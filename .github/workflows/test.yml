@@ -10,6 +10,11 @@ jobs:
       matrix:
         os: [windows-2025, ubuntu-24.04, macos-15]
         mode: [debug, release]
+        env: [dev]
+        include:
+          # Windows built with xclang for MinGW.
+          - { os: windows-2025, mode: debug, env: mingw }
+          - { os: windows-2025, mode: release, env: mingw }
 
     runs-on: ${{ matrix.os }}
 
@@ -24,31 +29,33 @@ jobs:
         with:
           xmake-version: v3.0.8
           actions-cache-folder: ".xmake-cache"
-          actions-cache-key: ${{ matrix.os }}
+          actions-cache-key: ${{ matrix.os }}-${{ matrix.env }}
           package-cache: true
           # Debug builds install their packages with sanitizer configs, so
           # the two modes must not share one package cache.
-          package-cache-key: ${{ matrix.os }}-${{ matrix.mode }}-pixi
+          package-cache-key: ${{ matrix.os }}-${{ matrix.env }}-${{ matrix.mode }}-pixi
 
       - uses: ./.github/actions/setup-pixi
+        with:
+          environments: ${{ matrix.env }}
 
       # Configures, builds, and runs the unit and integration tests.
       - name: Build and test
         timeout-minutes: 60
-        run: pixi run -e dev ci-build ${{ matrix.mode }}
+        run: pixi run -e ${{ matrix.env }} ci-build ${{ matrix.mode }}
 
       # Package the exact binaries the suites above just validated. These
       # artifacts are what releases promote — there is no separate release
       # build (see publish.yml).
       - name: Package
         if: ${{ matrix.mode == 'release' }}
-        run: pixi run -e dev package
+        run: pixi run -e ${{ matrix.env }} package
 
       - name: Upload package artifact
         if: ${{ matrix.mode == 'release' }}
         uses: actions/upload-artifact@v7
         with:
-          name: package-${{ matrix.os }}
+          name: package-${{ matrix.os }}${{ matrix.env != 'dev' && format('-{0}', matrix.env) || '' }}
           path: release-assets/**
           if-no-files-found: error
           # 30 days bounds how old a commit a tag can still promote.

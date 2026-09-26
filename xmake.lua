@@ -2,7 +2,7 @@ set_version("0.1.0")
 set_project("catter")
 
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
-set_allowedplats("windows", "linux", "macosx")
+set_allowedplats("windows", "mingw", "linux", "macosx")
 
 set_languages("c++23")
 
@@ -58,7 +58,8 @@ if has_config("dev") then
             if toolchain == "msvc" then
                 set_policy("build.sanitizer.address", true)
             end
-        else
+        elseif not is_plat("mingw") then
+            -- xclang has no ASan runtime for MinGW.
             set_policy("build.sanitizer.address", true)
         end
 
@@ -107,7 +108,7 @@ if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
-elseif is_plat("windows") then
+elseif is_plat("windows", "mingw") then
     add_defines("CATTER_WINDOWS")
     add_defines("WIN32_LEAN_AND_MEAN", "NOMINMAX")
     add_requires("minhook", {version = "v1.3.4"})
@@ -147,7 +148,7 @@ target("common-config")
     add_packages("kotatsu", {public = true})
 
 target("common-winapi")
-    set_default(is_plat("windows"))
+    set_default(is_plat("windows", "mingw"))
     set_kind("static")
     add_includedirs("src/common", {public = true})
     add_files("src/common/winapi/**.cc")
@@ -157,13 +158,13 @@ target("common-resolver")
     set_kind("static")
     add_local_prefix_includedirs()
     add_includedirs("src/common", {public = true})
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_files("src/common/resolver/win.cc")
     else
         add_files("src/common/resolver/unix.cc")
     end
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_deps("common-winapi", {public = true})
     end
 
@@ -171,7 +172,7 @@ target("common")
     set_kind("static")
     add_includedirs("src/common", {public = true})
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_deps("common-winapi", {public = true})
     end
 
@@ -298,8 +299,10 @@ target("catter")
 
 
 target("catter-hook-win64")
-    set_default(is_plat("windows"))
+    set_default(is_plat("windows", "mingw"))
     set_kind("shared")
+    -- catter loads it as catter-hook-win64.dll; MinGW would name it lib*.dll.
+    set_prefixname("")
     add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
@@ -309,6 +312,10 @@ target("catter-hook-win64")
     if toolchain == "msvc" or toolchain == "clang-cl" then
         add_cxxflags("/GR-")
         add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
+    elseif is_plat("mingw") then
+        add_cxxflags("-fno-rtti")
+        -- exports.def exports nothing; MinGW links would export everything.
+        add_shflags("-Wl,--exclude-all-symbols")
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
         add_shflags("-Wl,/DEF:src/catter-hook/win/payload/exports.def")
@@ -362,7 +369,7 @@ target("catter-hook")
     add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/", {public = true})
     add_deps("common")
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_files("src/catter-hook/win/*.cc")
     elseif is_plat("linux", "macosx") then
         add_files("src/catter-hook/unix/impl.cc")
@@ -430,7 +437,7 @@ target("ut-catter-hook-unix")
     end
 
 target("ut-catter-hook-win64")
-    set_default(has_config("test") and is_plat("windows"))
+    set_default(has_config("test") and is_plat("windows", "mingw"))
     set_kind("binary")
     add_rules("ut-base")
 
@@ -441,7 +448,7 @@ target("ut-catter-hook-win64")
 
     add_deps("common")
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_tests("default")
     end
 
@@ -627,6 +634,8 @@ package("kotatsu")
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
     add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
+    add_patches("170", path.join(os.scriptdir(), "patches", "kotatsu-mingw.patch"),
+        "f4dc8f6a37aa3314d458924777877c4cf1eee1c2658ba3a710020cebdfcea91f")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -732,7 +741,7 @@ xpack("catter")
     end)
 
     add_targets("catter", "catter-proxy")
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_targets("catter-hook-win64")
     elseif is_plat("linux", "macosx") then
         add_targets("catter-hook-unix")

@@ -118,7 +118,8 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
                HELP,                                                                               \
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
-               VALUES)                                                                             \
+               VALUES,                                                                             \
+               SUBCOMMANDIDS_OFFSET)                                                               \
     kota_opt::Option{                                                                              \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(NAME_OFFSET),                                                      \

@@ -12,12 +12,16 @@ license-file = "LICENSE"
 readme = "README.md"
 documentation = "https://clice.io"
 repository = "https://github.com/clice-io/catter"
-channels = ["conda-forge", "https://clice-io.github.io/conda-channel"]
+channels = ["conda-forge", "https://conda.clice.io"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [dependencies]
 pnpm = "*"
-llvm-option-inc = "==20.1.8"
+# From xclang (clice-io/xclang): the option tables of clang, lld, llvm-lib
+# and llvm-dlltool, and the toolchain, whose FileCheck the integration tests
+# use and whose clang builds catter on macOS and for MinGW.
+llvm-option-inc = "==23.1.2.1"
+xclang = "==23.1.2.1"
 
 # Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
 [target.win-64.dependencies]
@@ -33,14 +37,6 @@ CATTER_DEFAULT_TOOLCHAIN = "msvc"
 sysroot_linux-64 = "==2.17"
 gcc = "==14.2.0"
 gxx = "==14.2.0"
-
-[target.osx-arm64.dependencies]
-clang = "==20.1.8"
-clangxx = "==20.1.8"
-lld = "==20.1.8"
-llvm-tools = "==20.1.8"
-compiler-rt = "==20.1.8"
-libcxx = "==20.1.8"
 
 [target.linux.activation.env]
 PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
@@ -68,7 +64,6 @@ cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ to
 python = ">=3.14.2,<3.15"
 nodejs = "==24.4.0"
 lit = "*"
-llvm-filecheck = ">=20.1.8,<22"
 
 [feature.dev.pypi-dependencies]
 pre-commit = "*"
@@ -83,9 +78,21 @@ ut = [{ task = "unit-test" }]
 it = [{ task = "integration-test" }]
 test = [{ task = "build" }, { task = "ut" }, { task = "it" }]
 
+# Windows with xclang: the MinGW target (x86_64-w64-mingw32) instead of MSVC.
+[feature.mingw]
+platforms = ["win-64"]
+
+[feature.mingw.tasks.cfg]
+args = [
+  { arg = "mode", choices = ["debug", "release", "releasedbg"] },
+]
+cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --plat=mingw --arch=x86_64 \
+--toolchain=llvm --sdk=$CONDA_PREFIX/opt/xclang"""
+
 [environments]
 dev = ["dev"]
 clang = { features = ["dev", "clang"] }
+mingw = ["dev", "mingw"]
 
 [tasks]
 npm-install = { cmd = "pnpm install", inputs = [
