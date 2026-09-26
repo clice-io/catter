@@ -349,9 +349,10 @@ target("catter-hook-unix")
         add_shflags("-Wl,--gc-sections", {force = true})
     elseif is_plat("macosx") then
         -- set_policy("check.auto_ignore_flags", false)
+        -- A private libc++, force-loaded below; xclang's libc++.a carries
+        -- libc++abi as well.
         add_shflags("-nostdlib++", {force = true})
         add_syslinks("System")
-        add_syslinks("c++abi")
         add_shflags("-fuse-ld=lld")
         add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true, force = true})
         add_shflags("-Wl,-dead_strip", {force = true})
