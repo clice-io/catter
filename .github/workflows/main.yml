@@ -1,0 +1,119 @@
+name: main
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  # A manual run skips the path filter and builds everything, e.g. to give a
+  # docs-only commit the package artifacts a release tag needs.
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  changes:
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      format: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.format == 'true' }}
+      docs: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docs == 'true' }}
+      build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.build == 'true' }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@v4
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        id: filter
+        with:
+          filters: |
+            format:
+              - '**/*.{h,hpp,c,cc,cpp,ts,js,mjs,py,md,yml,yaml}'
+              - '.pre-commit-config.yaml'
+              - '.clang-format'
+              - '.prettierignore'
+              - 'eslint.config.js'
+              - 'pixi.toml'
+              - 'pixi.lock'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+            docs:
+              - 'docs/**'
+            build:
+              - 'src/**'
+              - 'tests/**'
+              - 'api/**'
+              - 'scripts/**'
+              - 'xmake.lua'
+              - 'pixi.toml'
+              - 'pixi.lock'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.base.json'
+              - '.github/actions/**'
+              - '.github/workflows/main.yml'
+              - '.github/workflows/test.yml'
+
+  lint:
+    needs: changes
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/lint.yml
+    with:
+      format: ${{ needs.changes.outputs.format == 'true' }}
+
+  deploy-docs:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: clice-io/docs@main
+        with:
+          project: catter
+          token: ${{ secrets.CLICE_DOCS }}
+
+  test:
+    needs: changes
+    if: ${{ needs.changes.outputs.build == 'true' }}
+    uses: ./.github/workflows/test.yml
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push' }}
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+
+  # The single required status check: green when every job above either
+  # passed or was skipped by the path filter.
+  checks-passed:
+    if: ${{ always() && !startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - changes
+      - lint
+      - deploy-docs
+      - test
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        uses: re-actors/alls-green@v1.2.2
+        with:
+          allowed-skips: lint,deploy-docs,test
+          jobs: ${{ toJSON(needs) }}

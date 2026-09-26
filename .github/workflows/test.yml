@@ -1,52 +1,23 @@
 name: test
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/*"
-      - "src/**"
-      - "tests/**"
-      - "api/**"
-      - "scripts/**"
-      - "xmake.lua"
-      - "pixi.toml"
-
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/*"
-      - "src/**"
-      - "tests/**"
-      - "api/**"
-      - "xmake.lua"
-      - "pixi.toml"
-  workflow_dispatch:
-    inputs:
-      os:
-        type: choice
-        description: Platform(s) to build (only applies to manual runs)
-        options:
-          - all
-          - ubuntu-24.04
-          - macos-15
-          - windows-2025
+  workflow_call:
 
 jobs:
-  build:
+  build-and-test:
     strategy:
+      fail-fast: false
       matrix:
-        os: ${{ fromJSON((github.event_name == 'workflow_dispatch' && (github.event.inputs.os != 'all')) && format('["{0}"]', github.event.inputs.os) || '["windows-2025", "ubuntu-24.04", "macos-15"]') }}
-
-    concurrency:
-      group: ${{ github.ref }}-${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.os }}
-      cancel-in-progress: true
+        os: [windows-2025, ubuntu-24.04, macos-15]
+        mode: [debug, release]
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
@@ -55,20 +26,30 @@ jobs:
           actions-cache-folder: ".xmake-cache"
           actions-cache-key: ${{ matrix.os }}
           package-cache: true
-          package-cache-key: ${{ matrix.os }}-pixi
+          # Debug builds install their packages with sanitizer configs, so
+          # the two modes must not share one package cache.
+          package-cache-key: ${{ matrix.os }}-${{ matrix.mode }}-pixi
 
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.4
+      - uses: ./.github/actions/setup-pixi
+
+      # Configures, builds, and runs the unit and integration tests.
+      - name: Build and test
+        timeout-minutes: 60
+        run: pixi run -e dev ci-build ${{ matrix.mode }}
+
+      # Package the exact binaries the suites above just validated. These
+      # artifacts are what releases promote — there is no separate release
+      # build (see publish.yml).
+      - name: Package
+        if: ${{ matrix.mode == 'release' }}
+        run: pixi run -e dev package
+
+      - name: Upload package artifact
+        if: ${{ matrix.mode == 'release' }}
+        uses: actions/upload-artifact@v7
         with:
-          pixi-version: v0.65.0
-          activate-environment: false
-          cache: true
-          locked: true
-
-      - name: Build (debug)
-        run: |
-          pixi run -e dev ci-build debug
-
-      - name: Build (release)
-        run: |
-          pixi run -e dev ci-build release
+          name: package-${{ matrix.os }}
+          path: release-assets/**
+          if-no-files-found: error
+          # 30 days bounds how old a commit a tag can still promote.
+          retention-days: 30
