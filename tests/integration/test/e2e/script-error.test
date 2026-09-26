@@ -1,0 +1,7 @@
+An exception in a script's onCommand ends the session with an error that
+names it, instead of hanging or passing silently.
+
+RUN: not %e2e timeout 90 -- %catter %S/Inputs/throw-on-command.js -- %e2e probe nested 2>&1 | FileCheck %s
+
+CHECK: thrown from onCommand
+CHECK-NOT: TIMEOUT

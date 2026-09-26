@@ -1,0 +1,14 @@
+REQUIRES: cmake-ninja
+
+Ninja runs one compile per core at once; every one of 100 sources gets an
+entry.
+
+RUN: %e2e generate 100 %t
+RUN: cmake -S %t -B %t/build -G Ninja
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
+RUN: %e2e summarize --brief %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 100
+CHECK-NEXT: other entries: 0
+CHECK-NEXT: missing sources: 0
+CHECK-NEXT: without define: 0

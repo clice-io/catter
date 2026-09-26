@@ -1,0 +1,7 @@
+A child started with an almost empty environment, as `env -i` or a
+sandboxing build tool does, still runs through catter.
+
+RUN: %e2e probe scrubbed-env | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe scrubbed-env | FileCheck %s
+
+CHECK: PASS scrubbed-env

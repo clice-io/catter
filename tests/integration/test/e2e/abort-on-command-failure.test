@@ -1,0 +1,9 @@
+script::cdb --abort-on-command-failure stops the build at the first failed
+command: the probe fails one child, waits, then creates a marker file that
+must not appear.
+
+RUN: rm -f %t.marker
+RUN: %e2e timeout 90 -- %catter script::cdb -q --abort-on-command-failure -o %t.json -- %e2e probe fail-then-touch %t.marker
+RUN: %e2e absent %t.marker | FileCheck %s
+
+CHECK: PASS absent

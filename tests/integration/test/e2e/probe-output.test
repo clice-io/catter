@@ -1,0 +1,7 @@
+A child writing megabytes to stdout and stderr at once delivers all of it to
+its parent through catter, without stalling.
+
+RUN: %e2e probe output | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe output | FileCheck %s
+
+CHECK: PASS output

@@ -1,0 +1,7 @@
+A child started with a very long command line (close to the 32767-character
+limit on Windows) still starts through catter.
+
+RUN: %e2e probe long-argument | FileCheck %s
+RUN: %catter script::cdb -q -o %t.json -- %e2e probe long-argument | FileCheck %s
+
+CHECK: PASS long-argument
