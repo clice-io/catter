@@ -1,9 +1,11 @@
 REQUIRES: cmake-ninja
 UNSUPPORTED: system-darwin
+XFAIL: system-windows
 
 A C++20 modules build (CMake scans each source for module dependencies, then
 compiles with a module map): one entry per source, carrying its flags.
 macOS is unsupported: Apple's clang comes without clang-scan-deps.
+Known failures: #123 (CMake passes the module map through a response file).
 
 RUN: %e2e prepare modules %t
 RUN: cmake -S %t -B %t/build -G Ninja

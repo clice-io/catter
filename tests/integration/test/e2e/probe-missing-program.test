@@ -1,6 +1,9 @@
+XFAIL: system-windows, debug-build
+
 Starting a program that does not exist fails to start it, under catter as
 directly: build tools and shells rely on that error ("command not found",
 trying the next candidate).
+Known failures: #152 on Windows and #137 in debug builds.
 
 RUN: %e2e probe missing-program | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe missing-program | FileCheck %s

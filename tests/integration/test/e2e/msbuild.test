@@ -1,8 +1,10 @@
 REQUIRES: msbuild
+XFAIL: *
 
 Without a generator, CMake on Windows picks the newest installed Visual
 Studio, so the build runs through MSBuild and its CL task. CMAKE_GENERATOR
 is cleared so the developer environment cannot override that choice.
+Known failures: #123 (MSBuild compiles through response files).
 
 RUN: %e2e prepare hello %t
 RUN: env -u CMAKE_GENERATOR cmake -S %t -B %t/build

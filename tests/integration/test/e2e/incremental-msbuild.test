@@ -1,8 +1,10 @@
 REQUIRES: msbuild
+XFAIL: *
 
 MSBuild records which files each compile read and wrote (its tracker injects
 itself into cl.exe) and skips up-to-date projects on the next build. After
 a build under catter, building again compiles nothing.
+Known failures: #141 (MSBuild's file tracking misses the compiler).
 
 RUN: %e2e prepare hello %t
 RUN: env -u CMAKE_GENERATOR cmake -S %t -B %t/build

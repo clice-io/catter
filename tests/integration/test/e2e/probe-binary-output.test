@@ -1,5 +1,8 @@
+XFAIL: system-windows
+
 Output that is not text (every byte value, NUL included) reaches the parent
 byte for byte through catter.
+Known failures: #139 (output line endings are rewritten on Windows).
 
 RUN: %e2e probe binary-output | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe binary-output | FileCheck %s

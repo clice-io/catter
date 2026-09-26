@@ -1,5 +1,8 @@
+XFAIL: debug-build, system-darwin
+
 128 commands started at once all run and report their output and exit codes
 through catter.
+Known failures: #137 in debug builds and #115 on macOS (/bin/echo is arm64e).
 
 RUN: %e2e probe fan-out 128 | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe fan-out 128 | FileCheck %s

@@ -3,6 +3,7 @@ XFAIL: system-darwin
 
 A recursive make -j4: the sub-make still gets the jobserver, and both of its
 compiles get entries.
+Known failures: #115 (dyld kills Apple's arm64e tools).
 
 RUN: %e2e prepare recursive %t
 RUN: cd %t && %catter script::cdb -q -o %t/compile_commands.json -- make -j4 2>&1 | FileCheck %s --check-prefix=MAKE

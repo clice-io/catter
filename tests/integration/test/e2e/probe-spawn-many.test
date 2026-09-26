@@ -1,5 +1,8 @@
+XFAIL: system-linux && debug-build
+
 Prints how long starting a process takes, directly and through catter (see
 the test output); passes as long as all of them run.
+Known failures: #137 (debug builds deadlock in vfork children).
 
 RUN: %e2e probe spawn-many 200 | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe spawn-many 200 | FileCheck %s

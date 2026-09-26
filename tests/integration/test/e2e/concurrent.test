@@ -1,5 +1,8 @@
+XFAIL: *
+
 Two catter sessions running at once (a terminal and an IDE, or parallel CI
 jobs on one machine) each see exactly their own commands.
+Known failures: #121 (all sessions share one IPC endpoint).
 
 RUN: %e2e concurrent -- %catter script::cmd-tree -w 200 -- | FileCheck %s
 

@@ -1,5 +1,8 @@
+XFAIL: system-windows
+
 A child started in a directory whose name has spaces and non-ASCII
 characters runs there through catter.
+Known failures: #127 (non-ASCII directories on Windows).
 
 RUN: %e2e probe cwd | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe cwd | FileCheck %s

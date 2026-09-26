@@ -1,5 +1,8 @@
+XFAIL: *
+
 A script's abort() stops the build with an error, instead of hanging or
 running the command.
+Known failures: #122 (the abort action throws and hangs the session).
 
 RUN: not %e2e timeout 90 -- %catter %S/Inputs/abort.js -- %e2e probe drop 2>&1 | FileCheck %s
 

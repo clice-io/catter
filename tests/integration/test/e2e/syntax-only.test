@@ -1,5 +1,8 @@
+XFAIL: *
+
 A compile that only checks syntax (-fsyntax-only, /Zs), as linters and
 editors run, still describes how the source is compiled.
+Known failures: #132 (compiles without an object get no entry) and, on Windows, #151.
 
 RUN: %e2e prepare hello %t
 RUN: %if !system-windows %{ cd %t && %catter script::cdb -o %t/compile_commands.json -- %cxx -fsyntax-only -DCATTER_E2E=1 -Iinclude src/main.cc %}

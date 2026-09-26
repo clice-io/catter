@@ -1,7 +1,9 @@
 UNSUPPORTED: system-windows
+XFAIL: system-darwin
 
 A file descriptor a parent hands to its child (as make does with its
 jobserver) is still open in the child through catter.
+Known failures: #153 (inherited descriptors are closed on macOS).
 
 RUN: %e2e probe pass-fds | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe pass-fds | FileCheck %s

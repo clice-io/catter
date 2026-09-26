@@ -3,6 +3,7 @@ XFAIL: system-darwin
 
 Ninja runs one compile per core at once; every one of 100 sources gets an
 entry.
+Known failures: #115 (dyld kills Apple's arm64e tools).
 
 RUN: %e2e generate 100 %t
 RUN: cmake -S %t -B %t/build -G Ninja

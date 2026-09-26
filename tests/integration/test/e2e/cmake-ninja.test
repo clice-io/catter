@@ -5,6 +5,7 @@ RUN: %e2e prepare hello %t
 RUN: cmake -S %t -B %t/build -G Ninja
 RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
 RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+Known failures: #115 (dyld kills Apple's arm64e tools).
 
 CHECK: entries: 2
 CHECK-NEXT: other entries: 0

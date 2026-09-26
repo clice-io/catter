@@ -1,7 +1,9 @@
 REQUIRES: system-windows
+XFAIL: *
 
 A 64-bit process starting a 32-bit program (SysWOW64's cmd.exe) still runs
 it through catter.
+Known failures: #124 (32-bit programs fail to start).
 
 RUN: %e2e probe wow64 | FileCheck %s
 RUN: %catter script::cdb -q -o %t.json -- %e2e probe wow64 | FileCheck %s

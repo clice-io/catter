@@ -3,6 +3,7 @@ XFAIL: system-darwin
 
 make -j8 over 100 sources, compiled by make directly; every source gets an
 entry.
+Known failures: #115 (dyld kills Apple's arm64e tools).
 
 RUN: %e2e generate 100 %t
 RUN: cd %t && %catter script::cdb -q -o %t/compile_commands.json -- make -j8

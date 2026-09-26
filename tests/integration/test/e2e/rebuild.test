@@ -1,7 +1,9 @@
 REQUIRES: cmake-ninja
+XFAIL: system-darwin
 
 Building again into the same database (the default merges with the existing
 file) keeps one entry per compile instead of adding duplicates.
+Known failures: #115 (dyld kills Apple's arm64e compiler).
 
 RUN: %e2e prepare hello %t
 RUN: cmake -S %t -B %t/build -G Ninja

@@ -3,6 +3,7 @@ XFAIL: system-darwin
 
 A build under catter leaves Ninja's dependency records as a direct build
 does: building again right after has nothing to do.
+Known failures: #115 (dyld kills Apple's arm64e tools).
 
 RUN: %e2e prepare hello %t
 RUN: cmake -S %t -B %t/build -G Ninja
