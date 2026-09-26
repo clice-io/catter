@@ -1,0 +1,99 @@
+name: publish
+
+# Promotes already-built, already-tested packages to a release. There is no
+# release build: every CI run on main packages the binaries its test suites
+# just validated (see test.yml), and this workflow only downloads those
+# artifacts from the green run of the tagged commit, renames them to the tag
+# version, and attaches them to a draft release.
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        required: true
+  # Re-promote an existing tag, e.g. after rerunning its commit's build.
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: The tag to release (e.g., v1.0.0)
+        type: string
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ inputs.release_tag }}
+      # One per build-and-test leg in test.yml that packages.
+      PACKAGES: package-windows-2025 package-ubuntu-24.04 package-macos-15
+    steps:
+      - name: Locate the green build run
+        id: find
+        run: |
+          # Resolve the tag itself rather than trusting GITHUB_SHA, which is
+          # the branch tip for a manual dispatch.
+          SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          RUN_IDS=$(gh run list --repo "$GITHUB_REPOSITORY" --commit "$SHA" \
+            --workflow main.yml --branch main --status success \
+            --json databaseId -q '.[].databaseId')
+          if [ -z "$RUN_IDS" ]; then
+            echo "::error::no green main run found for $TAG ($SHA) — releases only promote tested builds"
+            exit 1
+          fi
+          # A green run may still have nothing to promote: path-filtered
+          # runs (e.g. docs-only commits) skip the build jobs, and package
+          # artifacts expire after 30 days. Take the newest run that still
+          # has every package.
+          for RUN_ID in $RUN_IDS; do
+            MISSING=""
+            for NAME in $PACKAGES; do
+              LIVE=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=$NAME" \
+                --jq '[.artifacts[] | select(.expired | not)] | length')
+              if [ "$LIVE" -eq 0 ]; then
+                MISSING="$MISSING $NAME"
+              fi
+            done
+            if [ -z "$MISSING" ]; then
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "run $RUN_ID is missing:$MISSING"
+          done
+          echo "::error::no green main run for $TAG ($SHA) has live package artifacts (path-filtered build, or expired after 30 days) — run the main workflow manually on that commit first"
+          exit 1
+
+      - name: Download packages
+        run: |
+          for NAME in $PACKAGES; do
+            gh run download "${{ steps.find.outputs.run_id }}" \
+              --repo "$GITHUB_REPOSITORY" -n "$NAME" -D pkg
+          done
+
+      # xpack names packages after the version in xmake.lua
+      # (catter-<version>-<plat>-<arch>.<ext>); the release carries the tag's.
+      - name: Rename to the tag version
+        working-directory: pkg
+        run: |
+          VERSION="${TAG#v}"
+          for FILE in catter-*; do
+            mv "$FILE" "catter-${VERSION}-${FILE#catter-*-}"
+          done
+          ls -l
+
+      - name: Upload assets to a draft release
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            FLAGS="--draft --generate-notes"
+            # Tags like v0.1.0-alpha.4 are prereleases.
+            if [[ "$TAG" == *-* ]]; then
+              FLAGS="$FLAGS --prerelease"
+            fi
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --title "$TAG" $FLAGS
+          fi
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber pkg/*

@@ -1,0 +1,38 @@
+name: Feature Request
+description: Suggest a new feature or an improvement to existing behavior.
+labels: ["kind:feature-request", "needs-triage"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Related area
+      description: Which part of catter does this relate to? Pick all that apply.
+      multiple: true
+      # Keep in sync with the area: labels in .github/labels.yml.
+      options:
+        - Process interception (hook)
+        - catter-proxy
+        - IPC
+        - Command-line interface
+        - Script API / JavaScript runtime
+        - Compilation database (script::cdb)
+        - Compiler argument parsing
+        - Replay
+        - Performance
+        - Other / new area
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What would you like catter to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this useful? What is your use case, and how do you work around it today?

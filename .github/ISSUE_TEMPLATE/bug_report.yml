@@ -1,0 +1,103 @@
+name: Bug Report
+description: Something works incorrectly (wrong or missing commands, errors, crashes, a broken build).
+labels: ["kind:bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+  - type: input
+    id: version
+    attributes:
+      label: catter version
+      description: The release you downloaded, or the commit you built from.
+      placeholder: e.g. v0.1.0-alpha.4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - WSL
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build_system
+    attributes:
+      label: Build system
+      description: The build system of the project you ran catter on.
+      options:
+        - CMake
+        - Make
+        - Ninja
+        - MSBuild
+        - XMake
+        - Meson
+        - Bazel
+        - Python package build
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: compiler
+    attributes:
+      label: Compiler
+      options:
+        - GCC
+        - Clang
+        - MSVC (cl.exe)
+        - clang-cl
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Related area
+      description: Which part of catter does this relate to? Pick all that apply.
+      multiple: true
+      # Keep in sync with the area: labels in .github/labels.yml.
+      options:
+        - Process interception (hook)
+        - catter-proxy
+        - IPC
+        - Command-line interface
+        - Script API / JavaScript runtime
+        - Compilation database (script::cdb)
+        - Compiler argument parsing
+        - Replay
+        - Performance
+        - Other / not sure
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The full catter command you ran.
+      render: shell
+      placeholder: catter script::cdb -o compile_commands.json -- make
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: What you expected, and what actually happened. Include the error output if there is any.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal project or build that reproduces the problem helps us fix things much faster.
