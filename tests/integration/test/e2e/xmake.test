@@ -1,0 +1,20 @@
+REQUIRES: xmake
+
+%t sits inside catter's own configured build tree, and xmake prefers the
+nearest configured project above the working directory, so every call pins
+the project with -P.
+
+xmake's build cache compiles in two steps, preprocessing each source first
+(-E) and then compiling the preprocessed file; it is disabled here so the
+entries come from the plain compile. xmake also compiles temporary files to
+probe compiler flags during the build; those count as other entries.
+
+RUN: %e2e prepare hello %t
+RUN: cd %t && xmake config -P . --ccache=n --yes
+RUN: cd %t && %catter script::cdb -q -o %t/compile_commands.json -- xmake build -P .
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: {{[0-9]+}}
+CHECK-NEXT: src/main.cc exists dir=. output=build/.objs/hello/{{.+}}/src/main.cc.{{o|obj}} define=yes
+CHECK-NEXT: src/util.cc exists dir=. output=build/.objs/hello/{{.+}}/src/util.cc.{{o|obj}} define=yes

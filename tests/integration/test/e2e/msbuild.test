@@ -1,0 +1,15 @@
+REQUIRES: msbuild
+
+Without a generator, CMake on Windows picks the newest installed Visual
+Studio, so the build runs through MSBuild and its CL task. CMAKE_GENERATOR
+is cleared so the developer environment cannot override that choice.
+
+RUN: %e2e prepare hello %t
+RUN: env -u CMAKE_GENERATOR cmake -S %t -B %t/build
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build --config Debug
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: 0
+CHECK-NEXT: src/main.cc exists dir={{.+}} output={{.+}} define=yes
+CHECK-NEXT: src/util.cc exists dir={{.+}} output={{.+}} define=yes

@@ -1,0 +1,5 @@
+target("hello")
+    set_kind("binary")
+    add_files("src/*.cc")
+    add_includedirs("include")
+    add_defines("CATTER_E2E=1")

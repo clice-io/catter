@@ -1,0 +1,10 @@
+REQUIRES: make
+
+RUN: %e2e prepare hello %t
+RUN: cd %t && %catter script::cdb -q -o %t/compile_commands.json -- make
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: 0
+CHECK-NEXT: src/main.cc exists dir=. output=main.o define=yes
+CHECK-NEXT: src/util.cc exists dir=src output=util.o define=yes

@@ -1,0 +1,11 @@
+REQUIRES: cmake-ninja
+
+RUN: %e2e prepare hello %t
+RUN: cmake -S %t -B %t/build -G Ninja
+RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build
+RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
+
+CHECK: entries: 2
+CHECK-NEXT: other entries: 0
+CHECK-NEXT: src/main.cc exists dir=build output=build/CMakeFiles/hello.dir/src/main.cc.{{o|obj}} define=yes
+CHECK-NEXT: src/util.cc exists dir=build output=build/CMakeFiles/hello.dir/src/util.cc.{{o|obj}} define=yes
