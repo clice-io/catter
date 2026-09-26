@@ -657,54 +657,7 @@ package("kotatsu")
         configs.deco = true
         configs.ztest = true
         configs.http = true
-        if package:is_plat("macosx") then
-            local conda_prefix = os.getenv("CONDA_PREFIX")
-            if conda_prefix then
-                local bindir = path.join(conda_prefix, "bin")
-                local libdir = path.join(conda_prefix, "lib")
-                local mode = package:is_debug() and "debug" or "release"
-                local builddir = package:builddir()
-                -- Pixi's clang cfg injects `.pixi/.../include`; disable that default
-                -- config just for kotatsu's package install and keep the rest explicit.
-                local argv = {
-                    "f", "-y", "-c",
-                    "--plat=" .. package:plat(),
-                    "--arch=" .. package:arch(),
-                    "--mode=" .. mode,
-                    "--kind=" .. (package:config("shared") and "shared" or "static"),
-                    "--builddir=" .. builddir,
-                    "--cc=" .. path.join(bindir, "clang"),
-                    "--cxx=" .. path.join(bindir, "clang++"),
-                    "--ld=" .. path.join(bindir, "clang++"),
-                    "--sh=" .. path.join(bindir, "clang++"),
-                    "--ar=" .. path.join(bindir, "llvm-ar"),
-                    "--ranlib=" .. path.join(bindir, "llvm-ranlib"),
-                    "--cflags=--no-default-config",
-                    "--cxflags=--no-default-config -D_LIBCPP_DISABLE_AVAILABILITY=1",
-                    "--ldflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
-                    "--shflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
-                    "--dev=false",
-                    "--test=false",
-                    "--async=true",
-                    "--deco=true",
-                    "--ztest=true",
-                    "--http=true"
-                }
-                if package:config("asan") then
-                    table.insert(argv, "--policies=build.sanitizer.address")
-                end
-                os.vrunv("xmake", argv, {curdir = package:sourcedir()})
-                os.mkdir(path.join(builddir, ".deps", "kotatsu", package:plat(), package:arch(), mode))
-                os.vrunv("xmake", {"build", "kotatsu"}, {curdir = package:sourcedir()})
-                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "kotatsu"}, {curdir = package:sourcedir()})
-                return
-            end
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        elseif is_plat("linux") then
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        else
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        end
+        import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
     end)
 
 
