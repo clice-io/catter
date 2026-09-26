@@ -23,11 +23,18 @@ def prepare(project: str, dest: str) -> None:
     shutil.copytree(source, dest)
 
 
-def relative(path: str, root: str) -> str:
+def relative(path: str, root: str) -> str | None:
+    """The path relative to root with '/' separators, or None outside root."""
     # realpath on both sides: macOS reports /tmp as /private/tmp.
-    return os.path.relpath(os.path.realpath(path), os.path.realpath(root)).replace(
-        os.sep, "/"
-    )
+    path, root = os.path.realpath(path), os.path.realpath(root)
+    try:
+        result = os.path.relpath(path, root)
+    except ValueError:
+        # On another drive, e.g. a build tool's temporary files on Windows.
+        return None
+    if result == os.pardir or result.startswith(os.pardir + os.sep):
+        return None
+    return result.replace(os.sep, "/")
 
 
 def has_define(arguments: list[str]) -> bool:
@@ -43,15 +50,19 @@ def summarize(database: str, root: str) -> None:
     for entry in entries:
         directory = entry["directory"]
         file = os.path.join(directory, entry["file"])
-        if relative(file, root).startswith("../"):
+        file_relative = relative(file, root)
+        if file_relative is None:
             others += 1
             continue
         output = entry.get("output")
+        if output:
+            output = os.path.join(directory, output)
+            output = relative(output, root) or output
         fields = [
-            relative(file, root),
+            file_relative,
             "exists" if os.path.isfile(file) else "missing",
-            f"dir={relative(directory, root)}",
-            f"output={relative(os.path.join(directory, output), root) if output else '-'}",
+            f"dir={relative(directory, root) or directory}",
+            f"output={output or '-'}",
             f"define={'yes' if has_define(entry['arguments']) else 'no'}",
         ]
         lines.append(" ".join(fields))

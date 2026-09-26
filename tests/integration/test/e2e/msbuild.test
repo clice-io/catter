@@ -6,7 +6,7 @@ is cleared so the developer environment cannot override that choice.
 
 RUN: %e2e prepare hello %t
 RUN: env -u CMAKE_GENERATOR cmake -S %t -B %t/build
-RUN: %catter script::cdb -q -o %t/compile_commands.json -- cmake --build %t/build --config Debug
+RUN: %catter script::cdb -v -o %t/compile_commands.json -- cmake --build %t/build --config Debug
 RUN: %e2e summarize %t/compile_commands.json %t | FileCheck %s
 
 CHECK: entries: 2

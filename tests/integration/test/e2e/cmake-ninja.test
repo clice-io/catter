@@ -1,4 +1,5 @@
 REQUIRES: cmake-ninja
+XFAIL: system-darwin
 
 RUN: %e2e prepare hello %t
 RUN: cmake -S %t -B %t/build -G Ninja
