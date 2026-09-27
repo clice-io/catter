@@ -80,8 +80,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sysroot_linux-64-2.17-h0157908_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
-      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.2-hb0f4dca_0.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
+      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.3-hb0f4dca_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e2/bbb7129c9e7999a6b8ee9cca3b66486c25c423ab5a75f34071798b74ce94/pre_commit-4.6.2-py2.py3-none-any.whl
@@ -141,8 +141,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tapi-1600.0.11.8-hb561403_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hbeba79b_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.2-h60d57d3_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.3-h60d57d3_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e2/bbb7129c9e7999a6b8ee9cca3b66486c25c423ab5a75f34071798b74ce94/pre_commit-4.6.2-py2.py3-none-any.whl
@@ -190,8 +190,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.44.35208-h818238b_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vs2022_win-64-19.44.35207-ha74f236_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/win-64/xclang-23.1.2.2-h9490d1a_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/win-64/xclang-23.1.2.3-h9490d1a_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl
@@ -240,8 +240,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/libstdcxx-devel_linux-64-14.2.0-h9c4974d_102.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sysroot_linux-64-2.17-h0157908_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
-      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.2-hb0f4dca_0.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
+      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.3-hb0f4dca_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.7.22-hbd8a1cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/c-ares-1.34.8-h74c22ad_2.conda
@@ -259,8 +259,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/openssl-3.6.4-h55eecbc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pnpm-12.4.1-h8893684_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.2-h60d57d3_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.3-h60d57d3_0.conda
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/vswhere-3.1.7-h40126e0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/nodejs-26.10.0-h80d1838_0.conda
@@ -270,8 +270,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.44.35208-h818238b_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.44.35208-h818238b_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vs2022_win-64-19.44.35207-ha74f236_41.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/win-64/xclang-23.1.2.2-h9490d1a_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/win-64/xclang-23.1.2.3-h9490d1a_0.conda
   dev:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -320,8 +320,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-9_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sysroot_linux-64-2.17-h0157908_18.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
-      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.2-hb0f4dca_0.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
+      - conda: https://dl.clice.io/linux-64/xclang-23.1.2.3-hb0f4dca_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e2/bbb7129c9e7999a6b8ee9cca3b66486c25c423ab5a75f34071798b74ce94/pre_commit-4.6.2-py2.py3-none-any.whl
@@ -356,8 +356,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h8b90a29_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hbeba79b_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.2-h60d57d3_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.3-h60d57d3_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e2/bbb7129c9e7999a6b8ee9cca3b66486c25c423ab5a75f34071798b74ce94/pre_commit-4.6.2-py2.py3-none-any.whl
@@ -393,8 +393,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.44.35208-h818238b_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vs2022_win-64-19.44.35207-ha74f236_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/win-64/xclang-23.1.2.2-h9490d1a_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/win-64/xclang-23.1.2.3-h9490d1a_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl
@@ -437,8 +437,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.44.35208-h818238b_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vs2022_win-64-19.44.35207-ha74f236_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_7.conda
-      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-      - conda: https://dl.clice.io/win-64/xclang-23.1.2.2-h9490d1a_0.conda
+      - conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+      - conda: https://dl.clice.io/win-64/xclang-23.1.2.3-h9490d1a_0.conda
       - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/16/7d/e9ffbadfbf89c93848412d04594135c4ae8c1d37d9e053b9c3ed718fabc4/python_discovery-1.6.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/23/20/bb6982b26a40bb43951265ba29d4c246ef0ff59c9fdcdf0ed04e0687de4d/pyyaml-6.0.3-cp314-cp314-win_amd64.whl
@@ -2783,34 +2783,34 @@ packages:
     - zstd >=1.5.7,<1.6.0a0
   size: 387535
   timestamp: 1786599623274
-- conda: https://dl.clice.io/linux-64/xclang-23.1.2.2-hb0f4dca_0.conda
-  sha256: 6ce31a1139a2413450998d83da59eaf345b8e080d754c2a029e6a5dfe011fa9d
-  md5: 8b9eefaa97ddfe43d410e2a7319a6b5e
+- conda: https://dl.clice.io/linux-64/xclang-23.1.2.3-hb0f4dca_0.conda
+  sha256: 658c2e2ed3c121b90cb2b0826028fe60a075a6bc730c96093a079615ca95cc9c
+  md5: 2dbd04de7c01fd9e8d240de9cf50be18
   channel: https://conda.clice.io/
   license: Apache-2.0 WITH LLVM-exception AND LGPL-2.1-or-later AND ZPL-2.1 AND MIT
-  size: 94678513
-  timestamp: 1790465915114
-- conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.2-h4616a5c_0.conda
-  sha256: e8d7f0b8de8f46c7005cb09bfbfc852356c602cfd6e228681c7453ccd2340430
-  md5: 403b559721f9750ce464d47c2a4f59e9
+  size: 94720049
+  timestamp: 1790526873729
+- conda: https://dl.clice.io/noarch/llvm-option-inc-23.1.2.3-h4616a5c_0.conda
+  sha256: 77d72bcc936d7f899a4acbf9c54af797277a00658e120a4fa6dc76bfc87bf026
+  md5: e81eecde8fb78e192f0c95586d591bc2
   channel: https://conda.clice.io/
   license: Apache-2.0 WITH LLVM-exception
-  size: 180945
-  timestamp: 1790466249861
-- conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.2-h60d57d3_0.conda
-  sha256: baa23520c70131f9f7398b9372cc110bb2814a2e2fe3e95d7b98838fc02f5e44
-  md5: 349b8bd939fc6591e2a67fdd7c1613c1
+  size: 180922
+  timestamp: 1790527202250
+- conda: https://dl.clice.io/osx-arm64/xclang-23.1.2.3-h60d57d3_0.conda
+  sha256: cdcebfd723ce737eeb16b79a760210fa17a89615bf14315d560bb66ef7cd0cdb
+  md5: eabf913661813a759a7ebd4fe0d84733
   channel: https://conda.clice.io/
   license: Apache-2.0 WITH LLVM-exception AND LGPL-2.1-or-later AND ZPL-2.1 AND MIT
-  size: 115370003
-  timestamp: 1790465918617
-- conda: https://dl.clice.io/win-64/xclang-23.1.2.2-h9490d1a_0.conda
-  sha256: 6a75b4ead29cc7c723abe9daf9c64abfaf365c990596398cbb00a98fbcdbc128
-  md5: 1e06a8636b99dfe1051d6591d5c1340d
+  size: 115475861
+  timestamp: 1790526875838
+- conda: https://dl.clice.io/win-64/xclang-23.1.2.3-h9490d1a_0.conda
+  sha256: 84b01385b210ff3142f31df4aa1d54c7a298abca121f1545bcdf056fb0845de7
+  md5: c65ac03049623b880956d135396f0ef8
   channel: https://conda.clice.io/
   license: Apache-2.0 WITH LLVM-exception AND LGPL-2.1-or-later AND ZPL-2.1 AND MIT
-  size: 94016102
-  timestamp: 1790465914399
+  size: 94062866
+  timestamp: 1790526875153
 - pypi: https://files.pythonhosted.org/packages/02/08/9c41fb51ab5b43eb21674aff13df270e8ba6c4b29c8624e328dc7a9482af/distlib-0.4.3-py2.py3-none-any.whl
   name: distlib
   version: 0.4.3

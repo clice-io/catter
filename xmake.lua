@@ -86,18 +86,10 @@ if is_plat("macosx") then
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
 
-    local cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1"
-    if is_mode("debug") then
-        -- xclang's static libc++ is not built with ASan: its own copies of the
-        -- container code annotate nothing, and the annotated copies of
-        -- instrumented code then report false container overflows.
-        add_defines("__SANITIZER_DISABLE_CONTAINER_OVERFLOW__")
-        cxflags = cxflags .. " -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__"
-    end
     add_requireconfs("**|cmake", {configs = {
         ldflags = "-fuse-ld=lld",
         shflags = "-fuse-ld=lld",
-        cxflags = cxflags,
+        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
     }})
 end
 
