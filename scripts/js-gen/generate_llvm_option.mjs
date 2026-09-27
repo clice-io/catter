@@ -23,19 +23,25 @@ const tables = {
   "llvm-lib": ["llvm-lib-Options.inc", "LlvmLibID"],
 };
 
+// Every file is checked before any is written.
+const updates = [];
 for (const [name, [inc, enumName]] of Object.entries(tables)) {
   const source = fs.readFileSync(path.join(include, "llvm-options-td", inc), "utf8");
   // The ID is the third field of an OPTION( line; comments name the option
   // and may hold any character.
   const ids = source
-    .split("\n")
+    .split(/\r?\n/)
     .filter((line) => line.startsWith("OPTION("))
     .map((line) => line.slice("OPTION(".length).replace(/\/\*.*?\*\//g, "").split(",")[2].trim());
-  const body = ["  ID_INVALID = 0,", ...ids.map((id) => `  ID_${id},`)].join("\n");
   const file = path.join(root, "api", "src", "option", `${name}.ts`);
   const text = fs.readFileSync(file, "utf8");
-  const pattern = new RegExp(`(export enum ${enumName} \\{\\n)[\\s\\S]*?(\\n\\})`);
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const body = ["  ID_INVALID = 0,", ...ids.map((id) => `  ID_${id},`)].join(eol);
+  const pattern = new RegExp(`(export enum ${enumName} \\{\\r?\\n)[\\s\\S]*?(\\r?\\n\\})`);
   if (!pattern.test(text)) throw new Error(`${file}: no enum ${enumName}`);
-  fs.writeFileSync(file, text.replace(pattern, (_, open, close) => open + body + close));
-  console.log(`${file}: ${ids.length} options`);
+  updates.push({ file, text: text.replace(pattern, (_, open, close) => open + body + close), count: ids.length });
+}
+for (const { file, text, count } of updates) {
+  fs.writeFileSync(file, text);
+  console.log(`${file}: ${count} options`);
 }
