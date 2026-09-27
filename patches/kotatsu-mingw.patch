@@ -1,0 +1,30 @@
+diff --git a/xmake.lua b/xmake.lua
+--- a/xmake.lua
++++ b/xmake.lua
+@@ -1,7 +1,7 @@
+ set_project("kotatsu")
+ 
+ add_rules("mode.debug", "mode.release", "mode.releasedbg")
+-set_allowedplats("windows", "linux", "macosx")
++set_allowedplats("windows", "mingw", "linux", "macosx")
+ 
+ option("dev", { default = true })
+ option("test", { default = true })
+@@ -60,7 +60,7 @@
+ 
+ set_languages("c++23")
+ 
+-if is_plat("windows") then
++if is_plat("windows", "mingw") then
+ 	add_defines("NOMINMAX", "WIN32_LEAN_AND_MEAN")
+ end
+ 
+@@ -82,7 +82,7 @@
+ if has_config("codec") and has_config("codec_toml") then
+ 	add_requires("toml++ v3.4.0")
+ end
+-if has_config("test") and is_plat("windows") then
++if has_config("test") and is_plat("windows", "mingw") then
+ 	add_requires("unistd_h")
+ end
+ 

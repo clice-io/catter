@@ -2,7 +2,7 @@ set_version("0.1.0")
 set_project("catter")
 
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
-set_allowedplats("windows", "linux", "macosx")
+set_allowedplats("windows", "mingw", "linux", "macosx")
 
 set_languages("c++23")
 
@@ -58,7 +58,8 @@ if has_config("dev") then
             if toolchain == "msvc" then
                 set_policy("build.sanitizer.address", true)
             end
-        else
+        elseif not is_plat("mingw") then
+            -- xclang has no ASan runtime for MinGW.
             set_policy("build.sanitizer.address", true)
         end
 
@@ -85,10 +86,18 @@ if is_plat("macosx") then
     add_ldflags("-fuse-ld=lld")
     add_shflags("-fuse-ld=lld")
 
+    local cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1"
+    if is_mode("debug") then
+        -- xclang's static libc++ is not built with ASan: its own copies of the
+        -- container code annotate nothing, and the annotated copies of
+        -- instrumented code then report false container overflows.
+        add_defines("__SANITIZER_DISABLE_CONTAINER_OVERFLOW__")
+        cxflags = cxflags .. " -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__"
+    end
     add_requireconfs("**|cmake", {configs = {
         ldflags = "-fuse-ld=lld",
         shflags = "-fuse-ld=lld",
-        cxflags = "-D_LIBCPP_DISABLE_AVAILABILITY=1",
+        cxflags = cxflags,
     }})
 end
 
@@ -107,7 +116,7 @@ if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
-elseif is_plat("windows") then
+elseif is_plat("windows", "mingw") then
     add_defines("CATTER_WINDOWS")
     add_defines("WIN32_LEAN_AND_MEAN", "NOMINMAX")
     add_requires("minhook", {version = "v1.3.4"})
@@ -147,7 +156,7 @@ target("common-config")
     add_packages("kotatsu", {public = true})
 
 target("common-winapi")
-    set_default(is_plat("windows"))
+    set_default(is_plat("windows", "mingw"))
     set_kind("static")
     add_includedirs("src/common", {public = true})
     add_files("src/common/winapi/**.cc")
@@ -157,13 +166,13 @@ target("common-resolver")
     set_kind("static")
     add_local_prefix_includedirs()
     add_includedirs("src/common", {public = true})
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_files("src/common/resolver/win.cc")
     else
         add_files("src/common/resolver/unix.cc")
     end
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_deps("common-winapi", {public = true})
     end
 
@@ -171,7 +180,7 @@ target("common")
     set_kind("static")
     add_includedirs("src/common", {public = true})
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_deps("common-winapi", {public = true})
     end
 
@@ -298,8 +307,10 @@ target("catter")
 
 
 target("catter-hook-win64")
-    set_default(is_plat("windows"))
+    set_default(is_plat("windows", "mingw"))
     set_kind("shared")
+    -- catter loads it as catter-hook-win64.dll; MinGW would name it lib*.dll.
+    set_prefixname("")
     add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/*.cc")
@@ -309,6 +320,10 @@ target("catter-hook-win64")
     if toolchain == "msvc" or toolchain == "clang-cl" then
         add_cxxflags("/GR-")
         add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
+    elseif is_plat("mingw") then
+        add_cxxflags("-fno-rtti")
+        -- exports.def exports nothing; MinGW links would export everything.
+        add_shflags("-Wl,--exclude-all-symbols")
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
         add_shflags("-Wl,/DEF:src/catter-hook/win/payload/exports.def")
@@ -342,9 +357,10 @@ target("catter-hook-unix")
         add_shflags("-Wl,--gc-sections", {force = true})
     elseif is_plat("macosx") then
         -- set_policy("check.auto_ignore_flags", false)
+        -- A private libc++, force-loaded below; xclang's libc++.a carries
+        -- libc++abi as well.
         add_shflags("-nostdlib++", {force = true})
         add_syslinks("System")
-        add_syslinks("c++abi")
         add_shflags("-fuse-ld=lld")
         add_shflags("-Wl,-exported_symbols_list,/dev/null", {public = true, force = true})
         add_shflags("-Wl,-dead_strip", {force = true})
@@ -362,7 +378,7 @@ target("catter-hook")
     add_local_prefix_includedirs()
     add_includedirs("src/catter-hook/", {public = true})
     add_deps("common")
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_files("src/catter-hook/win/*.cc")
     elseif is_plat("linux", "macosx") then
         add_files("src/catter-hook/unix/impl.cc")
@@ -430,7 +446,7 @@ target("ut-catter-hook-unix")
     end
 
 target("ut-catter-hook-win64")
-    set_default(has_config("test") and is_plat("windows"))
+    set_default(has_config("test") and is_plat("windows", "mingw"))
     set_kind("binary")
     add_rules("ut-base")
 
@@ -441,7 +457,7 @@ target("ut-catter-hook-win64")
 
     add_deps("common")
 
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_tests("default")
     end
 
@@ -627,6 +643,8 @@ package("kotatsu")
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
     add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
+    add_patches("170", path.join(os.scriptdir(), "patches", "kotatsu-mingw.patch"),
+        "f4dc8f6a37aa3314d458924777877c4cf1eee1c2658ba3a710020cebdfcea91f")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
@@ -648,54 +666,7 @@ package("kotatsu")
         configs.deco = true
         configs.ztest = true
         configs.http = true
-        if package:is_plat("macosx") then
-            local conda_prefix = os.getenv("CONDA_PREFIX")
-            if conda_prefix then
-                local bindir = path.join(conda_prefix, "bin")
-                local libdir = path.join(conda_prefix, "lib")
-                local mode = package:is_debug() and "debug" or "release"
-                local builddir = package:builddir()
-                -- Pixi's clang cfg injects `.pixi/.../include`; disable that default
-                -- config just for kotatsu's package install and keep the rest explicit.
-                local argv = {
-                    "f", "-y", "-c",
-                    "--plat=" .. package:plat(),
-                    "--arch=" .. package:arch(),
-                    "--mode=" .. mode,
-                    "--kind=" .. (package:config("shared") and "shared" or "static"),
-                    "--builddir=" .. builddir,
-                    "--cc=" .. path.join(bindir, "clang"),
-                    "--cxx=" .. path.join(bindir, "clang++"),
-                    "--ld=" .. path.join(bindir, "clang++"),
-                    "--sh=" .. path.join(bindir, "clang++"),
-                    "--ar=" .. path.join(bindir, "llvm-ar"),
-                    "--ranlib=" .. path.join(bindir, "llvm-ranlib"),
-                    "--cflags=--no-default-config",
-                    "--cxflags=--no-default-config -D_LIBCPP_DISABLE_AVAILABILITY=1",
-                    "--ldflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
-                    "--shflags=--no-default-config -L" .. libdir .. " -Wl,-rpath," .. libdir,
-                    "--dev=false",
-                    "--test=false",
-                    "--async=true",
-                    "--deco=true",
-                    "--ztest=true",
-                    "--http=true"
-                }
-                if package:config("asan") then
-                    table.insert(argv, "--policies=build.sanitizer.address")
-                end
-                os.vrunv("xmake", argv, {curdir = package:sourcedir()})
-                os.mkdir(path.join(builddir, ".deps", "kotatsu", package:plat(), package:arch(), mode))
-                os.vrunv("xmake", {"build", "kotatsu"}, {curdir = package:sourcedir()})
-                os.vrunv("xmake", {"install", "-y", "--packages=n", "-o", package:installdir(), "kotatsu"}, {curdir = package:sourcedir()})
-                return
-            end
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        elseif is_plat("linux") then
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        else
-            import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
-        end
+        import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
     end)
 
 
@@ -732,7 +703,7 @@ xpack("catter")
     end)
 
     add_targets("catter", "catter-proxy")
-    if is_plat("windows") then
+    if is_plat("windows", "mingw") then
         add_targets("catter-hook-win64")
     elseif is_plat("linux", "macosx") then
         add_targets("catter-hook-unix")

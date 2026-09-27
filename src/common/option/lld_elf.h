@@ -20,7 +20,8 @@ enum ID : unsigned {
                HELP,                                                                               \
                HELP_TEXTS,                                                                         \
                META_VAR,                                                                           \
-               VALUES)                                                                             \
+               VALUES,                                                                             \
+               SUBCOMMANDIDS_OFFSET)                                                               \
     ID_##ID,
 #include <llvm-options-td/lld-ELF-Options.inc>
 #undef OPTION

@@ -12,7 +12,10 @@
 |---|---|
 | Windows (win-64) | MSVC (VS2022) |
 | Linux (linux-64) | GCC 14.2 |
-| macOS (osx-arm64) | Clang 20.1 |
+| macOS (osx-arm64) | xclang 23.1.2 |
+| Windows (win-64)，`mingw` 环境 | xclang 23.1.2（MinGW） |
+
+`mingw` 环境在 Windows 上用 [xclang](https://github.com/clice-io/xclang) 代替 MSVC 构建：先 `pixi run -e mingw cfg debug`，再 `pixi run -e mingw build`。
 
 ## 构建命令
 
