@@ -20,8 +20,8 @@ pnpm = "*"
 # From xclang (clice-io/xclang): the option tables of clang, lld, llvm-lib
 # and llvm-dlltool, and the toolchain, whose FileCheck the integration tests
 # use and whose clang builds catter on macOS and for MinGW.
-llvm-option-inc = "==23.1.2.2"
-xclang = "==23.1.2.2"
+llvm-option-inc = "==23.1.2.3"
+xclang = "==23.1.2.3"
 
 # Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
 [target.win-64.dependencies]
