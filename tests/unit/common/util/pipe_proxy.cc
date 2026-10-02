@@ -7,8 +7,8 @@
 
 using namespace catter::util;
 
-TEST_SUITE(pipe_proxy) {
-TEST_CASE(append_bounded_output_keeps_full_text_within_limit) {
+ZEST_SUITE(pipe_proxy) {
+ZEST_CASE(append_bounded_output_keeps_full_text_within_limit) {
     std::string buffer = "hello";
     bool truncated = false;
 
@@ -17,11 +17,11 @@ TEST_CASE(append_bounded_output_keeps_full_text_within_limit) {
                                      truncated,
                                      PipeProxy::truncation_marker.size() + 32);
 
-    EXPECT_FALSE(truncated);
-    EXPECT_TRUE(buffer == "hello world");
+    EXPECT(!truncated);
+    EXPECT(buffer == "hello world");
 };
 
-TEST_CASE(append_bounded_output_keeps_latest_bytes_after_truncation) {
+ZEST_CASE(append_bounded_output_keeps_latest_bytes_after_truncation) {
     constexpr size_t payload_limit = 8;
     const size_t limit = PipeProxy::truncation_marker.size() + payload_limit;
 
@@ -30,14 +30,14 @@ TEST_CASE(append_bounded_output_keeps_latest_bytes_after_truncation) {
 
     PipeProxy::append_bounded_output(buffer, "abcdefghij", truncated, limit);
 
-    EXPECT_TRUE(truncated);
-    EXPECT_TRUE(buffer.starts_with(PipeProxy::truncation_marker));
-    EXPECT_TRUE(buffer.size() == limit);
-    EXPECT_TRUE(buffer.substr(PipeProxy::truncation_marker.size()) == "cdefghij");
+    EXPECT(truncated);
+    EXPECT(buffer.starts_with(PipeProxy::truncation_marker));
+    EXPECT(buffer.size() == limit);
+    EXPECT(buffer.substr(PipeProxy::truncation_marker.size()) == "cdefghij");
 
     PipeProxy::append_bounded_output(buffer, "KLMN", truncated, limit);
 
-    EXPECT_TRUE(buffer.starts_with(PipeProxy::truncation_marker));
-    EXPECT_TRUE(buffer.substr(PipeProxy::truncation_marker.size()) == "ghijKLMN");
+    EXPECT(buffer.starts_with(PipeProxy::truncation_marker));
+    EXPECT(buffer.substr(PipeProxy::truncation_marker.size()) == "ghijKLMN");
 };
-};  // TEST_SUITE(pipe_proxy)
+};  // ZEST_SUITE(pipe_proxy)

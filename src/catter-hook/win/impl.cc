@@ -205,7 +205,7 @@ public:
         return;
     }
 
-    kota::process::wait_result await_resume() noexcept {
+    kota::result<kota::process::exit_status> await_resume() noexcept {
         DWORD exit_code = 0;
         if(!GetExitCodeProcess(this->process_handle, &exit_code)) {
             return kota::outcome_error(kota::error(uv_translate_sys_error(GetLastError())));

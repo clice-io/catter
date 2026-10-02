@@ -2,11 +2,13 @@
 
 #include <atomic>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <string_view>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
 #include <kota/async/io/loop.h>
+#include <kota/async/io/system.h>
 
 #include "js/js.h"
 #include "js/qjs.h"
@@ -29,8 +31,9 @@ bool throws_with_message(Fn&& fn, std::string_view needle) {
 struct Fixture {
     Fixture() {
         static std::atomic_uint64_t serial{0};
+        // Tests run in several worker processes at once, so the name carries the pid.
         root = fs::temp_directory_path() /
-               ("catter_esm_loader_" + std::to_string(serial.fetch_add(1)));
+               std::format("catter_esm_loader_{}_{}", kota::sys::pid(), serial.fetch_add(1));
         fs::create_directories(root / "nested");
     }
 
@@ -50,36 +53,36 @@ struct Fixture {
 
 }  // namespace
 
-TEST_SUITE(esm_loader_tests) {
+ZEST_SUITE(esm_loader_tests) {
 
-TEST_CASE(path_resolution_uses_parent_without_extension_inference) {
+ZEST_CASE(path_resolution_uses_parent_without_extension_inference) {
     Fixture fixture;
     fixture.write(fixture.root / "nested" / "dep.js", "export const value = 42;");
     catter::js::EsmModuleLoader loader{};
 
     auto resolved =
         loader.normalizer((fixture.root / "main.js").string().c_str(), "./nested/dep.js");
-    EXPECT_TRUE(fs::path(resolved) == fixture.root / "nested" / "dep.js");
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(fs::path(resolved) == fixture.root / "nested" / "dep.js");
+    EXPECT(throws_with_message(
         [&]() {
             (void)loader.normalizer((fixture.root / "main.js").string().c_str(), "./nested/dep");
         },
         "Cannot find module"));
 }
 
-TEST_CASE(path_resolution_rejects_directories_and_non_path_specifiers) {
+ZEST_CASE(path_resolution_rejects_directories_and_non_path_specifiers) {
     Fixture fixture;
     catter::js::EsmModuleLoader loader{};
 
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(throws_with_message(
         [&]() { (void)loader.normalizer((fixture.root / "main.js").string().c_str(), "./nested"); },
         "Directory import"));
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(throws_with_message(
         [&]() { (void)loader.normalizer((fixture.root / "main.js").string().c_str(), "package"); },
         "only file paths are supported"));
 }
 
-TEST_CASE(loader_reads_canonical_file_name) {
+ZEST_CASE(loader_reads_canonical_file_name) {
     Fixture fixture;
     fixture.write(fixture.root / "dep.js", "export const value = 42;");
     catter::js::EsmModuleLoader loader{};
@@ -88,17 +91,17 @@ TEST_CASE(loader_reads_canonical_file_name) {
     auto ctx = rt.context();
 
     auto module = loader.loader(ctx, (fixture.root / "dep.js").string().c_str());
-    EXPECT_TRUE(module.module_def() != nullptr);
-    EXPECT_TRUE(module.module_name().to_string() == (fixture.root / "dep.js").string());
+    EXPECT(module.module_def() != nullptr);
+    EXPECT(module.module_name().to_string() == (fixture.root / "dep.js").string());
 }
 
-TEST_CASE(loader_rejects_unknown_builtin_specifiers) {
+ZEST_CASE(loader_rejects_unknown_builtin_specifiers) {
     catter::js::EsmModuleLoader loader{};
     auto rt = qjs::Runtime::create();
     auto ctx = rt.context();
 
-    EXPECT_TRUE(throws_with_message([&]() { (void)loader.loader(ctx, "catter/does-not-exist"); },
-                                    "Unknown builtin module"));
+    EXPECT(throws_with_message([&]() { (void)loader.loader(ctx, "catter/does-not-exist"); },
+                               "Unknown builtin module"));
 }
 
 struct ScriptRunConfig {
@@ -126,7 +129,7 @@ kota::task<> async_run(ScriptRunConfig config) {
     co_return;
 }
 
-TEST_CASE(api_source_style_project_dependency_graph_is_resolved_once) {
+ZEST_CASE(api_source_style_project_dependency_graph_is_resolved_once) {
     auto f = [&]() {
         Fixture fixture;
         fixture.write(fixture.root / "index.js",
@@ -233,11 +236,11 @@ TEST_CASE(api_source_style_project_dependency_graph_is_resolved_once) {
             path_loader.normalizer((fixture.root / "option" / "index.js").string().c_str(),
                                    "../data/flat-tree.js");
         const auto from_root = path_loader.normalizer(entry_path.c_str(), "./data/flat-tree.js");
-        EXPECT_TRUE(from_data_index == from_option);
-        EXPECT_TRUE(from_option == from_root);
+        EXPECT(from_data_index == from_option);
+        EXPECT(from_option == from_root);
     };
 
     EXPECT_NOTHROWS(f());
 }
 
-};  // TEST_SUITE(esm_loader_tests)
+};  // ZEST_SUITE(esm_loader_tests)

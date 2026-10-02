@@ -634,9 +634,7 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("170", "c516e3ae0ca3c7d7fb35fdcfdc7c6a111adef764")
-    add_patches("170", path.join(os.scriptdir(), "patches", "kotatsu-mingw.patch"),
-        "f4dc8f6a37aa3314d458924777877c4cf1eee1c2658ba3a710020cebdfcea91f")
+    add_versions("210", "4f5fc11be4133d6de4525b5c7556a45de59d0be1")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")

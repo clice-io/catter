@@ -29,6 +29,8 @@ pixi run -e dev integration-test
 pixi run cfg  # 或: xmake config --test=y
 ```
 
+每个测试程序把测试分给一组 worker 进程同时运行，每个测试限时 60 秒。用到固定文件名或目录名的 suite 必须单独运行：用 `ZEST_SUITE_ATTRS(serial = true);` 标记。调试某个测试时，用 `--no-isolation --test-filter=<suite>.<test>` 让它在测试程序自己的进程里运行；其他选项见 `--help`。
+
 ### 集成测试
 
 集成测试使用 [LLVM Lit](https://llvm.org/docs/CommandGuide/lit.html) 框架。位于 `tests/integration/`，编译并运行 C++ 测试程序，使用 FileCheck 进行输出验证。

@@ -83,9 +83,9 @@ struct ScopedEnvVar {
     }
 };
 
-TEST_SUITE(shared_win_resolver) {
+ZEST_SUITE(shared_win_resolver) {
 
-TEST_CASE(resolve_application_name_searches_current_directory) {
+ZEST_CASE(resolve_application_name_searches_current_directory) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
 
@@ -93,10 +93,10 @@ TEST_CASE(resolve_application_name_searches_current_directory) {
     touch_file(app_path);
 
     auto resolved = resolver::resolve_application_name<char>("clang");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
 };
 
-TEST_CASE(resolve_command_line_token_searches_PATH) {
+ZEST_CASE(resolve_command_line_token_searches_PATH) {
     TempSandbox sandbox;
     auto cwd = sandbox.root / "cwd";
     fs::create_directories(cwd);
@@ -108,15 +108,15 @@ TEST_CASE(resolve_command_line_token_searches_PATH) {
     ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
 
     auto resolved = resolver::resolve_command_line_token<char>("runner");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
 };
 
-TEST_CASE(resolve_command_line_token_preserves_missing_token_for_callers) {
+ZEST_CASE(resolve_command_line_token_preserves_missing_token_for_callers) {
     auto resolved = resolver::resolve_command_line_token<char>("definitely-missing-binary");
-    EXPECT_TRUE(resolved == "definitely-missing-binary");
+    EXPECT(resolved == "definitely-missing-binary");
 };
 
-TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
+ZEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
 
@@ -124,10 +124,10 @@ TEST_CASE(app_name_resolver_appends_exe_and_searches_current_directory) {
     touch_file(app_path);
 
     auto resolved = resolver::resolve_application_name<char>("clang");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
 };
 
-TEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
+ZEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
 
@@ -135,11 +135,11 @@ TEST_CASE(app_name_resolver_does_not_append_exe_when_input_has_path) {
     touch_file(app_path);
 
     auto resolved = resolver::resolve_application_name<char>("bin\\lld");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
-    EXPECT_TRUE(fs::path(resolved).filename() == "lld");
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(fs::path(resolved).filename() == "lld");
 };
 
-TEST_CASE(command_line_resolver_searches_path_variable) {
+ZEST_CASE(command_line_resolver_searches_path_variable) {
     TempSandbox sandbox;
     auto cwd = sandbox.root / "cwd";
     fs::create_directories(cwd);
@@ -152,10 +152,10 @@ TEST_CASE(command_line_resolver_searches_path_variable) {
     ScopedEnvVar path_scope(L"PATH", app_dir.wstring());
 
     auto resolved = resolver::resolve_command_line_token<char>("runner");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
 };
 
-TEST_CASE(resolve_command_line_token_resolves_binary_name_in_current_directory) {
+ZEST_CASE(resolve_command_line_token_resolves_binary_name_in_current_directory) {
     TempSandbox sandbox;
     ScopedCurrentDirectory scope(sandbox.root);
 
@@ -163,10 +163,10 @@ TEST_CASE(resolve_command_line_token_resolves_binary_name_in_current_directory) 
     touch_file(app_path);
 
     auto resolved = resolver::resolve_command_line_token<char>("quoted");
-    EXPECT_TRUE(same_existing_file(fs::path(resolved), app_path));
+    EXPECT(same_existing_file(fs::path(resolved), app_path));
 };
 
-};  // TEST_SUITE(shared_win_resolver)
+};  // ZEST_SUITE(shared_win_resolver)
 
 }  // namespace
 

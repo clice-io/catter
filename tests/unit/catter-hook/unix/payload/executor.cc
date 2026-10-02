@@ -49,7 +49,7 @@ public:
         if(auto* old_value = std::getenv(m_key.c_str()); old_value != nullptr) {
             m_old_value = old_value;
         }
-        EXPECT_TRUE(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
+        EXPECT(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
     }
 
     ~ScopedEnv() {
@@ -133,7 +133,7 @@ int fake_posix_spawn(pid_t*,
 fs::path create_executable(std::string_view name) {
     std::error_code ec;
     manager.create(std::string(name), ec);
-    EXPECT_TRUE(!ec);
+    EXPECT(!ec);
     return manager.root / name;
 }
 
@@ -141,20 +141,22 @@ void expect_proxy_command(const CapturedCall& call,
                           const ct::Session& session,
                           const fs::path& executable,
                           std::string_view argv0) {
-    EXPECT_TRUE(call.path == session.proxy_path);
-    EXPECT_TRUE(call.argv.size() >= 7);
-    EXPECT_TRUE(call.argv.at(0) == session.proxy_path);
-    EXPECT_TRUE(call.argv.at(1) == "-p");
-    EXPECT_TRUE(call.argv.at(2) == session.self_id);
-    EXPECT_TRUE(call.argv.at(3) == "--exec");
-    EXPECT_TRUE(call.argv.at(4) == executable.string());
-    EXPECT_TRUE(call.argv.at(5) == "--");
-    EXPECT_TRUE(call.argv.at(6) == argv0);
+    EXPECT(call.path == session.proxy_path);
+    EXPECT(call.argv.size() >= 7);
+    EXPECT(call.argv.at(0) == session.proxy_path);
+    EXPECT(call.argv.at(1) == "-p");
+    EXPECT(call.argv.at(2) == session.self_id);
+    EXPECT(call.argv.at(3) == "--exec");
+    EXPECT(call.argv.at(4) == executable.string());
+    EXPECT(call.argv.at(5) == "--");
+    EXPECT(call.argv.at(6) == argv0);
 }
 
-TEST_SUITE(executor) {
+ZEST_SUITE(executor) {
+// Every worker process removes ./tmp-executor when it exits, so these must run alone.
+ZEST_SUITE_ATTRS(serial = true);
 
-TEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
+ZEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
     exec_call.reset(42);
     spawn_call.reset();
 
@@ -173,20 +175,20 @@ TEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
 
     auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
 
-    EXPECT_TRUE(result == 42);
-    EXPECT_TRUE(exec_call.calls == 1);
+    EXPECT(result == 42);
+    EXPECT(exec_call.calls == 1);
     expect_proxy_command(exec_call, valid_session, executable, "execve-tool");
-    EXPECT_TRUE(exec_call.argv.at(7) == "-c");
-    EXPECT_TRUE(exec_call.argv.at(8) == "main.cc");
-    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
-    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
-    EXPECT_TRUE(has_env_entry(exec_call.envp, "LANG"));
-    EXPECT_TRUE(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
-    EXPECT_TRUE(exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
-                exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so");
+    EXPECT(exec_call.argv.at(7) == "-c");
+    EXPECT(exec_call.argv.at(8) == "main.cc");
+    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
+    EXPECT(has_env_entry(exec_call.envp, "LANG"));
+    EXPECT(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
+    EXPECT((exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
+            exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so"));
 }
 
-TEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
+ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
     exec_call.reset(51);
 
     auto executable = create_executable("path-tool");
@@ -201,14 +203,14 @@ TEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
 
     auto result = executor.execvp("path-tool", argv.data());
 
-    EXPECT_TRUE(result == 51);
-    EXPECT_TRUE(exec_call.calls == 1);
+    EXPECT(result == 51);
+    EXPECT(exec_call.calls == 1);
     expect_proxy_command(exec_call, valid_session, fs::absolute(executable), "path-tool");
-    EXPECT_TRUE(has_env_entry(exec_call.envp, "PATH"));
-    EXPECT_TRUE(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    EXPECT(has_env_entry(exec_call.envp, "PATH"));
+    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
 }
 
-TEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_missing) {
+ZEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_missing) {
     exec_call.reset(60);
 
     ct::Session invalid_session{};
@@ -220,12 +222,12 @@ TEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_miss
     errno = 0;
     auto result = executor.execve("/definitely/missing/tool", argv.data(), nullptr);
 
-    EXPECT_TRUE(result == -1);
-    EXPECT_TRUE(errno == ENOENT);
-    EXPECT_TRUE(exec_call.calls == 0);
+    EXPECT(result == -1);
+    EXPECT(errno == ENOENT);
+    EXPECT(exec_call.calls == 0);
 }
 
-TEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
+ZEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
     exec_call.reset();
     MutableCStrings argv = {"tool"};
 
@@ -235,12 +237,12 @@ TEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
     errno = 0;
     auto result = executor.execve(nullptr, argv.data(), nullptr);
 
-    EXPECT_TRUE(result == -1);
-    EXPECT_TRUE(errno == EFAULT);
-    EXPECT_TRUE(exec_call.calls == 0);
+    EXPECT(result == -1);
+    EXPECT(errno == EFAULT);
+    EXPECT(exec_call.calls == 0);
 }
 
-TEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
+ZEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
     spawn_call.reset(17);
 
     auto executable = create_executable("spawn-tool");
@@ -253,12 +255,12 @@ TEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
     auto result =
         executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), nullptr);
 
-    EXPECT_TRUE(result == 17);
-    EXPECT_TRUE(spawn_call.calls == 1);
+    EXPECT(result == 17);
+    EXPECT(spawn_call.calls == 1);
     expect_proxy_command(spawn_call, valid_session, executable, "spawn-tool");
 }
 
-TEST_CASE(spawn_boundary_returns_error_code) {
+ZEST_CASE(spawn_boundary_returns_error_code) {
     spawn_call.reset();
     MutableCStrings argv = {"tool"};
 
@@ -269,11 +271,11 @@ TEST_CASE(spawn_boundary_returns_error_code) {
     errno = 0;
     auto result = executor.posix_spawn(&pid, nullptr, nullptr, nullptr, argv.data(), nullptr);
 
-    EXPECT_TRUE(result == EFAULT);
-    EXPECT_TRUE(errno == EFAULT);
-    EXPECT_TRUE(spawn_call.calls == 0);
+    EXPECT(result == EFAULT);
+    EXPECT(errno == EFAULT);
+    EXPECT(spawn_call.calls == 0);
 }
 
-};  // TEST_SUITE(executor)
+};  // ZEST_SUITE(executor)
 
 }  // namespace

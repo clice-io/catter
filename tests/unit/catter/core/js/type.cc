@@ -19,8 +19,8 @@ bool is_roundtrip_equal(const qjs::Context& ctx, const T& value) {
 
 }  // namespace
 
-TEST_SUITE(api_tests) {
-TEST_CASE(catter_runtime_conversion) {
+ZEST_SUITE(api_tests) {
+ZEST_CASE(catter_runtime_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -31,13 +31,13 @@ TEST_CASE(catter_runtime_conversion) {
             .supportParentId = true
         };
 
-        EXPECT_TRUE(is_roundtrip_equal(ctx, catter_runtime));
+        EXPECT(is_roundtrip_equal(ctx, catter_runtime));
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(command_data_and_action_conversion) {
+ZEST_CASE(command_data_and_action_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -59,15 +59,15 @@ TEST_CASE(command_data_and_action_conversion) {
 
         };
 
-        EXPECT_TRUE(is_roundtrip_equal(ctx, command_data));
-        EXPECT_TRUE(is_roundtrip_equal(ctx, modify_action));
-        EXPECT_TRUE(is_roundtrip_equal(ctx, skip_action));
+        EXPECT(is_roundtrip_equal(ctx, command_data));
+        EXPECT(is_roundtrip_equal(ctx, modify_action));
+        EXPECT(is_roundtrip_equal(ctx, skip_action));
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(process_result_and_config_conversion) {
+ZEST_CASE(process_result_and_config_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -90,14 +90,14 @@ TEST_CASE(process_result_and_config_conversion) {
             .execute = true
         };
 
-        EXPECT_TRUE(is_roundtrip_equal(ctx, process_result));
-        EXPECT_TRUE(is_roundtrip_equal(ctx, config));
+        EXPECT(is_roundtrip_equal(ctx, process_result));
+        EXPECT(is_roundtrip_equal(ctx, config));
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(option_item_and_info_conversion) {
+ZEST_CASE(option_item_and_info_conversion) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -123,10 +123,10 @@ TEST_CASE(option_item_and_info_conversion) {
             .meta_var = "<dir>",
         };
 
-        EXPECT_TRUE(is_roundtrip_equal(ctx, option_item));
-        EXPECT_TRUE(is_roundtrip_equal(ctx, option_info));
+        EXPECT(is_roundtrip_equal(ctx, option_item));
+        EXPECT(is_roundtrip_equal(ctx, option_info));
     };
 
     EXPECT_NOTHROWS(f());
 };
-};  // TEST_SUITE(api_tests)
+};  // ZEST_SUITE(api_tests)

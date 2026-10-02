@@ -205,7 +205,7 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
         .match(catter::proxy::Option::Cate::proxy,
                [&](const auto& opt) {
                    auto [code] = kota::run(proxy_main(argc, argv, opt.proxy_opt));
-                   ret = code.value_or(-1);
+                   ret = code.has_value() ? *code : -1;
                })
         .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;

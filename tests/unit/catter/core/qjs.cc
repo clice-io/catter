@@ -114,54 +114,54 @@ constexpr int eval_flags = JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_STRICT;
 
 }  // namespace
 
-TEST_SUITE(qjs_tests) {
+ZEST_SUITE(qjs_tests) {
 
-TEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
+ZEST_CASE(runtime_context_and_eval_cover_success_and_error_paths) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
-        EXPECT_TRUE(runtime);
+        EXPECT(runtime);
 
         auto default_ctx = runtime.context();
         auto same_ctx = runtime.context();
         auto other_ctx = runtime.context("other");
 
-        EXPECT_TRUE(default_ctx.js_context() == same_ctx.js_context());
-        EXPECT_TRUE(default_ctx.js_context() != other_ctx.js_context());
+        EXPECT(default_ctx.js_context() == same_ctx.js_context());
+        EXPECT(default_ctx.js_context() != other_ctx.js_context());
 
         auto value = default_ctx.eval("1 + 2", "<eval>", eval_flags);
-        EXPECT_TRUE(value.as<int64_t>() == 3);
+        EXPECT(value.as<int64_t>() == 3);
 
         auto undefined_value = default_ctx.eval("undefined", "<eval>", eval_flags);
-        EXPECT_TRUE(undefined_value.is_undefined());
-        EXPECT_TRUE(undefined_value.is_nothing());
+        EXPECT(undefined_value.is_undefined());
+        EXPECT(undefined_value.is_nothing());
 
         auto null_value = default_ctx.eval("null", "<eval>", eval_flags);
-        EXPECT_TRUE(null_value.is_null());
-        EXPECT_TRUE(null_value.is_nothing());
+        EXPECT(null_value.is_null());
+        EXPECT(null_value.is_nothing());
 
         auto global = default_ctx.global_this();
         global.set_property("from_cpp", int64_t{9});
-        EXPECT_TRUE(global.get_property("from_cpp").as<int64_t>() == 9);
+        EXPECT(global.get_property("from_cpp").as<int64_t>() == 9);
 
         auto wrapped_global = qjs::Value::from(global);
-        EXPECT_TRUE(wrapped_global.as<qjs::Object>().get_property("from_cpp").as<int64_t>() == 9);
+        EXPECT(wrapped_global.as<qjs::Object>().get_property("from_cpp").as<int64_t>() == 9);
 
         auto atom =
             qjs::Atom(default_ctx.js_context(), JS_NewAtom(default_ctx.js_context(), "qjs-test"));
-        EXPECT_TRUE(atom.to_string() == "qjs-test");
+        EXPECT(atom.to_string() == "qjs-test");
     };
 
     EXPECT_NOTHROWS(f());
 
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
-    EXPECT_TRUE(throws_with_jserror(
+    EXPECT(throws_with_jserror(
         [&]() { ctx.eval("throw new TypeError('boom')", "<eval>", eval_flags); },
         "TypeError"));
-    EXPECT_TRUE(!ctx.has_exception());
+    EXPECT(!ctx.has_exception());
 };
 
-TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
+ZEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -172,24 +172,24 @@ TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
         auto wide_unsigned_value = qjs::Value::from(ctx.js_context(), uint64_t{1} << 32);
         auto string_value = qjs::Value::from(ctx.js_context(), std::string{"hello"});
 
-        EXPECT_TRUE(bool_value.to<bool>().value_or(false));
-        EXPECT_TRUE(signed_value.as<int64_t>() == -7);
-        EXPECT_TRUE(unsigned_value.as<uint32_t>() == 11);
-        EXPECT_TRUE(wide_unsigned_value.as<uint64_t>() == (uint64_t{1} << 32));
-        EXPECT_TRUE(string_value.as<std::string>() == "hello");
+        EXPECT(bool_value.to<bool>().value_or(false));
+        EXPECT(signed_value.as<int64_t>() == -7);
+        EXPECT(unsigned_value.as<uint32_t>() == 11);
+        EXPECT(wide_unsigned_value.as<uint64_t>() == (uint64_t{1} << 32));
+        EXPECT(string_value.as<std::string>() == "hello");
 
         auto copied_string = string_value;
-        EXPECT_TRUE(copied_string.as<std::string>() == "hello");
+        EXPECT(copied_string.as<std::string>() == "hello");
 
         auto moved_string = std::move(copied_string);
-        EXPECT_TRUE(!copied_string.is_valid());
-        EXPECT_TRUE(moved_string.as<std::string>() == "hello");
+        EXPECT(!copied_string.is_valid());
+        EXPECT(moved_string.as<std::string>() == "hello");
 
         auto released = qjs::Value::from(ctx.js_context(), int64_t{27});
         auto raw_value = released.release();
-        EXPECT_TRUE(!released.is_valid());
+        EXPECT(!released.is_valid());
         auto rebound = qjs::Value(ctx.js_context(), std::move(raw_value));
-        EXPECT_TRUE(rebound.as<int64_t>() == 27);
+        EXPECT(rebound.as<int64_t>() == 27);
     };
 
     EXPECT_NOTHROWS(f());
@@ -197,31 +197,31 @@ TEST_CASE(value_conversions_cover_supported_types_copy_move_and_type_mismatch) {
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
     auto bool_value = qjs::Value::from(ctx.js_context(), true);
-    EXPECT_FALSE(bool_value.to<std::string>().has_value());
-    EXPECT_TRUE(throws_with_message([&]() { (void)bool_value.as<std::string>(); },
-                                    "Value is not a string"));
+    EXPECT(!bool_value.to<std::string>().has_value());
+    EXPECT(throws_with_message([&]() { (void)bool_value.as<std::string>(); },
+                               "Value is not a string"));
 };
 
-TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
+ZEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
     auto global = ctx.global_this();
 
     constexpr std::string_view sync_source = "globalThis.syncResult = 40 + 2;";
     auto sync_result = ctx.eval_script(sync_source.data(), sync_source.size(), "sync-script.js");
-    EXPECT_TRUE(sync_result.as<int64_t>() == 42);
-    EXPECT_TRUE(global["syncResult"].as<int64_t>() == 42);
-    EXPECT_TRUE(throws_with_jserror(
+    EXPECT(sync_result.as<int64_t>() == 42);
+    EXPECT(global["syncResult"].as<int64_t>() == 42);
+    EXPECT(throws_with_jserror(
         [&]() { (void)ctx.eval_script("undeclaredValue = 1", "strict-script.js"); },
         "ReferenceError"));
 
     auto async_result =
         ctx.async_eval_script("await Promise.resolve(); globalThis.asyncResult = 21 * 2;",
                               "async-script.js");
-    EXPECT_TRUE(async_result.is_pending());
+    EXPECT(async_result.is_pending());
     drain_jobs(runtime);
-    EXPECT_TRUE(async_result.is_fulfilled());
-    EXPECT_TRUE(global["asyncResult"].as<int64_t>() == 42);
+    EXPECT(async_result.is_fulfilled());
+    EXPECT(global["asyncResult"].as<int64_t>() == 42);
 
     struct Loader : public qjs::Runtime::ModuleLoader {
         std::string normalizer(std::string_view referrer_name,
@@ -252,14 +252,14 @@ TEST_CASE(script_and_module_evaluation_cover_sync_async_and_custom_loading) {
                                          "main-module.js");
     drain_jobs(runtime);
 
-    EXPECT_TRUE(module_result.is_fulfilled());
-    EXPECT_TRUE(global["moduleResult"].as<int64_t>() == 42);
-    EXPECT_TRUE(loader_ptr->normalized_referrer == "main-module.js");
-    EXPECT_TRUE(loader_ptr->normalized_specifier == "./dependency.js");
-    EXPECT_TRUE(loader_ptr->loaded_name == "virtual:dependency");
+    EXPECT(module_result.is_fulfilled());
+    EXPECT(global["moduleResult"].as<int64_t>() == 42);
+    EXPECT(loader_ptr->normalized_referrer == "main-module.js");
+    EXPECT(loader_ptr->normalized_specifier == "./dependency.js");
+    EXPECT(loader_ptr->loaded_name == "virtual:dependency");
 };
 
-TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
+ZEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -276,14 +276,14 @@ TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
         object.set_property("raw", raw_js_value);
         JS_FreeValue(ctx.js_context(), raw_js_value);
 
-        EXPECT_TRUE(object.get_property("number").as<int64_t>() == 42);
-        EXPECT_TRUE(object["flag"].as<bool>());
-        EXPECT_TRUE(object.get_property("wrapped").as<std::string>() == "wrapped");
-        EXPECT_TRUE(object.get_property("raw").as<int64_t>() == 99);
-        EXPECT_FALSE(object.get_optional_property("missing").has_value());
+        EXPECT(object.get_property("number").as<int64_t>() == 42);
+        EXPECT(object["flag"].as<bool>());
+        EXPECT(object.get_property("wrapped").as<std::string>() == "wrapped");
+        EXPECT(object.get_property("raw").as<int64_t>() == 99);
+        EXPECT(!object.get_optional_property("missing").has_value());
 
         auto same_object = object;
-        EXPECT_TRUE(same_object.get_property("number").as<int64_t>() == 42);
+        EXPECT(same_object.get_property("number").as<int64_t>() == 42);
     };
 
     EXPECT_NOTHROWS(f());
@@ -297,13 +297,13 @@ TEST_CASE(object_property_apis_cover_reads_writes_and_exceptional_access) {
                eval_flags)
             .as<qjs::Object>();
 
-    EXPECT_TRUE(throws_with_message([&]() { (void)throwing_object.get_property("boom"); },
-                                    "property boom"));
-    EXPECT_FALSE(throwing_object.get_optional_property("boom").has_value());
+    EXPECT(throws_with_message([&]() { (void)throwing_object.get_property("boom"); },
+                               "property boom"));
+    EXPECT(!throwing_object.get_optional_property("boom").has_value());
     JS_FreeValue(ctx.js_context(), JS_GetException(ctx.js_context()));
 };
 
-TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
+ZEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -311,21 +311,21 @@ TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
         auto values = std::vector<int64_t>{1, 2, 3};
         auto array = qjs::Array<int64_t>::from(ctx.js_context(), values);
 
-        EXPECT_TRUE(array.length() == 3);
-        EXPECT_TRUE(array[0] == 1);
-        EXPECT_TRUE(array.as<std::vector<int64_t>>() == values);
+        EXPECT(array.length() == 3);
+        EXPECT(array[0] == 1);
+        EXPECT(array.as<std::vector<int64_t>>() == values);
 
         auto array_value = qjs::Value::from(array);
-        EXPECT_TRUE(array_value.as<qjs::Array<int64_t>>().length() == 3);
-        EXPECT_TRUE(array_value.to<qjs::Array<int64_t>>().has_value());
+        EXPECT(array_value.as<qjs::Array<int64_t>>().length() == 3);
+        EXPECT(array_value.to<qjs::Array<int64_t>>().has_value());
 
         auto array_object = qjs::Object::from(array);
-        EXPECT_TRUE(array_object.as<qjs::Array<int64_t>>().length() == 3);
+        EXPECT(array_object.as<qjs::Array<int64_t>>().length() == 3);
 
         auto empty = qjs::Array<int64_t>::empty_one(ctx.js_context());
         empty.push(7);
-        EXPECT_TRUE(empty.length() == 1);
-        EXPECT_TRUE(empty[0] == 7);
+        EXPECT(empty.length() == 1);
+        EXPECT(empty[0] == 7);
     };
 
     EXPECT_NOTHROWS(f());
@@ -334,36 +334,36 @@ TEST_CASE(array_conversions_cover_roundtrip_element_failures_and_push_errors) {
     auto ctx = runtime.context();
 
     auto not_an_array = qjs::json::parse(R"({"length":1})", ctx).as<qjs::Object>();
-    EXPECT_TRUE(throws_with_message([&]() { (void)not_an_array.as<qjs::Array<int64_t>>(); },
-                                    "Object is not an array"));
+    EXPECT(throws_with_message([&]() { (void)not_an_array.as<qjs::Array<int64_t>>(); },
+                               "Object is not an array"));
 
     auto frozen_array =
         ctx.eval("const arr = []; Object.preventExtensions(arr); arr", "<eval>", eval_flags)
             .as<qjs::Object>()
             .as<qjs::Array<int64_t>>();
-    EXPECT_TRUE(throws_with_jserror([&]() { frozen_array.push(1); }, "TypeError"));
+    EXPECT(throws_with_jserror([&]() { frozen_array.push(1); }, "TypeError"));
 };
 
-TEST_CASE(array_conversions_cover_string_roundtrip) {
+ZEST_CASE(array_conversions_cover_string_roundtrip) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
 
         auto string_values = std::vector<std::string>{"alpha", "beta", "gamma"};
         auto string_array = qjs::Array<std::string>::from(ctx.js_context(), string_values);
-        EXPECT_TRUE(string_array.length() == 3);
-        EXPECT_TRUE(string_array[0] == "alpha");
-        EXPECT_TRUE(string_array[2] == "gamma");
-        EXPECT_TRUE(string_array.as<std::vector<std::string>>() == string_values);
+        EXPECT(string_array.length() == 3);
+        EXPECT(string_array[0] == "alpha");
+        EXPECT(string_array[2] == "gamma");
+        EXPECT(string_array.as<std::vector<std::string>>() == string_values);
 
         auto string_array_object = qjs::Object::from(string_array);
-        EXPECT_TRUE(string_array_object.to<qjs::Array<std::string>>().has_value());
+        EXPECT(string_array_object.to<qjs::Array<std::string>>().has_value());
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
+ZEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -396,37 +396,37 @@ TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
         ctx.global_this().set_property("addOne", add_one);
         ctx.global_this().set_property("addTwo", add_two);
 
-        EXPECT_TRUE(plus_three(4) == 7);
-        EXPECT_TRUE(plus_three.as()(5) == 8);
-        EXPECT_TRUE(plus_three.value().u.ptr != nullptr);
-        EXPECT_TRUE(add_one(9) == 10);
-        EXPECT_TRUE(add_two(9) == 11);
+        EXPECT(plus_three(4) == 7);
+        EXPECT(plus_three.as()(5) == 8);
+        EXPECT(plus_three.value().u.ptr != nullptr);
+        EXPECT(add_one(9) == 10);
+        EXPECT(add_two(9) == 11);
 
         auto object_arg = qjs::json::parse(R"({"value":33})", ctx).as<qjs::Object>();
-        EXPECT_TRUE(object_arg.get_property("value").as<int64_t>() == 33);
-        EXPECT_TRUE(ctx.eval("readValue({ value: 44 })", "<eval>", eval_flags).as<int64_t>() == 44);
+        EXPECT(object_arg.get_property("value").as<int64_t>() == 33);
+        EXPECT(ctx.eval("readValue({ value: 44 })", "<eval>", eval_flags).as<int64_t>() == 44);
 
         remember_value(21);
-        EXPECT_TRUE(remembered == 21);
+        EXPECT(remembered == 21);
 
         ctx.eval("rememberValue(34)", "<eval>", eval_flags);
-        EXPECT_TRUE(remembered == 34);
+        EXPECT(remembered == 34);
 
-        EXPECT_TRUE(make_object().get_property("kind").as<std::string>() == "native-object");
-        EXPECT_TRUE(ctx.eval("makeObject().kind", "<eval>", eval_flags).as<std::string>() ==
-                    "native-object");
+        EXPECT(make_object().get_property("kind").as<std::string>() == "native-object");
+        EXPECT(ctx.eval("makeObject().kind", "<eval>", eval_flags).as<std::string>() ==
+               "native-object");
 
         auto js_function =
             ctx.eval("(function (value) { return value * 2; })", "<eval>", eval_flags)
                 .as<qjs::Object>()
                 .as<qjs::Function<int64_t(int64_t)>>();
-        EXPECT_TRUE(js_function(6) == 12);
-        EXPECT_TRUE(js_function.as()(7) == 14);
+        EXPECT(js_function(6) == 12);
+        EXPECT(js_function.as()(7) == 14);
 
         auto function_value = qjs::Value::from(js_function);
-        EXPECT_TRUE(function_value.as<qjs::Function<int64_t(int64_t)>>()(8) == 16);
-        EXPECT_TRUE(function_value.is_object());
-        EXPECT_TRUE(function_value.is_function());
+        EXPECT(function_value.as<qjs::Function<int64_t(int64_t)>>()(8) == 16);
+        EXPECT(function_value.is_object());
+        EXPECT(function_value.is_function());
     };
 
     EXPECT_NOTHROWS(f());
@@ -435,22 +435,22 @@ TEST_CASE(function_wrappers_cover_cpp_js_and_raw_function_invocation) {
     auto ctx = runtime.context();
     auto zero_arg_js_function =
         ctx.eval("(function () { return 7; })", "<eval>", eval_flags).as<qjs::Object>();
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(throws_with_message(
         [&]() { (void)zero_arg_js_function.as<qjs::Function<std::string()>>()(); },
         "Value is not a string"));
 
     auto single_arg_js_function =
         ctx.eval("(function (value) { return value; })", "<eval>", eval_flags).as<qjs::Object>();
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(throws_with_message(
         [&]() { (void)single_arg_js_function.as<qjs::Function<int64_t(int64_t, int64_t)>>(); },
         "incorrect number of arguments"));
 
     auto plain_object = qjs::json::parse(R"({"value":1})", ctx).as<qjs::Object>();
-    EXPECT_TRUE(throws_with_message([&]() { (void)plain_object.as<qjs::Function<int64_t()>>(); },
-                                    "Object is not a function"));
+    EXPECT(throws_with_message([&]() { (void)plain_object.as<qjs::Function<int64_t()>>(); },
+                               "Object is not a function"));
 };
 
-TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
+ZEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
 
@@ -468,18 +468,17 @@ TEST_CASE(function_wrappers_surface_argument_and_exception_failures) {
     global.set_property("qjsThrower", qjs_thrower);
     global.set_property("stdThrower", std_thrower);
 
-    EXPECT_TRUE(
-        throws_with_message([&]() { ctx.eval("expectNumber('bad')", "<eval>", eval_flags); },
-                            "Value is not a number"));
-    EXPECT_TRUE(throws_with_message([&]() { ctx.eval("expectNumber()", "<eval>", eval_flags); },
-                                    "Incorrect number of arguments"));
-    EXPECT_TRUE(throws_with_message([&]() { ctx.eval("qjsThrower()", "<eval>", eval_flags); },
-                                    "custom boom"));
-    EXPECT_TRUE(
+    EXPECT(throws_with_message([&]() { ctx.eval("expectNumber('bad')", "<eval>", eval_flags); },
+                               "Value is not a number"));
+    EXPECT(throws_with_message([&]() { ctx.eval("expectNumber()", "<eval>", eval_flags); },
+                               "Incorrect number of arguments"));
+    EXPECT(throws_with_message([&]() { ctx.eval("qjsThrower()", "<eval>", eval_flags); },
+                               "custom boom"));
+    EXPECT(
         throws_with_message([&]() { ctx.eval("stdThrower()", "<eval>", eval_flags); }, "std boom"));
 };
 
-TEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
+ZEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
     auto runtime = qjs::Runtime::create();
     auto ctx = runtime.context();
 
@@ -489,16 +488,16 @@ TEST_CASE(function_wrappers_cover_lvalue_functor_storage) {
     auto global = ctx.global_this();
     global.set_property("countingFunctor", lvalue_functor);
 
-    EXPECT_TRUE(lvalue_functor(10) == 11);
-    EXPECT_TRUE(counting_functor.calls == 1);
-    EXPECT_TRUE(ctx.eval("countingFunctor(10)", "<eval>", eval_flags).as<int64_t>() == 12);
-    EXPECT_TRUE(counting_functor.calls == 2);
+    EXPECT(lvalue_functor(10) == 11);
+    EXPECT(counting_functor.calls == 1);
+    EXPECT(ctx.eval("countingFunctor(10)", "<eval>", eval_flags).as<int64_t>() == 12);
+    EXPECT(counting_functor.calls == 2);
 
     using Register = qjs::Object::Register<CountingFunctor&>;
-    EXPECT_TRUE(Register::get(runtime.js_runtime()) != JS_INVALID_CLASS_ID);
+    EXPECT(Register::get(runtime.js_runtime()) != JS_INVALID_CLASS_ID);
 };
 
-TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
+ZEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -539,25 +538,25 @@ TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
         cpp_args.push_back(qjs::Value::from(ctx.js_context(), int64_t{3}));
         cpp_args.push_back(qjs::Value::from(ctx.js_context(), int64_t{4}));
 
-        EXPECT_TRUE(sum_all(cpp_args) == 9);
-        EXPECT_TRUE(sum_all.as()(cpp_args) == 9);
-        EXPECT_TRUE(sum_raw(cpp_args) == 9);
-        EXPECT_TRUE(count_raw(cpp_args) == 3);
+        EXPECT(sum_all(cpp_args) == 9);
+        EXPECT(sum_all.as()(cpp_args) == 9);
+        EXPECT(sum_raw(cpp_args) == 9);
+        EXPECT(count_raw(cpp_args) == 3);
 
-        EXPECT_TRUE(ctx.eval("sumAll()", "<eval>", eval_flags).as<int64_t>() == 0);
-        EXPECT_TRUE(ctx.eval("sumAll(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 10);
-        EXPECT_TRUE(ctx.eval("sumRaw(5, 6, 7)", "<eval>", eval_flags).as<int64_t>() == 18);
-        EXPECT_TRUE(ctx.eval("countRaw(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 4);
-        EXPECT_TRUE(ctx.eval("joinAll('cat', 'ter')", "<eval>", eval_flags).as<std::string>() ==
-                    "catter");
+        EXPECT(ctx.eval("sumAll()", "<eval>", eval_flags).as<int64_t>() == 0);
+        EXPECT(ctx.eval("sumAll(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 10);
+        EXPECT(ctx.eval("sumRaw(5, 6, 7)", "<eval>", eval_flags).as<int64_t>() == 18);
+        EXPECT(ctx.eval("countRaw(1, 2, 3, 4)", "<eval>", eval_flags).as<int64_t>() == 4);
+        EXPECT(ctx.eval("joinAll('cat', 'ter')", "<eval>", eval_flags).as<std::string>() ==
+               "catter");
 
         auto js_variadic =
             ctx.eval("(function (...values) { return values.length; })", "<eval>", eval_flags)
                 .as<qjs::Object>()
                 .as<qjs::Function<int64_t(qjs::Parameters)>>();
-        EXPECT_TRUE(js_variadic({}) == 0);
-        EXPECT_TRUE(js_variadic({qjs::Value::from(ctx.js_context(), int64_t{1}),
-                                 qjs::Value::from(ctx.js_context(), int64_t{2})}) == 2);
+        EXPECT(js_variadic({}) == 0);
+        EXPECT(js_variadic({qjs::Value::from(ctx.js_context(), int64_t{1}),
+                            qjs::Value::from(ctx.js_context(), int64_t{2})}) == 2);
     };
 
     EXPECT_NOTHROWS(f());
@@ -566,7 +565,7 @@ TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
     auto ctx = runtime.context();
 
     auto plain_object = qjs::json::parse(R"({"value":1})", ctx).as<qjs::Object>();
-    EXPECT_TRUE(throws_with_message(
+    EXPECT(throws_with_message(
         [&]() { (void)plain_object.as<qjs::Function<int64_t(qjs::Parameters)>>(); },
         "Object is not a function"));
 
@@ -580,11 +579,11 @@ TEST_CASE(function_wrappers_cover_variadic_parameter_list_api) {
         });
     ctx.global_this().set_property("sumAll", sum_all);
 
-    EXPECT_TRUE(throws_with_message([&]() { ctx.eval("sumAll(1, 'x')", "<eval>", eval_flags); },
-                                    "Value is not a number"));
+    EXPECT(throws_with_message([&]() { ctx.eval("sumAll(1, 'x')", "<eval>", eval_flags); },
+                               "Value is not a number"));
 };
 
-TEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_args) {
+ZEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_args) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
@@ -593,33 +592,31 @@ TEST_CASE(error_and_json_helpers_cover_metadata_stringify_and_invalid_variadic_a
                          .as<qjs::Object>()
                          .as<qjs::Error>();
 
-        EXPECT_TRUE(error.name() == "TypeError");
-        EXPECT_TRUE(error.message() == "boom");
-        EXPECT_TRUE(error.stack().contains("<eval>:1:4"));
-        EXPECT_TRUE(error.format().contains("Stack Trace:"));
+        EXPECT(error.name() == "TypeError");
+        EXPECT(error.message() == "boom");
+        EXPECT(error.stack().contains("<eval>:1:4"));
+        EXPECT(error.format().contains("Stack Trace:"));
 
         auto parsed = qjs::json::parse(R"({"number":1,"text":"ok"})", ctx).as<qjs::Object>();
         auto dumped = qjs::json::stringify(parsed);
-        EXPECT_TRUE(dumped.contains(R"("number":1)"));
-        EXPECT_TRUE(dumped.contains(R"("text":"ok")"));
+        EXPECT(dumped.contains(R"("number":1)"));
+        EXPECT(dumped.contains(R"("text":"ok")"));
 
         auto cyclic =
             ctx.eval("const x = {}; x.self = x; x;", "<eval>", eval_flags).as<qjs::Object>();
-        EXPECT_TRUE(
-            throws_with_jserror([&]() { (void)qjs::json::stringify(cyclic); }, "TypeError"));
+        EXPECT(throws_with_jserror([&]() { (void)qjs::json::stringify(cyclic); }, "TypeError"));
 
         auto count_args = qjs::Function<int64_t(qjs::Parameters)>::from(
             ctx.js_context(),
             [](qjs::Parameters args) { return static_cast<int64_t>(args.size()); });
         qjs::Parameters invalid_args{};
         invalid_args.emplace_back();
-        EXPECT_TRUE(
-            throws_with_message([&]() { (void)count_args(invalid_args); }, "invalid value"));
+        EXPECT(throws_with_message([&]() { (void)count_args(invalid_args); }, "invalid value"));
     };
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
+ZEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
     auto runtime_a = qjs::Runtime::create();
     auto ctx_a = runtime_a.context();
     auto runtime_b = qjs::Runtime::create();
@@ -627,41 +624,41 @@ TEST_CASE(object_register_reuses_class_id_per_runtime_and_separates_runtimes) {
 
     using Register = qjs::Object::Register<IncrementFunctor&&>;
 
-    EXPECT_TRUE(Register::get(runtime_a.js_runtime()) == JS_INVALID_CLASS_ID);
-    EXPECT_TRUE(Register::get(runtime_b.js_runtime()) == JS_INVALID_CLASS_ID);
+    EXPECT(Register::get(runtime_a.js_runtime()) == JS_INVALID_CLASS_ID);
+    EXPECT(Register::get(runtime_b.js_runtime()) == JS_INVALID_CLASS_ID);
 
     auto f = [&]() {
         auto functor_fn_1 =
             qjs::Function<int64_t(int64_t)>::from(ctx_a.js_context(), IncrementFunctor{.delta = 5});
         auto first_id = Register::get(runtime_a.js_runtime());
-        EXPECT_TRUE(first_id != JS_INVALID_CLASS_ID);
-        EXPECT_TRUE(functor_fn_1(7) == 12);
-        EXPECT_TRUE(Register::get(runtime_b.js_runtime()) == JS_INVALID_CLASS_ID);
+        EXPECT(first_id != JS_INVALID_CLASS_ID);
+        EXPECT(functor_fn_1(7) == 12);
+        EXPECT(Register::get(runtime_b.js_runtime()) == JS_INVALID_CLASS_ID);
 
         auto functor_fn_2 =
             qjs::Function<int64_t(int64_t)>::from(ctx_a.js_context(), IncrementFunctor{.delta = 5});
-        EXPECT_TRUE(Register::get(runtime_a.js_runtime()) == first_id);
-        EXPECT_TRUE(functor_fn_2(9) == 14);
+        EXPECT(Register::get(runtime_a.js_runtime()) == first_id);
+        EXPECT(functor_fn_2(9) == 14);
 
         auto other_runtime_fn =
             qjs::Function<int64_t(int64_t)>::from(ctx_b.js_context(), IncrementFunctor{.delta = 5});
         auto second_id = Register::get(runtime_b.js_runtime());
-        EXPECT_TRUE(second_id != JS_INVALID_CLASS_ID);
-        EXPECT_TRUE(other_runtime_fn(11) == 16);
-        EXPECT_TRUE(Register::get(runtime_b.js_runtime()) == second_id);
+        EXPECT(second_id != JS_INVALID_CLASS_ID);
+        EXPECT(other_runtime_fn(11) == 16);
+        EXPECT(Register::get(runtime_b.js_runtime()) == second_id);
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
+ZEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
 
         auto& module = ctx.cmodule("native-test");
         auto& same_module = ctx.cmodule("native-test");
-        EXPECT_TRUE(&module == &same_module);
+        EXPECT(&module == &same_module);
 
         module.export_functor("concat",
                               qjs::Function<std::string(std::string, std::string)>::from(
@@ -678,24 +675,24 @@ TEST_CASE(cmodule_exports_cover_functor_export_bare_export_and_module_cache) {
                  JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_STRICT);
 
         auto global = ctx.global_this();
-        EXPECT_TRUE(global.get_property("moduleConcat").as<std::string>() == "catter");
-        EXPECT_TRUE(global.get_property("moduleValue").as<int64_t>() == 42);
+        EXPECT(global.get_property("moduleConcat").as<std::string>() == "catter");
+        EXPECT(global.get_property("moduleValue").as<int64_t>() == 42);
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
+ZEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
     auto f = [&]() {
         auto runtime = qjs::Runtime::create();
         auto ctx = runtime.context();
 
         auto fulfilled_cap = qjs::PromiseCapability::create(ctx.js_context());
         auto fulfilled_promise_value = qjs::Value::from(fulfilled_cap.promise);
-        EXPECT_TRUE(fulfilled_promise_value.as<qjs::Promise>().is_pending());
+        EXPECT(fulfilled_promise_value.as<qjs::Promise>().is_pending());
 
         auto fulfilled_object = qjs::Object::from(fulfilled_cap.promise);
-        EXPECT_TRUE(fulfilled_object.as<qjs::Promise>().is_pending());
+        EXPECT(fulfilled_object.as<qjs::Promise>().is_pending());
 
         std::string fulfilled_value;
         auto on_fulfilled =
@@ -707,9 +704,9 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         fulfilled_cap.executor.resolve(std::string{"resolved"});
         drain_jobs(runtime);
 
-        EXPECT_TRUE(fulfilled_cap.promise.is_fulfilled());
-        EXPECT_TRUE(fulfilled_next.is_fulfilled());
-        EXPECT_TRUE(fulfilled_value == "resolved");
+        EXPECT(fulfilled_cap.promise.is_fulfilled());
+        EXPECT(fulfilled_next.is_fulfilled());
+        EXPECT(fulfilled_value == "resolved");
 
         auto rejected_cap = qjs::PromiseCapability::create(ctx.js_context());
         std::string rejected_reason;
@@ -727,9 +724,9 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         rejected_cap.executor.reject(std::string{"rejected"});
         drain_jobs(runtime);
 
-        EXPECT_TRUE(rejected_cap.promise.is_rejected());
-        EXPECT_TRUE(rejected_next.is_fulfilled());
-        EXPECT_TRUE(rejected_reason == "rejected");
+        EXPECT(rejected_cap.promise.is_rejected());
+        EXPECT(rejected_next.is_fulfilled());
+        EXPECT(rejected_reason == "rejected");
 
         auto caught_cap = qjs::PromiseCapability::create(ctx.js_context());
         std::string caught_reason;
@@ -744,15 +741,15 @@ TEST_CASE(promise_capability_and_then_cover_fulfilled_and_rejected_paths) {
         caught_cap.executor.reject(std::string{"catch-path"});
         drain_jobs(runtime);
 
-        EXPECT_TRUE(caught_cap.promise.is_rejected());
-        EXPECT_TRUE(caught_next.is_fulfilled());
-        EXPECT_TRUE(caught_reason == "catch-path");
+        EXPECT(caught_cap.promise.is_rejected());
+        EXPECT(caught_next.is_fulfilled());
+        EXPECT(caught_reason == "catch-path");
     };
 
     EXPECT_NOTHROWS(f());
 };
 
-TEST_CASE(async_function_wraps_tasks_as_promises) {
+ZEST_CASE(async_function_wraps_tasks_as_promises) {
     auto f = [&]() {
         auto task = []() -> kota::task<> {
             auto runtime = qjs::Runtime::create();
@@ -788,7 +785,7 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                 if(!bridged) {
                     throw std::move(bridged.error());
                 }
-                EXPECT_TRUE(bridged.value() == "hello bridge");
+                EXPECT(bridged.value() == "hello bridge");
 
                 auto eval_result = ctx.eval(R"(
                         (async () => {
@@ -810,9 +807,9 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
                     throw result.error().to_exception();
                 }
 
-                EXPECT_TRUE(global["asyncGreetResult"].as<std::string>() == "hello catter");
-                EXPECT_TRUE(global["asyncAddResult"].as<int64_t>() == 42);
-                EXPECT_TRUE(global["asyncErrorResult"].as<std::string>().contains(
+                EXPECT(global["asyncGreetResult"].as<std::string>() == "hello catter");
+                EXPECT(global["asyncAddResult"].as<int64_t>() == 42);
+                EXPECT(global["asyncErrorResult"].as<std::string>().contains(
                     "Negative value not allowed"));
             } catch(...) {
                 error = std::current_exception();
@@ -833,4 +830,4 @@ TEST_CASE(async_function_wraps_tasks_as_promises) {
 
     EXPECT_NOTHROWS(f());
 };
-};  // TEST_SUITE(qjs_tests)
+};  // ZEST_SUITE(qjs_tests)

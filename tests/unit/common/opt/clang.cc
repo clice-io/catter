@@ -67,94 +67,94 @@ std::string_view canonical_spelling(const ParseResult::OwnedArg& arg) {
 
 }  // namespace
 
-TEST_SUITE(clang_option_table_tests) {
-TEST_CASE(parse_clang_compile_command) {
+ZEST_SUITE(clang_option_table_tests) {
+ZEST_CASE(parse_clang_compile_command) {
     const auto argv = std::to_array<std::string>(
         {"clang++", "-c", "main.cc", "-Iinclude", "-isystem", "/usr/include", "-o", "main.o"});
 
     auto parsed = parse_command(argv);
 
-    EXPECT_TRUE(parsed.errors.empty());
-    ASSERT_EQ(parsed.args.size(), 5U);
+    EXPECT(parsed.errors.empty());
+    ASSERT(parsed.args.size() == 5U);
 
-    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_c);
+    EXPECT(parsed.args[0].id == opt::clang::ID_c);
 
-    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[1].spelling, "main.cc");
+    EXPECT(parsed.args[1].id == opt::clang::ID_INPUT);
+    EXPECT(parsed.args[1].spelling == "main.cc");
 
-    EXPECT_EQ(parsed.args[2].id, opt::clang::ID_I);
-    ASSERT_EQ(parsed.args[2].values.size(), 1U);
-    EXPECT_EQ(parsed.args[2].values[0], "include");
+    EXPECT(parsed.args[2].id == opt::clang::ID_I);
+    ASSERT(parsed.args[2].values.size() == 1U);
+    EXPECT(parsed.args[2].values[0] == "include");
 
-    EXPECT_EQ(parsed.args[3].id, opt::clang::ID_isystem);
-    ASSERT_EQ(parsed.args[3].values.size(), 1U);
-    EXPECT_EQ(parsed.args[3].values[0], "/usr/include");
+    EXPECT(parsed.args[3].id == opt::clang::ID_isystem);
+    ASSERT(parsed.args[3].values.size() == 1U);
+    EXPECT(parsed.args[3].values[0] == "/usr/include");
 
-    EXPECT_EQ(parsed.args[4].id, opt::clang::ID_o);
-    ASSERT_EQ(parsed.args[4].values.size(), 1U);
-    EXPECT_EQ(parsed.args[4].values[0], "main.o");
+    EXPECT(parsed.args[4].id == opt::clang::ID_o);
+    ASSERT(parsed.args[4].values.size() == 1U);
+    EXPECT(parsed.args[4].values[0] == "main.o");
 };
 
-TEST_CASE(parse_alias_and_dash_dash_inputs) {
+ZEST_CASE(parse_alias_and_dash_dash_inputs) {
     const auto argv = std::to_array<std::string>(
         {"clang++", "--all-warnings", "-fsyntax-only", "--", "-dash.cc"});
 
     auto parsed = parse_command(argv);
 
-    EXPECT_TRUE(parsed.errors.empty());
-    ASSERT_EQ(parsed.args.size(), 3U);
+    EXPECT(parsed.errors.empty());
+    ASSERT(parsed.args.size() == 3U);
 
-    EXPECT_EQ(canonical_spelling(parsed.args[0]), "-Wall");
-    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_Wall);
+    EXPECT(canonical_spelling(parsed.args[0]) == "-Wall");
+    EXPECT(parsed.args[0].id == opt::clang::ID_Wall);
 
-    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_fsyntax_only);
+    EXPECT(parsed.args[1].id == opt::clang::ID_fsyntax_only);
 
-    EXPECT_EQ(parsed.args[2].id, opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[2].spelling, "-dash.cc");
+    EXPECT(parsed.args[2].id == opt::clang::ID_INPUT);
+    EXPECT(parsed.args[2].spelling == "-dash.cc");
 };
 
-TEST_CASE(parse_unknown_and_missing_value) {
+ZEST_CASE(parse_unknown_and_missing_value) {
 
     {
         const auto argv =
             std::to_array<std::string>({"clang++", "--definitely-not-a-real-clang-flag"});
         auto parsed = parse_command(argv);
-        EXPECT_TRUE(parsed.errors.empty());
-        ASSERT_EQ(parsed.args.size(), 1U);
-        EXPECT_EQ(parsed.args[0].id, opt::clang::ID_UNKNOWN);
-        EXPECT_EQ(parsed.args[0].spelling, "--definitely-not-a-real-clang-flag");
+        EXPECT(parsed.errors.empty());
+        ASSERT(parsed.args.size() == 1U);
+        EXPECT(parsed.args[0].id == opt::clang::ID_UNKNOWN);
+        EXPECT(parsed.args[0].spelling == "--definitely-not-a-real-clang-flag");
     };
 
     {
         const auto argv = std::to_array<std::string>({"clang++", "-o"});
         auto parsed = parse_command(argv);
-        EXPECT_TRUE(parsed.args.empty());
-        ASSERT_EQ(parsed.errors.size(), 1U);
-        EXPECT_TRUE(parsed.errors[0].contains("missing argument value"));
+        EXPECT(parsed.args.empty());
+        ASSERT(parsed.errors.size() == 1U);
+        EXPECT(parsed.errors[0].contains("missing argument value"));
     };
 }
 
-TEST_CASE(parse_clang_cl_output_options_with_cl_visibility) {
+ZEST_CASE(parse_clang_cl_output_options_with_cl_visibility) {
     const auto argv = std::to_array<std::string>(
         {"clang-cl", "/c", "main.cc", "/Foobj/main.obj", "/Fe:bin/tool.exe"});
 
     auto parsed = parse_command(argv, opt::clang::DefaultVis | opt::clang::CLOption);
 
-    EXPECT_TRUE(parsed.errors.empty());
-    ASSERT_EQ(parsed.args.size(), 4U);
+    EXPECT(parsed.errors.empty());
+    ASSERT(parsed.args.size() == 4U);
 
-    EXPECT_EQ(parsed.args[0].id, opt::clang::ID_c);
-    EXPECT_EQ(parsed.args[0].spelling, "/c");
+    EXPECT(parsed.args[0].id == opt::clang::ID_c);
+    EXPECT(parsed.args[0].spelling == "/c");
 
-    EXPECT_EQ(parsed.args[1].id, opt::clang::ID_INPUT);
-    EXPECT_EQ(parsed.args[1].spelling, "main.cc");
+    EXPECT(parsed.args[1].id == opt::clang::ID_INPUT);
+    EXPECT(parsed.args[1].spelling == "main.cc");
 
-    EXPECT_EQ(parsed.args[2].id, opt::clang::ID__SLASH_Fo);
-    ASSERT_EQ(parsed.args[2].values.size(), 1U);
-    EXPECT_EQ(parsed.args[2].values[0], "obj/main.obj");
+    EXPECT(parsed.args[2].id == opt::clang::ID__SLASH_Fo);
+    ASSERT(parsed.args[2].values.size() == 1U);
+    EXPECT(parsed.args[2].values[0] == "obj/main.obj");
 
-    EXPECT_EQ(parsed.args[3].id, opt::clang::ID__SLASH_Fe);
-    ASSERT_EQ(parsed.args[3].values.size(), 1U);
-    EXPECT_EQ(parsed.args[3].values[0], "bin/tool.exe");
+    EXPECT(parsed.args[3].id == opt::clang::ID__SLASH_Fe);
+    ASSERT(parsed.args[3].values.size() == 1U);
+    EXPECT(parsed.args[3].values[0] == "bin/tool.exe");
 };
-};  // TEST_SUITE(clang_option_table_tests)
+};  // ZEST_SUITE(clang_option_table_tests)
