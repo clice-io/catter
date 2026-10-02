@@ -18,13 +18,87 @@ on:
         type: choice
         default: linux
         options: [linux, linux-arm, macos, macos-intel, windows, windows-arm]
-permissions: {}
+permissions:
+  contents: read
 jobs:
   box:
     if: github.event_name == 'workflow_dispatch' && github.actor == '16bit-ykiko' && github.triggering_actor == '16bit-ykiko'
     runs-on: ${{ fromJSON('{"linux":"ubuntu-24.04","linux-arm":"ubuntu-24.04-arm","macos":"macos-15","macos-intel":"macos-15-intel","windows":"windows-2025","windows-arm":"windows-11-arm"}')[inputs.os] || 'ubuntu-24.04' }}
     timeout-minutes: 350
+    # The runner image CI names its caches by.
+    env:
+      CI_OS: ${{ fromJSON('{"linux":"ubuntu-24.04","linux-arm":"ubuntu-24.04-arm","macos":"macos-15","macos-intel":"macos-15-intel","windows":"windows-2025","windows-arm":"windows-11-arm"}')[inputs.os] || 'ubuntu-24.04' }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+
+      # No cache inputs: setup-xmake saves its caches when the job ends, and the cache quota is
+      # CI's. The package cache is restored below instead.
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: v3.1.1
+
+      - name: Setup Pixi
+        uses: prefix-dev/setup-pixi@v0.9.6
+        with:
+          pixi-version: v0.71.1
+          environments: ${{ runner.os == 'Windows' && 'dev mingw' || 'dev' }}
+          activate-environment: false
+          cache: true
+          cache-write: false
+          locked: true
+          post-cleanup: false
+
+      # Restore only; CI saves. The newest debug entry of each env CI builds on this OS: what the
+      # packages lack, configure builds.
+      - name: Restore xmake packages (dev)
+        uses: actions/cache/restore@v6
+        with:
+          path: .xmake-package-cache
+          key: xmake-package-cache-${{ env.CI_OS }}-dev-debug-pixi-
+          restore-keys: xmake-package-cache-${{ env.CI_OS }}-dev-debug-pixi-
+      - name: Install xmake packages (dev)
+        shell: pwsh
+        run: |
+          if (Test-Path .xmake-package-cache) {
+            $dir = (xmake l -c 'import("core.package.package"); print(package.installdir())' | Out-String).Trim()
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Copy-Item -Recurse -Force .xmake-package-cache/* $dir
+            Remove-Item -Recurse -Force .xmake-package-cache
+          }
+      - name: Restore xmake packages (mingw)
+        if: runner.os == 'Windows'
+        uses: actions/cache/restore@v6
+        with:
+          path: .xmake-package-cache
+          key: xmake-package-cache-${{ env.CI_OS }}-mingw-debug-pixi-
+          restore-keys: xmake-package-cache-${{ env.CI_OS }}-mingw-debug-pixi-
+      - name: Install xmake packages (mingw)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path .xmake-package-cache) {
+            $dir = (xmake l -c 'import("core.package.package"); print(package.installdir())' | Out-String).Trim()
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Copy-Item -Recurse -Force .xmake-package-cache/* $dir
+            Remove-Item -Recurse -Force .xmake-package-cache
+          }
+
+      - name: Notes
+        shell: bash
+        run: |
+          mkdir -p ~/.box
+          {
+            echo 'Build and test as CI does: pixi run -e dev ci-build debug (or release).'
+            if [ "$RUNNER_OS" = Windows ]; then
+              echo 'MinGW: pixi run -e mingw ci-build debug.'
+              echo 'Git Bash sets MSYSTEM, which makes xmake take the host for MSYS: unset MSYSTEM first.'
+            fi
+          } > ~/.box/notes
+
       - uses: 16bit-ykiko/agent-box@1d433bb4c6ac84e877e2f9861b72fd251adee496
         with:
           pubkey: ${{ inputs.pubkey }}
