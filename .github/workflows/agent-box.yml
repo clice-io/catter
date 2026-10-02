@@ -39,7 +39,7 @@ jobs:
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: v3.1.1
+          xmake-version: v3.0.8
 
       - name: Setup Pixi
         uses: prefix-dev/setup-pixi@v0.9.6
