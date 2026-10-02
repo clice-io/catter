@@ -29,6 +29,8 @@ To enable test targets in the build:
 pixi run cfg  # or: xmake config --test=y
 ```
 
+Each test binary runs its tests on a pool of worker processes, several at once, with a 60 second limit per test. A suite that uses a fixed file or directory name must run alone: mark it with `ZEST_SUITE_ATTRS(serial = true);`. To debug a test, run it in the binary's own process with `--no-isolation --test-filter=<suite>.<test>`; `--help` lists the other options.
+
 ### Integration Tests
 
 Integration tests use the [LLVM Lit](https://llvm.org/docs/CommandGuide/lit.html) framework. Located in `tests/integration/`, they compile and run C++ test programs, using FileCheck for output verification.

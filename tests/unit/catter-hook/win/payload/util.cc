@@ -33,42 +33,42 @@ struct ScopedEnvVar {
     }
 };
 
-TEST_SUITE(win_payload_util) {
-TEST_CASE(get_proxy_path_reads_environment_variable) {
+ZEST_SUITE(win_payload_util) {
+ZEST_CASE(get_proxy_path_reads_environment_variable) {
     ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
-    EXPECT_TRUE(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
-    EXPECT_TRUE(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
+    EXPECT(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
+    EXPECT(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
 };
 
-TEST_CASE(get_ipc_id_reads_environment_variable) {
+ZEST_CASE(get_ipc_id_reads_environment_variable) {
     ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
-    EXPECT_TRUE(ct::win::payload::get_ipc_id<char>() == "12345");
-    EXPECT_TRUE(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
+    EXPECT(ct::win::payload::get_ipc_id<char>() == "12345");
+    EXPECT(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
 };
 
-TEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
+ZEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
     auto command =
         ct::win::payload::build_proxy_command<char>(R"(C:\Program Files\Catter\catter-proxy.exe)",
                                                     "12345",
                                                     R"(C:\Program Files\LLVM\bin\clang-cl.exe)",
                                                     R"("clang-cl.exe" /c main.cc)");
 
-    EXPECT_TRUE(
+    EXPECT(
         command ==
         R"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" -- "clang-cl.exe" /c main.cc)");
 };
 
-TEST_CASE(build_proxy_command_supports_wide_strings) {
+ZEST_CASE(build_proxy_command_supports_wide_strings) {
     auto command = ct::win::payload::build_proxy_command<wchar_t>(
         LR"(C:\Program Files\Catter\catter-proxy.exe)",
         L"12345",
         LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
         LR"("clang-cl.exe" /c main.cc)");
 
-    EXPECT_TRUE(
+    EXPECT(
         command ==
         LR"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" -- "clang-cl.exe" /c main.cc)");
 };
-};  // TEST_SUITE(win_payload_util)
+};  // ZEST_SUITE(win_payload_util)
 
 }  // namespace

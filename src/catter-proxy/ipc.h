@@ -20,7 +20,10 @@ struct Peer {
     template <typename Tag, typename Traits = typename kota::ipc::protocol::RequestTraits<Tag>>
     typename kota::task<typename Traits::Result>
         send_request(const typename Traits::Params& params) {
-        if(auto ret = co_await this->peer.send_request<Tag>(params); !ret.has_value()) {
+        if(auto ret =
+               co_await this->peer.template send_request<typename Traits::Result>(Traits::method,
+                                                                                  params);
+           !ret.has_value()) {
             throw cpptrace::runtime_error(
                 std::format("IPC request failed: {}", ret.error().message));
         } else {

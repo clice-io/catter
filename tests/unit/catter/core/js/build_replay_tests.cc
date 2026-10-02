@@ -1,5 +1,6 @@
 #include <atomic>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -8,6 +9,7 @@
 #include <vector>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/async/io/system.h>
 
 #include "replay.h"
 #include "temp_file_manager.h"
@@ -23,8 +25,10 @@ namespace {
 
 fs::path make_root() {
     static std::atomic_uint64_t serial{0};
+    // Tests run in several worker processes at once, so the name carries the pid.
     const auto root =
-        fs::temp_directory_path() / ("catter_build_replay_" + std::to_string(serial.fetch_add(1)));
+        fs::temp_directory_path() /
+        std::format("catter_build_replay_{}_{}", kota::sys::pid(), serial.fetch_add(1));
     std::error_code ec;
     fs::create_directories(root, ec);
     if(ec) {
@@ -103,9 +107,9 @@ void write_existing_database(const fs::path& path, const fs::path& root) {
 
 }  // namespace
 
-TEST_SUITE(build_replay_tests) {
+ZEST_SUITE(build_replay_tests) {
 
-TEST_CASE(cdb_generates_compile_database) {
+ZEST_CASE(cdb_generates_compile_database) {
     TempFileManager cleanup(make_root());
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
@@ -130,12 +134,12 @@ TEST_CASE(cdb_generates_compile_database) {
         });
 
     const auto content = read_file(save_path);
-    EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
-    EXPECT_TRUE(content.find("\"file\": \"src/main.cc\"") != std::string::npos);
-    EXPECT_TRUE(content.find("main.o") != std::string::npos);
+    EXPECT(count_occurrences(content, "\"file\":") == 1);
+    EXPECT(content.find("\"file\": \"src/main.cc\"") != std::string::npos);
+    EXPECT(content.find("main.o") != std::string::npos);
 }
 
-TEST_CASE(cdb_does_not_save_on_failure_by_default) {
+ZEST_CASE(cdb_does_not_save_on_failure_by_default) {
     TempFileManager cleanup(make_root());
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
@@ -148,10 +152,10 @@ TEST_CASE(cdb_does_not_save_on_failure_by_default) {
                    .finish = js::ProcessResult{.code = 1},
                });
 
-    EXPECT_TRUE(!fs::exists(save_path));
+    EXPECT(!fs::exists(save_path));
 }
 
-TEST_CASE(cdb_saves_on_failure_with_save_on_failure) {
+ZEST_CASE(cdb_saves_on_failure_with_save_on_failure) {
     TempFileManager cleanup(make_root());
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
@@ -165,11 +169,11 @@ TEST_CASE(cdb_saves_on_failure_with_save_on_failure) {
                });
 
     const auto content = read_file(save_path);
-    EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
-    EXPECT_TRUE(content.find("src/main.cc") != std::string::npos);
+    EXPECT(count_occurrences(content, "\"file\":") == 1);
+    EXPECT(content.find("src/main.cc") != std::string::npos);
 }
 
-TEST_CASE(cdb_append_and_replace_existing_database) {
+ZEST_CASE(cdb_append_and_replace_existing_database) {
     TempFileManager cleanup(make_root());
     const auto root = cleanup.root;
     const auto append_path = root / "append.json";
@@ -192,17 +196,17 @@ TEST_CASE(cdb_append_and_replace_existing_database) {
                });
 
     const auto appended = read_file(append_path);
-    EXPECT_EQ(count_occurrences(appended, "\"file\":"), 2);
-    EXPECT_TRUE(appended.find("src/inherited.cc") != std::string::npos);
-    EXPECT_TRUE(appended.find("src/main.cc") != std::string::npos);
+    EXPECT(count_occurrences(appended, "\"file\":") == 2);
+    EXPECT(appended.find("src/inherited.cc") != std::string::npos);
+    EXPECT(appended.find("src/main.cc") != std::string::npos);
 
     const auto replaced = read_file(replace_path);
-    EXPECT_EQ(count_occurrences(replaced, "\"file\":"), 1);
-    EXPECT_TRUE(replaced.find("src/inherited.cc") == std::string::npos);
-    EXPECT_TRUE(replaced.find("src/main.cc") != std::string::npos);
+    EXPECT(count_occurrences(replaced, "\"file\":") == 1);
+    EXPECT(replaced.find("src/inherited.cc") == std::string::npos);
+    EXPECT(replaced.find("src/main.cc") != std::string::npos);
 }
 
-TEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
+ZEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
     TempFileManager cleanup(make_root());
     const auto root = cleanup.root;
     const auto save_path = root / "compile_commands.json";
@@ -228,10 +232,10 @@ TEST_CASE(cdb_aborts_on_command_failure_and_saves_partial_database) {
             std::string_view(error.what()).find("exited with code 2") != std::string_view::npos;
     }
 
-    EXPECT_TRUE(aborted);
+    EXPECT(aborted);
     const auto content = read_file(save_path);
-    EXPECT_EQ(count_occurrences(content, "\"file\":"), 1);
-    EXPECT_TRUE(content.find("src/broken.cc") != std::string_view::npos);
+    EXPECT(count_occurrences(content, "\"file\":") == 1);
+    EXPECT(content.find("src/broken.cc") != std::string_view::npos);
 }
 
-};  // TEST_SUITE(build_replay_tests)
+};  // ZEST_SUITE(build_replay_tests)

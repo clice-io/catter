@@ -24,9 +24,8 @@ public:
     PipeProxy& operator= (PipeProxy&&) = delete;
 
     ~PipeProxy() {
-        if(pipe.handle()) {
-            pipe.stop();
-        }
+        // Ends a pending read; fails harmlessly on a pipe that was never opened.
+        (void)pipe.stop();
     }
 
     kota::task<void> monitor();

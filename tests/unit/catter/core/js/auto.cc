@@ -45,16 +45,15 @@ void run_auto_js_case(const fs::path& relative_path) {
                                          auto_js_case_uses_fs_test_env(relative_path));
 }
 
-kota::zest::TestState run_auto_js_test_case(const fs::path& relative_path) {
+void run_auto_js_test_case(const fs::path& relative_path) {
     try {
         run_auto_js_case(relative_path);
-        return kota::zest::TestState::Passed;
     } catch(const std::exception& ex) {
         catter::output::redln("auto js test failed: {}: {}", relative_path.string(), ex.what());
-        return kota::zest::TestState::Failed;
+        kota::zest::failure();
     } catch(...) {
         catter::output::redln("auto js test failed: {}: unknown exception", relative_path.string());
-        return kota::zest::TestState::Fatal;
+        kota::zest::failure();
     }
 }
 
@@ -70,7 +69,7 @@ std::vector<kota::zest::TestCase> auto_js_test_cases() {
             .path = full_path,
             .line = 1,
             .attrs = {},
-            .test = [relative_path] { return run_auto_js_test_case(relative_path); },
+            .test = [relative_path] { run_auto_js_test_case(relative_path); },
         });
     }
 

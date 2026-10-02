@@ -251,8 +251,8 @@ private:
 
 }  // namespace
 
-TEST_SUITE(js_unit_tests) {
-TEST_CASE(run_http_client_js_file_through_async_loop) {
+ZEST_SUITE(js_unit_tests) {
+ZEST_CASE(run_http_client_js_file_through_async_loop) {
 #if defined(CATTER_LINUX) || defined(CATTER_MAC)
     auto f = [&]() {
         LocalHttpServer server{2};
@@ -292,7 +292,7 @@ TEST_CASE(run_http_client_js_file_through_async_loop) {
 
     EXPECT_NOTHROWS(f());
 #else
-    EXPECT_TRUE(true);
+    EXPECT(true);
 #endif
 };
-};  // TEST_SUITE(js_unit_tests)
+};  // ZEST_SUITE(js_unit_tests)

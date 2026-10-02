@@ -167,7 +167,7 @@ IncludeCategories:
     Priority: 20
     SortPriority: 22
 
-NamespaceMacros: [TEST_SUITE]
+NamespaceMacros: [ZEST_SUITE]
 StatementMacros:
   - DECO_CFG_START
   - DECO_CFG

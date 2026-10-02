@@ -41,13 +41,12 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
         };
 
         auto updated_config = co_await catter::js::on_start(config);
-        EXPECT_TRUE(updated_config.scriptPath == config.scriptPath);
-        EXPECT_TRUE(updated_config.scriptArgs.size() == 3);
-        EXPECT_TRUE(updated_config.scriptArgs.back() == "--from-service");
-        EXPECT_TRUE(updated_config.options.log == false);
-        EXPECT_TRUE(updated_config.options.stdioMode ==
-                    catter::js::CatterOptions::StdioMode::capture);
-        EXPECT_TRUE(updated_config.execute == true);
+        EXPECT(updated_config.scriptPath == config.scriptPath);
+        EXPECT(updated_config.scriptArgs.size() == 3);
+        EXPECT(updated_config.scriptArgs.back() == "--from-service");
+        EXPECT(updated_config.options.log == false);
+        EXPECT(updated_config.options.stdioMode == catter::js::CatterOptions::StdioMode::capture);
+        EXPECT(updated_config.execute == true);
 
         catter::js::CommandData data{
             .cwd = "/tmp",
@@ -61,18 +60,18 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
         auto action = co_await catter::js::on_command(7, data);
         action.visit([&]<auto E>(const catter::js::Tag<E>& tag) {
             if constexpr(E == catter::js::ActionType::modify) {
-                EXPECT_TRUE(tag.data.argv.size() == 4);
-                EXPECT_TRUE(tag.data.argv.back() == "--from-service");
-                EXPECT_TRUE(tag.data.parent.has_value());
-                EXPECT_TRUE(tag.data.parent.value() == 41);
+                EXPECT(tag.data.argv.size() == 4);
+                EXPECT(tag.data.argv.back() == "--from-service");
+                EXPECT(tag.data.parent.has_value());
+                EXPECT(tag.data.parent.value() == 41);
             } else {
-                EXPECT_TRUE(E == catter::js::ActionType::modify);
+                EXPECT(E == catter::js::ActionType::modify);
             }
         });
 
         catter::js::CatterErr err{.msg = "spawn failed"};
         auto error_action = co_await catter::js::on_command(7, std::unexpected(err));
-        EXPECT_TRUE(error_action.type() == catter::js::ActionType::skip);
+        EXPECT(error_action.type() == catter::js::ActionType::skip);
 
         catter::js::ProcessResult execution_result{
             .code = 0,
@@ -99,8 +98,8 @@ kota::task<> run_service_js_callbacks(fs::path js_path) {
 
 }  // namespace
 
-TEST_SUITE(js_file_tests) {
-TEST_CASE(run_service_js_file_and_callbacks) {
+ZEST_SUITE(js_file_tests) {
+ZEST_CASE(run_service_js_file_and_callbacks) {
     auto f = [&]() {
         auto task = run_service_js_callbacks(catter::tests::js::js_test_root());
 
@@ -113,4 +112,4 @@ TEST_CASE(run_service_js_file_and_callbacks) {
     EXPECT_NOTHROWS(f());
 };
 
-};  // TEST_SUITE(js_file_tests)
+};  // ZEST_SUITE(js_file_tests)

@@ -64,8 +64,13 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
     std::string error_msg;
 
     for(auto& client_task: linked_clients) {
+        // A client still connected is let go, cancelled, when the list goes; result() requires a
+        // task that has ended.
+        if(!client_task.done()) {
+            continue;
+        }
         try {
-            client_task.result();  // Await completion and propagate exceptions
+            client_task.result();  // Propagate exceptions
         } catch(const std::exception& ex) {
             error_msg += std::format("|| {} ||", ex.what());
         }

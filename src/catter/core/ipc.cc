@@ -28,32 +28,34 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(client)));
     using Context = kota::ipc::BincodePeer::RequestContext;
 
-    peer.on_request<Request<RequestType::CHECK_MODE>>(
-        [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
-            -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
-            co_return params == data::ServiceMode::INJECT;
-        });
+    peer.on_request(Request<RequestType::CHECK_MODE>::method,
+                    [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
+                        -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
+                        co_return params == data::ServiceMode::INJECT;
+                    });
 
-    peer.on_request<Request<RequestType::CREATE>>(
-        [&](const Context& ctx, Request<RequestType::CREATE>::Params params)
-            -> kota::ipc::RequestResult<Request<RequestType::CREATE>> {
-            co_return co_await service->create(params);
-        });
+    peer.on_request(Request<RequestType::CREATE>::method,
+                    [&](const Context& ctx, Request<RequestType::CREATE>::Params params)
+                        -> kota::ipc::RequestResult<Request<RequestType::CREATE>> {
+                        co_return co_await service->create(params);
+                    });
 
-    peer.on_request<Request<RequestType::MAKE_DECISION>>(
+    peer.on_request(
+        Request<RequestType::MAKE_DECISION>::method,
         [&](const Context& ctx, const Request<RequestType::MAKE_DECISION>::Params& params)
             -> kota::ipc::RequestResult<Request<RequestType::MAKE_DECISION>> {
             co_return co_await service->make_decision(params);
         });
 
-    peer.on_request<Request<RequestType::FINISH>>(
-        [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
-            -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
-            co_await service->finish(params);
-            co_return nullptr;
-        });
+    peer.on_request(Request<RequestType::FINISH>::method,
+                    [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
+                        -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
+                        co_await service->finish(params);
+                        co_return nullptr;
+                    });
 
-    peer.on_request<Request<RequestType::REPORT_ERROR>>(
+    peer.on_request(
+        Request<RequestType::REPORT_ERROR>::method,
         [&](const Context& ctx, const Request<RequestType::REPORT_ERROR>::Params& params)
             -> kota::ipc::RequestResult<Request<RequestType::REPORT_ERROR>> {
             co_await service->report_error(params.parent_id, params.error_msg);

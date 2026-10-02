@@ -22,8 +22,8 @@ const char* find_entry(char* const* envp, std::string_view key) {
     return nullptr;
 }
 
-TEST_SUITE(env_sanitizer) {
-TEST_CASE(removes_injected_keys_and_filters_hook_preload) {
+ZEST_SUITE(env_sanitizer) {
+ZEST_CASE(removes_injected_keys_and_filters_hook_preload) {
     std::string keep_lib_1 = "/tmp/libkeep-1.so";
     std::string keep_lib_2 = "/tmp/libkeep-2.so";
     std::string hook_lib = "/tmp/";
@@ -39,19 +39,19 @@ TEST_CASE(removes_injected_keys_and_filters_hook_preload) {
     auto sanitized = ct::sanitize_environment(raw_env);
     auto clean_envp = sanitized.data();
 
-    EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
-    EXPECT_TRUE(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
+    EXPECT(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
+    EXPECT(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
 
     auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
-    EXPECT_TRUE(cleaned_preload != nullptr);
+    EXPECT(cleaned_preload != nullptr);
     std::string expected_preload =
         std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
-    EXPECT_TRUE(std::string_view(cleaned_preload) == expected_preload);
+    EXPECT(std::string_view(cleaned_preload) == expected_preload);
 
-    EXPECT_TRUE(find_entry(clean_envp, "LANG") != nullptr);
+    EXPECT(find_entry(clean_envp, "LANG") != nullptr);
 };
 
-TEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
+ZEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     std::string hook_lib = "/tmp/";
     hook_lib += cfg::RELATIVE_PATH_OF_HOOK_LIB;
     std::string preload = std::string(cfg::KEY_PRELOAD) + "=" + hook_lib;
@@ -61,8 +61,8 @@ TEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     auto clean_envp = sanitized.data();
 
     auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
-    EXPECT_TRUE(cleaned_preload == nullptr);
+    EXPECT(cleaned_preload == nullptr);
 };
-};  // TEST_SUITE(env_sanitizer)
+};  // ZEST_SUITE(env_sanitizer)
 
 }  // namespace
