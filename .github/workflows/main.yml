@@ -86,6 +86,21 @@ jobs:
           project: catter
           token: ${{ secrets.CLICE_DOCS }}
 
+  # Builds docs.clice.io with this PR's docs, so markup VitePress rejects
+  # fails here rather than in the sync PR after merge.
+  docs-check:
+    needs: changes
+    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: clice-io/docs@main
+        with:
+          project: catter
+          mode: check
+
   test:
     needs: changes
     if: ${{ needs.changes.outputs.build == 'true' }}
@@ -108,6 +123,7 @@ jobs:
       - changes
       - lint
       - deploy-docs
+      - docs-check
       - test
 
     runs-on: ubuntu-latest
@@ -115,5 +131,5 @@ jobs:
       - name: Check results
         uses: re-actors/alls-green@v1.2.2
         with:
-          allowed-skips: lint,deploy-docs,test
+          allowed-skips: lint,deploy-docs,docs-check,test
           jobs: ${{ toJSON(needs) }}
