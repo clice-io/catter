@@ -5,7 +5,6 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "bench:http": "node bench/http/benchmark.mjs",
     "eslint-all": "eslint -c eslint.config.js --cache ./api/src/**/*.ts ./scripts/**/*.ts",
     "eslint": "eslint -c eslint.config.js --cache",
     "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",

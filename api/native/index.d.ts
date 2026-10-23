@@ -249,43 +249,6 @@ export function time_unix_seconds(): number;
 export function time_monotonic_ms(): number;
 export function time_monotonic_us(): number;
 
-// http
-export type RawHttpResponse = {
-  status: number;
-  ok: boolean;
-  url: string;
-  body: string;
-  headers: Record<string, string>;
-};
-
-export function http_client_create(): number;
-export function http_client_close(clientId: number): void;
-
-export function http_client_request(
-  clientId: number,
-  method: string,
-  url: string,
-  headers: string[],
-  body: string,
-  timeoutMs: number,
-  maxRedirects: number,
-  dangerAcceptInvalidCerts: boolean,
-  dangerAcceptInvalidHostnames: boolean,
-  proxyUrl: string,
-): Promise<RawHttpResponse>;
-
-export function http_request(
-  method: string,
-  url: string,
-  headers: string[],
-  body: string,
-  timeoutMs: number,
-  maxRedirects: number,
-  dangerAcceptInvalidCerts: boolean,
-  dangerAcceptInvalidHostnames: boolean,
-  proxyUrl: string,
-): Promise<RawHttpResponse>;
-
 // fs
 export function fs_exists(path: string): boolean;
 export function fs_is_file(path: string): boolean;
