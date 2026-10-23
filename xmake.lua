@@ -638,7 +638,6 @@ package("kotatsu")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
-    add_deps("libcurl 8.11.0")
 
     on_install(function (package)
         if package:has_tool("cxx", "cl", "clang_cl") then
@@ -655,7 +654,8 @@ package("kotatsu")
         configs.async = true
         configs.deco = true
         configs.ztest = true
-        configs.http = true
+        -- http defaults on upstream and would pull in libcurl and OpenSSL.
+        configs.http = false
         import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
     end)
 
