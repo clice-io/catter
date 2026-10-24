@@ -48,6 +48,10 @@ jobs:
       os: windows-2025
       target: x86_64-pc-windows-msvc
       mode: debug
+      # cl's -Zi objects leave their debug info in the PDB of the compile
+      # that made them, which the build cache does not keep: cached ones
+      # would link without it.
+      build_cache: false
 
   # Windows built with xclang for MinGW.
   windows-x64-mingw:

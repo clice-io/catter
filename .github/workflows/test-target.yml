@@ -27,6 +27,9 @@ on:
       package:
         type: string
         default: ""
+      build_cache:
+        type: boolean
+        default: true
       # The shard numbers 1..n of the cases split over n runners, as a JSON
       # array.
       cases_shards:
@@ -72,7 +75,7 @@ jobs:
       # path, not by version: pixi.lock in the key keeps a toolchain update
       # from reusing what the old compiler made.
       - name: Restore the build cache
-        if: github.ref != 'refs/heads/main'
+        if: inputs.build_cache && github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: build/.build_cache
@@ -86,7 +89,7 @@ jobs:
         run: pixi run -e ${{ inputs.env }} ci-build ${{ inputs.mode }}
 
       - name: Save the build cache
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: inputs.build_cache && github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/cache/save@v6
         with:
           path: build/.build_cache
