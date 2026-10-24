@@ -86,7 +86,7 @@ jobs:
         run: pixi run -e ${{ inputs.env }} ci-build ${{ inputs.mode }}
 
       - name: Save the build cache
-        if: true
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/cache/save@v6
         with:
           path: build/.build_cache
