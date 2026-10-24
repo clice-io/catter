@@ -1,8 +1,6 @@
 #include "runtime_driver.h"
 
 #include <array>
-#include <cstdint>
-#include <expected>
 #include <filesystem>
 #include <format>
 #include <memory>
@@ -16,24 +14,15 @@
 #include "session.h"
 #include "config/catter-proxy.h"
 #include "config/ipc.h"
-#include "js/js.h"
 #include "util/crossplat.h"
 #include "util/encoding.h"
 
 namespace catter::core {
 namespace {
-Session::StdioMode to_process_stdio_mode(js::CatterOptions::StdioMode mode) {
-    switch(mode) {
-        case js::CatterOptions::StdioMode::inherit: return Session::StdioMode::inherit;
-        case js::CatterOptions::StdioMode::capture: return Session::StdioMode::capture;
-    }
-
-    throw cpptrace::runtime_error("Unhandled catter output mode");
-}
 
 class InjectService final : public ipc::InjectService {
 public:
-    InjectService(data::ipcid_t id, const js::CatterRuntime* runtime) : id(id), runtime(runtime) {}
+    InjectService(data::ipcid_t id, Handler& handler) : id(id), handler(handler) {}
 
     kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept override {
         this->parent_id = parent_id;
@@ -41,66 +30,48 @@ public:
     }
 
     kota::task<data::action> make_decision(data::command cmd) noexcept override {
-        auto act = co_await js::on_command(this->id,
-                                           js::CommandData{
-                                               .cwd = cmd.cwd,
-                                               .exe = cmd.executable,
-                                               .argv = cmd.args,
-                                               .env = cmd.env,
-                                               .runtime = *runtime,
-                                               .parent = this->parent_id,
-                                           });
+        auto act = co_await handler.on_command(this->id, this->parent_id, cmd);
 
-        switch(act.type()) {
-            case js::ActionType::drop: {
+        switch(act.type) {
+            case Action::Type::Drop: {
                 co_return data::action{.type = data::action::DROP, .cmd = {}};
             }
-            case js::ActionType::skip: {
+            case Action::Type::Skip: {
                 co_return data::action{.type = data::action::INJECT, .cmd = std::move(cmd)};
             }
-            case js::ActionType::modify: {
-                auto& tag = act.get<js::ActionType::modify>();
-                co_return data::action{
-                    .type = data::action::INJECT,
-                    .cmd = {
-                            .cwd = std::move(tag.data.cwd),
-                            .executable = std::move(tag.data.exe),
-                            .args = std::move(tag.data.argv),
-                            .env = std::move(tag.data.env),
-                            }
-                };
+            case Action::Type::Modify: {
+                co_return data::action{.type = data::action::INJECT, .cmd = std::move(act.command)};
             }
-            // TODO: handle js::ActionType::abort
-            default: {
+            // TODO: handle Action::Type::Abort
+            case Action::Type::Abort: {
                 throw cpptrace::runtime_error("Unhandled action type");
             }
         }
+        std::unreachable();
     }
 
     kota::task<> finish(data::process_result result) noexcept override {
-        co_await js::on_execution(this->id, to_js_process_result(std::move(result)));
-        co_return;
+        co_await handler.on_exit(this->id, std::move(result));
     }
 
     kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept override {
-        co_await js::on_command(
-            id,
-            std::unexpected(js::CatterErr{.msg = std::move(error_msg), .parent = parent_id}));
-        co_return;
+        co_await handler.on_error(this->id, parent_id, std::move(error_msg));
     }
 
     struct Factory {
-        const js::CatterRuntime* runtime;
+        Handler* handler;
 
         std::unique_ptr<InjectService> operator() (data::ipcid_t id) const {
-            return std::make_unique<InjectService>(id, runtime);
+            return std::make_unique<InjectService>(id, *handler);
         }
     };
 
 private:
     data::ipcid_t id = 0;
+
     data::ipcid_t parent_id = 0;
-    const js::CatterRuntime* runtime = nullptr;
+
+    Handler& handler;
 };
 
 class InjectRuntimeDriver final : public RuntimeDriver {
@@ -109,24 +80,15 @@ public:
         return "inject";
     }
 
-    const js::CatterRuntime& runtime() const noexcept override {
-        const static js::CatterRuntime value{
-            .supportActions = {js::ActionType::drop, js::ActionType::skip, js::ActionType::modify},
-            .type = js::CatterRuntime::Type::inject,
-            .supportParentId = true,
-        };
-        return value;
-    }
-
-    kota::task<data::process_result> execute(const js::CatterConfig& config) const override {
-        if(config.buildSystemCommand.empty()) {
+    kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
+        if(build.command.empty()) {
             throw cpptrace::runtime_error("buildSystemCommand must not be empty");
         }
 
         auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
         auto pipe_name = config::ipc::session_pipe_name();
         Session::ProcessLaunchPlan launch_plan{
-            .cwd = config.buildSystemCommandCwd,
+            .cwd = build.cwd,
             .executable = util::to_utf8(proxy_path),
             .args =
                 {
@@ -134,15 +96,14 @@ public:
                        "-p", "0",
                        "--ipc", pipe_name,
                        "--", },
-            .mode = to_process_stdio_mode(config.options.stdioMode),
+            .mode = build.stdio_mode,
         };
-        util::append_range_to_vector(launch_plan.args, config.buildSystemCommand);
+        util::append_range_to_vector(launch_plan.args, build.command);
 
         Session session;
-        auto session_plan =
-            Session::make_run_plan(std::move(launch_plan),
-                                   std::move(pipe_name),
-                                   InjectService::Factory{.runtime = &config.runtime});
+        auto session_plan = Session::make_run_plan(std::move(launch_plan),
+                                                   std::move(pipe_name),
+                                                   InjectService::Factory{.handler = &handler});
 
         co_return co_await session.run(std::move(session_plan));
     }
@@ -161,18 +122,13 @@ public:
         return "replay";
     }
 
-    const js::CatterRuntime& runtime() const noexcept override {
-        return inject_runtime_driver()->runtime();
-    }
-
-    kota::task<data::process_result> execute(const js::CatterConfig& config) const override {
-        if(config.buildSystemCommand.size() != 1) {
+    kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
+        if(build.command.size() != 1) {
             throw cpptrace::runtime_error(
                 "the replay mode takes a replay file for the build command: " "catter -m replay <script> -- <file>");
         }
-        auto file = util::from_utf8(config.buildSystemCommandCwd) /
-                    util::from_utf8(config.buildSystemCommand.front());
-        co_return co_await replay_build(file.lexically_normal(), config.runtime);
+        auto file = util::from_utf8(build.cwd) / util::from_utf8(build.command.front());
+        co_return co_await replay_build(file.lexically_normal(), handler);
     }
 };
 
@@ -198,14 +154,6 @@ const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept {
 
 const RuntimeDriver* default_runtime_driver() noexcept {
     return inject_runtime_driver();
-}
-
-js::ProcessResult to_js_process_result(data::process_result result) {
-    return js::ProcessResult{
-        .code = result.code,
-        .stdOut = std::move(result.std_out),
-        .stdErr = std::move(result.std_err),
-    };
 }
 
 }  // namespace catter::core

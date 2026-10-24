@@ -30,7 +30,7 @@ Distilled from real correction history — these mistakes keep recurring:
 
 C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targets:
 
-- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the runtime driver, replaying a recorded build, and `js/`: the embedded QuickJS engine, the ES module loader and the native side of the script API (`js/capi/`)
+- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the handler that decides each command and observes the session (`handler.h`), the runtime driver, replaying a recorded build, and `js/`: the embedded QuickJS engine, the ES module loader, the native side of the script API (`js/capi/`) and the handler that runs a script (`js/script_handler.h`)
 - `src/catter-proxy/` — `catter-proxy`: launches the build with the hook attached, and stands in for every intercepted command, relaying it to the daemon and running what the daemon decides
 - `src/catter-hook/` — launching a command with the hook (`hook.h`, linked into `catter-proxy`) and the hook libraries themselves: `unix/payload/` is the shared library preloaded into every process (the exec-family hooks, the environment it keeps), `win/` injects `win/payload/`, the DLL that hooks process creation with MinHook
 - `src/common/` — shared static libraries: `option/` (the option tables of clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and of nvcc, read by kotatsu's option parser), `util/` (logging, data paths, processes, pipes), `config/` (names and paths every process agrees on), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`

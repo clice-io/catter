@@ -9,8 +9,8 @@
 #include <vector>
 #include <kota/deco/deco.h>
 
+#include "handler.h"
 #include "runtime_driver.h"
-#include "js/capi/type.h"
 #include "util/encoding.h"
 
 namespace catter::core {
@@ -95,7 +95,7 @@ struct CatterConfig {
         help =
             "control target stdio behavior when it is captured by catter; 'inherit' prints in real time, 'capture' only stores it; default to 'inherit'",
         required = false)
-    <js::CatterOptions::StdioMode> stdio_mode = js::CatterOptions::StdioMode::inherit;
+    <StdioMode> stdio_mode = StdioMode::inherit;
 
     DecoPack(
         meta_var = "<Args>",
