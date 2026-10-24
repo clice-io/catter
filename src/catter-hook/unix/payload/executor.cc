@@ -88,13 +88,24 @@ std::filesystem::path resolve_from_search_path(const char* file, const char* sea
     }
     return *resolved;
 }
+
+/// A program that is not there or not executable fails to start as it would
+/// without catter: a build may expect that (a PATH search tries every entry).
+void report_failure([[maybe_unused]] std::string_view name,
+                    [[maybe_unused]] const catter::PayloadError& err) {
+    if(err.code() == ENOENT || err.code() == EACCES || err.code() == ENOTDIR) {
+        INFO("{} failed: {}", name, err.what());
+    } else {
+        ERROR("{} failed: {}", name, err.what());
+    }
+}
 }  // namespace
 
 // clang-format 23 splits `try BODY catch` apart.
 // clang-format off
 #define CATTER_EXEC_BOUNDARY(NAME, BODY)                                                           \
     try BODY catch(const catter::PayloadError& err) {                                              \
-        ERROR("{} failed: {}", NAME, err.what());                                                  \
+        report_failure(NAME, err);                                                                 \
         errno = err.code();                                                                        \
         return -1;                                                                                 \
     }                                                                                              \
@@ -111,7 +122,7 @@ std::filesystem::path resolve_from_search_path(const char* file, const char* sea
 
 #define CATTER_SPAWN_BOUNDARY(NAME, BODY)                                                          \
     try BODY catch(const catter::PayloadError& err) {                                              \
-        ERROR("{} failed: {}", NAME, err.what());                                                  \
+        report_failure(NAME, err);                                                                 \
         errno = err.code();                                                                        \
         return err.code();                                                                         \
     }                                                                                              \

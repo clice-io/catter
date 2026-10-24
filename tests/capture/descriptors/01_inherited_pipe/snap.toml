@@ -1,10 +1,10 @@
 [test."$ node build.mjs"]
-stdout = 'through fd 3: "through fd", exit 0'
+stdout = 'through fd 3: "through fd"'
 exit = 0
 
 [test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
-through fd 3: "through fd", exit 0
+through fd 3: "through fd"
 node build.mjs
 └── node child.mjs
 '''
@@ -13,26 +13,8 @@ exit = 0
 [test."$ catter script::cmd-tree -w 1000 -- node build.mjs".darwin]
 wrong = "a descriptor a parent passes to its child is closed (catter#153)"
 stdout = '''
-through fd 3: "", exit 1
+through fd 3: ""
 node build.mjs
 └── node child.mjs
-'''
-stderr = '''
-node:fs:917
-  handleErrorFromBinding(ctx);
-  ^
-
-Error: ENXIO: no such device or address, write
-    at Module.writeSync (node:fs:917:3)
-    at file://${WS}/child.mjs:3:4
-    at ModuleJob.run (node:internal/modules/esm/module_job:370:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:99:5) {
-  errno: -6,
-  syscall: 'write',
-  code: 'ENXIO'
-}
-
-Node.js v24.4.0
 '''
 exit = 0

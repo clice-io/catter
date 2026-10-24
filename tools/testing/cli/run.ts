@@ -73,6 +73,8 @@ const DROPPED = [
     "FORCE_COLOR",
     "CLICOLOR_FORCE",
     "NINJA_STATUS",
+    // Git Bash's: xmake takes the host for MSYS and builds with MinGW.
+    "MSYSTEM",
 ];
 
 /// The environment of a Visual Studio developer prompt for x64, which

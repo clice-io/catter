@@ -120,13 +120,18 @@ jobs:
           name: programs-${{ matrix.os }}-${{ matrix.env }}-${{ matrix.mode }}
           path: programs
 
+      # An artifact keeps no file modes.
+      - name: Make programs executable
+        if: runner.os != 'Windows'
+        run: chmod +x programs/*
+
+      # In the job's default shell, as the build ran: on Windows not Git
+      # Bash, whose MSYS environment changes how build tools behave.
       - name: Cases
         timeout-minutes: 20
-        shell: bash
         env:
           CATTER_EXECUTABLE: ${{ github.workspace }}/programs/catter
           CATTER_CASES_SHARD: ${{ matrix.shard }}
         run: |
-          chmod +x programs/* || true
           pixi run -e dev npm-install
           pixi run -e dev pnpm --dir tests run cases
