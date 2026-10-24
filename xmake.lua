@@ -129,6 +129,8 @@ end
 add_requires("quickjs-ng", {version = "v0.15.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 add_requires("kotatsu")
+-- The backend of kotatsu's JSON codec, whose headers need nothing else.
+add_requires("simdjson v4.2.4")
 
 
 target("common-option")
@@ -289,6 +291,7 @@ target("catter-core")
     add_local_prefix_includedirs()
     add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
+    add_packages("simdjson", {public = true})
 
     add_deps("common", "catter-js-runtime", "catter-js-scripts")
 

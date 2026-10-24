@@ -1,0 +1,4 @@
+clang --target=wasm32 -c a.c
+arm-none-eabi-gcc -c a.c -o a.o
+clang --target=x86_64-pc-windows -c a.c
+clang --target=x86_64-pc-cygwin -c a.c

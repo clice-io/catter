@@ -1,0 +1,70 @@
+[test."$ catter script::cdb --help -- node -e 0"]
+stdout = '''
+Generate a compile_commands.json file from captured compiler commands.
+
+Usage:
+  cdb [options] [<path>]
+
+Arguments:
+  [<path>]  Legacy output path; prefer --output for scripts. (optional)
+
+Options:
+  -o, --output <path>         Write the compilation database to this path.
+  --append                    Merge with an existing database. This is the default.
+  --replace                   Ignore existing database entries and replace the output file.
+  --save-on-failure           Save collected entries even when the build exits with a non-zero code.
+  --abort-on-command-failure  Abort when any captured command exits with a non-zero code.
+  --abort-on-capture-error    Abort when catter reports a command capture error.
+  -q, --quiet                 Suppress informational output.
+  -v, --verbose               Print detailed command analysis and generated entries.
+  -h, --help                  Print this help message.
+
+Examples:
+  cdb -o build/compile_commands.json
+  cdb --save-on-failure -o compile_commands.json
+  # Merge existing entries and still save partial results from a failed build.
+'''
+exit = 0
+
+[test."$ catter script::cdb --append --replace -- node -e 0"]
+stdout = "cdb: --append and --replace cannot be used together"
+exit = 1
+
+[test."$ catter script::cdb a.json b.json -- node -e 0"]
+stdout = '''
+cdb: unexpected input argument b.json
+
+Generate a compile_commands.json file from captured compiler commands.
+
+Usage:
+  cdb [options] [<path>]
+
+Arguments:
+  [<path>]  Legacy output path; prefer --output for scripts. (optional)
+
+Options:
+  -o, --output <path>         Write the compilation database to this path.
+  --append                    Merge with an existing database. This is the default.
+  --replace                   Ignore existing database entries and replace the output file.
+  --save-on-failure           Save collected entries even when the build exits with a non-zero code.
+  --abort-on-command-failure  Abort when any captured command exits with a non-zero code.
+  --abort-on-capture-error    Abort when catter reports a command capture error.
+  -q, --quiet                 Suppress informational output.
+  -v, --verbose               Print detailed command analysis and generated entries.
+  -h, --help                  Print this help message.
+
+Examples:
+  cdb -o build/compile_commands.json
+  cdb --save-on-failure -o compile_commands.json
+  # Merge existing entries and still save partial results from a failed build.
+'''
+exit = 1
+
+[test."compile_commands.json"]
+absent = true
+
+[test."a.json"]
+absent = true
+
+[test."b.json"]
+absent = true
