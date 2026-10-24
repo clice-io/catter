@@ -93,9 +93,7 @@ jobs:
           fi
           exit $failed
 
-  # docs/zh against docs/en, segment by segment, as the hash pairs in
-  # docs/meta/translations attest. An exact release: tools/docs/translations.ts
-  # runs this one locally.
+  # An exact release: tools/docs/translations.ts runs this one locally.
   translations:
     if: ${{ inputs.docs || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest

@@ -51,6 +51,7 @@ def main():
     snapdir = Path(args.validated).parent
     titles = json.loads((snapdir / "titles.json").read_text())
     states = json.loads((snapdir / "states.json").read_text())
+    updated = json.loads((snapdir / "updated.json").read_text())
 
     for verdict in json.load(open(args.validated)):
         num = verdict["issue"]
@@ -64,15 +65,20 @@ def main():
                 "--repo",
                 args.repo,
                 "--json",
-                "labels,state,title",
+                "labels,state,title,updatedAt",
             )
         )
         closed = live["state"] != "OPEN"
         live_labels = {label["name"] for label in live["labels"]}
         # The verdict was produced for the snapshotted state — any drift
-        # (state flip, or someone else stamping `triaged`) makes it stale.
+        # (state flip, a new comment or edit, someone else stamping
+        # `triaged`) makes it stale.
         if live["state"] != states.get(str(num)):
             print(f"#{num} skipped: state changed since snapshot")
+            time.sleep(1)
+            continue
+        if live["updatedAt"] != updated.get(str(num)):
+            print(f"#{num} skipped: updated since snapshot")
             time.sleep(1)
             continue
         if "triaged" in live_labels:

@@ -42,6 +42,9 @@ Translate:
   build system → 构建系统, child process → 子进程, linker → 链接器.
 - runtime, catter's capture mechanism: the page title is
   运行机制（Runtime）; in prose it stays `runtime` (inject runtime).
+- A page that keeps one of these terms in English — hook, proxy, or Action
+  (the design pages' section on actions is titled and cross-referenced as
+  Action) — keeps it that way; a translator follows the page, not the list.
 
 Keep English (never transliterate):
 

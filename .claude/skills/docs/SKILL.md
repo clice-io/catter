@@ -50,12 +50,15 @@ the pixi tasks above run that same release locally
 (`tools/docs/translations.ts` reads the pin, until the package is on npm
 and the tasks call `npx @clice-io/translate@1`). A new release is adopted
 by bumping the pin in lint.yml and the RULES.md references here and in the
-translate-docs skill. What catter adds on top:
+translate-docs skill, with `check-doc-translations` green on the new
+release. What catter adds on top:
 
 - The frontmatter that translates is index.md's (the VitePress home page).
-- catter's formatter has no markdown rules; the CJK spacing and
-  punctuation that step 4 of RULES.md's workflow formats are checked by
-  autocorrect in CI (`npx autocorrect-node --lint ./docs` runs it here).
+- catter's formatter (`pixi run -e dev format`) touches markdown only for
+  trailing whitespace and final newlines; CJK spacing and punctuation are
+  autocorrect's, which CI runs (`npx autocorrect-node --lint ./docs` here).
+  Both change segment hashes: fix what autocorrect reports and format
+  before `record`.
 - The wording — catter's page conventions and glossary — is the
   translate-docs skill. `review-doc-translations [page...]` passes that
   skill to the model as the glossary; review its diff, then `record`.
@@ -67,8 +70,10 @@ checks of the pr skill, not after every edit: `report-doc-translations`
 lists every broken pair with both texts; translate each new or drifted en
 segment into the zh page, keeping the skeleton and the terminology of the
 surrounding page, and delete zh segments whose en segment is gone (a whole
-new page: copy the en page over the zh one and `review` it); then `record`
-and `check`. For more than a page or two, delegate it to an Opus subagent
+new page: copy the en page over the zh one and `review` it). A page added,
+removed or renamed in `docs/en/sidebar.yaml` changes `docs/zh/sidebar.yaml`
+too — the checker reads only the pages. Then fix what autocorrect
+reports, `pixi run -e dev format`, `record`, and `check`. For more than a page or two, delegate it to an Opus subagent
 with this skill, so the page texts stay out of the main context.
 
 ## What the docs describe

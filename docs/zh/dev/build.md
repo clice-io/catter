@@ -46,7 +46,7 @@ pixi run npm-install
 
 - `catter` -- 主 CLI 可执行文件（DECISION 守护进程）
 - `catter-proxy` -- 代理进程管理器
-- `catter-hook-unix` -- Unix hook 共享库（Linux/macOS）
+- `catter-hook-unix` -- Unix 钩子共享库（Linux/macOS）
 - `catter-hook-win64` -- Windows 钩子 DLL
 - `catter-core` -- 核心库
 - `common` -- 共享工具库

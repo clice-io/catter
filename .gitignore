@@ -61,6 +61,7 @@ vsxmake*/
 !.pixi/config.toml
 
 # Agent
+*/**/.claude/
 .claude/*
 !.claude/CLAUDE.md
 !.claude/skills/

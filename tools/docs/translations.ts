@@ -1,5 +1,5 @@
 /// Runs the translation checker, @clice-io/translate from clice-io/docs,
-/// at the release the lint workflow's docs job pins, so a local run and CI
+/// at the release the lint workflow's translations job pins, so a local run and CI
 /// run the same checker: a sparse checkout of it under .cache/ with its
 /// dependencies installed. Stands in until the package is on npm and the
 /// pixi tasks call `npx @clice-io/translate@1` directly.

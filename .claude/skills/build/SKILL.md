@@ -20,6 +20,7 @@ The box belongs to the calling session, not to this skill: build on the id the c
 
 - Every platform builds on a box of its own OS, as CI does: `--os macos` for macOS, `--os windows` for both Windows environments (MSVC and MinGW). Nothing cross-builds, and nothing is copied between boxes.
 - A box restores the xmake package cache of CI's debug legs: a `release` or `releasedbg` configure there installs its packages first (minutes), since debug packages carry the sanitizer configs.
+- One box runs one build at a time: two `ci-build`s in one `~/src` reconfigure each other's tree (`cfg` is `xmake config --clean`), and two lit suites cross-talk on catter's one IPC pipe. MSVC and MinGW on one Windows box, or debug and release on one box, run one after the other; for parallel runs, lease another box.
 - A session may hold several boxes, one per platform, each leased once and reused, building in parallel. Pushing never waits for a box: CI has the capacity to verify in parallel.
 
 ### Windows

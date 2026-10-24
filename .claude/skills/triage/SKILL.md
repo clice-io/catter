@@ -24,8 +24,8 @@ python3 .claude/skills/triage/scripts/snapshot.py
 Fetches every open untriaged issue (body + comments) into
 `/tmp/catter-triage/issues/chunk-N/` (25 per chunk), plus `digest.json`
 (new issues in the last 7 days, `needs-info`/`needs-repro` threads with no
-activity for over 14 days), `existing-labels.json`, `titles.json` and
-`states.json` (what apply checks for drift). `--state all` sweeps closed
+activity for over 14 days), `existing-labels.json`, `titles.json`,
+`states.json` and `updated.json` (what apply checks for drift). `--state all` sweeps closed
 issues too, paired with apply's `--include-closed`, for a backfill. With
 zero untriaged issues, skip straight to the digest section of the report.
 
@@ -93,7 +93,8 @@ python3 .claude/skills/triage/scripts/apply.py /tmp/catter-triage/validated.json
 ```
 
 apply refetches each issue's live labels and title. It skips an issue
-whose state changed since the snapshot, that gained `triaged` meanwhile,
+whose state changed or that was updated (a comment, an edit) since the
+snapshot, that gained `triaged` meanwhile,
 a closed one without `--include-closed`, and one that needs manual
 resolution (several maintainer kinds, `os:wsl` beside a native os label).
 While `needs-triage` is present the model's kind replaces the template's;

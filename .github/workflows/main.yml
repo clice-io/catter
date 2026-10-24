@@ -24,6 +24,7 @@ jobs:
     outputs:
       format: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.format == 'true' }}
       docs: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docs == 'true' }}
+      translations: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.translations == 'true' }}
       build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.build == 'true' }}
 
     steps:
@@ -47,6 +48,10 @@ jobs:
               - 'pnpm-lock.yaml'
             docs:
               - 'docs/**'
+            # The pages, or the checker release lint.yml pins.
+            translations:
+              - 'docs/**'
+              - '.github/workflows/lint.yml'
             build:
               - 'src/**'
               - 'tests/**'
@@ -72,7 +77,7 @@ jobs:
     uses: ./.github/workflows/lint.yml
     with:
       format: ${{ needs.changes.outputs.format == 'true' }}
-      docs: ${{ needs.changes.outputs.docs == 'true' }}
+      docs: ${{ needs.changes.outputs.translations == 'true' }}
 
   deploy-docs:
     needs: changes
