@@ -1,0 +1,491 @@
+[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o"]
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123)"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "linux",
+    "objectFormat": "elf",
+    "artifactModel": "elf",
+    "from": "host-fallback"
+  },
+  "sources": [
+    "a.c"
+  ],
+  "reads": [
+    "a.c"
+  ],
+  "writes": [
+    "a.o"
+  ],
+  "edges": [
+    {
+      "output": "a.o",
+      "inputs": [
+        "a.c"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate did not match suffix rules",
+      "path": "@args.rsp",
+      "index": 3,
+      "source": {
+        "kind": "argument"
+      }
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.c",
+      "arguments": [
+        "gcc",
+        "-c",
+        "a.c",
+        "@args.rsp",
+        "-o",
+        "a.o"
+      ],
+      "output": "${WS}/a.o"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".darwin]
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "darwin",
+    "objectFormat": "macho",
+    "artifactModel": "macho",
+    "from": "host-fallback"
+  },
+  "sources": [
+    "a.c"
+  ],
+  "reads": [
+    "a.c"
+  ],
+  "writes": [
+    "a.o"
+  ],
+  "edges": [
+    {
+      "output": "a.o",
+      "inputs": [
+        "a.c"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate did not match suffix rules",
+      "path": "@args.rsp",
+      "index": 3,
+      "source": {
+        "kind": "argument"
+      }
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.c",
+      "arguments": [
+        "gcc",
+        "-c",
+        "a.c",
+        "@args.rsp",
+        "-o",
+        "a.o"
+      ],
+      "output": "${WS}/a.o"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".win32]
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "windows",
+    "objectFormat": "coff",
+    "artifactModel": "coff-gnu",
+    "from": "host-fallback"
+  },
+  "sources": [
+    "a.c"
+  ],
+  "reads": [
+    "a.c"
+  ],
+  "writes": [
+    "a.o"
+  ],
+  "edges": [
+    {
+      "output": "a.o",
+      "inputs": [
+        "a.c"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate did not match suffix rules",
+      "path": "@args.rsp",
+      "index": 3,
+      "source": {
+        "kind": "argument"
+      }
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.c",
+      "arguments": [
+        "gcc",
+        "-c",
+        "a.c",
+        "@args.rsp",
+        "-o",
+        "a.o"
+      ],
+      "output": "${WS}/a.o"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -x assembler -c a.s"]
+wrong = "a source with an explicit language gets no reads or writes (catter#131)"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "linux",
+    "objectFormat": "elf",
+    "artifactModel": "elf",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate has unsupported explicit language",
+      "path": "a.s",
+      "index": 4,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -x assembler -c a.s".darwin]
+wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "darwin",
+    "objectFormat": "macho",
+    "artifactModel": "macho",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate has unsupported explicit language",
+      "path": "a.s",
+      "index": 4,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -x assembler -c a.s".win32]
+wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "windows",
+    "objectFormat": "coff",
+    "artifactModel": "coff-gnu",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "input candidate has unsupported explicit language",
+      "path": "a.s",
+      "index": 4,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -c -"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "linux",
+    "objectFormat": "elf",
+    "artifactModel": "elf",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "stream input is not a filesystem dependency",
+      "path": "-",
+      "index": 2,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -c -".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "darwin",
+    "objectFormat": "macho",
+    "artifactModel": "macho",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "stream input is not a filesystem dependency",
+      "path": "-",
+      "index": 2,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- gcc -c -".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:gcc",
+  "dialect": "gcc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "os": "windows",
+    "objectFormat": "coff",
+    "artifactModel": "coff-gnu",
+    "from": "host-fallback"
+  },
+  "sources": [],
+  "reads": [],
+  "writes": [],
+  "edges": [],
+  "diagnostics": [
+    {
+      "code": "input-candidate-rejected",
+      "message": "stream input is not a filesystem dependency",
+      "path": "-",
+      "index": 2,
+      "source": {
+        "kind": "argument"
+      }
+    },
+    {
+      "code": "default-output-missing-input",
+      "message": "compile output has no source input to name"
+    }
+  ],
+  "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- cl /nologo /c a.cc /link /out:a.exe"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:msvc",
+  "dialect": "msvc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "triple": "unknown-pc-windows-msvc",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "msvc",
+    "artifactModel": "coff-msvc",
+    "from": "driver-default"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.obj"
+  ],
+  "edges": [
+    {
+      "output": "a.obj",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "inferred": [
+    {
+      "path": "a.obj",
+      "reason": "default-output"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "output-kind-ignored",
+      "message": "output kind linked-artifact is not used for compile",
+      "path": "a.exe",
+      "index": 5,
+      "source": {
+        "kind": "remainder-option",
+        "boundary": "/link",
+        "boundaryIndex": 4,
+        "option": "/out:",
+        "optionIndex": 5
+      }
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "cl",
+        "/nologo",
+        "/c",
+        "a.cc",
+        "/link",
+        "/out:a.exe"
+      ],
+      "output": "${WS}/a.obj"
+    }
+  ]
+}
+'''
+exit = 0

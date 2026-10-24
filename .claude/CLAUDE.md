@@ -30,12 +30,12 @@ Distilled from real correction history — these mistakes keep recurring:
 
 C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targets:
 
-- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the handler that decides each command and observes the session (`handler.h`), the runtime driver, replaying a recorded build, and `js/`: the embedded QuickJS engine, the ES module loader, the native side of the script API (`js/capi/`) and the handler that runs a script (`js/script_handler.h`)
+- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the handler that decides each command and observes the session (`handler.h`), the runtime driver, replaying a recorded build, `cmd/`: what a command is (the compiler and its identification, its arguments parsed on the option tables of `src/common/option`, its mode and target, the files it reads and writes; `ar`), `builtin/`: the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), each a handler on `cmd/`, and `js/`: the embedded QuickJS engine, the ES module loader, the native side of the script API (`js/capi/`) and the handler that runs a script (`js/script_handler.h`)
 - `src/catter-proxy/` — `catter-proxy`: launches the build with the hook attached, and stands in for every intercepted command, relaying it to the daemon and running what the daemon decides
 - `src/catter-hook/` — launching a command with the hook (`hook.h`, linked into `catter-proxy`) and the hook libraries themselves: `unix/payload/` is the shared library preloaded into every process (the exec-family hooks, the environment it keeps), `win/` injects `win/payload/`, the DLL that hooks process creation with MinHook
 - `src/common/` — shared static libraries: `option/` (the option tables of clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and of nvcc, read by kotatsu's option parser), `util/` (logging, data paths, processes, pipes), `config/` (names and paths every process agrees on), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`
 - `api/` — the TypeScript script API: `api/src` holds the `catter/*` modules, including compiler identification and argument parsing (`cmd/`) and the database (`cdb/`); `api/native` declares the native functions; `api/dev` builds and bundles it, and xmake embeds the bundle into `catter`
-- `scripts/` — the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), in TypeScript, embedded the same way; `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
+- `scripts/` — the former TypeScript built-in scripts, still embedded but no longer run (`src/catter/core/builtin` replaced them); `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
 - `tests/` — the snapshot cases, `tests/<topic>/<subtopic>/NN_name/`: a small project, `test.ts` and `snap.toml`, run against the built `catter` (`tests/README.md` is their contract; the test and write-tests skills)
 - `tools/` — the `@catter/tools` package: the case runner (`tools/testing`), the repository's ESLint rules (`tools/lint`), the docs translation check (`tools/docs`)
 - `unittests/` — the zest unit tests, mirroring `src/`
@@ -47,7 +47,7 @@ C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targ
 
 Decided, not yet done — write code for where it stands today, and don't build on what is about to go:
 
-- **Built-ins in C++**: the built-in logic in `api/src` and `scripts/` (compiler identification, argument parsing, the database, the trees) is to be rewritten in C++. Once it and the protocol below pass the snapshot suite, QuickJS, the JS bridge (`src/catter/core/js`), `api/`, `scripts/` and the pnpm/rollup build are deleted.
+- **No TypeScript in catter**: the built-ins are C++ (`src/catter/core/cmd`, `builtin`); once the protocol below passes the snapshot suite, QuickJS, the JS bridge (`src/catter/core/js`), `api/`, `scripts/` and the pnpm/rollup build are deleted.
 - **User scripts**: they are to move out of process: catter speaking JSON-RPC to a handler process, with thin SDKs for Python, TypeScript and Rust. The embedded TS API is what users script today.
 - **Staying for now**: the Windows hook on MinHook (Detours is planned, later), and the xmake build (Bazel, then C++20 modules, later).
 

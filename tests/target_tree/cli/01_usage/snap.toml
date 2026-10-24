@@ -1,0 +1,27 @@
+[test."$ catter script::target-tree --help -- node -e 0"]
+stdout = '''
+Render captured build targets as a flat target forest.
+
+Usage:
+  target-tree [options]
+
+Options:
+  -d, --depth <n>  Limit render depth.
+  -h, --help       Print this help message.
+'''
+exit = 0
+
+[test."$ catter script::target-tree -d -1 -- node -e 0"]
+stdout = '''
+target-tree: expected --depth >= 0, got -1
+
+Render captured build targets as a flat target forest.
+
+Usage:
+  target-tree [options]
+
+Options:
+  -d, --depth <n>  Limit render depth.
+  -h, --help       Print this help message.
+'''
+exit = 1

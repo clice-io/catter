@@ -1,0 +1,216 @@
+[test."$ catter script::inspect -- clang-cl /c a.cc"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:clang-cl",
+  "dialect": "msvc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "triple": "unknown-pc-windows-msvc",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "msvc",
+    "artifactModel": "coff-msvc",
+    "from": "driver-default"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.obj"
+  ],
+  "edges": [
+    {
+      "output": "a.obj",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "inferred": [
+    {
+      "path": "a.obj",
+      "reason": "default-output"
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "clang-cl",
+        "/c",
+        "a.cc"
+      ],
+      "output": "${WS}/a.obj"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- clang --driver-mode=cl /c a.cc"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:clang",
+  "dialect": "clang",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "triple": "unknown-pc-windows-msvc",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "msvc",
+    "artifactModel": "coff-msvc",
+    "from": "driver-default"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.obj"
+  ],
+  "edges": [
+    {
+      "output": "a.obj",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "inferred": [
+    {
+      "path": "a.obj",
+      "reason": "default-output"
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "clang",
+        "--driver-mode=cl",
+        "/c",
+        "a.cc"
+      ],
+      "output": "${WS}/a.obj"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- clang++ --driver-mode=cl a.cc /Fea.exe"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:clang",
+  "dialect": "clang",
+  "phase": "link",
+  "artifact": "exe",
+  "target": {
+    "triple": "unknown-pc-windows-msvc",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "msvc",
+    "artifactModel": "coff-msvc",
+    "from": "driver-default"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.exe"
+  ],
+  "edges": [
+    {
+      "output": "a.exe",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "clang++",
+        "--driver-mode=cl",
+        "a.cc",
+        "/Fea.exe"
+      ],
+      "output": "${WS}/a.exe"
+    }
+  ]
+}
+'''
+exit = 0
+
+[test."$ catter script::inspect -- clang-cl --target=x86_64-pc-windows-gnu /c a.cc"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:clang-cl",
+  "dialect": "msvc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "triple": "x86_64-pc-windows-gnu",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "gnu",
+    "artifactModel": "coff-gnu",
+    "from": "argument"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.o"
+  ],
+  "edges": [
+    {
+      "output": "a.o",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "inferred": [
+    {
+      "path": "a.o",
+      "reason": "default-output"
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "clang-cl",
+        "--target=x86_64-pc-windows-gnu",
+        "/c",
+        "a.cc"
+      ],
+      "output": "${WS}/a.o"
+    }
+  ]
+}
+'''
+exit = 0

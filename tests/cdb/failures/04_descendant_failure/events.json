@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "gcc", "argv": ["gcc", "-c", "src/main.c", "-o", "obj/main.o"], "execution": { "code": 0, "stdout": "", "stderr": "" } },
+    { "id": 2, "parent": 1, "exe": "as", "argv": ["as", "-o", "obj/main.o", "main.s"], "execution": { "code": 1, "stdout": "", "stderr": "" } },
+    { "id": 3, "parent": 4, "exe": "sh", "argv": ["sh", "a.sh"] },
+    { "id": 4, "parent": 3, "exe": "sh", "argv": ["sh", "b.sh"] },
+    { "id": 5, "parent": 4, "exe": "true", "argv": ["true"], "execution": { "code": 0, "stdout": "", "stderr": "" } }
+  ],
+  "finish": { "code": 0, "stdout": "", "stderr": "" }
+}

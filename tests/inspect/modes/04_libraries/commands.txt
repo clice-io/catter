@@ -1,0 +1,6 @@
+x86_64-linux-gnu-gcc -shared a.o -o libx.so
+x86_64-linux-gnu-gcc -r a.o b.o -o c.o
+clang --target=x86_64-linux-gnu --emit-static-lib a.o -o libx.a
+cl /nologo /LD a.cc
+cl /nologo /LDd a.cc /Fe:x.dll
+cl /nologo a.cc /link /out:app.exe lib.lib /dll

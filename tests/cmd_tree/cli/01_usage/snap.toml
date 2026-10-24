@@ -1,0 +1,35 @@
+[test."$ catter script::cmd-tree --help -- node -e 0"]
+stdout = '''
+Render captured commands as a command tree.
+
+Usage:
+  cmd-tree [options]
+
+Options:
+  -d, --depth <n>     Limit render depth.
+  -a, --args <n>      Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]
+  -w, --argWidth <n>  Limit the display width of each argument. [default: 10]
+  -h, --help          Print this help message.
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 2 -- node -e 0"]
+stdout = '''
+cmd-tree: expected --argWidth >= 4, got 2
+
+Render captured commands as a command tree.
+
+Usage:
+  cmd-tree [options]
+
+Options:
+  -d, --depth <n>     Limit render depth.
+  -a, --args <n>      Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]
+  -w, --argWidth <n>  Limit the display width of each argument. [default: 10]
+  -h, --help          Print this help message.
+'''
+exit = 1
+
+[test."$ catter script::cmd-tree --argWidth=4 -- node -e 0"]
+stdout = "node -e 0"
+exit = 0

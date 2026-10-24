@@ -1,0 +1,2 @@
+cl /nologo /c /Fo:out/ a.cc b.cc
+cl /nologo a.cc /Fe:bin/
