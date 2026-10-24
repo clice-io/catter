@@ -9,36 +9,10 @@
 #include "runtime_driver.h"
 #include "js/builtin_files.h"
 #include "js/js.h"
+#include "js/script_handler.h"
 #include "util/encoding.h"
 
 namespace catter::app {
-
-struct RunContext {
-    js::CatterConfig script_config;
-    std::filesystem::path working_directory;
-    const core::RuntimeDriver* driver;
-
-    static RunContext make(const core::CatterConfig& config) {
-        auto driver = config.mode->driver;
-        return {
-            .script_config =
-                {
-                                .scriptPath = config.script_path.value(),
-                                .scriptArgs = config.script_args,
-                                .buildSystemCommand = config.command.value(),
-                                .buildSystemCommandCwd = util::to_utf8(config.working_dir->path),
-                                .runtime = driver->runtime(),
-                                .options =
-                        {
-                            .log = config.log,
-                            .stdioMode = config.stdio_mode.value(),
-                        }, .execute = true,
-                                },
-            .working_directory = config.working_dir->path,
-            .driver = driver,
-        };
-    }
-};
 
 std::string load_script_content(const std::string& script_path) {
     std::ifstream ifs{util::from_utf8(script_path)};
@@ -50,20 +24,18 @@ std::string load_script_content(const std::string& script_path) {
 }
 
 kota::task<> async_run(const core::CatterConfig& config) {
-    auto context = RunContext::make(config);
-
     js::RuntimeScope runtime;
     std::exception_ptr error;
     try {
-        runtime.start({.pwd = context.working_directory});
+        runtime.start({.pwd = config.working_dir->path});
 
-        auto& script_path = context.script_config.scriptPath;
+        const auto& script_path = config.script_path.value();
 
         if(script_path.starts_with("script::")) {
             const auto source = js::load_builtin_script(script_path);
             if(source.empty()) {
                 throw cpptrace::runtime_error(
-                    std::format("Unknown builtin script `{}`", context.script_config.scriptPath));
+                    std::format("Unknown builtin script `{}`", script_path));
             }
 
             co_await js::run_script(source, script_path);
@@ -76,11 +48,15 @@ kota::task<> async_run(const core::CatterConfig& config) {
                                     script_absolute_path);
         }
 
-        auto script_config = co_await js::on_start(context.script_config);
-
-        if(script_config.execute) {
-            auto process_result = co_await context.driver->execute(script_config);
-            co_await js::on_finish(core::to_js_process_result(std::move(process_result)));
+        js::ScriptHandler handler(script_path, config.script_args, config.log);
+        auto build = co_await handler.on_start({
+            .command = config.command.value(),
+            .cwd = util::to_utf8(config.working_dir->path),
+            .stdio_mode = config.stdio_mode.value(),
+        });
+        if(build) {
+            auto result = co_await config.mode->driver->execute(*build, handler);
+            co_await handler.on_finish(std::move(result));
         }
     } catch(...) {
         error = std::current_exception();

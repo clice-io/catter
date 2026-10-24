@@ -1,7 +1,6 @@
 #pragma once
 #include <cassert>
 #include <concepts>
-#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <list>
@@ -13,6 +12,7 @@
 #include <kota/support/functional.h>
 #include <kota/async/async.h>
 
+#include "handler.h"
 #include "ipc.h"
 #include "util/data.h"
 
@@ -38,16 +38,11 @@ public:
     using PipeAcceptor = kota::acceptor<kota::pipe>;
     using ClientAcceptor = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
 
-    enum class StdioMode : uint8_t {
-        inherit,
-        capture,
-    };
-
     struct ProcessLaunchPlan {
         std::string cwd;
         std::string executable;
         std::vector<std::string> args;
-        StdioMode mode;
+        core::StdioMode mode;
     };
 
     struct RunPlan {
@@ -57,13 +52,11 @@ public:
         ClientAcceptor callback;
     };
 
-    /**
-     * Create a run plan with the given launch plan and client accepted callback.
-     * @param launch_plan The plan for launching the process.
-     * @param pipe_name The pipe to listen on, which the launched process reports to.
-     * @param factory The factory for creating service instances when a client is accepted.
-     * @return A run plan containing the launch plan and client accepted callback.
-     */
+    /// Create a run plan with the given launch plan and client accepted callback.
+    /// @param launch_plan The plan for launching the process.
+    /// @param pipe_name The pipe to listen on, which the launched process reports to.
+    /// @param factory The factory for creating service instances when a client is accepted.
+    /// @return A run plan containing the launch plan and client accepted callback.
     template <typename ServiceFactoryType>
         requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
     static auto make_run_plan(ProcessLaunchPlan launch_plan,
@@ -80,12 +73,10 @@ public:
         };
     }
 
-    /**
-     * Run the session with the given run plan.
-     * @param run_plan The run plan containing the launch plan and service factory.
-     * @return The result of the process execution, including exit status and captured
-     * stdout/stderr.
-     */
+    /// Run the session with the given run plan.
+    /// @param run_plan The run plan containing the launch plan and service factory.
+    /// @return The result of the process execution, including exit status and captured
+    /// stdout/stderr.
     kota::task<data::process_result> run(RunPlan run_plan);
 
 private:
@@ -94,7 +85,7 @@ private:
     kota::task<data::process_result> spawn(std::string executable,
                                            std::vector<std::string> args,
                                            std::string cwd,
-                                           StdioMode mode);
+                                           core::StdioMode mode);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

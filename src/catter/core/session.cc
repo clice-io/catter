@@ -89,7 +89,7 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
 kota::task<data::process_result> Session::spawn(std::string executable,
                                                 std::vector<std::string> args,
                                                 std::string cwd,
-                                                StdioMode mode) {
+                                                core::StdioMode mode) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -123,9 +123,9 @@ kota::task<data::process_result> Session::spawn(std::string executable,
     };
 
     switch(mode) {
-        case StdioMode::inherit:
+        case core::StdioMode::inherit:
             co_return co_await capture_process_result(make_process_event(opts), stdout, stderr);
-        case StdioMode::capture:
+        case core::StdioMode::capture:
             co_return co_await capture_process_result(make_process_event(opts), nullptr, nullptr);
     }
 

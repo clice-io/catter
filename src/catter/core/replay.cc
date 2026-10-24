@@ -1,7 +1,5 @@
 #include "replay.h"
 
-#include <exception>
-#include <expected>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -11,7 +9,6 @@
 #include <cpptrace/exceptions.hpp>
 
 #include "js/capi/bridge.h"
-#include "js/js.h"
 #include "js/qjs.h"
 #include "util/encoding.h"
 
@@ -78,23 +75,11 @@ std::string command_cwd(const fs::path& base, const ReplayEvent& event) {
     return util::to_utf8(cwd.has_filename() ? cwd : cwd.parent_path());
 }
 
-std::expected<js::CommandData, js::CatterErr> to_command_data(const fs::path& base,
-                                                              const js::CatterRuntime& runtime,
-                                                              const ReplayEvent& event) {
-    if(event.error.has_value()) {
-        return std::unexpected(js::CatterErr{
-            .msg = event.error->message,
-            .parent = event.error->parent,
-        });
-    }
-
-    return js::CommandData{
-        .cwd = command_cwd(base, event),
-        .exe = event.exe,
-        .argv = event.argv,
-        .env = event.env.value_or(std::vector<std::string>{}),
-        .runtime = runtime,
-        .parent = event.parent,
+data::process_result to_process_result(const js::ProcessResult& result) {
+    return {
+        .code = result.code,
+        .std_out = result.stdOut,
+        .std_err = result.stdErr,
     };
 }
 
@@ -115,26 +100,31 @@ ReplayFile parse_replay_file(const fs::path& path) {
     return replay;
 }
 
-kota::task<data::process_result> replay_build(const fs::path& path,
-                                              const js::CatterRuntime& runtime) {
+kota::task<data::process_result> replay_build(const fs::path& path, Handler& handler) {
     const auto replay = parse_replay_file(path);
     auto base = (path.parent_path() / util::from_utf8(replay.cwd.value_or("."))).lexically_normal();
     if(!base.has_filename()) {
         base = base.parent_path();
     }
     for(const auto& event: replay.events) {
-        co_await js::on_command(event.id, to_command_data(base, runtime, event));
+        if(event.error.has_value()) {
+            co_await handler.on_error(event.id, event.error->parent, event.error->message);
+            continue;
+        }
+        co_await handler.on_command(event.id,
+                                    event.parent,
+                                    data::command{
+                                        .cwd = command_cwd(base, event),
+                                        .executable = event.exe,
+                                        .args = event.argv,
+                                        .env = event.env.value_or(std::vector<std::string>{}),
+                                    });
         if(event.execution.has_value()) {
-            co_await js::on_execution(event.id, *event.execution);
+            co_await handler.on_exit(event.id, to_process_result(*event.execution));
         }
     }
 
-    const auto finish = replay.finish.value_or(js::ProcessResult{.code = 0});
-    co_return data::process_result{
-        .code = finish.code,
-        .std_out = finish.stdOut,
-        .std_err = finish.stdErr,
-    };
+    co_return to_process_result(replay.finish.value_or(js::ProcessResult{.code = 0}));
 }
 
 }  // namespace catter::core
