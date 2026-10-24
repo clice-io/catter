@@ -95,7 +95,8 @@ jobs:
             echo 'Build and test as CI does: pixi run -e dev ci-build debug (or release).'
             if [ "$RUNNER_OS" = Windows ]; then
               echo 'MinGW: pixi run -e mingw ci-build debug.'
-              echo 'Git Bash sets MSYSTEM, which makes xmake take the host for MSYS: unset MSYSTEM first.'
+              echo 'Git Bash makes xmake take the host for MSYS, and unsetting MSYSTEM there does not help:'
+              echo 'run pixi and xmake through PowerShell, e.g. pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev ci-build debug".'
             fi
           } > ~/.box/notes
 
