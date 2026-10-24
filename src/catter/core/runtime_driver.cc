@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <memory>
 #include <stdexcept>
@@ -11,10 +12,13 @@
 #include <cpptrace/exceptions.hpp>
 
 #include "ipc.h"
+#include "replay.h"
 #include "session.h"
 #include "config/catter-proxy.h"
+#include "config/ipc.h"
 #include "js/js.h"
 #include "util/crossplat.h"
+#include "util/encoding.h"
 
 namespace catter::core {
 namespace {
@@ -120,13 +124,15 @@ public:
         }
 
         auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
+        auto pipe_name = config::ipc::session_pipe_name();
         Session::ProcessLaunchPlan launch_plan{
             .cwd = config.buildSystemCommandCwd,
-            .executable = proxy_path.string(),
+            .executable = util::to_utf8(proxy_path),
             .args =
                 {
-                       proxy_path.string(),
+                       util::to_utf8(proxy_path),
                        "-p", "0",
+                       "--ipc", pipe_name,
                        "--", },
             .mode = to_process_stdio_mode(config.options.stdioMode),
         };
@@ -135,6 +141,7 @@ public:
         Session session;
         auto session_plan =
             Session::make_run_plan(std::move(launch_plan),
+                                   std::move(pipe_name),
                                    InjectService::Factory{.runtime = &config.runtime});
 
         co_return co_await session.run(std::move(session_plan));
@@ -146,8 +153,36 @@ const InjectRuntimeDriver* inject_runtime_driver() noexcept {
     return &driver;
 }
 
+/// Plays a recorded build (see replay.h) instead of running one: the build
+/// command is the replay file.
+class ReplayRuntimeDriver final : public RuntimeDriver {
+public:
+    std::string_view name() const noexcept override {
+        return "replay";
+    }
+
+    const js::CatterRuntime& runtime() const noexcept override {
+        return inject_runtime_driver()->runtime();
+    }
+
+    kota::task<data::process_result> execute(const js::CatterConfig& config) const override {
+        if(config.buildSystemCommand.size() != 1) {
+            throw cpptrace::runtime_error(
+                "the replay mode takes a replay file for the build command: " "catter -m replay <script> -- <file>");
+        }
+        auto file = util::from_utf8(config.buildSystemCommandCwd) /
+                    util::from_utf8(config.buildSystemCommand.front());
+        co_return co_await replay_build(file.lexically_normal(), config.runtime);
+    }
+};
+
+const ReplayRuntimeDriver* replay_runtime_driver() noexcept {
+    const static ReplayRuntimeDriver driver;
+    return &driver;
+}
+
 auto runtime_drivers() noexcept {
-    return std::array<const RuntimeDriver*, 1>{inject_runtime_driver()};
+    return std::array<const RuntimeDriver*, 2>{inject_runtime_driver(), replay_runtime_driver()};
 }
 
 }  // namespace

@@ -22,6 +22,7 @@
 
 #include "util/crossplat.h"
 #include "util/data.h"
+#include "util/encoding.h"
 #include "util/exception.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -32,12 +33,12 @@
 namespace catter::proxy::hook {
 
 namespace {
-std::string cmdline_of(const catter::data::command& cmd) noexcept {
+std::wstring cmdline_of(const catter::data::command& cmd) {
     std::string full_cmd;
     for(const auto& arg: cmd.args) {
         full_cmd += win::quote_win32_arg(arg) + " ";
     }
-    return full_cmd;
+    return util::to_wide(full_cmd);
 }
 
 bool env_key_equals(std::string_view env_entry, std::string_view key) noexcept {
@@ -59,21 +60,16 @@ void upsert_environment_variable(std::vector<std::string>& env,
     env.push_back(std::move(entry));
 }
 
-std::vector<char> build_environment_block(std::vector<std::string> env) {
-    size_t env_block_size = 1;
+/// The environment block CreateProcessW takes with CREATE_UNICODE_ENVIRONMENT.
+std::vector<wchar_t> build_environment_block(const std::vector<std::string>& env) {
+    std::vector<wchar_t> env_block;
     for(const auto& entry: env) {
-        env_block_size += entry.size() + 1;
+        auto wide = util::to_wide(entry);
+        env_block.insert(env_block.end(), wide.begin(), wide.end());
+        env_block.push_back(L'\0');
     }
 
-    std::vector<char> env_block;
-    env_block.reserve(env_block_size);
-
-    for(const auto& entry: env) {
-        std::span<const char> span(entry.c_str(), entry.size() + 1);
-        env_block.append_range(span);
-    }
-
-    env_block.push_back('\0');
+    env_block.push_back(L'\0');
     return env_block;
 }
 
@@ -255,18 +251,22 @@ kota::task<int64_t, kota::error> wait_for_process_exit(RunningProcess process,
     co_return wait_ret->status;
 }
 
-StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string proxy_path) {
+StartedProcess start_process(data::command cmd,
+                             data::ipcid_t id,
+                             const std::string& pipe_name,
+                             std::string proxy_path) {
     auto env = std::move(cmd.env);
     upsert_environment_variable(env, win::ENV_VAR_IPC_ID<char>, std::to_string(id));
     upsert_environment_variable(env, win::ENV_VAR_PROXY_PATH<char>, proxy_path);
+    upsert_environment_variable(env, win::ENV_VAR_IPC_PIPE<char>, pipe_name);
 
-    auto env_block = build_environment_block(std::move(env));  // Double null termination
+    auto env_block = build_environment_block(env);  // Double null termination
 
     auto stdout_pipe = create_capture_pipe("stdout");
     auto stderr_pipe = create_capture_pipe("stderr");
 
-    STARTUPINFOA si{
-        .cb = sizeof(STARTUPINFOA),
+    STARTUPINFOW si{
+        .cb = sizeof(STARTUPINFOW),
         .dwFlags = STARTF_USESTDHANDLES,
         .hStdInput = GetStdHandle(STD_INPUT_HANDLE),
         .hStdOutput = stdout_pipe.write.get(),
@@ -274,20 +274,30 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
     };
     PROCESS_INFORMATION pi{};
 
-    std::string cmdline = cmdline_of(cmd);
+    // The command writes to the capture pipes, which the proxy forwards: the
+    // proxy's own output handles, catter's pipes, are not the command's.
+    // Inherited, they would hold the session open as long as the command, or a
+    // server it started, lives.
+    for(auto own: {STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
+        SetHandleInformation(GetStdHandle(own), HANDLE_FLAG_INHERIT, 0);
+    }
+
+    auto cmdline = cmdline_of(cmd);
+    auto executable = util::to_wide(cmd.executable);
+    auto cwd = util::to_wide(cmd.cwd);
 
     LOG_INFO("| -> Catter-Proxy Final Executing command: \n    exe = {} \n    args = {}",
              cmd.executable,
-             cmdline);
+             util::from_wide(cmdline));
 
-    if(!CreateProcessA(cmd.executable.c_str(),
+    if(!CreateProcessW(executable.c_str(),
                        cmdline.data(),
                        nullptr,
                        nullptr,
                        TRUE,
-                       CREATE_SUSPENDED,
+                       CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
                        env_block.data(),
-                       cmd.cwd.empty() ? nullptr : cmd.cwd.c_str(),
+                       cwd.empty() ? nullptr : cwd.c_str(),
                        &si,
                        &pi)) {
         throw catter::system_error(GetLastError(),
@@ -316,12 +326,13 @@ StartedProcess start_process(data::command cmd, data::ipcid_t id, std::string pr
 }
 }  // namespace
 
-kota::task<data::process_result> run(data::command cmd, data::ipcid_t id, std::string proxy_path) {
+kota::task<data::process_result>
+    run(data::command cmd, data::ipcid_t id, std::string pipe_name, std::string proxy_path) {
 
     return capture_process_result(
-        [cmd, id, proxy_path](kota::event_loop& loop) mutable -> catter::process_info {
+        [cmd, id, pipe_name, proxy_path](kota::event_loop& loop) mutable -> catter::process_info {
             LOG_INFO("new command id is: {}", id);
-            auto started = start_process(std::move(cmd), id, std::move(proxy_path));
+            auto started = start_process(std::move(cmd), id, pipe_name, std::move(proxy_path));
 
             return {
                 .wait_task = wait_for_process_exit(std::move(started.process), &loop),

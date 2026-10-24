@@ -112,7 +112,7 @@ win::Handle NtCreateThreadEx(HANDLE hProcess,
 enum class InjectMethod { CreateRemoteThread, NtCreateThread, RtlCreateUserThread };
 
 win::Handle inject(HANDLE hProcess, LPVOID lpSpace, InjectMethod method) {
-    auto loadLibraryAddr = reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryA);
+    auto loadLibraryAddr = reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryW);
     switch(method) {
         case InjectMethod::NtCreateThread: {
             return NtCreateThreadEx(hProcess, loadLibraryAddr, lpSpace);
@@ -128,8 +128,8 @@ win::Handle inject(HANDLE hProcess, LPVOID lpSpace, InjectMethod method) {
 }
 
 bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
-    auto dll_path_str = dll_path.string();
-    const auto dll_path_size = dll_path_str.size() + 1;
+    const auto& dll_path_str = dll_path.native();
+    const auto dll_path_size = (dll_path_str.size() + 1) * sizeof(wchar_t);
     auto Space =
         win::RemoteMemory(hProcess, NULL, dll_path_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 

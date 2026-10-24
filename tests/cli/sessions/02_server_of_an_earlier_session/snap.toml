@@ -1,0 +1,14 @@
+[test."$ catter script::cmd-tree -w 1000 -- node start.mjs"]
+stdout = '''
+server started
+node start.mjs
+└── node server.mjs
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node client.mjs"]
+stdout = '''
+server: compiled with space
+node client.mjs
+'''
+exit = 0

@@ -1,0 +1,7 @@
+[test."$ catter script.js -- node -e 0"]
+stdout = '''
+listed: dir, file.txt
+file exists: true
+removed: true
+'''
+exit = 0

@@ -5,6 +5,9 @@ add_rules("mode.debug", "mode.release", "mode.releasedbg")
 set_allowedplats("windows", "mingw", "linux", "macosx")
 
 set_languages("c++23")
+-- Sources and narrow string literals are UTF-8, the encoding catter's strings
+-- hold on every platform (src/common/util/encoding.h).
+set_encodings("utf-8")
 
 option("dev", {default = true})
 option("test", {default = false})
@@ -296,6 +299,10 @@ target("catter")
     add_local_prefix_includedirs()
     add_deps("catter-core")
     add_files("src/catter/main.cc")
+    -- main is wmain on Windows (src/catter/main.cc).
+    if is_plat("mingw") then
+        add_ldflags("-municode", {force = true})
+    end
 
 
 target("catter-hook-win64")
@@ -382,11 +389,15 @@ target("catter-proxy")
     add_deps("common", "catter-hook")
     add_includedirs("src/catter-proxy/")
     add_files("src/catter-proxy/**.cc")
+    -- main is wmain on Windows (src/catter-proxy/main.cc).
+    if is_plat("mingw") then
+        add_ldflags("-municode", {force = true})
+    end
 
 rule("ut-base")
     on_load(function (target)
-        target:add("includedirs", "tests/unit/base/")
-        target:add("files", "tests/unit/base/**.cc")
+        target:add("includedirs", "unittests/base/")
+        target:add("files", "unittests/base/**.cc")
         target:add("packages", "kotatsu")
     end)
 
@@ -396,7 +407,7 @@ target("ut-common")
     add_local_prefix_includedirs()
     add_rules("ut-base")
 
-    add_files("tests/unit/common/**.cc")
+    add_files("unittests/common/**.cc")
 
     add_deps("common")
     add_tests("default")
@@ -407,7 +418,7 @@ target("ut-catter")
     add_local_prefix_includedirs()
     add_rules("ut-base")
 
-    add_files("tests/unit/catter/**.cc")
+    add_files("unittests/catter/**.cc")
     add_deps("catter-core", "catter-js-tests", "common")
 
     add_defines(format([[JS_TEST_PATH="%s"]], path.unix(path.join(os.projectdir(), "api/build/test/"))))
@@ -428,8 +439,8 @@ target("ut-catter-hook-unix")
     add_includedirs("src/catter-hook/unix/payload/", { public = true })
     add_files("src/catter-hook/unix/payload/*.cc")
 
-    add_files("tests/unit/catter-hook/unix/**.cc")
-    add_files("tests/unit/catter-hook/shared/**.cc")
+    add_files("unittests/catter-hook/unix/**.cc")
+    add_files("unittests/catter-hook/shared/**.cc")
 
     add_deps("common")
 
@@ -444,33 +455,14 @@ target("ut-catter-hook-win64")
 
     add_includedirs("src/catter-hook/")
     add_files("src/catter-hook/win/payload/util.cc")
-    add_files("tests/unit/catter-hook/win/**.cc")
-    add_files("tests/unit/catter-hook/shared/**.cc")
+    add_files("unittests/catter-hook/win/**.cc")
+    add_files("unittests/catter-hook/shared/**.cc")
 
     add_deps("common")
 
     if is_plat("windows", "mingw") then
         add_tests("default")
     end
-
-target("it-catter-hook")
-    set_default(has_config("test"))
-    set_kind("binary")
-    add_files("tests/integration/test/catter-hook.cc")
-    add_deps("catter-hook", "common")
-
-target("it-catter-proxy")
-    set_default(has_config("test"))
-    set_kind("binary")
-    add_files("tests/integration/test/catter-proxy.cc")
-    add_deps("common", "catter-core", "catter-proxy")
-
-target("it-catter-replay")
-    set_default(has_config("test"))
-    set_kind("binary")
-    add_local_prefix_includedirs()
-    add_files("tests/integration/replay/catter-replay.cc")
-    add_deps("common", "catter-core")
 
 -- rule("build.js"): runs a JS toolchain build (pnpm script in api/dev/) and
 -- tracks the inputs/outputs for change detection. It hooks into before_build,

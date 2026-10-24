@@ -39,10 +39,29 @@ jobs:
         with:
           environments: ${{ matrix.env }}
 
-      # Configures, builds, and runs the unit and integration tests.
+      # Configures, builds, and runs the unit tests.
       - name: Build and test
         timeout-minutes: 60
         run: pixi run -e ${{ matrix.env }} ci-build ${{ matrix.mode }}
+
+      # The programs the cases run, side by side as catter finds them, for
+      # the cases jobs below.
+      - name: Collect programs
+        shell: bash
+        run: |
+          mkdir programs
+          for file in build/*/*/${{ matrix.mode }}/{catter,catter.exe,catter-proxy,catter-proxy.exe,libcatter-hook-unix.so,libcatter-hook-unix.dylib,catter-hook-win64.dll}; do
+            if [ -f "$file" ]; then cp "$file" programs/; fi
+          done
+          ls programs
+
+      - name: Upload programs
+        uses: actions/upload-artifact@v7
+        with:
+          name: programs-${{ matrix.os }}-${{ matrix.env }}-${{ matrix.mode }}
+          path: programs/
+          if-no-files-found: error
+          retention-days: 3
 
       # Package the exact binaries the suites above just validated. These
       # artifacts are what releases promote — there is no separate release
@@ -60,3 +79,59 @@ jobs:
           if-no-files-found: error
           # 30 days bounds how old a commit a tag can still promote.
           retention-days: 30
+
+  # The cases under tests/ (tests/README.md), on the programs a build job
+  # made, on a runner that did not build them, as a user runs catter.
+  cases:
+    needs: build-and-test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04, macos-15]
+        mode: [debug, release]
+        env: [dev]
+        shard: ["1/1"]
+        include:
+          - { os: windows-2025, mode: debug, env: mingw, shard: "1/1" }
+          - { os: windows-2025, mode: release, env: mingw, shard: "1/1" }
+
+    name: cases (${{ matrix.os }}, ${{ matrix.mode }}, ${{ matrix.env }}, ${{ matrix.shard }})
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # xmake is one of the build systems the cases build with.
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: v3.0.8
+
+      - uses: ./.github/actions/setup-pixi
+        with:
+          environments: dev
+
+      - name: Download programs
+        uses: actions/download-artifact@v8
+        with:
+          name: programs-${{ matrix.os }}-${{ matrix.env }}-${{ matrix.mode }}
+          path: programs
+
+      # An artifact keeps no file modes.
+      - name: Make programs executable
+        if: runner.os != 'Windows'
+        run: chmod +x programs/*
+
+      # In the job's default shell, as the build ran: on Windows not Git
+      # Bash, whose MSYS environment changes how build tools behave.
+      - name: Cases
+        timeout-minutes: 20
+        env:
+          CATTER_EXECUTABLE: ${{ github.workspace }}/programs/catter
+          CATTER_CASES_SHARD: ${{ matrix.shard }}
+        run: |
+          pixi run -e dev npm-install
+          pixi run -e dev pnpm --dir tests run cases

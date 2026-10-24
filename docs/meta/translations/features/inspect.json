@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "pairs": [
+    { "kind": "heading", "en": "6c3889a9359d3c77", "zh": "6e24b9d5162ac44f" },
+    { "kind": "paragraph", "en": "1f0d1b6500fc5f36", "zh": "e18df56e7aad8029" },
+    { "kind": "paragraph", "en": "0311be39856c0a81", "zh": "9442cc1d508f3a40" },
+    { "kind": "heading", "en": "63bfd61a0561b255", "zh": "898cf1ff9fecac7c" },
+    { "kind": "heading", "en": "e34e364b9c6b7d84", "zh": "fd685e8f1a75ea53" },
+    { "kind": "paragraph", "en": "17fc903d677f53fc", "zh": "8a4d693591c3540d" },
+    { "kind": "tableRow", "en": "18fabd3b13adbf1a", "zh": "4b146302c5793f3b" },
+    { "kind": "tableRow", "en": "076e78b6caf7c5a0", "zh": "d8f1585b2ec0e27a" },
+    { "kind": "tableRow", "en": "b67a8c4b910668af", "zh": "b015bd2ddf0df247" },
+    { "kind": "tableRow", "en": "ecf8547b111dfff4", "zh": "6abe76a03d9698e4" },
+    { "kind": "tableRow", "en": "5540a5f6c8bf81dd", "zh": "ca1e7a0c339c1604" },
+    { "kind": "tableRow", "en": "b1f6058cb34d7472", "zh": "62c231d0b22425e9" },
+    { "kind": "tableRow", "en": "9e97c9e24382979a", "zh": "ed01e1fda14a3546" },
+    { "kind": "tableRow", "en": "11be3a288ddc9a04", "zh": "6b816f84cbdc5233" },
+    { "kind": "tableRow", "en": "d0ed7fdfbf2e57ac", "zh": "d49e0d48b445850a" },
+    { "kind": "tableRow", "en": "a2392a1b66d1918b", "zh": "7d1d260be9e4d9d9" }
+  ]
+}

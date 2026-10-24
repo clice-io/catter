@@ -5,8 +5,10 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <kota/async/runtime/task.h>
 
 #include "js/capi/type.h"
+#include "util/data.h"
 
 namespace catter::core {
 
@@ -41,37 +43,15 @@ struct ReplayEvent {
 /**
  * Top-level replay document (schema version 1).
  *
- * `cwd` is resolved by the caller against the replay file directory when it
- * is relative; `build_system_command` and `finish` override the runner's
- * defaults when present.
+ * `cwd`, relative to the replay file's directory, is where the commands with a
+ * relative `cwd` of their own ran; `finish` is how the build ended.
  */
 struct ReplayFile {
     std::optional<int64_t> version;
     std::optional<std::string> name;
     std::optional<std::string> cwd;
-    std::optional<std::vector<std::string>> build_system_command;
     std::vector<ReplayEvent> events;
     std::optional<js::ProcessResult> finish;
-};
-
-struct ReplayConfig {
-    std::string script;  // "script::cdb" or a script file path.
-    std::vector<std::string> script_args;
-    std::vector<std::string> build_system_command;
-    std::filesystem::path working_directory;
-    js::CatterOptions options{
-        .log = false,
-        .stdioMode = js::CatterOptions::StdioMode::inherit,
-    };
-    js::CatterRuntime runtime{
-        .supportActions = {js::ActionType::skip,
-                           js::ActionType::drop,
-                           js::ActionType::abort,
-                           js::ActionType::modify},
-        .type = js::CatterRuntime::Type::inject,
-        .supportParentId = true,
-    };
-    bool execute = true;
 };
 
 /**
@@ -81,16 +61,13 @@ struct ReplayConfig {
 ReplayFile parse_replay_file(const std::filesystem::path& path);
 
 /**
- * Replays a whole build against the embedded QuickJS runtime.
+ * Plays the build a replay file recorded to the running script, as the inject
+ * mode delivers a real one: each command to on_command, its result, when the
+ * event has one, to on_execution.
  *
- * Loads the script (builtin or file), then drives the service lifecycle the
- * same way the real runtime driver does: on_start, one on_command /
- * on_execution pair per command, then on_finish. Exceptions thrown by the
- * script (e.g. abort-on-command-failure) propagate to the caller.
+ * @return how the build ended: the file's `finish`, else exit 0
  */
-class ReplayRunner {
-public:
-    void run(ReplayConfig config, const ReplayFile& replay);
-};
+kota::task<data::process_result> replay_build(const std::filesystem::path& path,
+                                              const js::CatterRuntime& runtime);
 
 }  // namespace catter::core

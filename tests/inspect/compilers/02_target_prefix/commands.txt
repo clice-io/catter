@@ -1,0 +1,2 @@
+aarch64-linux-gnu-gcc -c a.c -o a.o
+x86_64-w64-mingw32-g++ -c a.cc -o a.o

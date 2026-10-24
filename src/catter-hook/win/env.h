@@ -19,6 +19,15 @@ template <>
 constexpr inline wchar_t ENV_VAR_IPC_ID<wchar_t>[] = L"CATTER_IPC_ID";
 
 template <CharT char_t>
+constexpr char_t ENV_VAR_IPC_PIPE[] = {};
+
+template <>
+constexpr inline char ENV_VAR_IPC_PIPE<char>[] = "CATTER_IPC_PIPE";
+
+template <>
+constexpr inline wchar_t ENV_VAR_IPC_PIPE<wchar_t>[] = L"CATTER_IPC_PIPE";
+
+template <CharT char_t>
 constexpr char_t ENV_VAR_PROXY_PATH[] = {};
 
 template <>

@@ -36,7 +36,7 @@ On macOS, the hook uses the `DYLD_INTERPOSE` macro to replace functions at the d
 
 The hook is implemented as a set of cooperating classes:
 
-- **`Session`** -- Reads and stores session information from the environment (proxy path and the self command ID).
+- **`Session`** -- Reads and stores session information from the environment (the proxy path, the self command ID and the session's pipe).
 - **`Resolver`** -- Resolves the target executable path. Handles PATH lookups, relative path resolution, and edge cases like missing executables.
 - **`Command` / `build_proxy_command()`** -- Builds the rewritten proxy command, substituting `catter-proxy` for the original executable.
 - **`SanitizedEnv` / `sanitize_environment()`** -- Scrubs the environment before the real `execve` is called. Removes catter variables and strips the hook library from the preload variable.
@@ -57,6 +57,7 @@ The hook reads session information from these environment variables, set by the 
 | ---------------------------- | ------------------------------------------ |
 | `__key_catter_proxy_path_v1` | Absolute path to the `catter-proxy` binary |
 | `__key_catter_command_id_v1` | Session ID of the parent process           |
+| `__key_catter_ipc_v1`        | The pipe of the catter session             |
 
 ### Interception Flow
 
@@ -71,13 +72,13 @@ When any process creation function is called (e.g., `execve("/usr/bin/g++", argv
 4. **`Command`** (`build_proxy_command()`) constructs the proxy command:
 
    ```
-   <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
+   <proxy_path> -p <self_id> --exec <resolved_path> --ipc <pipe> -- <original_argv...>
    ```
 
    The original `argv[0]` and all subsequent arguments are preserved after the `--` separator.
 
 5. **`SanitizedEnv`** (`sanitize_environment()`) modifies the environment array:
-   - Removes `__key_catter_proxy_path_v1` and `__key_catter_command_id_v1`
+   - Removes `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` and `__key_catter_ipc_v1`
    - Strips the hook library name from `LD_PRELOAD` (or `DYLD_INSERT_LIBRARIES`)
    - If `LD_PRELOAD` becomes empty after stripping, removes it entirely
 
@@ -129,15 +130,16 @@ The hook is compiled as `catter-hook-win64.dll`. It uses MinHook, a lightweight 
 | Variable            | Purpose                                        |
 | ------------------- | ---------------------------------------------- |
 | `CATTER_IPC_ID`     | Session ID of the parent process               |
+| `CATTER_IPC_PIPE`   | The pipe of the catter session                 |
 | `CATTER_PROXY_PATH` | Absolute path to the `catter-proxy.exe` binary |
 
 ### DLL Injection Process
 
 When `catter-proxy` (in injector mode) needs to start a build command with the hook attached:
 
-1. **Create the target process suspended**. The proxy calls `CreateProcessA()` with the `CREATE_SUSPENDED` flag. The process is created but its main thread does not run.
+1. **Create the target process suspended**. The proxy calls `CreateProcessW()` with the `CREATE_SUSPENDED` flag. The process is created but its main thread does not run.
 
-2. **Set environment variables**. `CATTER_IPC_ID` and `CATTER_PROXY_PATH` are set in the target process environment before creation (passed via the environment block).
+2. **Set environment variables**. `CATTER_IPC_ID`, `CATTER_IPC_PIPE` and `CATTER_PROXY_PATH` are set in the target process environment before creation (passed via the environment block).
 
 3. **Allocate memory in the target process**. The proxy calls `VirtualAllocEx()` to allocate a region of memory in the target process's address space.
 
@@ -180,7 +182,7 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 3. **Rewrite the command line**:
 
    ```
-   {proxy_path} -p {ipc_id} --exec {resolved_path} -- {original_cmdline}
+   {proxy_path} -p {ipc_id} --exec {resolved_path} --ipc {pipe} -- {original_cmdline}
    ```
 
    The `lpApplicationName` is set to `nullptr` so that the command line is parsed by `CreateProcess` normally.

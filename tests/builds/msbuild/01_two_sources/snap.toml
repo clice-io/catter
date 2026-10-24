@@ -1,0 +1,21 @@
+[test."$ catter script::cdb -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
+wrong = "MSBuild hands cl.exe its arguments in a response file, which is not expanded (catter#123), and the output gets blank lines (catter#139)"
+stdout = '''
+
+  1>Checking Build System
+
+  Building Custom Rule ${WS}/CMakeLists.txt
+
+  main.cc
+  util.cc
+  Generating Code...
+  hello.vcxproj -> ${WS}/build/Debug/hello.exe
+  Building Custom Rule ${WS}/CMakeLists.txt
+
+CDB saved to ${WS}/compile_commands.json with 0 entries.
+'''
+exit = 0
+
+[test."compile_commands.json"]
+wrong = "MSBuild hands cl.exe its arguments in a response file, which is not expanded (catter#123)"
+entries = []

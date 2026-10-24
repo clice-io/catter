@@ -1,0 +1,3 @@
+[test."$ catter script::no-such-script -- node -e 0"]
+stdout = "Unknown builtin script `script::no-such-script`"
+exit = 1

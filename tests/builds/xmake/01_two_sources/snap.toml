@@ -1,0 +1,166 @@
+[test."$ catter script::cdb -q -o compile_commands.json -- xmake build -P . -j 1"]
+stdout = '''
+[ 19%]: <hello> compiling.release src/main.cc
+[ 38%]: <hello> compiling.release src/util.cc
+[ 56%]: <hello> linking.release hello
+[100%]: build ok, spent #s
+'''
+exit = 0
+
+[test."compile_commands.json"]
+wrong = "the sources xmake compiles to probe the compiler get entries (catter#117)"
+entries = [
+    {
+        file = "${TMP}/.xmake#/#/_#.cpp",
+        directory = "${WS}",
+        output = "${TMP}/.xmake#/#/_#",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-MMD",
+            "-MF",
+            "/dev/null",
+            "-m64",
+            "-S",
+            "-o",
+            "${TMP}/.xmake#/#/_#",
+            "${TMP}/.xmake#/#/_#.cpp",
+        ],
+    },
+    {
+        file = "${TMP}/.xmake#/#/_#.cpp",
+        directory = "${WS}",
+        output = "${TMP}/.xmake#/#/_#",
+        arguments = ["${ENV}/bin/g++", "-fPIC", "-m64", "-S", "-o", "${TMP}/.xmake#/#/_#", "${TMP}/.xmake#/#/_#.cpp"],
+    },
+    {
+        file = "${TMP}/.xmake#/#/_#.cpp",
+        directory = "${WS}",
+        output = "${TMP}/.xmake#/#/_#",
+        arguments = ["${ENV}/bin/g++", "-fPIC", "-m64", "-m64", "-o", "${TMP}/.xmake#/#/_#", "${TMP}/.xmake#/#/_#.cpp"],
+    },
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/linux/x86_64/release/src/main.cc.o",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-c",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "-o",
+            "build/.objs/hello/linux/x86_64/release/src/main.cc.o",
+            "src/main.cc",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/linux/x86_64/release/src/util.cc.o",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-c",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "-o",
+            "build/.objs/hello/linux/x86_64/release/src/util.cc.o",
+            "src/util.cc",
+        ],
+    },
+]
+
+[test."compile_commands.json".darwin]
+wrong = "the sources xmake compiles to probe the compiler get entries (catter#117); xmake compiles with Apple clang and probes it with other files"
+entries = [
+    {
+        file = "${TMP}/.xmake#/#/_#.cpp",
+        directory = "${WS}",
+        output = "${TMP}/.xmake#/#/_#",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-fPIC",
+            "-Qunused-arguments",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-S",
+            "-o",
+            "${TMP}/.xmake#/#/_#",
+            "${TMP}/.xmake#/#/_#.cpp",
+        ],
+    },
+    {
+        file = "${TMP}/.xmake#/#/_#.cpp",
+        directory = "${WS}",
+        output = "${TMP}/.xmake#/#/_#",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-fPIC",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-lz",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-lz",
+            "-o",
+            "${TMP}/.xmake#/#/_#",
+            "${TMP}/.xmake#/#/_#.cpp",
+        ],
+    },
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/macosx/arm64/release/src/main.cc.o",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-c",
+            "-Qunused-arguments",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "-o",
+            "build/.objs/hello/macosx/arm64/release/src/main.cc.o",
+            "src/main.cc",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/macosx/arm64/release/src/util.cc.o",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-c",
+            "-Qunused-arguments",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "-o",
+            "build/.objs/hello/macosx/arm64/release/src/util.cc.o",
+            "src/util.cc",
+        ],
+    },
+]

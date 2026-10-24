@@ -1,0 +1,2 @@
+ar rcs libx.a a.o b.o
+ar t libx.a

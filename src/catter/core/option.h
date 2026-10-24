@@ -11,6 +11,7 @@
 
 #include "runtime_driver.h"
 #include "js/capi/type.h"
+#include "util/encoding.h"
 
 namespace catter::core {
 namespace config {
@@ -48,7 +49,7 @@ struct WorkingDirectory {
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
         try {
-            path = std::filesystem::absolute(text);
+            path = std::filesystem::absolute(util::from_utf8(text));
         } catch(const std::exception& ex) {
             return context.format_error(std::format("Wrong Path: {}", ex.what()));
         }
@@ -74,10 +75,12 @@ struct CatterConfig {
               required = true)
     <std::string> script_path;
 
-    DecoKV(names = {"-m", "--mode"},
-           meta_var = "<Mode>",
-           help = "mode of operation, e.g. 'inject'",
-           required = false)
+    DecoKV(
+        names = {"-m", "--mode"},
+        meta_var = "<Mode>",
+        help =
+            "mode of operation: 'inject' (the default) runs the build; 'replay' plays a recorded one, whose replay file is the build command",
+        required = false)
     <config::RunMode> mode = config::RunMode{};
 
     DecoKV(names = {"-d", "--dir"},

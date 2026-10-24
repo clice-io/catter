@@ -12,8 +12,9 @@ constexpr static char OS_DIR_SEPARATOR = '/';
 namespace catter::config::hook {
 constexpr static char KEY_CATTER_PROXY_PATH[] = "__key_catter_proxy_path_v1";
 constexpr static char KEY_CATTER_COMMAND_ID[] = "__key_catter_command_id_v1";
+constexpr static char KEY_CATTER_IPC[] = "__key_catter_ipc_v1";
 constexpr static auto KEYS_TO_INJECT =
-    std::array<std::string_view, 2>{KEY_CATTER_PROXY_PATH, KEY_CATTER_COMMAND_ID};
+    std::array<std::string_view, 3>{KEY_CATTER_PROXY_PATH, KEY_CATTER_COMMAND_ID, KEY_CATTER_IPC};
 
 #if defined(CATTER_LINUX)
 constexpr static char KEY_PRELOAD[] = "LD_PRELOAD";

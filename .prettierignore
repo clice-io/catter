@@ -1,2 +1,7 @@
 # Written by pnpm.
 pnpm-lock.yaml
+# A case's inputs are test data (tests/README.md): formatting never rewrites
+# them. Its test.ts and README.md are code and docs, formatted as such.
+tests/*/*/*/*
+!tests/*/*/*/test.ts
+!tests/*/*/*/README.md

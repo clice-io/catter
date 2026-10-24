@@ -1,2 +1,5 @@
 # SCM syntax highlighting & preventing 3-way merges
 pixi.lock merge=binary linguist-language=YAML linguist-generated=true -diff
+# The cases' inputs and outputs read the same on every platform: a checkout
+# on Windows must not turn their line ends into CRLF.
+tests/** text eol=lf

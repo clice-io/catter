@@ -1,0 +1,7 @@
+gcc -E a.c -o a.i
+gcc -fsyntax-only a.c
+gcc -S a.c
+clang -c -emit-llvm a.c -o a.bc
+gcc a.c b.c -o app
+gcc a.o b.o -o app
+gcc -E a.c -o -
