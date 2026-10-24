@@ -61,6 +61,7 @@ jobs:
           environments: format
 
       - name: Run formatter
+        id: format
         run: pixi run -e format format
         continue-on-error: true
 
@@ -73,9 +74,14 @@ jobs:
 
       - name: Check results
         env:
+          FORMAT_OUTCOME: ${{ steps.format.outcome }}
           AUTOCORRECT_OUTCOME: ${{ steps.autocorrect.outcome }}
         run: |
           failed=0
+          if [[ "$FORMAT_OUTCOME" == "failure" ]]; then
+            echo "::error::'pixi run -e format format' failed (a file it cannot parse?); see the step log above."
+            failed=1
+          fi
           if ! git diff --quiet; then
             echo "::error::Formatting changes detected. Please run 'pixi run -e format format' and commit the result."
             git --no-pager diff --stat
@@ -87,6 +93,9 @@ jobs:
             failed=1
           fi
           exit $failed
+
+      - name: Lint Python
+        run: pixi run -e format lint-python
 
   typescript:
     if: ${{ inputs.format || github.event_name == 'workflow_dispatch' }}

@@ -16,6 +16,7 @@ export default defineConfig(
             "api/dist/**",
             "api/types/**",
             "scripts/build/**",
+            "scripts/dist/**",
             "scripts/output/**",
             "release-assets/**",
             "**/.turbo/**",

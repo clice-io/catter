@@ -42,7 +42,7 @@ for (const [name, [inc, enumName]] of Object.entries(tables)) {
     const file = path.join(root, "api", "src", "option", `${name}.ts`);
     const text = fs.readFileSync(file, "utf8");
     const eol = text.includes("\r\n") ? "\r\n" : "\n";
-    const body = ["  ID_INVALID = 0,", ...ids.map((id) => `  ID_${id},`)].join(eol);
+    const body = ["    ID_INVALID = 0,", ...ids.map((id) => `    ID_${id},`)].join(eol);
     const pattern = new RegExp(`(export enum ${enumName} \\{\\r?\\n)[\\s\\S]*?(\\r?\\n\\})`);
     if (!pattern.test(text)) throw new Error(`${file}: no enum ${enumName}`);
     updates.push({

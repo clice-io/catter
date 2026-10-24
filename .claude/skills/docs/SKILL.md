@@ -54,10 +54,10 @@ translate-docs skill, with `check-doc-translations` green on the new
 release. What catter adds on top:
 
 - The frontmatter that translates is index.md's (the VitePress home page).
-- The formatter of step 4 in RULES.md's workflow is `pixi run -e format
-format` (Prettier canonicalizes table padding and emphasis style); CJK
-  spacing and punctuation are autocorrect's, which CI runs
-  (`npx autocorrect-node --lint ./docs` here). Both change segment
+- The formatter of step 4 in RULES.md's workflow is
+  `pixi run -e format format` (Prettier canonicalizes table padding and
+  emphasis style); CJK spacing and punctuation are autocorrect's, which CI
+  runs (`npx autocorrect-node --lint ./docs` here). Both change segment
   hashes: fix what autocorrect reports and format before `record`.
 - The wording — catter's page conventions and glossary — is the
   translate-docs skill. `review-doc-translations [page...]` passes that
@@ -73,8 +73,9 @@ surrounding page, and delete zh segments whose en segment is gone (a whole
 new page: copy the en page over the zh one and `review` it). A page added,
 removed or renamed in `docs/en/sidebar.yaml` changes `docs/zh/sidebar.yaml`
 too — the checker reads only the pages. Then fix what autocorrect
-reports, `pixi run -e format format`, `record`, and `check`. For more than a page or two, delegate it to an Opus subagent
-with this skill, so the page texts stay out of the main context.
+reports, `pixi run -e format format`, `record`, and `check`. For more
+than a page or two, delegate it to an Opus subagent with this skill, so the
+page texts stay out of the main context.
 
 ## What the docs describe
 
