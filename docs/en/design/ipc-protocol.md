@@ -8,10 +8,10 @@ Catter uses inter-process communication between the daemon (`catter`) and proxy 
 
 The transport layer is platform-specific:
 
-| Platform | Mechanism | Path / Name |
-|----------|-----------|-------------|
+| Platform      | Mechanism          | Path / Name                          |
+| ------------- | ------------------ | ------------------------------------ |
 | Linux / macOS | Unix domain socket | `$HOME/.catter/pipe-catter-ipc.sock` |
-| Windows | Named pipe | `\\.\pipe\catter-ipc` |
+| Windows       | Named pipe         | `\\.\pipe\catter-ipc`                |
 
 The daemon creates the listening socket/pipe at startup. Each `catter-proxy` instance connects to it as a client when it starts. The connection persists for the lifetime of the proxy process.
 
@@ -45,10 +45,10 @@ Each request type maps to a `Request<Type>` specialization that declares `Params
 
 Asks the daemon what service mode is active.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| **Params** | `ServiceMode` (enum) | The mode to check (currently only `INJECT`) |
-| **Result** | `bool` | `true` if the daemon is in the requested mode |
+| Field      | Type                 | Description                                   |
+| ---------- | -------------------- | --------------------------------------------- |
+| **Params** | `ServiceMode` (enum) | The mode to check (currently only `INJECT`)   |
+| **Result** | `bool`               | `true` if the daemon is in the requested mode |
 
 This is the first request a proxy sends after connecting. It confirms the daemon is ready to handle intercepted commands.
 
@@ -56,9 +56,9 @@ This is the first request a proxy sends after connecting. It confirms the daemon
 
 Registers a new process session with the daemon.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| **Params** | `ipcid_t` (`int32_t`) | The parent session ID |
+| Field      | Type                  | Description                                         |
+| ---------- | --------------------- | --------------------------------------------------- |
+| **Params** | `ipcid_t` (`int32_t`) | The parent session ID                               |
 | **Result** | `ipcid_t` (`int32_t`) | A unique session ID assigned to this proxy instance |
 
 The parent ID establishes the parent-child relationship in the session tree. For the first proxy (injector mode), the parent ID is provided by the daemon when it spawns the proxy. For wrapper-mode proxies, the parent ID comes from the `__key_catter_command_id_v1` environment variable (or `CATTER_IPC_ID` on Windows), which was set by the hook.
@@ -69,19 +69,19 @@ The core request. The proxy sends a captured command and the daemon decides what
 
 **Params** -- `command`:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `cwd` | `string` | Working directory of the intercepted process |
-| `executable` | `string` | Resolved absolute path to the executable |
-| `args` | `string[]` | Full argument array (including `argv[0]`) |
-| `env` | `string[]` | Environment variables (in `KEY=VALUE` format) |
+| Field        | Type       | Description                                   |
+| ------------ | ---------- | --------------------------------------------- |
+| `cwd`        | `string`   | Working directory of the intercepted process  |
+| `executable` | `string`   | Resolved absolute path to the executable      |
+| `args`       | `string[]` | Full argument array (including `argv[0]`)     |
+| `env`        | `string[]` | Environment variables (in `KEY=VALUE` format) |
 
 **Result** -- `action`:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, or `WRAP` |
-| `cmd` | `command` | The command to execute (may be modified by the script) |
+| Field  | Type           | Description                                            |
+| ------ | -------------- | ------------------------------------------------------ |
+| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, or `WRAP`                     |
+| `cmd`  | `command`      | The command to execute (may be modified by the script) |
 
 **Action types**:
 
@@ -99,10 +99,10 @@ Reports an error condition from the hook or proxy back to the daemon.
 
 **Params**:
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field       | Type      | Description                      |
+| ----------- | --------- | -------------------------------- |
 | `parent_id` | `ipcid_t` | Session ID of the parent process |
-| `error_msg` | `string` | Human-readable error description |
+| `error_msg` | `string`  | Human-readable error description |
 
 **Result**: `null` (no response payload)
 
@@ -114,11 +114,11 @@ Reports that a command has completed execution.
 
 **Params** -- `process_result`:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `code` | `int64_t` | Process exit code |
-| `std_out` | `string` | Captured standard output |
-| `std_err` | `string` | Captured standard error |
+| Field     | Type      | Description              |
+| --------- | --------- | ------------------------ |
+| `code`    | `int64_t` | Process exit code        |
+| `std_out` | `string`  | Captured standard output |
+| `std_err` | `string`  | Captured standard error  |
 
 **Result**: `null` (no response payload)
 

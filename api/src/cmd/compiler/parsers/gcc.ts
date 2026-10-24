@@ -1,8 +1,5 @@
 import type { CompilerIdentity } from "../types.js";
-import {
-  buildClangGnuDriverModel,
-  collectClangDriverOptions,
-} from "./clang-driver.js";
+import { buildClangGnuDriverModel, collectClangDriverOptions } from "./clang-driver.js";
 import { ClangVisibility } from "catter/option";
 import type { CompilerParseResult } from "../types.js";
 
@@ -13,12 +10,12 @@ import type { CompilerParseResult } from "../types.js";
  * its own option table and parser semantics.
  */
 export function parseGccCommand(
-  cmd: readonly string[],
-  identity: CompilerIdentity,
+    cmd: readonly string[],
+    identity: CompilerIdentity,
 ): CompilerParseResult {
-  const args = cmd.slice(1);
-  return buildClangGnuDriverModel(
-    collectClangDriverOptions(args, ClangVisibility.DefaultVis),
-    identity.dialect,
-  );
+    const args = cmd.slice(1);
+    return buildClangGnuDriverModel(
+        collectClangDriverOptions(args, ClangVisibility.DefaultVis),
+        identity.dialect,
+    );
 }

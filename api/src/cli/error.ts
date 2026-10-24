@@ -7,32 +7,32 @@ import type { ParseFailure } from "./types.js";
  * contains the full formatted help text.
  */
 export class CLIParseError extends Error {
-  readonly usage: string;
-  readonly helpRequested: boolean;
+    readonly usage: string;
+    readonly helpRequested: boolean;
 
-  constructor(message: string, usage: string, helpRequested = false) {
-    super(message);
-    this.name = "CLIParseError";
-    this.usage = usage;
-    this.helpRequested = helpRequested;
-  }
-
-  format(): string {
-    if (this.helpRequested) {
-      return this.usage;
+    constructor(message: string, usage: string, helpRequested = false) {
+        super(message);
+        this.name = "CLIParseError";
+        this.usage = usage;
+        this.helpRequested = helpRequested;
     }
 
-    return `${this.message}\n\n${this.usage}`;
-  }
+    format(): string {
+        if (this.helpRequested) {
+            return this.usage;
+        }
+
+        return `${this.message}\n\n${this.usage}`;
+    }
 }
 
 /**
  * Formats a parse error into a human-readable message followed by usage text.
  */
 export function formatError(value: ParseFailure | CLIParseError): string {
-  if (value instanceof CLIParseError) {
-    return value.format();
-  }
+    if (value instanceof CLIParseError) {
+        return value.format();
+    }
 
-  return `${value.error}\n\n${value.usage}`;
+    return `${value.error}\n\n${value.usage}`;
 }

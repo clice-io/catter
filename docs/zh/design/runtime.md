@@ -16,11 +16,11 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 
 脚本在 `onStart` 收到的 `config.runtime` 中可以看到当前 runtime 的能力：
 
-| 字段 | 含义 |
-|------|------|
-| `type` | runtime 类型：`inject` / `eslogger` / `env` |
-| `supportActions` | 支持的脚本动作（`skip` / `drop` / `abort` / `modify` 的子集） |
-| `supportParentId` | 捕获的命令能否报告父命令 ID（命令树、目标树等功能依赖它） |
+| 字段              | 含义                                                          |
+| ----------------- | ------------------------------------------------------------- |
+| `type`            | runtime 类型：`inject` / `eslogger` / `env`                   |
+| `supportActions`  | 支持的脚本动作（`skip` / `drop` / `abort` / `modify` 的子集） |
+| `supportParentId` | 捕获的命令能否报告父命令 ID（命令树、目标树等功能依赖它）     |
 
 ## 机制一览
 
@@ -49,11 +49,11 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 
 ## 能力矩阵
 
-| 机制 | 平台 | 捕获方式 | supportActions | supportParentId | 状态 |
-|------|------|---------|----------------|-----------------|------|
-| inject | Linux / macOS / Windows | hook 拦截进程创建 | `skip` `drop` `modify` | 是 | 已实现（默认） |
-| env | 跨平台 | `CC` / `CXX` 环境变量 | 待定 | 预期否 | 计划中 |
-| eslogger | macOS | Event Stream API | 待定 | 待定 | 计划中 |
+| 机制     | 平台                    | 捕获方式              | supportActions         | supportParentId | 状态           |
+| -------- | ----------------------- | --------------------- | ---------------------- | --------------- | -------------- |
+| inject   | Linux / macOS / Windows | hook 拦截进程创建     | `skip` `drop` `modify` | 是              | 已实现（默认） |
+| env      | 跨平台                  | `CC` / `CXX` 环境变量 | 待定                   | 预期否          | 计划中         |
+| eslogger | macOS                   | Event Stream API      | 待定                   | 待定            | 计划中         |
 
 ## 选择与检查
 

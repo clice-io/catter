@@ -1,11 +1,5 @@
-import type {
-  ArchiverAnalysis,
-  ArchiverAnalysisError,
-} from "./archiver-cmd.js";
-import type {
-  CompilerAnalysis,
-  CompilerAnalysisError,
-} from "./compiler-cmd.js";
+import type { ArchiverAnalysis, ArchiverAnalysisError } from "./archiver-cmd.js";
+import type { CompilerAnalysis, CompilerAnalysisError } from "./compiler-cmd.js";
 
 export * from "./model.js";
 export * from "./registry.js";
@@ -16,6 +10,4 @@ export * from "./archiver-cmd.js";
 export type CommandAnalysis = CompilerAnalysis | ArchiverAnalysis;
 
 /** Built-in command analyzer error variants. */
-export type CommandAnalyzerError =
-  | CompilerAnalysisError
-  | ArchiverAnalysisError;
+export type CommandAnalyzerError = CompilerAnalysisError | ArchiverAnalysisError;

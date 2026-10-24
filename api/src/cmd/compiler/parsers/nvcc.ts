@@ -21,15 +21,15 @@ import type { Result } from "catter/neverthrow";
  * error string returned while collecting `clang` options.
  */
 export function nvcc2clang(args: string[]): Result<string[], string> {
-  return table2table("clang", "nvcc", args);
+    return table2table("clang", "nvcc", args);
 }
 
 /** Placeholder nvcc parser; throws until nvcc analysis exists. */
 export function parseNvccCommand(
-  _cmd: readonly string[],
-  identity: CompilerIdentity,
+    _cmd: readonly string[],
+    identity: CompilerIdentity,
 ): CompilerParseResult {
-  throw new CompilerUnsupportedError(
-    `compiler dialect is not supported yet: ${identity.dialect}`,
-  );
+    throw new CompilerUnsupportedError(
+        `compiler dialect is not supported yet: ${identity.dialect}`,
+    );
 }

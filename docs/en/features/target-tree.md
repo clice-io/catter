@@ -12,8 +12,8 @@ catter script::target-tree [options] -- <build-command>
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
+| Option            | Description         |
+| ----------------- | ------------------- |
 | `-d, --depth <n>` | Limit render depth. |
 
 ## Output

@@ -4,35 +4,35 @@ export {};
  * Result returned from a command handler.
  */
 export type Action =
-  | {
-      /**
-       * Ignore the command in catter, but still execute the original command.
-       */
-      type: "skip";
-    }
-  | {
-      /**
-       * Skip execution of the original command.
-       */
-      type: "drop";
-    }
-  | {
-      /**
-       * Abort the whole execution and report an error.
-       */
-      type: "abort";
-    }
-  | {
-      /**
-       * Replace the original command with a modified command.
-       */
-      type: "modify";
+    | {
+          /**
+           * Ignore the command in catter, but still execute the original command.
+           */
+          type: "skip";
+      }
+    | {
+          /**
+           * Skip execution of the original command.
+           */
+          type: "drop";
+      }
+    | {
+          /**
+           * Abort the whole execution and report an error.
+           */
+          type: "abort";
+      }
+    | {
+          /**
+           * Replace the original command with a modified command.
+           */
+          type: "modify";
 
-      /**
-       * Replacement command data for the modified command.
-       */
-      data: CommandData;
-    };
+          /**
+           * Replacement command data for the modified command.
+           */
+          data: CommandData;
+      };
 
 /**
  * Action discriminator extracted from {@link Action}.
@@ -43,44 +43,44 @@ export type ActionType = Action["type"];
  * Process result reported for a completed execution.
  */
 export type ProcessResult = {
-  /**
-   * Final process exit code.
-   */
-  code: number;
+    /**
+     * Final process exit code.
+     */
+    code: number;
 
-  /**
-   * Captured standard output content.
-   */
-  stdout: string;
+    /**
+     * Captured standard output content.
+     */
+    stdout: string;
 
-  /**
-   * Captured standard error content.
-   */
-  stderr: string;
+    /**
+     * Captured standard error content.
+     */
+    stderr: string;
 };
 
 /**
  * Runtime capabilities exposed to the script.
  */
 export type CatterRuntime = {
-  /**
-   * Actions supported by the current runtime.
-   */
-  supportActions: ActionType[];
+    /**
+     * Actions supported by the current runtime.
+     */
+    supportActions: ActionType[];
 
-  /**
-   * Runtime implementation type.
-   *
-   * - `"inject"`: Native injection-based runtime.
-   * - `"eslogger"`: macOS event-stream logger runtime.
-   * - `"env"`: Environment-based runtime, for example when `CC=catter-proxy`.
-   */
-  type: "inject" | "eslogger" | "env";
+    /**
+     * Runtime implementation type.
+     *
+     * - `"inject"`: Native injection-based runtime.
+     * - `"eslogger"`: macOS event-stream logger runtime.
+     * - `"env"`: Environment-based runtime, for example when `CC=catter-proxy`.
+     */
+    type: "inject" | "eslogger" | "env";
 
-  /**
-   * Whether captured commands can report a parent command identifier.
-   */
-  supportParentId: boolean;
+    /**
+     * Whether captured commands can report a parent command identifier.
+     */
+    supportParentId: boolean;
 };
 
 /**
@@ -95,141 +95,137 @@ export type CatterStdioMode = "inherit" | "capture";
  * Configuration passed to the script before command capture begins.
  */
 export type CatterConfig = {
-  /**
-   * Absolute path to the current script.
-   */
-  scriptPath: string;
-
-  /**
-   * Command-line arguments passed to the script.
-   */
-  scriptArgs: string[];
-
-  /**
-   * Build-system command used to launch the script, for example `['bazel', 'build', '//:target']`.
-   */
-  buildSystemCommand: string[];
-
-  /**
-   * Working directory used to launch the build-system command.
-   */
-  buildSystemCommandCwd: string;
-
-  /**
-   * Runtime capabilities available for the current script execution.
-   */
-  runtime: CatterRuntime;
-
-  /**
-   * Optional catter runtime features.
-   */
-  options: {
     /**
-     * Enables runtime logging.
+     * Absolute path to the current script.
      */
-    log: boolean;
+    scriptPath: string;
 
     /**
-     * Controls whether target stdout/stderr is printed by catter while it is captured.
+     * Command-line arguments passed to the script.
      */
-    stdioMode: CatterStdioMode;
-  };
+    scriptArgs: string[];
 
-  /**
-   * Whether catter should execute the build-system command after `onStart`.
-   *
-   * When `false`, catter stops before launching the build.
-   */
-  execute: boolean;
+    /**
+     * Build-system command used to launch the script, for example `['bazel', 'build', '//:target']`.
+     */
+    buildSystemCommand: string[];
+
+    /**
+     * Working directory used to launch the build-system command.
+     */
+    buildSystemCommandCwd: string;
+
+    /**
+     * Runtime capabilities available for the current script execution.
+     */
+    runtime: CatterRuntime;
+
+    /**
+     * Optional catter runtime features.
+     */
+    options: {
+        /**
+         * Enables runtime logging.
+         */
+        log: boolean;
+
+        /**
+         * Controls whether target stdout/stderr is printed by catter while it is captured.
+         */
+        stdioMode: CatterStdioMode;
+    };
+
+    /**
+     * Whether catter should execute the build-system command after `onStart`.
+     *
+     * When `false`, catter stops before launching the build.
+     */
+    execute: boolean;
 };
 
 /**
  * Error payload returned when command capture fails.
  */
 export type CatterErr = {
-  /**
-   * Error message describing the failure reason.
-   */
-  msg: string;
-  /**
-   * Parent command identifier when the runtime supports parent tracking.
-   */
-  parent?: number;
+    /**
+     * Error message describing the failure reason.
+     */
+    msg: string;
+    /**
+     * Parent command identifier when the runtime supports parent tracking.
+     */
+    parent?: number;
 };
 
 /**
  * Captured command metadata.
  */
 export type CommandData = {
-  /**
-   * Working directory of the command.
-   */
-  cwd: string;
+    /**
+     * Working directory of the command.
+     */
+    cwd: string;
 
-  /**
-   * Executable path or name.
-   */
-  exe: string;
+    /**
+     * Executable path or name.
+     */
+    exe: string;
 
-  /**
-   * Full argument vector, including the executable arguments.
-   */
-  argv: string[];
+    /**
+     * Full argument vector, including the executable arguments.
+     */
+    argv: string[];
 
-  /**
-   * Environment variables in `KEY=VALUE` form.
-   */
-  env: string[];
+    /**
+     * Environment variables in `KEY=VALUE` form.
+     */
+    env: string[];
 
-  /**
-   * Runtime that captured this command.
-   */
-  runtime: CatterRuntime;
+    /**
+     * Runtime that captured this command.
+     */
+    runtime: CatterRuntime;
 
-  /**
-   * Parent command identifier when the runtime supports parent tracking.
-   */
-  parent?: number;
+    /**
+     * Parent command identifier when the runtime supports parent tracking.
+     */
+    parent?: number;
 };
 
 /**
  * Tagged command capture result passed to `service_on_command`.
  */
 export type CommandCaptureResult =
-  | {
-      /**
-       * Indicates command capture succeeded.
-       */
-      success: true;
+    | {
+          /**
+           * Indicates command capture succeeded.
+           */
+          success: true;
 
-      /**
-       * Captured command payload.
-       */
-      data: CommandData;
-    }
-  | {
-      /**
-       * Indicates command capture failed.
-       */
-      success: false;
+          /**
+           * Captured command payload.
+           */
+          data: CommandData;
+      }
+    | {
+          /**
+           * Indicates command capture failed.
+           */
+          success: false;
 
-      /**
-       * Failure details for command capture.
-       */
-      error: CatterErr;
-    };
+          /**
+           * Failure details for command capture.
+           */
+          error: CatterErr;
+      };
 
-export function service_on_start(
-  cb: (config: CatterConfig) => Promise<CatterConfig>,
-): void;
-export function service_on_finish(
-  cb: (result: ProcessResult) => Promise<void>,
-): void;
+export function service_on_start(cb: (config: CatterConfig) => Promise<CatterConfig>): void;
+export function service_on_finish(cb: (result: ProcessResult) => Promise<void>): void;
 export function service_on_command(
-  cb: (id: number, data: CommandCaptureResult) => Promise<Action>,
+    cb: (id: number, data: CommandCaptureResult) => Promise<Action>,
 ): void;
 export function service_on_execution(
-  cb: (id: number, result: ProcessResult) => Promise<void>,
+    cb: (id: number, result: ProcessResult) => Promise<void>,
 ): void;
 // io
 export function stdout_print(content: string): void;
@@ -266,10 +262,7 @@ export function fs_create_dir_recursively(path: string): boolean;
 export function fs_create_empty_file_recursively(path: string): boolean;
 
 export function fs_remove_recursively(path: string): void;
-export function fs_rename_if_exists(
-  old_path: string,
-  new_path: string,
-): boolean;
+export function fs_rename_if_exists(old_path: string, new_path: string): boolean;
 
 export function fs_list_dir(path: string): string[];
 
@@ -278,77 +271,53 @@ export function fs_async_is_file(path: string): Promise<boolean>;
 export function fs_async_is_dir(path: string): Promise<boolean>;
 export function fs_async_list_dir(path: string): Promise<string[]>;
 export function fs_async_create_dir_recursively(path: string): Promise<boolean>;
-export function fs_async_create_empty_file_recursively(
-  path: string,
-): Promise<boolean>;
+export function fs_async_create_empty_file_recursively(path: string): Promise<boolean>;
 export function fs_async_remove_recursively(path: string): Promise<void>;
-export function fs_async_rename_if_exists(
-  old_path: string,
-  new_path: string,
-): Promise<boolean>;
+export function fs_async_rename_if_exists(old_path: string, new_path: string): Promise<boolean>;
 export function fs_async_read_text(path: string): Promise<string>;
-export function fs_async_write_text(
-  path: string,
-  content: string,
-): Promise<void>;
+export function fs_async_write_text(path: string, content: string): Promise<void>;
 
 // io read/write raw binary stream
 export function file_open(path: string): number;
 export function file_close(fd: number): void;
-export function file_seek_write(
-  fd: number,
-  offset: number,
-  whence: number,
-): void;
-export function file_seek_read(
-  fd: number,
-  offset: number,
-  whence: number,
-): void;
+export function file_seek_write(fd: number, offset: number, whence: number): void;
+export function file_seek_read(fd: number, offset: number, whence: number): void;
 export function file_tell_write(fd: number): number;
 export function file_tell_read(fd: number): number;
-export function file_read_n(
-  fd: number,
-  buf_size: number,
-  buf: ArrayBuffer,
-): number;
-export function file_write_n(
-  fd: number,
-  buf_size: number,
-  buf: ArrayBuffer,
-): void;
+export function file_read_n(fd: number, buf_size: number, buf: ArrayBuffer): number;
+export function file_write_n(fd: number, buf_size: number, buf: ArrayBuffer): void;
 
 // option
 export type OptionItem = {
-  values: string[];
-  key: string;
-  id: number;
-  index: number;
+    values: string[];
+    key: string;
+    id: number;
+    index: number;
 };
 
 export type OptionTable =
-  | "clang"
-  | "lld-coff"
-  | "lld-elf"
-  | "lld-macho"
-  | "lld-mingw"
-  | "lld-wasm"
-  | "nvcc"
-  | "llvm-dlltool"
-  | "llvm-lib";
+    | "clang"
+    | "lld-coff"
+    | "lld-elf"
+    | "lld-macho"
+    | "lld-mingw"
+    | "lld-wasm"
+    | "nvcc"
+    | "llvm-dlltool"
+    | "llvm-lib";
 
 export type OptionInfo = {
-  id: number;
-  prefixedKey: string;
-  kind: number;
-  group: number;
-  alias: number;
-  aliasArgs: string[];
-  flags: number;
-  visibility: number;
-  param: number;
-  help: string;
-  meta_var: string;
+    id: number;
+    prefixedKey: string;
+    kind: number;
+    group: number;
+    alias: number;
+    aliasArgs: string[];
+    flags: number;
+    visibility: number;
+    param: number;
+    help: string;
+    meta_var: string;
 };
 
 export function option_get_info(table: OptionTable, id: number): OptionInfo;
@@ -358,8 +327,8 @@ export function option_get_info(table: OptionTable, id: number): OptionInfo;
  * @param args from argv[1]
  */
 export function option_parse(
-  table: OptionTable,
-  args: string[],
-  cb: (parseRes: string | OptionItem) => boolean,
-  visibility?: number,
+    table: OptionTable,
+    args: string[],
+    cb: (parseRes: string | OptionItem) => boolean,
+    visibility?: number,
 ): void;

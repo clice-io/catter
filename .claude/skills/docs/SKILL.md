@@ -55,7 +55,7 @@ release. What catter adds on top:
 
 - The frontmatter that translates is index.md's (the VitePress home page).
 - The formatter of step 4 in RULES.md's workflow is `pixi run -e format
-  format` (Prettier canonicalizes table padding and emphasis style); CJK
+format` (Prettier canonicalizes table padding and emphasis style); CJK
   spacing and punctuation are autocorrect's, which CI runs
   (`npx autocorrect-node --lint ./docs` here). Both change segment
   hashes: fix what autocorrect reports and format before `record`.

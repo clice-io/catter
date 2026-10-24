@@ -106,7 +106,7 @@ IncludeBlocks: Regroup
 # get interleaved. Keep the numbers packed and monotonic below.
 IncludeCategories:
   # 1. C++ stdlib: <xxx> with no suffix and no subdir
-  - Regex: '^<[^./>]+>'
+  - Regex: "^<[^./>]+>"
     Priority: 10
     SortPriority: 10
 
@@ -116,41 +116,41 @@ IncludeCategories:
     SortPriority: 11
 
   # 2b. System headers under a subdir (sys/, mach-o/, linux/, net/, etc.)
-  - Regex: '^<(sys|mach-o|linux|bits|asm|arpa|net|netinet)/'
+  - Regex: "^<(sys|mach-o|linux|bits|asm|arpa|net|netinet)/"
     Priority: 10
     SortPriority: 11
 
   # 3. Third-party libraries with a subdir prefix
-  - Regex: '^<(spdlog|cpptrace|quickjs-ng|minhook)/'
+  - Regex: "^<(spdlog|cpptrace|quickjs-ng|minhook)/"
     Priority: 10
     SortPriority: 12
 
   # 3. kotatsu (split by submodule)
-  - Regex: '^<(kota/zest)/'
+  - Regex: "^<(kota/zest)/"
     Priority: 10
     SortPriority: 13
 
-  - Regex: '^<(kota/support)/'
+  - Regex: "^<(kota/support)/"
     Priority: 10
     SortPriority: 14
 
-  - Regex: '^<(kota/async)/'
+  - Regex: "^<(kota/async)/"
     Priority: 10
     SortPriority: 15
 
-  - Regex: '^<(kota/meta)/'
+  - Regex: "^<(kota/meta)/"
     Priority: 10
     SortPriority: 16
 
-  - Regex: '^<(kota/option)/'
+  - Regex: "^<(kota/option)/"
     Priority: 10
     SortPriority: 17
 
-  - Regex: '^<(kota/deco)/'
+  - Regex: "^<(kota/deco)/"
     Priority: 10
     SortPriority: 18
 
-  - Regex: '^<kota/'
+  - Regex: "^<kota/"
     Priority: 10
     SortPriority: 19
 
@@ -163,7 +163,7 @@ IncludeCategories:
     Priority: 20
     SortPriority: 21
 
-  - Regex: '.*'
+  - Regex: ".*"
     Priority: 20
     SortPriority: 22
 

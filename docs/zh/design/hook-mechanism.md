@@ -18,11 +18,13 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 钩子替换了所有用于创建新进程的标准 POSIX 函数：
 
 **exec 系列**:
+
 - `execve()`、`execv()`
 - `execvpe()`、`execvp()`、`execvP()`
 - `execl()`、`execlp()`、`execle()`
 
 **posix_spawn 系列**:
+
 - `posix_spawn()`
 - `posix_spawnp()`
 
@@ -51,10 +53,10 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 钩子从以下环境变量中读取会话信息，这些变量由代理在启动构建命令时设置：
 
-| 变量 | 用途 |
-|------|------|
+| 变量                         | 用途                                |
+| ---------------------------- | ----------------------------------- |
 | `__key_catter_proxy_path_v1` | `catter-proxy` 二进制文件的绝对路径 |
-| `__key_catter_command_id_v1` | 父进程的会话 ID |
+| `__key_catter_command_id_v1` | 父进程的会话 ID                     |
 
 ### 拦截流程
 
@@ -67,9 +69,11 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 3. **`Resolver`** 将目标可执行文件解析为绝对路径。对于 `execvp()` 和 `execvpe()` 等函数，它会搜索 `PATH` 中的目录。对于 `execve()`，则相对于当前目录解析。
 
 4. **`Command`**（`build_proxy_command()`）构造代理命令：
+
    ```
    <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
    ```
+
    原始的 `argv[0]` 及所有后续参数保留在 `--` 分隔符之后。
 
 5. **`SanitizedEnv`**（`sanitize_environment()`）修改环境数组：
@@ -122,9 +126,9 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 
 ### 环境变量
 
-| 变量 | 用途 |
-|------|------|
-| `CATTER_IPC_ID` | 父进程的会话 ID |
+| 变量                | 用途                          |
+| ------------------- | ----------------------------- |
+| `CATTER_IPC_ID`     | 父进程的会话 ID               |
 | `CATTER_PROXY_PATH` | `catter-proxy.exe` 的绝对路径 |
 
 ### DLL 注入过程
@@ -160,6 +164,7 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 - **`CreateProcessAsUserW()`** -- 透传（当前未重写命令行）
 
 MinHook 的工作原理：
+
 1. 保存目标函数的前几条指令
 2. 将其覆写为跳转到替代函数的指令
 3. 提供一个 trampoline（跳板），包含保存的指令及跳回原函数的跳转，使原始函数仍可被调用
@@ -173,9 +178,11 @@ MinHook 的工作原理：
 2. **解析绝对路径**。钩子使用 `resolve_abspath()` 解析可执行文件路径，搜索程序目录、当前目录、System32、Windows 目录和 `PATH`（与标准 Windows 搜索顺序一致）。
 
 3. **重写命令行**：
+
    ```
    {proxy_path} -p {ipc_id} --exec {resolved_path} -- {original_cmdline}
    ```
+
    `lpApplicationName` 被设为 `nullptr`，使 `CreateProcess` 正常解析命令行。
 
 4. **通过 MinHook trampoline 调用原始 `CreateProcess`**，传入修改后的命令行。
@@ -209,11 +216,11 @@ DLL_PROCESS_DETACH:
 
 ## 平台对比
 
-| 方面 | Linux | macOS | Windows |
-|------|-------|-------|---------|
-| 钩子库 | `libcatter-hook-unix.so` | `libcatter-hook-unix.dylib` | `catter-hook-win64.dll` |
-| 注入方式 | `LD_PRELOAD` 环境变量 | `DYLD_INSERT_LIBRARIES` 环境变量 | `VirtualAllocEx` + `LoadLibraryA` |
-| 函数替换 | `dlsym(RTLD_NEXT, ...)` | `DYLD_INTERPOSE` 宏 | MinHook trampoline 钩子 |
-| 拦截的 API | `execve`、`execvp`、`posix_spawn` 等 | 与 Linux 相同 | `CreateProcessA`、`CreateProcessW` |
-| 递归钩子 | 自动（环境变量继承） | 自动（环境变量继承） | 显式（每个进程重新注入 DLL） |
-| 会话环境变量 | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同 | `CATTER_PROXY_PATH`、`CATTER_IPC_ID` |
+| 方面         | Linux                                                      | macOS                            | Windows                              |
+| ------------ | ---------------------------------------------------------- | -------------------------------- | ------------------------------------ |
+| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-win64.dll`              |
+| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `VirtualAllocEx` + `LoadLibraryA`    |
+| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | MinHook trampoline 钩子              |
+| 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                       | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW`   |
+| 递归钩子     | 自动（环境变量继承）                                       | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）         |
+| 会话环境变量 | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同                    | `CATTER_PROXY_PATH`、`CATTER_IPC_ID` |

@@ -16,10 +16,10 @@ For these reasons catter abstracts capture mechanisms as runtimes: one runtime i
 
 The `config.runtime` object passed to `onStart` describes the current runtime:
 
-| Field | Meaning |
-|-------|---------|
-| `type` | Runtime type: `inject` / `eslogger` / `env` |
-| `supportActions` | Supported script actions (a subset of `skip` / `drop` / `abort` / `modify`) |
+| Field             | Meaning                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `type`            | Runtime type: `inject` / `eslogger` / `env`                                                          |
+| `supportActions`  | Supported script actions (a subset of `skip` / `drop` / `abort` / `modify`)                          |
 | `supportParentId` | Whether captured commands can report a parent command ID (used by command trees, target trees, etc.) |
 
 ## Mechanisms
@@ -49,11 +49,11 @@ The `config.runtime` object passed to `onStart` describes the current runtime:
 
 ## Capability matrix
 
-| Mechanism | Platforms | Capture method | supportActions | supportParentId | Status |
-|-----------|-----------|----------------|----------------|-----------------|--------|
-| inject | Linux / macOS / Windows | hook intercepting process creation | `skip` `drop` `modify` | yes | implemented (default) |
-| env | cross-platform | `CC` / `CXX` environment variables | TBD | expected no | planned |
-| eslogger | macOS | Event Stream API | TBD | TBD | planned |
+| Mechanism | Platforms               | Capture method                     | supportActions         | supportParentId | Status                |
+| --------- | ----------------------- | ---------------------------------- | ---------------------- | --------------- | --------------------- |
+| inject    | Linux / macOS / Windows | hook intercepting process creation | `skip` `drop` `modify` | yes             | implemented (default) |
+| env       | cross-platform          | `CC` / `CXX` environment variables | TBD                    | expected no     | planned               |
+| eslogger  | macOS                   | Event Stream API                   | TBD                    | TBD             | planned               |
 
 ## Selecting and checking
 

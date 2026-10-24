@@ -12,11 +12,11 @@ catter script::cdb [options] -- <build-command>
 
 ## Script Options
 
-| Option | Description |
-|--------|-------------|
-| `-o, --output <path>` | Output path for `compile_commands.json`. Defaults to `build/compile_commands.json`. |
-| `--abort-on-command-failure` | Abort the entire build if any intercepted command fails. |
-| `--save-on-failure` | Save partial CDB even if the build fails. |
+| Option                       | Description                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `-o, --output <path>`        | Output path for `compile_commands.json`. Defaults to `build/compile_commands.json`. |
+| `--abort-on-command-failure` | Abort the entire build if any intercepted command fails.                            |
+| `--save-on-failure`          | Save partial CDB even if the build fails.                                           |
 
 ## Behavior
 
