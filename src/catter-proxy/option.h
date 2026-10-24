@@ -15,6 +15,12 @@ struct ProxyOption {
            required = false)
     <std::string> exec;
 
+    DecoKV(
+        names = {"--ipc"},
+        meta_var = "<Pipe>",
+        help = "the pipe of the catter session to report to"
+    ) <std::string> ipc;
+
     DecoInput(
         meta_var = "<Error Msg>",
         help = "if the input is not after a '--', then it is an error message from the hook",

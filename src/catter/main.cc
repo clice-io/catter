@@ -9,6 +9,7 @@
 #include "config/catter.h"
 #include "js/qjs.h"
 #include "util/crossplat.h"
+#include "util/encoding.h"
 #include "util/log.h"
 
 #ifdef _WIN32
@@ -17,7 +18,9 @@
 
 using namespace catter;
 
-int main(int argc, char* argv[]) {
+namespace {
+
+int run(int argc, char* argv[]) {
 
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -30,7 +33,13 @@ int main(int argc, char* argv[]) {
     int ret = -1;
 
     try {
-        log::init_logger("catter", util::get_catter_data_path() / config::core::LOG_PATH_REL);
+        try {
+            log::init_logger("catter", util::get_catter_data_path() / config::core::LOG_PATH_REL);
+        } catch(...) {
+            // Without its log, catter reports what failed on the terminal only.
+            log::mute_logger();
+            throw;
+        }
         auto cli = kota::deco::cli::command<core::CatterConfig>(
             "catter [options for catter] script [options for script] -- [build system command]");
         cli.after<&core::CatterConfig::script_path>([](auto& step) {
@@ -58,16 +67,15 @@ int main(int argc, char* argv[]) {
     } catch(const qjs::JSException& ex) {
         std::println("JavaScript {}: {}", ex.js_error_name(), ex.message());
         std::println("JavaScript Stack trace:\n{}", ex.js_stack());
-        std::println("Native Stack trace:");
-        for(const auto& frame: ex.trace()) {
-            std::println("    {}", frame.to_string());
-        }
+        // The native frames are for catter's developers: the log keeps them.
+        LOG_ERROR("JavaScript {}: {}\nNative stack trace:\n{}",
+                  ex.js_error_name(),
+                  ex.message(),
+                  ex.trace().to_string());
         return 1;
     } catch(const cpptrace::exception& ex) {
-        std::println("{}\nStack trace:", ex.message());
-        for(const auto& frame: ex.trace()) {
-            std::println("    {}", frame.to_string());
-        }
+        std::println("{}", ex.message());
+        LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
         return 1;
     } catch(const std::exception& ex) {
         std::println("{}", ex.what());
@@ -78,3 +86,16 @@ int main(int argc, char* argv[]) {
     }
     return 0;
 }
+
+}  // namespace
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t* argv[]) {
+    util::Utf8Arguments arguments(argc, argv);
+    return run(argc, arguments.argv());
+}
+#else
+int main(int argc, char* argv[]) {
+    return run(argc, argv);
+}
+#endif

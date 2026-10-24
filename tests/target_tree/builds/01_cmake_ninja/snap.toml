@@ -1,0 +1,46 @@
+[test."$ catter script::target-tree -- cmake --build build -j 1"]
+stdout = '''
+[1/3] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
+[2/3] Building CXX object CMakeFiles/hello.dir/src/util.cc.o
+[3/3] Linking CXX executable hello
+hello
+├── main.cc.o
+│   └── main.cc
+└── util.cc.o
+    └── util.cc
+'''
+exit = 0
+
+[test."$ catter script::target-tree -- cmake --build build -j 1".darwin]
+wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+stdout = '''
+[1/3] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+[2/3] Building CXX object CMakeFiles/hello.dir/src/util.cc.o
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+[3/3] Linking CXX executable hello
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+No targets found.
+'''
+exit = 0
+
+[test."$ catter script::target-tree -- cmake --build build -j 1".win32]
+wrong = "the link takes its objects from a response file, which is not expanded (catter#123), and Ninja's output gets blank lines (catter#139)"
+stdout = '''
+[1/3] Building CXX object CMakeFiles\hello.dir\src\main.cc.obj
+
+
+[2/3] Building CXX object CMakeFiles\hello.dir\src\util.cc.obj
+
+
+[3/3] Linking CXX executable hello.exe
+.
+├── main.cc.obj
+│   └── main.cc
+└── util.cc.obj
+    └── util.cc
+'''
+exit = 0

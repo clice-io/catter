@@ -18,8 +18,8 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 [dependencies]
 pnpm = "*"
 # From xclang (clice-io/xclang): the option tables of clang, lld, llvm-lib
-# and llvm-dlltool, and the toolchain, whose FileCheck the integration tests
-# use and whose clang builds catter on macOS and for MinGW.
+# and llvm-dlltool, and the toolchain whose clang builds catter on macOS and
+# for MinGW.
 llvm-option-inc = "==23.1.2.4"
 xclang = "==23.1.2.4"
 
@@ -63,20 +63,38 @@ cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ to
 [feature.dev.dependencies]
 python = ">=3.14.2,<3.15"
 nodejs = "==24.4.0"
-lit = "*"
+# The build systems the cases build with (tests/builds), pinned so that
+# their output reads the same on every machine.
+cmake = "==4.1.2"
+ninja = "==1.13.1"
 
 [feature.dev.tasks]
 unit-test = "xmake test --verbose"
-# All catter/catter-proxy processes share one global IPC pipe, so integration
-# tests must run one at a time to avoid cross-talk on the same socket.
-integration-test = "lit ./tests/integration -sav -j 1"
 check-doc-translations = "node tools/docs/translations.ts check"
 report-doc-translations = "node tools/docs/translations.ts report"
 record-doc-translations = "node tools/docs/translations.ts record"
 review-doc-translations = "node tools/docs/translations.ts review --glossary=.claude/skills/translate-docs/SKILL.md"
 ut = [{ task = "unit-test" }]
-it = [{ task = "integration-test" }]
-test = [{ task = "build" }, { task = "ut" }, { task = "it" }]
+
+# The cases under tests/ (tests/README.md), against the catter of a build
+# mode, or shard i of n of them.
+[feature.dev.tasks.cases-test]
+args = [
+    { arg = "mode", choices = ["debug", "release", "releasedbg"], default = "release" },
+    { arg = "shard", default = "1/1" },
+]
+cmd = "CATTER_BUILD_MODE={{ mode }} CATTER_CASES_SHARD={{ shard }} pnpm --dir tests run cases"
+depends-on = ["npm-install"]
+
+# Configure and build a mode, then run the unit tests and the cases on it.
+[feature.dev.tasks.test]
+args = [
+    { arg = "mode", choices = ["debug", "release", "releasedbg"], default = "debug" },
+]
+depends-on = [
+    { task = "ci-build", args = ["{{ mode }}"] },
+    { task = "cases-test", args = ["{{ mode }}"] },
+]
 
 # Windows with xclang: the MinGW target (x86_64-w64-mingw32) instead of MSVC.
 [feature.mingw]
@@ -143,11 +161,13 @@ args = [
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""
 
+# What a CI build job runs: the build and the unit tests. The cases run in
+# jobs of their own, on the programs it uploads (.github/workflows/test.yml).
 [tasks.ci-build]
 args = [
     { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
 ]
-depends-on = [{ task = "npm-install" }, { task = "cfg", args = ["{{ mode }}"] }, { task = "build" }, { task = "test" }]
+depends-on = [{ task = "npm-install" }, { task = "cfg", args = ["{{ mode }}"] }, { task = "build" }, { task = "ut" }]
 
 [tasks.lint-ts]
 cmd = "pnpm exec eslint --cache ."
@@ -157,7 +177,14 @@ depends-on = ["npm-install"]
 depends-on = [
     { task = "lint-ts" },
     { task = "check-js-modules" },
+    { task = "check-testing" },
 ]
+
+# The test runner (tools/) and the cases' scripts (tests/): types, lint, and
+# the runner's own tests.
+[tasks.check-testing]
+cmd = "pnpm --dir tools run check && pnpm --dir tools run test && pnpm --dir tests run check"
+depends-on = ["npm-install"]
 
 [tasks.build-js]
 cmd = "pnpm --dir api/dev run build"

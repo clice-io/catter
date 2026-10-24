@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "${WS}",
+    "file": "src/inherited.cc",
+    "arguments": ["clang++", "-c", "src/inherited.cc"]
+  }
+]

@@ -1,0 +1,2 @@
+clang --target=aarch64-linux-gnu -c a.c -o a.o
+clang -target x86_64-pc-windows-msvc -c a.c -o a.obj

@@ -1,0 +1,17 @@
+[test."$ catter script.js -- node build.mjs"]
+wrong = "abort() fails only its command and the build goes on (catter#122)"
+stdout = '''
+act-on-me: exit 255
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+exit = 0
+
+[test."$ catter script.js -- node build.mjs".win32]
+wrong = "abort() fails only its command and the build goes on (catter#122); a Windows exit code keeps all 32 bits of the -1"
+stdout = '''
+act-on-me: exit 4294967295
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+exit = 0

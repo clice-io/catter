@@ -1,0 +1,15 @@
+[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessA command.txt"]
+stdout = '''
+started with ["plain","é"]
+spawn.exe CreateProcessA command.txt
+└── node child.mjs plain é
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+stdout = '''
+started with ["plain","é"]
+spawn.exe CreateProcessW command.txt
+└── node child.mjs plain é
+'''
+exit = 0

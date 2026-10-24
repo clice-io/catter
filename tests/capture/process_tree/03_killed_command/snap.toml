@@ -1,0 +1,12 @@
+[test."$ node build.mjs"]
+stdout = "the program is gone"
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+wrong = "killing a command leaves the program running (catter#138)"
+stdout = '''
+the program is still running
+node build.mjs
+└── node child.mjs
+'''
+exit = 0

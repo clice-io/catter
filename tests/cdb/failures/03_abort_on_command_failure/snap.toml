@@ -1,0 +1,22 @@
+[test."$ catter -m replay script::cdb --abort-on-command-failure --save-on-failure -o compile_commands.json -- events.json"]
+stdout = '''
+CDB saved to ${WS}/compile_commands.json with 1 entries.
+JavaScript Error: CDB aborting after compiler command 1 exited with code 2.
+JavaScript Stack trace:
+    at onExecution (script::cdb:1:5317)
+    at <anonymous> (catter/service:1:4421)
+    at <anonymous> (catter/service:1:4449)
+    at execution (catter/service:1:2439)
+    at <anonymous> (catter/service:1:4899)
+'''
+exit = 1
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/broken.cc",
+        directory = "${WS}",
+        output = "${WS}/obj/broken.o",
+        arguments = ["clang++", "-c", "src/broken.cc", "-o", "obj/broken.o"],
+    },
+]

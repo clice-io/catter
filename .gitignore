@@ -52,7 +52,9 @@ node_modules
 .xmake
 .venv
 .vscode
-build*/
+/build*/
+api/build/
+scripts/build/
 vsxmake*/
 .turbo/
 
@@ -65,7 +67,6 @@ vsxmake*/
 .claude/*
 !.claude/CLAUDE.md
 !.claude/skills/
-!.claude/skills/build/
 /CLAUDE.md
 .codex
 AGENTS.md

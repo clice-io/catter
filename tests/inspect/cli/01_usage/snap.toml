@@ -1,0 +1,25 @@
+[test."$ catter script::inspect --"]
+stdout = '''
+JavaScript Error: inspect: give the command to analyze after --
+JavaScript Stack trace:
+    at onStart (script::inspect:1:1206)
+    at start (catter/service:1:1883)
+    at <anonymous> (catter/service:1:4779)
+'''
+exit = 1
+
+[test."$ catter script::inspect --help -- gcc -c a.c"]
+stdout = '''
+Print how catter analyzes the command after --, without running it.
+
+Usage:
+  inspect [options]
+
+Options:
+  -h, --help  Print this help message.
+
+Examples:
+  inspect -- clang++ -c src/main.cc -o main.o
+  # The compiler, its mode, target, sources and outputs.
+'''
+exit = 0

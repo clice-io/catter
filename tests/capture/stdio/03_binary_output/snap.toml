@@ -1,0 +1,25 @@
+[test."$ node build.mjs"]
+stdout = '''
+stdout: 1048576 bytes, sha256 fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83
+stderr: 262144 bytes, sha256 5b06f4eca7e8b6b2255bf80cf047ae8aac03f6f0d303ac52e1e42b34ecc63db7
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+stdout = '''
+stdout: 1048576 bytes, sha256 fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83
+stderr: 262144 bytes, sha256 5b06f4eca7e8b6b2255bf80cf047ae8aac03f6f0d303ac52e1e42b34ecc63db7
+node build.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs".win32]
+wrong = "command output gets its line endings rewritten (catter#139)"
+stdout = '''
+stdout: 1052672 bytes, sha256 6d92baba25a2e6ab10aca11496cf13dd4771641626b05e6c2b2098b9f8a3744a
+stderr: 263168 bytes, sha256 68ef1f3fce57a1621348de9303080670c4b20ddc439c23da1da3430bd6af36ac
+node build.mjs
+└── node child.mjs
+'''
+exit = 0

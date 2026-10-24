@@ -1,0 +1,3 @@
+[test."$ catter script.js -- node -e \"require('node:child_process').spawnSync('node', ['-e', '0'])\""]
+wrong = "the exception fails only its command: catter prints nothing and exits 0 (catter#122)"
+exit = 0

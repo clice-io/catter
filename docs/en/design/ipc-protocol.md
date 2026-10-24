@@ -8,12 +8,14 @@ Catter uses inter-process communication between the daemon (`catter`) and proxy 
 
 The transport layer is platform-specific:
 
-| Platform      | Mechanism          | Path / Name                          |
-| ------------- | ------------------ | ------------------------------------ |
-| Linux / macOS | Unix domain socket | `$HOME/.catter/pipe-catter-ipc.sock` |
-| Windows       | Named pipe         | `\\.\pipe\catter-ipc`                |
+| Platform      | Mechanism          | Path / Name                 |
+| ------------- | ------------------ | --------------------------- |
+| Linux / macOS | Unix domain socket | `<data dir>/ipc-<pid>.sock` |
+| Windows       | Named pipe         | `\\.\pipe\catter-ipc-<pid>` |
 
-The daemon creates the listening socket/pipe at startup. Each `catter-proxy` instance connects to it as a client when it starts. The connection persists for the lifetime of the proxy process.
+Each daemon listens on a socket/pipe of its own, named by its process id, so builds that run under catter at the same time never meet. The data directory is `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows), or `CATTER_HOME` when it is set. The daemon creates the listening socket/pipe at startup and passes its name to every `catter-proxy` instance on the command line (`--ipc <pipe>`); each one connects to it as a client when it starts. The connection persists for the lifetime of the proxy process.
+
+A program can outlive the session it started in: a build server (an sccache server, a Gradle daemon) runs the commands of later builds with the earlier session's pipe in its environment. When that pipe is gone, `catter-proxy` runs the command as it would run without catter, uncaptured, and logs a warning; a command that ends after its session keeps its exit code.
 
 ## Serialization
 

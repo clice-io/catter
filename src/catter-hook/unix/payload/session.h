@@ -12,11 +12,13 @@ namespace catter {
 struct Session {
     std::string proxy_path{};
     std::string self_id{};
+    /// The pipe of the catter session the proxies report to.
+    std::string ipc{};
 
     static Session make(const char* const envp[]) noexcept;
 
     bool is_valid() noexcept {
-        return (!proxy_path.empty() && !self_id.empty());
+        return (!proxy_path.empty() && !self_id.empty() && !ipc.empty());
     }
 };
 }  // namespace catter

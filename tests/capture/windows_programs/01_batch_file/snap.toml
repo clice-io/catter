@@ -1,0 +1,11 @@
+[test."$ spawn.exe CreateProcessW command.txt"]
+stdout = '"a b" c'
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+stdout = '''
+"a b" c
+spawn.exe CreateProcessW command.txt
+└── probe.bat "a b" c
+'''
+exit = 0

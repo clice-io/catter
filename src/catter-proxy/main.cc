@@ -16,6 +16,7 @@
 #include "config/catter-proxy.h"
 #include "resolver/resolver.h"
 #include "util/crossplat.h"
+#include "util/encoding.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -29,7 +30,8 @@ using catter::data::action;
 std::string resolve_executable(std::string_view exe, const std::vector<std::string>& env) {
 
 #ifdef CATTER_WINDOWS
-    return catter::resolver::resolve_command_line_token<char>(exe);
+    return util::from_wide(
+        catter::resolver::resolve_command_line_token<wchar_t>(util::to_wide(exe)));
 #else
     std::string path_env;
     for(const auto& env_var: env) {
@@ -47,11 +49,11 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
         // produce the same error as if we did not resolve it.
         return std::string(exe);
     }
-    return resolved->string();
+    return util::to_utf8(*resolved);
 #endif
 }
 
-kota::task<data::process_result> run(data::action act, data::ipcid_t id) {
+kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::string pipe_name) {
     using catter::data::action;
 
     switch(act.type) {
@@ -69,7 +71,7 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id) {
             co_return co_await capture_process_result(make_process_event(opts));
         }
         case action::INJECT: {
-            co_return co_await proxy::hook::run(act.cmd, id);
+            co_return co_await proxy::hook::run(act.cmd, id, std::move(pipe_name));
         }
         case action::DROP: {
             co_return data::process_result{.code = 0};
@@ -78,6 +80,26 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id) {
             co_return data::process_result{.code = -1};
         }
     }
+}
+
+/// The command the proxy stands in for, as it runs here.
+data::command command_of(const catter::proxy::ProxyOption& opt) {
+    if(!opt.args.has_value()) {
+        throw cpptrace::runtime_error("missing command arguments after --");
+    }
+
+    data::command cmd = {
+        .cwd = util::to_utf8(std::filesystem::current_path()),
+        .args = *opt.args,
+        .env = catter::util::get_environment(),
+    };
+
+    if(opt.exec.has_value()) {
+        cmd.executable = *opt.exec;
+    } else {
+        cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
+    }
+    return cmd;
 }
 
 std::string format_args(int argc, char* argv[]) {
@@ -111,42 +133,32 @@ kota::task<int> handle_proxy_request(int argc,
             co_return -1;
         }
 
-        if(!opt.args.has_value()) {
-            throw cpptrace::runtime_error("missing command arguments after --");
-        }
+        auto cmd = command_of(opt);
 
         if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
             throw cpptrace::runtime_error(
                 "catter is not in inject mode, cannot handle the request");
         }
 
-        data::command cmd = {
-            .cwd = std::filesystem::current_path().string(),
-            .args = *opt.args,
-            .env = catter::util::get_environment(),
-        };
-
-        if(opt.exec.has_value()) {
-            cmd.executable = *opt.exec;
-        } else {
-            cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
-        }
-
         auto id = co_await peer.create(*opt.parent_id);
 
         auto received_act = co_await peer.make_decision(cmd);
 
-        auto result = co_await run(received_act, id);
+        auto result = co_await run(received_act, id, *opt.ipc);
+        auto code = static_cast<int>(result.code);
 
-        co_await peer.finish(std::move(result));
-
-        co_return static_cast<int>(result.code);
-    } catch(const cpptrace::exception& ex) {
-        err = std::format("{}\nStack trace:\n", ex.message());
-
-        for(const auto& frame: ex.trace()) {
-            err += std::format("    {}\n", frame.to_string());
+        // A command can outlive its session (a build server): its result
+        // stands, though catter is gone.
+        try {
+            co_await peer.finish(std::move(result));
+        } catch(const std::exception& ex) {
+            LOG_WARN("Command {} ended after its session: {}", id, ex.what());
         }
+
+        co_return code;
+    } catch(const cpptrace::exception& ex) {
+        err = std::format("{}\n", ex.message());
+        LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
     } catch(const std::exception& ex) {
         err = std::format("{}\n", ex.what());
     } catch(...) {
@@ -163,13 +175,21 @@ kota::task<int> handle_proxy_request(int argc,
 
 kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOption& opt) noexcept {
     auto& current = kota::event_loop::current();
-    auto ret =
-        co_await kota::pipe::connect(config::ipc::pipe_name(), kota::pipe::options(), current);
+    auto ret = co_await kota::pipe::connect(*opt.ipc, kota::pipe::options(), current);
     if(!ret) {
-        LOG_CRITICAL("Failed to connect to IPC pipe: {}, error: {}",
-                     config::ipc::pipe_name(),
-                     ret.error().message());
-        std::abort();
+        // A build server an earlier session started (an sccache server, a
+        // Gradle daemon) outlives that session's pipe: its commands run as
+        // they would without catter.
+        LOG_WARN("Failed to connect to IPC pipe: {}, error: {}; running the command uncaptured",
+                 *opt.ipc,
+                 ret.error().message());
+        try {
+            auto result = co_await run({.type = action::WRAP, .cmd = command_of(opt)}, 0, "");
+            co_return static_cast<int>(result.code);
+        } catch(const std::exception& ex) {
+            LOG_ERROR("Run `{}` failed: {}", format_args(argc, argv), ex.what());
+            co_return -1;
+        }
     }
     auto peer = proxy::ipc::Peer{
         kota::ipc::BincodePeer{current,
@@ -181,12 +201,11 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
 
     co_return code;
 }
-}  // namespace
 
 // we do not output in proxy, it must be invoked by main program.
 // usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
-int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
+int run(int argc, char* argv[]) {
     try {
         log::init_logger("catter-proxy.log",
                          util::get_catter_data_path() / config::proxy::LOG_PATH_REL,
@@ -214,3 +233,16 @@ int main(int argc, char* argv[], [[maybe_unused]] char* envp[]) {
         .execute(args);
     return ret;
 }
+
+}  // namespace
+
+#ifdef CATTER_WINDOWS
+int wmain(int argc, wchar_t* argv[]) {
+    util::Utf8Arguments arguments(argc, argv);
+    return run(argc, arguments.argv());
+}
+#else
+int main(int argc, char* argv[]) {
+    return run(argc, argv);
+}
+#endif

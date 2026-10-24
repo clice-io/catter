@@ -9,6 +9,7 @@
 #include "runtime_driver.h"
 #include "js/builtin_files.h"
 #include "js/js.h"
+#include "util/encoding.h"
 
 namespace catter::app {
 
@@ -25,7 +26,7 @@ struct RunContext {
                                 .scriptPath = config.script_path.value(),
                                 .scriptArgs = config.script_args,
                                 .buildSystemCommand = config.command.value(),
-                                .buildSystemCommandCwd = config.working_dir->path.string(),
+                                .buildSystemCommandCwd = util::to_utf8(config.working_dir->path),
                                 .runtime = driver->runtime(),
                                 .options =
                         {
@@ -40,7 +41,7 @@ struct RunContext {
 };
 
 std::string load_script_content(const std::string& script_path) {
-    std::ifstream ifs{script_path};
+    std::ifstream ifs{util::from_utf8(script_path)};
     if(!ifs.good()) {
         throw cpptrace::runtime_error(std::format("Failed to open script file `{}`", script_path));
     }
@@ -68,8 +69,8 @@ kota::task<> async_run(const core::CatterConfig& config) {
             co_await js::run_script(source, script_path);
         } else {
 
-            auto script_absolute_path =
-                std::filesystem::absolute(script_path).lexically_normal().string();
+            auto script_absolute_path = util::to_utf8(
+                std::filesystem::absolute(util::from_utf8(script_path)).lexically_normal());
 
             co_await js::run_script(load_script_content(script_absolute_path),
                                     script_absolute_path);

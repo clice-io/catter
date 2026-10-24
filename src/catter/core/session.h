@@ -52,20 +52,26 @@ public:
 
     struct RunPlan {
         ProcessLaunchPlan launch_plan;
+        /// The pipe the session listens on, which the launched process reports to.
+        std::string pipe_name;
         ClientAcceptor callback;
     };
 
     /**
      * Create a run plan with the given launch plan and client accepted callback.
      * @param launch_plan The plan for launching the process.
+     * @param pipe_name The pipe to listen on, which the launched process reports to.
      * @param factory The factory for creating service instances when a client is accepted.
      * @return A run plan containing the launch plan and client accepted callback.
      */
     template <typename ServiceFactoryType>
         requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
-    static auto make_run_plan(ProcessLaunchPlan launch_plan, ServiceFactoryType&& factory) {
+    static auto make_run_plan(ProcessLaunchPlan launch_plan,
+                              std::string pipe_name,
+                              ServiceFactoryType&& factory) {
         return RunPlan{
             .launch_plan = std::move(launch_plan),
+            .pipe_name = std::move(pipe_name),
             .callback =
                 [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
                                                                       kota::pipe&& client) {

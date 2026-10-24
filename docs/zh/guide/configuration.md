@@ -8,12 +8,16 @@ catter [options] <script> [script-args] -- <build-command>
 
 ### 选项
 
-| 选项                  | 说明                                                           | 默认值    |
-| --------------------- | -------------------------------------------------------------- | --------- |
-| `-m, --mode <mode>`   | runtime 模式，即选用哪种 runtime，控制 catter 拦截进程的方式。 | `inject`  |
-| `-d, --dir <path>`    | 目标进程的工作目录。                                           | 当前目录  |
-| `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。                         | `inherit` |
-| `-h, --help`          | 显示帮助信息。                                                 |           |
+| 选项                  | 说明                                                                                                       | 默认值    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- | --------- |
+| `-m, --mode <mode>`   | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject`  |
+| `-d, --dir <path>`    | 目标进程的工作目录。                                                                                       | 当前目录  |
+| `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。                                                                     | `inherit` |
+| `-h, --help`          | 显示帮助信息。                                                                                             |           |
+
+### 数据目录
+
+catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。
 
 ### `--stdio-mode`
 
@@ -32,11 +36,12 @@ catter script::<name> [script-args] -- <build-command>
 
 可用的内置脚本：
 
-| 名称                  | 说明                         |
-| --------------------- | ---------------------------- |
-| `script::cdb`         | 生成 `compile_commands.json` |
-| `script::cmd-tree`    | 展示构建命令树               |
-| `script::target-tree` | 展示构建目标树               |
+| 名称                  | 说明                                     |
+| --------------------- | ---------------------------------------- |
+| `script::cdb`         | 生成 `compile_commands.json`             |
+| `script::cmd-tree`    | 展示构建命令树                           |
+| `script::target-tree` | 展示构建目标树                           |
+| `script::inspect`     | 展示 catter 如何分析一条命令（不运行它） |
 
 **自定义脚本**使用文件路径：
 

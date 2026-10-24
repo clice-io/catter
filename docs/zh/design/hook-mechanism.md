@@ -36,7 +36,7 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 钩子由一组协作的类实现：
 
-- **`Session`** -- 从环境变量中读取并存储会话信息（代理路径和自身命令 ID）。
+- **`Session`** -- 从环境变量中读取并存储会话信息（代理路径、自身命令 ID 和会话的管道）。
 - **`Resolver`** -- 解析目标可执行文件的路径。处理 PATH 查找、相对路径解析及可执行文件缺失等边界情况。
 - **`Command` / `build_proxy_command()`** -- 构造重写后的代理命令，将 `catter-proxy` 替换原始可执行文件。
 - **`SanitizedEnv` / `sanitize_environment()`** -- 在调用真正的 `execve` 之前清理环境。移除 catter 相关变量，并从预加载变量中剥离钩子库。
@@ -57,6 +57,7 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 | ---------------------------- | ----------------------------------- |
 | `__key_catter_proxy_path_v1` | `catter-proxy` 二进制文件的绝对路径 |
 | `__key_catter_command_id_v1` | 父进程的会话 ID                     |
+| `__key_catter_ipc_v1`        | catter 会话的管道                   |
 
 ### 拦截流程
 
@@ -71,13 +72,13 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 4. **`Command`**（`build_proxy_command()`）构造代理命令：
 
    ```
-   <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
+   <proxy_path> -p <self_id> --exec <resolved_path> --ipc <pipe> -- <original_argv...>
    ```
 
    原始的 `argv[0]` 及所有后续参数保留在 `--` 分隔符之后。
 
 5. **`SanitizedEnv`**（`sanitize_environment()`）修改环境数组：
-   - 移除 `__key_catter_proxy_path_v1` 和 `__key_catter_command_id_v1`
+   - 移除 `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` 和 `__key_catter_ipc_v1`
    - 从 `LD_PRELOAD`（或 `DYLD_INSERT_LIBRARIES`）中剥离钩子库名称
    - 如果剥离后 `LD_PRELOAD` 变为空，则将其完全移除
 
@@ -129,15 +130,16 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 | 变量                | 用途                          |
 | ------------------- | ----------------------------- |
 | `CATTER_IPC_ID`     | 父进程的会话 ID               |
+| `CATTER_IPC_PIPE`   | catter 会话的管道             |
 | `CATTER_PROXY_PATH` | `catter-proxy.exe` 的绝对路径 |
 
 ### DLL 注入过程
 
 当 `catter-proxy`（注入模式）需要启动挂载了钩子的构建命令时：
 
-1. **以挂起状态创建目标进程**。代理调用 `CreateProcessA()`，使用 `CREATE_SUSPENDED` 标志。进程被创建但主线程不会运行。
+1. **以挂起状态创建目标进程**。代理调用 `CreateProcessW()`，使用 `CREATE_SUSPENDED` 标志。进程被创建但主线程不会运行。
 
-2. **设置环境变量**。`CATTER_IPC_ID` 和 `CATTER_PROXY_PATH` 在创建进程前通过环境块传入目标进程。
+2. **设置环境变量**。`CATTER_IPC_ID`、`CATTER_IPC_PIPE` 和 `CATTER_PROXY_PATH` 在创建进程前通过环境块传入目标进程。
 
 3. **在目标进程中分配内存**。代理调用 `VirtualAllocEx()` 在目标进程的地址空间中分配一块内存区域。
 
@@ -180,7 +182,7 @@ MinHook 的工作原理：
 3. **重写命令行**：
 
    ```
-   {proxy_path} -p {ipc_id} --exec {resolved_path} -- {original_cmdline}
+   {proxy_path} -p {ipc_id} --exec {resolved_path} --ipc {pipe} -- {original_cmdline}
    ```
 
    `lpApplicationName` 被设为 `nullptr`，使 `CreateProcess` 正常解析命令行。

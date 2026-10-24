@@ -8,12 +8,16 @@ catter [options] <script> [script-args] -- <build-command>
 
 ### Options
 
-| Option                | Description                                             | Default           |
-| --------------------- | ------------------------------------------------------- | ----------------- |
-| `-m, --mode <mode>`   | Runtime mode. Controls how catter intercepts processes. | `inject`          |
-| `-d, --dir <path>`    | Working directory for the target process.               | Current directory |
-| `--stdio-mode <mode>` | How to handle child process stdio. See below.           | `inherit`         |
-| `-h, --help`          | Show help message.                                      |                   |
+| Option                | Description                                                                                                                                                     | Default           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `-m, --mode <mode>`   | Runtime mode: `inject` runs the build command and intercepts its processes; `replay` plays a recorded build, whose events file stands in for the build command. | `inject`          |
+| `-d, --dir <path>`    | Working directory for the target process.                                                                                                                       | Current directory |
+| `--stdio-mode <mode>` | How to handle child process stdio. See below.                                                                                                                   | `inherit`         |
+| `-h, --help`          | Show help message.                                                                                                                                              |                   |
+
+### Data directory
+
+catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.
 
 ### `--stdio-mode`
 
@@ -32,11 +36,12 @@ catter script::<name> [script-args] -- <build-command>
 
 Available built-in scripts:
 
-| Name                  | Description                      |
-| --------------------- | -------------------------------- |
-| `script::cdb`         | Generate `compile_commands.json` |
-| `script::cmd-tree`    | Display the build command tree   |
-| `script::target-tree` | Display the build target tree    |
+| Name                  | Description                                            |
+| --------------------- | ------------------------------------------------------ |
+| `script::cdb`         | Generate `compile_commands.json`                       |
+| `script::cmd-tree`    | Display the build command tree                         |
+| `script::target-tree` | Display the build target tree                          |
+| `script::inspect`     | Show how catter analyzes a command, without running it |
 
 **Custom scripts** use a file path:
 
