@@ -191,7 +191,7 @@ cmd = "xmake run catter-protocol-schema $PIXI_PROJECT_ROOT/sdk/protocol.schema.j
 
 # Fails when what `protocol` writes differs from what is checked in.
 [tasks.check-protocol]
-cmd = "git diff --exit-code -- sdk"
+cmd = "git diff --exit-code -- sdk/protocol.schema.json sdk/python/catter/protocol.py sdk/typescript/src/protocol.ts"
 depends-on = ["protocol"]
 
 [tasks.lint-ts]

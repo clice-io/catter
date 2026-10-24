@@ -8,6 +8,6 @@ test(async (t) => {
         "--",
         "node",
         "-e",
-        "console.log('the build ran')",
+        "console.log('the-build-ran')",
     ]);
 });

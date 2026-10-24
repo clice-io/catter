@@ -1,7 +1,11 @@
-[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+[inject."$ catter --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 act-on-me: exit 1
 leave-me: exit 1
 Handler `python handler.py` aborted the build at command 2: act-on-me must not run
 '''
+exit = 1
+
+[replay."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+stdout = "Handler `python handler.py` aborted the build at command 2: act-on-me must not run"
 exit = 1

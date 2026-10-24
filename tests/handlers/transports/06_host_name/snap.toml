@@ -1,0 +1,3 @@
+[test."$ catter --connect example.com:9000 -- node -e 0"]
+stdout = "`example.com:9000` names no IP address: give --connect the handler's IP address and port"
+exit = 1

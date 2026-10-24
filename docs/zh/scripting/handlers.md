@@ -20,7 +20,7 @@ catter 启动 handler，经它的 stdin 和 stdout 与它通信，并在构建�
 catter --connect 127.0.0.1:9000 -- make
 ```
 
-这适合在调试器下运行的 handler，或依次为多次构建服务的 handler。除非指定了 `--allow-remote`，catter 只连接本机上的 handler，因为 handler 能修改、丢弃构建的命令。
+这适合在调试器下运行的 handler，或依次为多次构建服务的 handler。主机写 IP 地址或 `localhost`。除非指定了 `--allow-remote`，catter 只连接本机上的 handler，因为 handler 能修改、丢弃构建的命令。
 
 ### 选项
 
@@ -94,6 +94,8 @@ await serve({
 ```
 
 回调有 `onStart`、`onCommand`、`onError`、`onExit` 和 `onFinish`，与 Python 中的相同。不是 UTF-8 的参数以 `{ base64 }` 的形式出现，交回的命令会保留它。`listen(port)` 用于配合 `--connect`。
+
+导入 `@catter/sdk` 之后，handler 用 `console` 打印的内容会输出到 stderr。它的 stdout 用于传输协议：由 catter 启动的 handler 不能写 `process.stdout`，也不能让它启动的程序继承 stdout。
 
 ## 多个 handler
 

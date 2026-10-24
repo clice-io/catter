@@ -204,10 +204,14 @@ Domain words with one meaning each — use them only in that meaning:
 
 - **command**: one process the build starts, as catter captured it (cwd,
   executable, arguments, environment) — not a shell command line.
-- **action**: what a script decides for a command (`skip`, `drop`,
-  `abort`, `modify`, `js::ActionType`). What the daemon then tells the
-  proxy to do is the protocol's `data::action` (`DROP`, `INJECT`, `WRAP`);
-  keep the two apart.
+- **handler**: what decides on a session's commands and is told of its
+  events (`core::Handler`): a script (`js::ScriptHandler`), or a program
+  catter speaks the handler protocol to (`core::RemoteHandler`).
+- **action**: what a handler decides for a command (`skip`, `drop`,
+  `abort`, `modify`: `protocol::Action`, `js::ActionType`; in
+  `core::Action` an abort is the exception the handler throws). What the
+  daemon then tells the proxy to do is the IPC protocol's `data::action`
+  (`DROP`, `INJECT`, `WRAP`, `FAIL`); keep the two apart.
 - **runtime**: a capture mechanism (`inject` today); not the JS runtime,
   which is "the JS runtime" or "the script engine".
 - **payload**: the hook library loaded into the build's processes.

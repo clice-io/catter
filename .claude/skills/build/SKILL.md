@@ -38,7 +38,7 @@ box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run 
 
 All from the repo root, in the environment CI uses (`-e dev`; `-e mingw` for MinGW on Windows):
 
-- Everything a CI build job runs: `pixi run -e dev ci-build <mode>` = `npm-install`, `cfg <mode>`, `build`, then the unit tests. The snapshot cases run on the built programs: the test skill.
+- Everything a CI build job runs: `pixi run -e dev ci-build <mode>` = `npm-install`, `cfg <mode>`, `build`, the unit tests, then `check-protocol` (the protocol's schema and the SDKs' generated types are what the build gives). The snapshot cases run on the built programs: the test skill.
 - Step by step: `pixi run -e dev npm-install` (the pnpm workspace, needed by the JS build), `pixi run -e dev cfg <mode> [toolchain]` (`xmake config --clean`: a full reconfigure; the toolchain defaults to the OS's: gcc, clang, msvc), `pixi run -e dev build` (all default targets, the test programs included).
 - The unit tests alone, on a built tree: `pixi run -e dev unit-test` (`xmake test`).
 - One unit test in the binary's own process, for debugging: `build/<plat>/<arch>/<mode>/ut-catter --no-isolation --test-filter=<suite>.<test>` (`ut-common`, `ut-catter-hook-unix`, `ut-catter-hook-win64` likewise; `--help` lists the rest).

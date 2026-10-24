@@ -1,3 +1,4 @@
+#include <csignal>
 #include <iostream>
 #include <print>
 #include <string_view>
@@ -29,6 +30,10 @@ int run(int argc, char* argv[]) {
     // build's: inherited by every program it starts, a server among them would
     // hold them open after catter exits. libuv hands the build its stdio itself.
     uv_disable_stdio_inheritance();
+#else
+    // A write to a handler that has exited fails, and is reported, instead of
+    // killing catter. libuv resets the programs catter starts to the default.
+    std::signal(SIGPIPE, SIG_IGN);
 #endif
 
     auto args = kota::deco::util::argvify(argc, argv, 1);

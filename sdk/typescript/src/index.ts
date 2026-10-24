@@ -19,11 +19,11 @@
 /// `listen()` serves catter's `--connect` instead.
 ///
 /// Every callback is optional: a handler is told of the events it has a
-/// callback for. Once the SDK is imported, what the program prints goes to
-/// stderr: its stdout carries the protocol. An argument, a path or an environment entry that is not
+/// callback for. Once the SDK is imported, what the program prints with
+/// console goes to stderr: its stdout carries the protocol. An argument, a path or an environment entry that is not
 /// UTF-8 comes as `{ base64 }`, which a command handed back keeps.
 
-import * as fs from "node:fs";
+import { Console } from "node:console";
 import * as net from "node:net";
 import type { Readable, Writable } from "node:stream";
 import {
@@ -69,38 +69,38 @@ export interface Handler {
 const CALLBACK_FAILED = 1;
 
 /// The protocol goes to catter over this program's stdout: from the import
-/// on, what the program prints with console.log or process.stdout goes to
-/// stderr, where catter shows it.
-const protocolOutput = fs.createWriteStream("", { fd: process.stdout.fd });
-process.stdout.write = process.stderr.write.bind(process.stderr) as typeof process.stdout.write;
+/// on, what the program prints with console goes to stderr, where catter
+/// shows it.
+globalThis.console = new Console(process.stderr, process.stderr);
 
 function describe(error: unknown): string {
     return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 }
 
-/// A request's answer, or the error it fails with when the callback throws.
-async function answer<T>(callback: () => MaybePromise<T>): Promise<T> {
-    try {
-        return await callback();
-    } catch (error) {
-        console.error(error);
-        throw new ResponseError(CALLBACK_FAILED, describe(error));
-    }
-}
-
-/// Nothing answers a notification: a handler whose callback throws fails as
-/// a program does, and catter reports that it stopped.
-async function told(callback: () => MaybePromise<void>): Promise<void> {
-    try {
-        await callback();
-    } catch (error) {
-        console.error(error);
-        process.exit(1);
-    }
-}
-
-/// Answers catter until it ends the session.
+/// Answers catter until it ends the session. The callbacks run one after
+/// another, in the order catter sent their messages: an async callback would
+/// otherwise let the next one start while it waits.
 function run(handler: Handler, input: Readable, output: Writable): Promise<void> {
+    let queue: Promise<unknown> = Promise.resolve();
+    const inTurn = <T>(callback: () => MaybePromise<T>): Promise<T> => {
+        const turn = queue.then(callback);
+        queue = turn.catch(() => undefined);
+        return turn;
+    };
+    /// A request's answer, or the error it fails with when the callback throws.
+    const answer = <T>(callback: () => MaybePromise<T>): Promise<T> =>
+        inTurn(callback).catch((error: unknown) => {
+            console.error(error);
+            throw new ResponseError(CALLBACK_FAILED, describe(error));
+        });
+    /// Nothing answers a notification: a handler whose callback throws fails
+    /// as a program does, and catter reports that it stopped.
+    const told = (callback: () => MaybePromise<void>): Promise<void> =>
+        inTurn(callback).catch((error: unknown) => {
+            console.error(error);
+            process.exit(1);
+        });
+
     const connection = createMessageConnection(
         new StreamMessageReader(input),
         new StreamMessageWriter(output),
@@ -144,10 +144,10 @@ function run(handler: Handler, input: Readable, output: Writable): Promise<void>
 }
 
 /// Serves the session of the catter that started this program
-/// (`--handler`), over stdin and stdout. A child process it starts must not
-/// inherit its stdout.
+/// (`--handler`), over stdin and stdout. Neither the program, with
+/// process.stdout, nor a child process it starts may write to its stdout.
 export function serve(handler: Handler): Promise<void> {
-    return run(handler, process.stdin, protocolOutput);
+    return run(handler, process.stdin, process.stdout);
 }
 
 /// A TCP port catter connects to (`--connect host:port`).

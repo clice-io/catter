@@ -99,7 +99,17 @@ Address parse_address(std::string_view address, bool allow_remote) {
     if(host.starts_with('[') && host.ends_with(']')) {
         host = host.substr(1, host.size() - 2);
     }
-    const bool local = host == "localhost" || host == "::1" || host.starts_with("127.");
+    if(host == "localhost") {
+        host = "127.0.0.1";
+    }
+    // catter resolves no names: the host is an IPv4 or IPv6 address.
+    if(host.find_first_not_of("0123456789.") != std::string_view::npos &&
+       host.find(':') == std::string_view::npos) {
+        throw cpptrace::runtime_error(std::format(
+            "`{}` names no IP address: give --connect the handler's IP address and port",
+            address));
+    }
+    const bool local = host == "::1" || host.starts_with("127.");
     if(!local) {
         if(!allow_remote) {
             throw cpptrace::runtime_error(std::format(

@@ -2,6 +2,6 @@
 # until catter ends its input.
 import sys
 
-sys.stdout.write("Content-Length: many\r\n\r\n")
-sys.stdout.flush()
+sys.stdout.buffer.write(b"Content-Length: many\r\n\r\n")
+sys.stdout.buffer.flush()
 sys.stdin.read()

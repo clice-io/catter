@@ -74,7 +74,7 @@ sequenceDiagram
 "如何处理一条命令"在 catter 中分两层表达：
 
 1. **脚本层**（脚本看到的）：`skip` / `drop` / `abort` / `modify`，语义化、与机制无关。
-2. **协议层**（proxy 执行的）：`DROP` / `INJECT` / `WRAP`，是具体的执行机制。
+2. **协议层**（proxy 执行的）：`DROP` / `INJECT` / `WRAP` / `FAIL`，是具体的执行机制。
 
 runtime 驱动负责把脚本层动作映射到协议层动作。当前 `inject` runtime 的映射如下：
 

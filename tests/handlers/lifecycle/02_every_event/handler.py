@@ -30,3 +30,4 @@ class Handler(catter.Handler):
 
 
 catter.serve(Handler())
+print("served")

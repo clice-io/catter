@@ -144,7 +144,7 @@ struct CatterConfig {
 
     /// A handler the command line names: a command for catter to start
     /// (--handler), or an address to connect to (--connect).
-    struct Handler {
+    struct HandlerOption {
         bool connect;
 
         std::string text;
@@ -152,7 +152,7 @@ struct CatterConfig {
 
     /// The handlers, in the order of the command line: an option given
     /// more than once keeps only its last value, so main collects them.
-    std::vector<Handler> handlers;
+    std::vector<HandlerOption> handlers;
 };
 
 }  // namespace catter::core

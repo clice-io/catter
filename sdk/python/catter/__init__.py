@@ -79,6 +79,7 @@ _SDK = Path(__file__).resolve().parent
 sys.stdout.flush()
 _protocol_output = os.fdopen(os.dup(sys.stdout.fileno()), "wb")
 os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
+sys.stdout.reconfigure(line_buffering=True)
 
 
 class Handler:
@@ -141,10 +142,22 @@ def _read(reader: BinaryIO) -> Any | None:
     return json.loads(reader.read(length).decode("utf-8"))
 
 
+def _text(value: Any) -> Any:
+    """`value` with the bytes that are not UTF-8 of its strings, such as a
+    message built from an argument, replaced: the protocol's strings are
+    valid Unicode, and the arguments in it already base64."""
+    if isinstance(value, str):
+        return value.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+    if isinstance(value, dict):
+        return {key: _text(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_text(item) for item in value]
+    return value
+
+
 def _write(writer: BinaryIO, message: dict[str, Any]) -> None:
-    body = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode(
-        "utf-8"
-    )
+    text = json.dumps(_text(message), ensure_ascii=False, separators=(",", ":"))
+    body = text.encode("utf-8")
     writer.write(b"Content-Length: %d\r\n\r\n" % len(body))
     writer.write(body)
     writer.flush()
@@ -178,12 +191,9 @@ def _dispatch(handler: Handler, method: str, params: Any) -> Any:
 def _run(handler: Handler, reader: BinaryIO, writer: BinaryIO) -> None:
     """Answers catter until it ends the session."""
     while (message := _read(reader)) is not None:
-        method = message.get("method")
-        if method is None:
-            continue
         request = "id" in message
         try:
-            result = _dispatch(handler, method, message.get("params"))
+            result = _dispatch(handler, message["method"], message.get("params"))
         except Exception as error:
             _print_failure(error)
             if not request:

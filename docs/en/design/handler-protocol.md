@@ -74,7 +74,7 @@ The result of the request is an action, named by its `action` field:
 - **OS strings.** An argument, a path or an environment entry is a JSON string when its bytes are valid UTF-8, and `{"base64": "<the bytes in base64>"}` otherwise: on Linux and macOS they are bytes, which need not be UTF-8. A handler hands such a value back as it got it, or builds one the same way.
 - Every other string is valid Unicode. JSON text has no byte order mark and no object repeats a key.
 - An optional field that is absent may be left out or be `null`.
-- An integer above 2<sup>53</sup>, which a JavaScript number cannot hold exactly, is sent as a string. No field of version 1 reaches it.
+- Every integer of version 1 is below 2<sup>53</sup>, which a JavaScript number holds exactly.
 
 ## Errors
 

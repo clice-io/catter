@@ -1,0 +1,6 @@
+[test."$ catter --allow-remote --connect 0.0.0.0:1 -- node -e 0"]
+stdout = '''
+Warning: the handler at `0.0.0.0:1` on another machine decides on the build
+Failed to connect to handler `0.0.0.0:1`: connection refused
+'''
+exit = 1

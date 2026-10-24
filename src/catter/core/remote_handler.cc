@@ -34,8 +34,8 @@ public:
         co_return std::move(*message);
     }
 
-    kota::task<void, kota::ipc::Error> write_message(std::string_view payload) override {
-        return inner->write_message(payload);
+    kota::task<void, kota::ipc::Error> write_message(std::string_view message) override {
+        return inner->write_message(message);
     }
 
     kota::task<void, kota::ipc::Error> close_output() override {
@@ -119,6 +119,13 @@ std::vector<std::string> split_words(std::string_view command) {
     return words;
 }
 
+#endif
+
+#ifdef CATTER_WINDOWS
+// libuv terminates the process for any signal it takes on Windows.
+constexpr int kill_signal = SIGTERM;
+#else
+constexpr int kill_signal = SIGKILL;
 #endif
 
 std::string seconds(std::chrono::milliseconds time) {
@@ -252,9 +259,16 @@ kota::task<std::optional<Build>> RemoteHandler::on_start(Build build) {
 kota::task<Action> RemoteHandler::on_command(data::ipcid_t id,
                                              std::optional<data::ipcid_t> parent,
                                              data::command command) {
+    auto action = co_await decide(id, parent, std::move(command));
     if(subscription.events.exit) {
         decided[id] = std::chrono::steady_clock::now();
     }
+    co_return action;
+}
+
+kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
+                                         std::optional<data::ipcid_t> parent,
+                                         data::command command) {
     if(!subscription.decides && !subscription.events.command) {
         co_return Action{.type = Action::Type::Skip};
     }
@@ -374,7 +388,7 @@ kota::task<> RemoteHandler::close() {
              options.name,
              seconds(options.timeout));
     if(process.pid() != -1) {
-        if(auto error = process.kill(SIGTERM)) {
+        if(auto error = process.kill(kill_signal)) {
             LOG_WARN("Failed to kill handler `{}`: {}", options.name, error.message());
         }
         co_await process.wait();

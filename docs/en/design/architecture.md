@@ -74,7 +74,7 @@ sequenceDiagram
 "How to handle a command" is expressed at two layers in catter:
 
 1. **Script layer** (what scripts see): `skip` / `drop` / `abort` / `modify` -- semantic and independent of the mechanism.
-2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` -- the concrete execution mechanics.
+2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` / `FAIL` -- the concrete execution mechanics.
 
 The runtime driver maps script-layer actions to protocol-layer actions. The current `inject` runtime mapping:
 

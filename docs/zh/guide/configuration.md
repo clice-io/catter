@@ -18,7 +18,7 @@ catter [options] [<script> [script-args]] -- <build-command>
 | `--handler <command>`         | 由 catter 启动的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                             |           |
 | `--connect <host:port>`       | 在该地址监听的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                               |           |
 | `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                |           |
-| `--handler-timeout <seconds>` | catter 等待 handler 应答的时长；`0` 表示一直等下去。                                                       | `60`      |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                             | `60`      |
 | `-h, --help`                  | 显示帮助信息。                                                                                             |           |
 
 ### 数据目录

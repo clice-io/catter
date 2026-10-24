@@ -1,6 +1,5 @@
 #include "protocol.h"
 
-#include <array>
 #include <cstdint>
 #include <format>
 #include <string>

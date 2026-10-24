@@ -20,7 +20,7 @@ A handler that already runs, listening on a TCP port, is reached with `--connect
 catter --connect 127.0.0.1:9000 -- make
 ```
 
-This suits a handler run under a debugger, or one that serves several builds in turn. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
+This suits a handler run under a debugger, or one that serves several builds in turn. The host is an IP address, or `localhost`. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
 
 ### Options
 
@@ -94,6 +94,8 @@ await serve({
 ```
 
 The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as in Python. An argument that is not UTF-8 comes as `{ base64 }`, which a command handed back keeps. `listen(port)` serves `--connect`.
+
+Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdout carries the protocol: a handler started by catter must not write to `process.stdout`, nor let a program it starts inherit it.
 
 ## Several handlers
 

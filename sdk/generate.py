@@ -2,15 +2,12 @@
 
 The schema is what `catter-protocol-schema` prints of the messages that
 src/catter/core/protocol.h defines; `pixi run -e dev protocol` writes it and
-runs this. With --check, nothing is written: the run fails when a generated
-file is not what the schema gives.
+runs this.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -115,8 +112,6 @@ def load(schema: dict) -> tuple[list[Message], dict[str, tuple[str, list[Message
 
 def python_type(type: Type) -> str:
     match type.kind:
-        case "int" | "str" | "bool":
-            return type.kind
         case "os":
             return "str"
         case "list":
@@ -322,36 +317,13 @@ def typescript_module(messages: list[Message], unions: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="fail when a generated file is out of date",
-    )
-    args = parser.parse_args()
-
+def main() -> None:
     messages, unions = load(json.loads(SCHEMA.read_text(encoding="utf-8")))
-    outputs = {
-        PYTHON: python_module(messages, unions),
-        TYPESCRIPT: typescript_module(messages, unions),
-    }
-    stale = [
-        path
-        for path, text in outputs.items()
-        if not path.exists() or path.read_text(encoding="utf-8") != text
-    ]
-    if args.check:
-        for path in stale:
-            print(
-                f"{path.relative_to(SDK.parent)} is out of date: run `pixi run -e dev protocol`"
-            )
-        return 1 if stale else 0
-    for path in stale:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(outputs[path], encoding="utf-8", newline="\n")
-    return 0
+    PYTHON.write_text(python_module(messages, unions), encoding="utf-8", newline="\n")
+    TYPESCRIPT.write_text(
+        typescript_module(messages, unions), encoding="utf-8", newline="\n"
+    )
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

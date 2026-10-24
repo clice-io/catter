@@ -3,6 +3,7 @@
 # What it and catter print shows once catter is done, one after the other.
 import os
 import subprocess
+import sys
 
 import catter
 
@@ -35,8 +36,8 @@ with catter.listen() as listener:
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
     )
     listener.accept(Handler())
     stdout, stderr = build.communicate()
-    print(f"catter exited with {build.returncode}, printing:\n{stdout}{stderr}", end="")
+    print(f"catter exited with {build.returncode}, printing:", flush=True)
+    sys.stderr.buffer.write(stdout + stderr)

@@ -18,7 +18,7 @@ A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
 | `--handler <command>`         | A handler for catter to start; may be given more than once. See [Handlers](../scripting/handlers.md).                                                           |                   |
 | `--connect <host:port>`       | A handler listening at the address; may be given more than once. See [Handlers](../scripting/handlers.md).                                                      |                   |
 | `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                                                             |                   |
-| `--handler-timeout <seconds>` | How long catter waits for a handler to answer; `0` waits as long as it takes.                                                                                   | `60`              |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.                                             | `60`              |
 | `-h, --help`                  | Show help message.                                                                                                                                              |                   |
 
 ### Data directory

@@ -11,9 +11,9 @@ class Handler(catter.Handler):
 
     def on_command(self, command):
         self.seen.append(command.args[1:])
-        if "modify-me" in command.args:
+        if "leave-me" in command.args:
             return catter.Modify(args=[*command.args, "added-by-second"])
-        return None
+        return catter.Skip()
 
     def on_finish(self, finish):
         for args in self.seen:

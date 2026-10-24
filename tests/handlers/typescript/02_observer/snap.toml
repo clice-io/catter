@@ -1,0 +1,14 @@
+[test."$ catter --handler \"node handler.ts\" -- node build.mjs"]
+stdout = '''
+ran with ["drop-me"]
+drop-me: exit 0
+ran with ["modify-me"]
+modify-me: exit 0
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+stderr = '''
+finish: code 0, after ["build.mjs"] ["child.mjs","drop-me"] ["child.mjs","modify-me"] ["child.mjs","leave-me"]
+served
+'''
+exit = 0

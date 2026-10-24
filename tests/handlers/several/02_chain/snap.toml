@@ -1,9 +1,9 @@
 [test."$ catter --handler \"python decider.py\" --handler \"python second.py\" -- node build.mjs"]
 stdout = '''
 drop-me: exit 0
-ran with ["modify-me","added-by-decider","added-by-second"]
+ran with ["modify-me","added-by-decider"]
 modify-me: exit 0
-ran with ["leave-me"]
+ran with ["leave-me","added-by-second"]
 leave-me: exit 0
 '''
 stderr = '''

@@ -22,4 +22,4 @@ catter.serve(Handler())
 catter --handler "python handler.py" -- make
 ```
 
-The protocol and the SDK are described in catter's documentation (`docs/en/guide/handlers.md`).
+The SDK and the protocol are described in [catter's documentation](https://docs.clice.io/catter/scripting/handlers).
