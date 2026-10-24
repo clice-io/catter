@@ -16,7 +16,7 @@ Every platform tests on a box of its own OS, as it builds there (the build skill
 box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev cases-test debug"'
 ```
 
-PowerShell sets a variable for the commands after it, not on the command line: `$env:CATTER_CASES = 'capture/'; pixi run -e dev cases-test debug`. When both MSVC and MinGW are built on one box, `cases-test` finds two catters: point the cases at one, `$env:CATTER_EXECUTABLE = 'build/mingw/x86_64/debug/catter.exe'; pixi run -e dev pnpm --dir tests run cases`, as CI's MinGW leg does.
+PowerShell sets a variable for the commands after it, not on the command line: `$env:CATTER_CASES = 'capture/'; pixi run -e dev cases-test debug`. When both MSVC and MinGW are built on one box, `cases-test` finds two catters: point the cases at one, `$env:CATTER_EXECUTABLE = 'build/mingw/x86_64/debug/catter.exe'; pixi run -e dev pnpm --dir tests run cases`, as CI's MinGW cases jobs do.
 
 ## Commands
 

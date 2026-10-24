@@ -32,10 +32,10 @@ They always move together:
    option catter names that was renamed or removed upstream shows up as a
    C++ build error or a tsc error; the unit tests under
    `unittests/common/opt` and the `tests/inspect` cases pin the parsing.
-4. Build and run the unit tests and the cases on every CI leg (the build
-   and test skills): Linux,
+4. Build and run the unit tests and the cases on everything CI builds (the
+   build and test skills): Linux,
    macOS and Windows MSVC and MinGW, debug and release. macOS and MinGW
-   are the legs xclang's clang compiles.
+   are the builds xclang's clang compiles.
 
 ## kotatsu
 
@@ -50,8 +50,8 @@ configs catter consumes (`async`, `deco`, `ztest` on, `http` off).
 3. Read kotatsu's history since the old pin
    (`git log --oneline <old>..<new>`) for API changes, adapt catter to
    them, and list them in the PR body.
-4. Build and run the unit tests and the cases on every CI leg, debug and
-   release (the build and test skills): the cases are what exercises
+4. Build and run the unit tests and the cases on everything CI builds,
+   debug and release (the build and test skills): the cases are what exercises
    kotatsu's IPC, pipes and processes. A new version is in no package cache: CI and every box install
    it first.
 

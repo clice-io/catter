@@ -1,0 +1,166 @@
+name: test-target
+
+# One target and build mode: a build job, which runs the unit tests too, then
+# the cases in jobs of their own that wait for this build only, never for
+# another target's. They run on the programs the build uploads, on a runner
+# that did not build them, as a user runs catter.
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      # Names the artifacts and caches.
+      target:
+        required: true
+        type: string
+      # The pixi environment that builds.
+      env:
+        type: string
+        default: dev
+      mode:
+        type: string
+        default: release
+      # The package artifact of a release build, which releases promote
+      # (publish.yml).
+      package:
+        type: string
+        default: ""
+      # The shard numbers 1..n of the cases split over n runners, as a JSON
+      # array.
+      cases_shards:
+        type: string
+        default: "[1]"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The package cache is keyed by a hash of every package's
+      # configuration, so a run saves one only when that changed.
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: v3.0.8
+          actions-cache-folder: ".xmake-cache"
+          actions-cache-key: ${{ inputs.os }}
+          package-cache: true
+          # Debug builds install their packages with sanitizer configs, so
+          # the two modes must not share one package cache. agent-box.yml
+          # restores these entries by this prefix.
+          package-cache-key: ${{ inputs.os }}-${{ inputs.env }}-${{ inputs.mode }}-pixi
+
+      - uses: ./.github/actions/setup-pixi
+        with:
+          environments: ${{ inputs.env }}
+
+      # xmake's compile cache (build.ccache in xmake.lua). Pull requests only
+      # restore: every push saving its own copy would churn the repository's
+      # cache pool faster than the next run can reuse it. main starts empty
+      # and saves what its build compiled, once per merge: xmake does not
+      # mark the entries it reads, so a restored cache could never shed the
+      # ones the tree no longer compiles.
+      - name: Restore the build cache
+        if: github.ref != 'refs/heads/main'
+        uses: actions/cache/restore@v6
+        with:
+          path: build/.build_cache
+          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ github.sha }}
+          restore-keys: |
+            xmake-build-${{ inputs.target }}-${{ inputs.mode }}-
+
+      # Configures, builds, and runs the unit tests.
+      - name: Build and test
+        timeout-minutes: 60
+        run: pixi run -e ${{ inputs.env }} ci-build ${{ inputs.mode }}
+
+      - name: Save the build cache
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/cache/save@v6
+        with:
+          path: build/.build_cache
+          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ github.sha }}
+
+      # The programs the cases run, side by side as catter finds them.
+      - name: Collect programs
+        shell: bash
+        run: |
+          mkdir programs
+          for file in build/*/*/${{ inputs.mode }}/{catter,catter.exe,catter-proxy,catter-proxy.exe,libcatter-hook-unix.so,libcatter-hook-unix.dylib,catter-hook-win64.dll}; do
+            if [ -f "$file" ]; then cp "$file" programs/; fi
+          done
+          ls programs
+
+      # A failed shard can be rerun alone while it lives.
+      - name: Upload programs
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ inputs.target }}-${{ inputs.mode }}
+          path: programs/
+          if-no-files-found: error
+          retention-days: 3
+
+      # Package the exact binaries the suites validate. These artifacts are
+      # what releases promote — there is no separate release build (see
+      # publish.yml).
+      - name: Package
+        if: ${{ inputs.package }}
+        run: pixi run -e ${{ inputs.env }} package
+
+      - name: Upload package artifact
+        if: ${{ inputs.package }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.package }}
+          path: release-assets/**
+          if-no-files-found: error
+          # 30 days bounds how old a commit a tag can still promote.
+          retention-days: 30
+
+  # The cases under tests/ (tests/README.md).
+  cases:
+    needs: build
+    name: cases ${{ matrix.shard }}/${{ strategy.job-total }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.cases_shards) }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # xmake is one of the build systems the cases build with.
+      - name: Setup xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: v3.0.8
+          actions-cache-folder: ".xmake-cache"
+          actions-cache-key: ${{ inputs.os }}
+
+      - uses: ./.github/actions/download-programs
+        with:
+          target: ${{ inputs.target }}
+          mode: ${{ inputs.mode }}
+
+      # In the job's default shell, as the build ran: on Windows not Git
+      # Bash, whose MSYS environment changes how build tools behave.
+      - name: Cases
+        timeout-minutes: 20
+        env:
+          CATTER_EXECUTABLE: ${{ github.workspace }}/programs/catter
+          CATTER_CASES_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+        run: |
+          pixi run -e dev npm-install
+          pixi run -e dev pnpm --dir tests run cases
