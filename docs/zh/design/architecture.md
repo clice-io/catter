@@ -54,9 +54,9 @@ sequenceDiagram
 
 - 入参 `CatterConfig` 包含：脚本路径与参数、构建系统命令及其工作目录、当前 runtime 能力、catter 选项（`log`、`stdioMode`）。
 - 脚本可以返回修改后的 config（例如解析自己的 CLI 参数后写回）；返回 `void` 表示不修改。
-- 设置 `config.execute = false` 可阻止 catter 启动构建（内置脚本在参数解析失败时用这种方式优雅退出）。
+- 设置 `config.execute = false` 可阻止 catter 启动构建。
 
-**`onFinish(result)`** 在构建进程结束后调用一次。`result` 是构建命令自身的进程结果：退出码与捕获的 stdout/stderr。内置脚本在这里落盘最终产物（例如 cdb 脚本写 `compile_commands.json`）。
+**`onFinish(result)`** 在构建进程结束后调用一次。`result` 是构建命令自身的进程结果：退出码与捕获的 stdout/stderr。脚本在这里写出最终产物。
 
 ### 命令级：onCommand / onExecution
 

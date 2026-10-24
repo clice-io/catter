@@ -54,9 +54,9 @@ sequenceDiagram
 
 - The `CatterConfig` payload includes: the script path and arguments, the build system command and its working directory, the current runtime capabilities, and catter options (`log`, `stdioMode`).
 - The script may return a modified config (for example, after parsing its own CLI arguments); returning `void` means no change.
-- Setting `config.execute = false` prevents catter from launching the build (builtin scripts use this to exit gracefully when argument parsing fails).
+- Setting `config.execute = false` prevents catter from launching the build.
 
-**`onFinish(result)`** is called once after the build process ends. `result` is the process result of the build command itself: exit code and captured stdout/stderr. Builtin scripts persist their final output here (for example, the cdb script writes `compile_commands.json`).
+**`onFinish(result)`** is called once after the build process ends. `result` is the process result of the build command itself: exit code and captured stdout/stderr. A script writes its final output here.
 
 ### Command level: onCommand / onExecution
 
