@@ -1,0 +1,11 @@
+[test."$ catter -m replay script::cmd-tree -d 1 -- events.json"]
+stdout = '''
+make
+├── sh -c "gcc....n.c"
+└── ld main.o -o app
+'''
+exit = 0
+
+[test."$ catter -m replay script::cmd-tree --depth=0 -- events.json"]
+stdout = "make"
+exit = 0

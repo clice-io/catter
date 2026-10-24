@@ -1,0 +1,4 @@
+clang-cl /c a.cc
+clang --driver-mode=cl /c a.cc
+clang++ --driver-mode=cl a.cc /Fea.exe
+clang-cl --target=x86_64-pc-windows-gnu /c a.cc

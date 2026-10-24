@@ -1,4 +1,5 @@
 [test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o"]
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123)"
 stdout = '''
 {
   "analyzer": "compiler",
@@ -60,7 +61,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".darwin]
-differs = "a command that names no target compiles for the host"
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
 stdout = '''
 {
   "analyzer": "compiler",
@@ -122,7 +123,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".win32]
-differs = "a command that names no target compiles for the host"
+wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
 stdout = '''
 {
   "analyzer": "compiler",
@@ -184,6 +185,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::inspect -- gcc -x assembler -c a.s"]
+wrong = "a source with an explicit language gets no reads or writes (catter#131)"
 stdout = '''
 {
   "analyzer": "compiler",
@@ -222,7 +224,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::inspect -- gcc -x assembler -c a.s".darwin]
-differs = "a command that names no target compiles for the host"
+wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
 stdout = '''
 {
   "analyzer": "compiler",
@@ -261,7 +263,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::inspect -- gcc -x assembler -c a.s".win32]
-differs = "a command that names no target compiles for the host"
+wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
 stdout = '''
 {
   "analyzer": "compiler",

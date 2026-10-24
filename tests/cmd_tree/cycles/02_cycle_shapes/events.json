@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "name": "a command its own parent, a cycle with a child, and a second cycle",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 2,
+      "exe": "sh",
+      "argv": ["sh", "self.sh"]
+    },
+    {
+      "type": "command",
+      "id": 3,
+      "parent": 4,
+      "exe": "gcc",
+      "argv": ["gcc", "-c", "a.c"]
+    },
+    {
+      "type": "command",
+      "id": 4,
+      "parent": 3,
+      "exe": "cc1",
+      "argv": ["cc1", "a.c"]
+    },
+    {
+      "type": "command",
+      "id": 5,
+      "parent": 4,
+      "exe": "as",
+      "argv": ["as", "a.s"]
+    },
+    {
+      "type": "command",
+      "id": 6,
+      "parent": 7,
+      "exe": "ninja",
+      "argv": ["ninja"]
+    },
+    {
+      "type": "command",
+      "id": 7,
+      "parent": 6,
+      "exe": "cmake",
+      "argv": ["cmake", "--regenerate"]
+    }
+  ],
+  "finish": {
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

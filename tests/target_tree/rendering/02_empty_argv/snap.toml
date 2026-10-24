@@ -1,0 +1,3 @@
+[test."$ catter -m replay script::target-tree -- events.json"]
+stdout = "No targets found."
+exit = 0
