@@ -80,6 +80,9 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::st
         case action::DROP: {
             co_return data::process_result{.code = 0};
         }
+        case action::FAIL: {
+            co_return data::process_result{.code = 1};
+        }
         default: {
             co_return data::process_result{.code = -1};
         }

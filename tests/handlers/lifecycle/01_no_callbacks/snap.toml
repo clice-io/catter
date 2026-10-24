@@ -1,0 +1,4 @@
+[test."$ catter --handler \"python handler.py\" -- node -e \"console.log('the build ran')\""]
+stdout = "the build ran"
+stderr = "a handler without callbacks"
+exit = 0

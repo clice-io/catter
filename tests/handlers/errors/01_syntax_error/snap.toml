@@ -1,0 +1,9 @@
+[test."$ catter --handler \"python handler.py\" -- node -e 0"]
+stdout = "Handler `python handler.py` stopped before it answered initialize"
+stderr = '''
+  File "${WS}/handler.py", line 5
+    def on_command(self, command)
+                                 ^
+SyntaxError: expected ':'
+'''
+exit = 1

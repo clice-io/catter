@@ -28,6 +28,7 @@ struct action {
         DROP,    // Do not execute the command
         INJECT,  // Inject <catter-payload> into the command
         WRAP,    // Wrap the command execution, and return its exit code
+        FAIL,    // Do not execute the command: the session has ended with an error
     } type;
 
     command cmd;

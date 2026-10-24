@@ -1,8 +1,8 @@
 [inject."$ catter script.js append -- node build.mjs"]
 stdout = '''
-onStart: args ["append"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 1: parent 0, args ["build.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 2: parent 1, args ["child.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
+onStart: args ["append"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 1: parent undefined, args ["build.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 2: parent 1, args ["child.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
 onExecution 2: code 3, stdout "ran in sub with [\"added-by-onCommand\"]\nCATTER_CASE_VAR=set-by-onCommand\n", stderr ""
 onExecution 1: code 0, stdout "", stderr "ran in sub with [\"added-by-onCommand\"]\nCATTER_CASE_VAR=set-by-onCommand\nchild: exit 3\n"
 onFinish: code 0, stdout "", stderr "ran in sub with [\"added-by-onCommand\"]\nCATTER_CASE_VAR=set-by-onCommand\nchild: exit 3\n"
@@ -17,9 +17,9 @@ exit = 0
 [inject."$ catter script.js append -- node build.mjs".win32]
 wrong = "the LF line ends a command prints reach its parent as CRLF (catter#139)"
 stdout = '''
-onStart: args ["append"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 1: parent 0, args ["build.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 2: parent 1, args ["child.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
+onStart: args ["append"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 1: parent 0, args ["build.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 2: parent 1, args ["child.mjs","added-by-onStart"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
 onExecution 2: code 3, stdout "ran in sub with [\"added-by-onCommand\"]\nCATTER_CASE_VAR=set-by-onCommand\n", stderr ""
 onExecution 1: code 0, stdout "", stderr "ran in sub with [\"added-by-onCommand\"]\r\nCATTER_CASE_VAR=set-by-onCommand\r\nchild: exit 3\n"
 onFinish: code 0, stdout "", stderr "ran in sub with [\"added-by-onCommand\"]\r\r\nCATTER_CASE_VAR=set-by-onCommand\r\r\nchild: exit 3\r\n"
@@ -34,9 +34,9 @@ exit = 0
 [replay."$ catter -m replay script.js -- events.json"]
 wrong = "catter exits 0 though the build failed with 2 (catter#116)"
 stdout = '''
-onStart: args [], build ["events.json"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 1: parent undefined, args ["all"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
-onCommand 2: parent 1, args ["-c","a.c"], cwd ${WS}, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}
+onStart: args [], build ["events.json"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 1: parent undefined, args ["all"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
+onCommand 2: parent 1, args ["-c","a.c"], cwd ${WS}, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}
 onExecution 2: code 1, stdout "from cc\n", stderr "a.c: error\n"
 onCommand 3: error "could not capture", parent 1
 onFinish: code 2, stdout "make output\n", stderr "make: *** [all] Error 1\n"
@@ -44,5 +44,5 @@ onFinish: code 2, stdout "make output\n", stderr "make: *** [all] Error 1\n"
 exit = 0
 
 ["no build"."$ catter script.js stop -- node build.mjs"]
-stdout = 'onStart: args ["stop"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","modify"],"type":"inject","supportParentId":true}'
+stdout = 'onStart: args ["stop"], build ["node","build.mjs"], cwd ${WS}, stdio inherit, runtime {"supportActions":["drop","skip","abort","modify"],"type":"inject","supportParentId":true}'
 exit = 0

@@ -1,0 +1,7 @@
+[test."$ catter --handler \"python handler.py\" --handler-timeout 1 -- node build.mjs"]
+stdout = '''
+first: exit 1
+second: exit 1
+Handler `python handler.py` did not answer command 2 within 1 s
+'''
+exit = 1

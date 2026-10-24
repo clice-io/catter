@@ -149,7 +149,14 @@ mingw = ["dev", "mingw"]
 [tasks]
 npm-install = {
     cmd = "pnpm install",
-    inputs = ["pnpm-lock.yaml", "pnpm-workspace.yaml", "package.json", "api/dev/package.json", "scripts/package.json"]
+    inputs = [
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "package.json",
+        "api/dev/package.json",
+        "scripts/package.json",
+        "sdk/typescript/package.json",
+    ]
 }
 build = "xmake --verbose --diagnosis"
 
@@ -168,7 +175,24 @@ cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 args = [
     { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
 ]
-depends-on = [{ task = "npm-install" }, { task = "cfg", args = ["{{ mode }}"] }, { task = "build" }, { task = "ut" }]
+depends-on = [
+    { task = "npm-install" },
+    { task = "cfg", args = ["{{ mode }}"] },
+    { task = "build" },
+    { task = "ut" },
+    { task = "check-protocol" },
+]
+
+# The protocol's schema, from the messages src/catter/core/protocol.h
+# defines, and the SDKs' types generated from it (sdk/generate.py), on a
+# built tree.
+[tasks.protocol]
+cmd = "xmake run catter-protocol-schema $PIXI_PROJECT_ROOT/sdk/protocol.schema.json && python sdk/generate.py"
+
+# Fails when what `protocol` writes differs from what is checked in.
+[tasks.check-protocol]
+cmd = "git diff --exit-code -- sdk"
+depends-on = ["protocol"]
 
 [tasks.lint-ts]
 cmd = "pnpm exec eslint --cache ."
@@ -179,7 +203,12 @@ depends-on = [
     { task = "lint-ts" },
     { task = "check-js-modules" },
     { task = "check-testing" },
+    { task = "check-sdk-ts" },
 ]
+
+[tasks.check-sdk-ts]
+cmd = "pnpm --dir sdk/typescript run typecheck"
+depends-on = ["npm-install"]
 
 # The test runner (tools/) and the cases' scripts (tests/): types, lint, and
 # the runner's own tests.

@@ -1,0 +1,13 @@
+[test."$ catter --handler \"python decider.py\" script::cmd-tree -- node build.mjs"]
+stdout = '''
+drop-me: exit 0
+ran with ["modify-me","added-by-decider"]
+modify-me: exit 0
+ran with ["leave-me"]
+leave-me: exit 0
+node build.mjs
+├── node child.mjs drop-me
+├── node child.mjs modify-me
+└── node child.mjs leave-me
+'''
+exit = 0

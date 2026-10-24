@@ -1,0 +1,3 @@
+[test."$ catter --handler no-such-handler -- node -e 0"]
+stdout = "Failed to start handler `no-such-handler`: no such file or directory"
+exit = 1

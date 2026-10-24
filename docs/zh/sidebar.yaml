@@ -19,6 +19,7 @@ scripting:
   label: 脚本系统
   items:
     - overview
+    - handlers
 
 design:
   label: 设计
@@ -29,6 +30,7 @@ design:
       label: inject 实现：钩子机制
     - file: ipc-protocol
       label: inject 实现：IPC 协议
+    - handler-protocol
 
 dev:
   label: 开发

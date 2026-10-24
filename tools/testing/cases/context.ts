@@ -20,7 +20,7 @@ import { SCRIPT_DEADLINE_MS, StepRecord, throwFailures } from "../steps.ts";
 import type { Case } from "./case.ts";
 import { Disk } from "./disk.ts";
 import { Output, type Blocks } from "./output.ts";
-import { freshDir, materialize } from "./project.ts";
+import { freshDir, linkSdk, materialize } from "./project.ts";
 import type { Registered } from "./script.ts";
 
 /// What a command left: its exit status, or the signal that killed it, and
@@ -75,6 +75,7 @@ class TestRun implements TestContext {
         this.disk = new Disk(this.root, this.steps, (text) => normalize(text, this.places));
         this.errors = (registered.options.errors ?? []).map((source) => new RegExp(source));
         materialize(c.dir, this.root);
+        linkSdk(this.root);
     }
 
     private async command(

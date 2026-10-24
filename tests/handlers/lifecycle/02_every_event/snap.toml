@@ -1,0 +1,27 @@
+[inject."$ catter --handler \"python handler.py\" -- node build.mjs"]
+stdout = '''
+fails: exit 3
+in sub: exit 0
+'''
+stderr = '''
+start: version 1, mode inject, build ['node', 'build.mjs'] in ., session of 16 characters
+command 1: parent None, args ['build.mjs'], in ., env None
+command 2: parent 1, args ['-e', 'process.exit(3)'], in ., env None
+exit 2: code 3, took #ms
+command 3: parent 1, args ['-e', '0'], in sub, env None
+exit 3: code 0, took #ms
+exit 1: code 0, took #ms
+finish: code 0
+'''
+exit = 0
+
+[replay."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+stderr = '''
+start: version 1, mode replay, build ['events.json'] in ., session of 16 characters
+command 1: parent None, args ['all'], in ., env None
+command 2: parent 1, args ['-c', 'a.c'], in ., env None
+exit 2: code 1, took #ms
+error 3: parent 1, could not capture
+finish: code 2
+'''
+exit = 0

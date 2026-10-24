@@ -1,0 +1,21 @@
+[test."$ catter --handler \"node handler.ts\" -- node build.mjs"]
+stdout = '''
+drop-me: exit 0
+ran with ["modify-me","added-by-handler"]
+modify-me: exit 0
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+stderr = '''
+start: mode inject, build ["node","build.mjs"]
+command 1: ["build.mjs"]
+command 2: ["child.mjs","drop-me"]
+exit 2: code 0
+command 3: ["child.mjs","modify-me"]
+exit 3: code 0
+command 4: ["child.mjs","leave-me"]
+exit 4: code 0
+exit 1: code 0
+finish: code 0
+'''
+exit = 0

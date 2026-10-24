@@ -1,0 +1,14 @@
+[test."$ catter --handler \"python decider.py\" --handler \"python second.py\" -- node build.mjs"]
+stdout = '''
+drop-me: exit 0
+ran with ["modify-me","added-by-decider","added-by-second"]
+modify-me: exit 0
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+stderr = '''
+second saw ['build.mjs']
+second saw ['child.mjs', 'modify-me', 'added-by-decider']
+second saw ['child.mjs', 'leave-me']
+'''
+exit = 0

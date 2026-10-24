@@ -32,7 +32,9 @@ tests/<topic>/<subtopic>/NN_name/
   environment, working directory, stdio, exit status, process trees, the
   functions that start programs), `builds` (real build systems: make, CMake
   with Ninja, MSBuild, xmake), `scripts` (user scripts: their actions,
-  errors, modules, lifecycle).
+  errors, modules, lifecycle), `handlers` (handlers over the protocol, on
+  the SDKs: their actions, errors, lifecycle, transports, several at once,
+  arguments that are not UTF-8).
 - **Builtins**, what a builtin script answers on the commands it saw: `cdb`
   (`script::cdb`), `cmd_tree`, `target_tree`, and `inspect`
   (`script::inspect`, how catter analyzes one command, which it does not
@@ -57,6 +59,11 @@ repository root.
   the copy's root: a database or response file that needs absolute paths.
 - **Generated inputs** (a hundred sources) come from
   `t.disk.write(generate.sources(100))`, never from loops in a test.
+- **The catter and the SDKs under test** reach every command a test runs:
+  `CATTER_EXECUTABLE` names the catter, for a program that starts it
+  itself; `import catter` finds the Python SDK; and a copy whose
+  `package.json` depends on `@catter/sdk` has the TypeScript SDK in its
+  `node_modules`.
 - **A program a build runs** to show what reaches it is an input of the case:
   a `build.mjs` that starts programs the way a build tool does and prints
   what they received, or a C source the test compiles with `t.setup`. It

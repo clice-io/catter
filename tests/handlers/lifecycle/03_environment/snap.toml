@@ -1,0 +1,4 @@
+[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+stdout = "sub set-by-build by-handler"
+stderr = "command 2 has CASE_VAR=set-by-build"
+exit = 0

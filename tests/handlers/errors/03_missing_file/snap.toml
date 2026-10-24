@@ -1,0 +1,4 @@
+[test."$ catter --handler \"python missing.py\" -- node -e 0"]
+stdout = "Handler `python missing.py` stopped before it answered initialize"
+stderr = "python: can't open file '${WS}/missing.py': [Errno 2] No such file or directory"
+exit = 1

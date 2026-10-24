@@ -46,7 +46,7 @@ int run(int argc, char* argv[]) {
             throw;
         }
         auto cli = kota::deco::cli::command<core::CatterConfig>(
-            "catter [options for catter] script [options for script] -- [build system command]");
+            "catter [options for catter] [script [options for script]] -- [build system command]");
         cli.after<&core::CatterConfig::script_path>([](auto& step) {
                unsigned idx = step.next_cursor();
                std::span<std::string> original_argv = step.original_argv();
@@ -55,6 +55,14 @@ int run(int argc, char* argv[]) {
                }
                return step.seek(idx);
            })
+            .after<&core::CatterConfig::handler>([](auto& step) {
+                step.options().handlers.push_back({.connect = false, .text = step.value()});
+                return step.next();
+            })
+            .after<&core::CatterConfig::connect>([](auto& step) {
+                step.options().handlers.push_back({.connect = true, .text = step.value()});
+                return step.next();
+            })
             .after<&core::CatterConfig::help>([&](auto& step) {
                 step.usage(std::cout);
                 ret = 0;

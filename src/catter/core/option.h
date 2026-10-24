@@ -72,8 +72,37 @@ struct CatterConfig {
 
     DecoInput(meta_var = "<Script>",
               help = "path to the custom js; or internal script, eg. script::cdb",
-              required = true)
+              required = false)
     <std::string> script_path;
+
+    DecoKV(
+        names = {"--handler"},
+        meta_var = "<Command>",
+        help =
+            "a handler for catter to start, which decides or observes the build's commands over its stdin and stdout; may be given more than once",
+        required = false)
+    <std::string> handler;
+
+    DecoKV(
+        names = {"--connect"},
+        meta_var = "<Host:Port>",
+        help =
+            "a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once",
+        required = false)
+    <std::string> connect;
+
+    DecoFlag(names = {"--allow-remote"},
+             help = "let --connect reach a handler on another machine",
+             required = false)
+    allow_remote = false;
+
+    DecoKV(
+        names = {"--handler-timeout"},
+        meta_var = "<Seconds>",
+        help =
+            "how long catter waits for a handler to answer, and to exit once the session is over; 0 waits as long as it takes; default to 60",
+        required = false)
+    <unsigned> handler_timeout = 60;
 
     DecoKV(
         names = {"-m", "--mode"},
@@ -112,6 +141,18 @@ struct CatterConfig {
     DECO_CFG_END()
 
     bool log = true;
+
+    /// A handler the command line names: a command for catter to start
+    /// (--handler), or an address to connect to (--connect).
+    struct Handler {
+        bool connect;
+
+        std::string text;
+    };
+
+    /// The handlers, in the order of the command line: an option given
+    /// more than once keeps only its last value, so main collects them.
+    std::vector<Handler> handlers;
 };
 
 }  // namespace catter::core

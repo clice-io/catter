@@ -3,3 +3,4 @@ packages:
   - "api/dev"
   - "tools"
   - "tests"
+  - "sdk/typescript"

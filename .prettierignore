@@ -1,5 +1,8 @@
 # Written by pnpm.
 pnpm-lock.yaml
+# Written by catter-protocol-schema, and by sdk/generate.py from it.
+sdk/protocol.schema.json
+sdk/typescript/src/protocol.ts
 # A case's inputs are test data (tests/README.md): formatting never rewrites
 # them. Its test.ts and README.md are code and docs, formatted as such.
 tests/*/*/*/*

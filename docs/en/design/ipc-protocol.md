@@ -82,7 +82,7 @@ The core request. The proxy sends a captured command and the daemon decides what
 
 | Field  | Type           | Description                                            |
 | ------ | -------------- | ------------------------------------------------------ |
-| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, or `WRAP`                     |
+| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, `WRAP`, or `FAIL`             |
 | `cmd`  | `command`      | The command to execute (may be modified by the script) |
 
 **Action types**:
@@ -90,6 +90,7 @@ The core request. The proxy sends a captured command and the daemon decides what
 - **`DROP` (0)** -- Do not execute the command. The proxy returns exit code 0 immediately. Used when the script determines a command is irrelevant (e.g., a compiler invocation the user wants to skip).
 - **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD` (or performs DLL injection on Windows) so that child processes of this command are also intercepted. This is the default for build commands whose children should be monitored.
 - **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command and captures its stdout/stderr, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
+- **`FAIL` (3)** -- Do not execute the command: the proxy returns exit code 1 immediately. The session has ended with an error (a script or handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
 
 The daemon may modify the command in the returned action. For example, a script could change compiler flags, redirect output paths, or substitute a different executable.
 
@@ -124,7 +125,7 @@ Reports that a command has completed execution.
 
 **Result**: `null` (no response payload)
 
-After the daemon receives this request, it invokes the `onExecution()` JavaScript callback with the result data. The proxy then disconnects.
+After the daemon receives this request, it tells the session's handlers (the `onExecution()` JavaScript callback) the result. The proxy then disconnects.
 
 ## Typical Message Sequence
 

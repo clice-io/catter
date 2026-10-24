@@ -1,0 +1,7 @@
+import { test } from "@catter/tools/testing";
+
+// A handler runs in catter's working directory: the case's handler.py works
+// on files there once the build is done.
+test(async (t) => {
+    await t.cli(["--handler", "python handler.py", "--", "node", "-e", "0"]);
+});

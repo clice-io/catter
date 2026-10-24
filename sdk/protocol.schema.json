@@ -1,0 +1,416 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "initializeParams": {
+            "$ref": "#/$defs/InitializeParams"
+        },
+        "initializeResult": {
+            "$ref": "#/$defs/InitializeResult"
+        },
+        "command": {
+            "$ref": "#/$defs/Command"
+        },
+        "action": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "const": "skip"
+                        }
+                    },
+                    "required": [
+                        "action"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "const": "drop"
+                        }
+                    },
+                    "required": [
+                        "action"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string"
+                        },
+                        "action": {
+                            "const": "abort"
+                        }
+                    },
+                    "required": [
+                        "reason",
+                        "action"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "args": {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/Base64"
+                                    }
+                                ]
+                            }
+                        },
+                        "executable": {
+                            "anyOf": [
+                                {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "$ref": "#/$defs/Base64"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "cwd": {
+                            "anyOf": [
+                                {
+                                    "anyOf": [
+                                        {
+                                            "type": "string"
+                                        },
+                                        {
+                                            "$ref": "#/$defs/Base64"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "env": {
+                            "anyOf": [
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "$ref": "#/$defs/Base64"
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "action": {
+                            "const": "modify"
+                        }
+                    },
+                    "required": [
+                        "args",
+                        "action"
+                    ]
+                }
+            ]
+        },
+        "captureError": {
+            "$ref": "#/$defs/CaptureError"
+        },
+        "exit": {
+            "$ref": "#/$defs/Exit"
+        },
+        "finish": {
+            "$ref": "#/$defs/Finish"
+        }
+    },
+    "required": [
+        "initializeParams",
+        "initializeResult",
+        "command",
+        "action",
+        "captureError",
+        "exit",
+        "finish"
+    ],
+    "$defs": {
+        "Base64": {
+            "type": "object",
+            "properties": {
+                "base64": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "base64"
+            ]
+        },
+        "Build": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                },
+                "cwd": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "command",
+                "cwd"
+            ]
+        },
+        "InitializeParams": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "integer",
+                    "minimum": -2147483648,
+                    "maximum": 2147483647
+                },
+                "session": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "build": {
+                    "$ref": "#/$defs/Build"
+                }
+            },
+            "required": [
+                "version",
+                "session",
+                "mode",
+                "build"
+            ]
+        },
+        "Events": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "boolean"
+                },
+                "error": {
+                    "type": "boolean"
+                },
+                "exit": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "command",
+                "error",
+                "exit"
+            ]
+        },
+        "InitializeResult": {
+            "type": "object",
+            "properties": {
+                "decides": {
+                    "type": "boolean"
+                },
+                "events": {
+                    "$ref": "#/$defs/Events"
+                },
+                "env": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "decides",
+                "events",
+                "env"
+            ]
+        },
+        "Command": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "minimum": -2147483648,
+                    "maximum": 2147483647
+                },
+                "parent": {
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": -2147483648,
+                            "maximum": 2147483647
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "cwd": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "executable": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                },
+                "env": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/Base64"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                }
+            },
+            "required": [
+                "id",
+                "cwd",
+                "executable",
+                "args"
+            ]
+        },
+        "CaptureError": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "minimum": -2147483648,
+                    "maximum": 2147483647
+                },
+                "parent": {
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": -2147483648,
+                            "maximum": 2147483647
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "message": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "id",
+                "message"
+            ]
+        },
+        "Exit": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "minimum": -2147483648,
+                    "maximum": 2147483647
+                },
+                "code": {
+                    "type": "integer",
+                    "minimum": -9223372036854775808,
+                    "maximum": 9223372036854775807
+                },
+                "duration": {
+                    "type": "integer",
+                    "minimum": -9223372036854775808,
+                    "maximum": 9223372036854775807
+                }
+            },
+            "required": [
+                "id",
+                "code",
+                "duration"
+            ]
+        },
+        "Finish": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "minimum": -9223372036854775808,
+                    "maximum": 9223372036854775807
+                }
+            },
+            "required": [
+                "code"
+            ]
+        }
+    }
+}
+
