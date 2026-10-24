@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       format:
-        description: Run the format check.
+        description: Run the format check and the TypeScript lint.
         type: boolean
         default: false
       docs:
@@ -57,11 +57,11 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup-pixi
+        with:
+          environments: format
 
-      # pre-commit rewrites files in place; the diff below reports them.
-      - name: Run formatter and module checks
-        id: check
-        run: pixi run -e dev ci-check
+      - name: Run formatter
+        run: pixi run -e format format
         continue-on-error: true
 
       - name: Auto correct
@@ -73,18 +73,13 @@ jobs:
 
       - name: Check results
         env:
-          CHECK_OUTCOME: ${{ steps.check.outcome }}
           AUTOCORRECT_OUTCOME: ${{ steps.autocorrect.outcome }}
         run: |
           failed=0
           if ! git diff --quiet; then
-            echo "::error::Formatting changes detected. Please run 'pixi run -e dev format' and commit the result."
+            echo "::error::Formatting changes detected. Please run 'pixi run -e format format' and commit the result."
             git --no-pager diff --stat
             git --no-pager diff
-            failed=1
-          fi
-          if [[ "$CHECK_OUTCOME" == "failure" ]]; then
-            echo "::error::'pixi run -e dev ci-check' failed; see the step log above."
             failed=1
           fi
           if [[ "$AUTOCORRECT_OUTCOME" == "failure" ]]; then
@@ -92,6 +87,20 @@ jobs:
             failed=1
           fi
           exit $failed
+
+  typescript:
+    if: ${{ inputs.format || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-pixi
+
+      - name: ESLint and the module boundaries of api/
+        run: pixi run -e dev ci-check
 
   # An exact release: tools/docs/translations.ts runs this one locally.
   translations:

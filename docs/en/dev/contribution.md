@@ -57,4 +57,4 @@ Scopes should match source directories or feature names. Keep the subject line u
 - C++23 standard
 - Use `.clang-format` for C++ formatting
 - Use ESLint + Prettier for TypeScript
-- Pre-commit hooks are configured (`.pre-commit-config.yaml`)
+- `pixi run -e format format` formats every source file; CI fails on any change it makes

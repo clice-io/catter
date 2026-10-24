@@ -4,8 +4,8 @@ name = "catter"
 version = "0.0.1"
 description = "A new tool to capture C++ compilation command"
 authors = [
-  "star9029 <hengxing9029@outlook.com>",
-  "clice contributors <clice@clice.io>",
+    "star9029 <hengxing9029@outlook.com>",
+    "clice contributors <clice@clice.io>",
 ]
 license = "Apache-2.0"
 license-file = "LICENSE"
@@ -55,8 +55,8 @@ compiler-rt = "==20.1.8"
 
 [feature.clang.tasks.cfg]
 args = [
-  { arg = "mode", choices = ["debug", "release"] },
-  { arg = "toolchain", choices = ["msvc","clang", "clang-cl", "gcc"], default = "clang" },
+    { arg = "mode", choices = ["debug", "release"] },
+    { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc"], default = "clang" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ toolchain }}"""
 
@@ -65,11 +65,7 @@ python = ">=3.14.2,<3.15"
 nodejs = "==24.4.0"
 lit = "*"
 
-[feature.dev.pypi-dependencies]
-pre-commit = "*"
-
 [feature.dev.tasks]
-format = "pre-commit run --all-files"
 unit-test = "xmake test --verbose"
 # All catter/catter-proxy processes share one global IPC pipe, so integration
 # tests must run one at a time to avoid cross-talk on the same socket.
@@ -88,50 +84,80 @@ platforms = ["win-64"]
 
 [feature.mingw.tasks.cfg]
 args = [
-  { arg = "mode", choices = ["debug", "release", "releasedbg"] },
+    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --plat=mingw --arch=x86_64 \
 --toolchain=llvm --sdk=$CONDA_PREFIX/opt/xclang"""
 
+# ============================================================================== #
+#                                    FORMAT                                      #
+# ============================================================================== #
+[feature.format.dependencies]
+ruff = "*"
+tombi = "==1.8.5"
+fd-find = "*"
+prettier = "*"
+clang-format = "==23.1.1"
+
+[feature.format.tasks]
+format-cpp = "fd -H -e cpp -e h -e cc -e hpp -X clang-format -i"
+format-python = "ruff format ."
+format-web = "fd -H -e js -e mjs -e ts -e css -X prettier --write"
+format-markdown = "fd -H -e md -X prettier --write"
+format-json = "fd -H -e json -e jsonc -X prettier --write"
+format-toml = "fd -H -e toml -X tombi format --offline"
+format-yaml = """
+fd -H -e yaml -e yml -X prettier --write && \
+fd -H "^\\.clang-format$" -X prettier --write --parser yaml
+"""
+format = {
+    depends-on = [
+        "format-cpp",
+        "format-python",
+        "format-web",
+        "format-markdown",
+        "format-json",
+        "format-toml",
+        "format-yaml",
+    ]
+}
+lint-python = "ruff check ."
+
 [environments]
 dev = ["dev"]
+format = { features = ["format"], no-default-feature = true }
 clang = { features = ["dev", "clang"] }
 mingw = ["dev", "mingw"]
 
 [tasks]
-npm-install = { cmd = "pnpm install", inputs = [
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-  "package.json",
-  "api/dev/package.json",
-  "scripts/package.json"
-] }
+npm-install = {
+    cmd = "pnpm install",
+    inputs = ["pnpm-lock.yaml", "pnpm-workspace.yaml", "package.json", "api/dev/package.json", "scripts/package.json"]
+}
 build = "xmake --verbose --diagnosis"
 
 [tasks.cfg]
 args = [
-  { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-  { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc", "default"], default = "default" },
+    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
+    { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc", "default"], default = "default" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""
 
 [tasks.ci-build]
 args = [
-  { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
+    { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
 ]
-depends-on = [
-  { task = "npm-install" },
-  { task = "cfg", args = ["{{ mode }}"] },
-  { task = "build" },
-  { task = "test" }
-]
+depends-on = [{ task = "npm-install" }, { task = "cfg", args = ["{{ mode }}"] }, { task = "build" }, { task = "test" }]
+
+[tasks.lint-ts]
+cmd = "pnpm exec eslint --cache ."
+depends-on = ["npm-install"]
 
 [tasks.ci-check]
 depends-on = [
-  { task = "npm-install" },
-  { task = "format" },
-  { task = "check-js-modules" },
+    { task = "lint-ts" },
+    { task = "check-js-modules" },
 ]
 
 [tasks.build-js]
@@ -157,7 +183,5 @@ cmd = "pnpm --dir api/dev run check:modules"
 cmd = "pnpm --dir api/dev run clean"
 
 [tasks.package]
-args = [
-  { arg = "outputdir", default = "release-assets" }
-]
+args = [{ arg = "outputdir", default = "release-assets" }]
 cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"

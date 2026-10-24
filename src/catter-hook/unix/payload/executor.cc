@@ -90,6 +90,8 @@ std::filesystem::path resolve_from_search_path(const char* file, const char* sea
 }
 }  // namespace
 
+// clang-format 23 splits `try BODY catch` apart.
+// clang-format off
 #define CATTER_EXEC_BOUNDARY(NAME, BODY)                                                           \
     try BODY catch(const catter::PayloadError& err) {                                              \
         ERROR("{} failed: {}", NAME, err.what());                                                  \
@@ -123,6 +125,7 @@ std::filesystem::path resolve_from_search_path(const char* file, const char* sea
         errno = ENOSYS;                                                                            \
         return ENOSYS;                                                                             \
     }
+// clang-format on
 
 namespace catter {
 

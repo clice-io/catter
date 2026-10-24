@@ -1,0 +1,9 @@
+# tombi.toml
+
+toml-version = "v1.1.0"
+
+[format.rules]
+indent-style = "space"
+indent-width = 4
+line-width = 120
+string-quote-style = "preserve"
