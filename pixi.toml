@@ -102,14 +102,13 @@ clang-format = "==23.1.1"
 [feature.format.tasks]
 format-cpp = "fd -H -e cpp -e h -e cc -e hpp -X clang-format -i"
 format-python = "ruff format ."
-format-web = "fd -H -e js -e mjs -e ts -e css -X prettier --write"
-format-markdown = "fd -H -e md -X prettier --write"
-format-json = "fd -H -e json -e jsonc -X prettier --write"
+# prettier expands its own globs: on Windows it is a .bat, which fd -X
+# cannot start.
+format-web = "prettier --write '**/*.{js,mjs,ts,css}'"
+format-markdown = "prettier --write '**/*.md'"
+format-json = "prettier --write '**/*.{json,jsonc}'"
 format-toml = "fd -H -e toml -X tombi format --offline"
-format-yaml = """
-fd -H -e yaml -e yml -X prettier --write && \
-fd -H "^\\.clang-format$" -X prettier --write --parser yaml
-"""
+format-yaml = "prettier --write '**/*.{yaml,yml}' && prettier --write --parser yaml .clang-format"
 format = {
     depends-on = [
         "format-cpp",
