@@ -7,11 +7,9 @@ import type { UnwrappedCompilerCommand } from "./types.js";
  * This is currently a placeholder stage that returns the argv unchanged while
  * preserving the original argv for future wrapper support.
  */
-export function unwrapCompilerCommand(
-  command: AnalyzedData,
-): UnwrappedCompilerCommand {
-  return {
-    exe: command.exe,
-    argv: [...command.argv],
-  };
+export function unwrapCompilerCommand(command: AnalyzedData): UnwrappedCompilerCommand {
+    return {
+        exe: command.exe,
+        argv: [...command.argv],
+    };
 }

@@ -1,30 +1,30 @@
 import {
-  fs_create_dir_recursively,
-  fs_create_empty_file_recursively,
-  fs_async_create_dir_recursively,
-  fs_async_create_empty_file_recursively,
-  fs_async_exists,
-  fs_async_is_dir,
-  fs_async_is_file,
-  fs_async_list_dir,
-  fs_async_read_text,
-  fs_async_remove_recursively,
-  fs_async_rename_if_exists,
-  fs_async_write_text,
-  fs_exists,
-  fs_is_dir,
-  fs_is_file,
-  fs_list_dir,
-  fs_path_absolute,
-  fs_path_ancestor_n,
-  fs_path_extension,
-  fs_path_filename,
-  fs_path_join_all,
-  fs_path_lexical_normal,
-  fs_path_relative_to,
-  fs_pwd,
-  fs_remove_recursively,
-  fs_rename_if_exists,
+    fs_create_dir_recursively,
+    fs_create_empty_file_recursively,
+    fs_async_create_dir_recursively,
+    fs_async_create_empty_file_recursively,
+    fs_async_exists,
+    fs_async_is_dir,
+    fs_async_is_file,
+    fs_async_list_dir,
+    fs_async_read_text,
+    fs_async_remove_recursively,
+    fs_async_rename_if_exists,
+    fs_async_write_text,
+    fs_exists,
+    fs_is_dir,
+    fs_is_file,
+    fs_list_dir,
+    fs_path_absolute,
+    fs_path_ancestor_n,
+    fs_path_extension,
+    fs_path_filename,
+    fs_path_join_all,
+    fs_path_lexical_normal,
+    fs_path_relative_to,
+    fs_pwd,
+    fs_remove_recursively,
+    fs_rename_if_exists,
 } from "catter/native";
 
 export {};
@@ -45,7 +45,7 @@ export {};
  * ```
  */
 export function existsSync(pathStr: string): boolean {
-  return fs_exists(pathStr);
+    return fs_exists(pathStr);
 }
 
 /**
@@ -64,7 +64,7 @@ export function existsSync(pathStr: string): boolean {
  * ```
  */
 export function isFileSync(pathStr: string): boolean {
-  return fs_is_file(pathStr);
+    return fs_is_file(pathStr);
 }
 
 /**
@@ -83,7 +83,7 @@ export function isFileSync(pathStr: string): boolean {
  * ```
  */
 export function isDirSync(pathStr: string): boolean {
-  return fs_is_dir(pathStr);
+    return fs_is_dir(pathStr);
 }
 
 /**
@@ -98,7 +98,7 @@ export function isDirSync(pathStr: string): boolean {
  * ```
  */
 export function pwd(): string {
-  return fs_pwd();
+    return fs_pwd();
 }
 
 /**
@@ -118,7 +118,7 @@ export function pwd(): string {
  * ```
  */
 export function readDirsSync(pathStr: string): string[] {
-  return fs_list_dir(pathStr);
+    return fs_list_dir(pathStr);
 }
 
 /**
@@ -144,15 +144,15 @@ export function readDirsSync(pathStr: string): string[] {
  * ```
  */
 export function mkdirSync(pathStr: string, recursively = true): boolean {
-  if (recursively) {
-    fs_create_dir_recursively(pathStr);
-    return true;
-  }
-  if (isDirSync(path.toAncestor(pathStr))) {
-    fs_create_dir_recursively(pathStr);
-    return true;
-  }
-  return false;
+    if (recursively) {
+        fs_create_dir_recursively(pathStr);
+        return true;
+    }
+    if (isDirSync(path.toAncestor(pathStr))) {
+        fs_create_dir_recursively(pathStr);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -179,15 +179,15 @@ export function mkdirSync(pathStr: string, recursively = true): boolean {
  * ```
  */
 export function createFileSync(pathStr: string, recursively = true): boolean {
-  if (recursively) {
-    fs_create_empty_file_recursively(pathStr);
-    return true;
-  }
-  if (isDirSync(path.toAncestor(pathStr))) {
-    fs_create_empty_file_recursively(pathStr);
-    return true;
-  }
-  return false;
+    if (recursively) {
+        fs_create_empty_file_recursively(pathStr);
+        return true;
+    }
+    if (isDirSync(path.toAncestor(pathStr))) {
+        fs_create_empty_file_recursively(pathStr);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -209,7 +209,7 @@ export function createFileSync(pathStr: string, recursively = true): boolean {
  * ```
  */
 export function removeAllSync(pathStr: string): void {
-  return fs_remove_recursively(pathStr);
+    return fs_remove_recursively(pathStr);
 }
 
 /**
@@ -235,105 +235,93 @@ export function removeAllSync(pathStr: string): void {
  * ```
  */
 export function renameSync(oldPath: string, newPath: string): boolean {
-  return fs_rename_if_exists(oldPath, newPath);
+    return fs_rename_if_exists(oldPath, newPath);
 }
 
 /**
  * Asynchronously checks whether a path exists.
  */
 export function exists(pathStr: string): Promise<boolean> {
-  return fs_async_exists(pathStr);
+    return fs_async_exists(pathStr);
 }
 
 /**
  * Asynchronously checks whether a path points to a regular file.
  */
 export function isFile(pathStr: string): Promise<boolean> {
-  return fs_async_is_file(pathStr);
+    return fs_async_is_file(pathStr);
 }
 
 /**
  * Asynchronously checks whether a path points to a directory.
  */
 export function isDir(pathStr: string): Promise<boolean> {
-  return fs_async_is_dir(pathStr);
+    return fs_async_is_dir(pathStr);
 }
 
 /**
  * Asynchronously lists all entries in a directory.
  */
 export function readDirs(pathStr: string): Promise<string[]> {
-  return fs_async_list_dir(pathStr);
+    return fs_async_list_dir(pathStr);
 }
 
 /**
  * Asynchronously creates a directory.
  */
-export async function mkdir(
-  pathStr: string,
-  recursively = true,
-): Promise<boolean> {
-  if (recursively) {
-    await fs_async_create_dir_recursively(pathStr);
-    return true;
-  }
-  if (await isDir(path.toAncestor(pathStr))) {
-    await fs_async_create_dir_recursively(pathStr);
-    return true;
-  }
-  return false;
+export async function mkdir(pathStr: string, recursively = true): Promise<boolean> {
+    if (recursively) {
+        await fs_async_create_dir_recursively(pathStr);
+        return true;
+    }
+    if (await isDir(path.toAncestor(pathStr))) {
+        await fs_async_create_dir_recursively(pathStr);
+        return true;
+    }
+    return false;
 }
 
 /**
  * Asynchronously creates an empty file.
  */
-export async function createFile(
-  pathStr: string,
-  recursively = true,
-): Promise<boolean> {
-  if (recursively) {
-    await fs_async_create_empty_file_recursively(pathStr);
-    return true;
-  }
-  if (await isDir(path.toAncestor(pathStr))) {
-    await fs_async_create_empty_file_recursively(pathStr);
-    return true;
-  }
-  return false;
+export async function createFile(pathStr: string, recursively = true): Promise<boolean> {
+    if (recursively) {
+        await fs_async_create_empty_file_recursively(pathStr);
+        return true;
+    }
+    if (await isDir(path.toAncestor(pathStr))) {
+        await fs_async_create_empty_file_recursively(pathStr);
+        return true;
+    }
+    return false;
 }
 
 /**
  * Asynchronously removes a file or directory tree.
  */
 export async function removeAll(pathStr: string): Promise<void> {
-  return fs_async_remove_recursively(pathStr);
+    return fs_async_remove_recursively(pathStr);
 }
 
 /**
  * Asynchronously renames or moves a file or directory.
  */
-export async function rename(
-  oldPath: string,
-  newPath: string,
-): Promise<boolean> {
-  return fs_async_rename_if_exists(oldPath, newPath);
+export async function rename(oldPath: string, newPath: string): Promise<boolean> {
+    return fs_async_rename_if_exists(oldPath, newPath);
 }
 
 /**
  * Asynchronously reads a text file as a string.
  */
 export async function readText(pathStr: string): Promise<string> {
-  return fs_async_read_text(pathStr);
+    return fs_async_read_text(pathStr);
 }
 
 /**
  * Asynchronously writes a string to a text file.
  */
-export async function writeText(
-  pathStr: string,
-  content: string,
-): Promise<void> {
-  return fs_async_write_text(pathStr, content);
+export async function writeText(pathStr: string, content: string): Promise<void> {
+    return fs_async_write_text(pathStr, content);
 }
 
 /**
@@ -348,170 +336,168 @@ export async function writeText(
  * ```
  */
 export namespace path {
-  /**
-   * Checks whether a path string is absolute.
-   *
-   * Supports POSIX roots (`/foo`), Windows drive roots (`C:\\foo`), and UNC
-   * paths (`\\\\server\\share`).
-   *
-   * @param pathStr - The path to inspect.
-   * @returns `true` if the path is absolute.
-   *
-   * @example
-   * ```typescript
-   * if (path.isAbsolute('/tmp/file.txt')) {
-   *   println('absolute');
-   * }
-   * ```
-   */
-  export function isAbsolute(pathStr: string): boolean {
-    return (
-      pathStr.startsWith("/") ||
-      pathStr.startsWith("\\\\") ||
-      /^[A-Za-z]:[\\/]/.test(pathStr)
-    );
-  }
-  /**
-   * Joins multiple path segments into a single path string.
-   *
-   * Handles path separators correctly across platforms. The first segment
-   * can be absolute; subsequent segments are appended with proper separators.
-   *
-   * @param paths - Variable number of path segments to join.
-   * @returns The concatenated path string using the platform-specific separator.
-   *
-   * @example
-   * ```typescript
-   * const fullPath = path.joinAll('/home', 'user', 'documents', 'file.txt');
-   * // Returns: '/home/user/documents/file.txt'
-   * ```
-   */
-  export function joinAll(...paths: string[]): string {
-    return fs_path_join_all(paths);
-  }
+    /**
+     * Checks whether a path string is absolute.
+     *
+     * Supports POSIX roots (`/foo`), Windows drive roots (`C:\\foo`), and UNC
+     * paths (`\\\\server\\share`).
+     *
+     * @param pathStr - The path to inspect.
+     * @returns `true` if the path is absolute.
+     *
+     * @example
+     * ```typescript
+     * if (path.isAbsolute('/tmp/file.txt')) {
+     *   println('absolute');
+     * }
+     * ```
+     */
+    export function isAbsolute(pathStr: string): boolean {
+        return (
+            pathStr.startsWith("/") || pathStr.startsWith("\\\\") || /^[A-Za-z]:[\\/]/.test(pathStr)
+        );
+    }
+    /**
+     * Joins multiple path segments into a single path string.
+     *
+     * Handles path separators correctly across platforms. The first segment
+     * can be absolute; subsequent segments are appended with proper separators.
+     *
+     * @param paths - Variable number of path segments to join.
+     * @returns The concatenated path string using the platform-specific separator.
+     *
+     * @example
+     * ```typescript
+     * const fullPath = path.joinAll('/home', 'user', 'documents', 'file.txt');
+     * // Returns: '/home/user/documents/file.txt'
+     * ```
+     */
+    export function joinAll(...paths: string[]): string {
+        return fs_path_join_all(paths);
+    }
 
-  /**
-   * Converts a path to its absolute form.
-   *
-   * If the path is already absolute, it is returned as-is. If the path is relative,
-   * it is resolved against the current working directory.
-   *
-   * @param path - The path to resolve. Can be relative or absolute.
-   * @returns The absolute path string.
-   *
-   * @example
-   * ```typescript
-   * const abs = path.absolute('./relative/path');
-   * // Returns: '/home/user/current-dir/relative/path'
-   * ```
-   */
-  export function absolute(path: string): string {
-    return fs_path_absolute(path);
-  }
+    /**
+     * Converts a path to its absolute form.
+     *
+     * If the path is already absolute, it is returned as-is. If the path is relative,
+     * it is resolved against the current working directory.
+     *
+     * @param path - The path to resolve. Can be relative or absolute.
+     * @returns The absolute path string.
+     *
+     * @example
+     * ```typescript
+     * const abs = path.absolute('./relative/path');
+     * // Returns: '/home/user/current-dir/relative/path'
+     * ```
+     */
+    export function absolute(path: string): string {
+        return fs_path_absolute(path);
+    }
 
-  /**
-   * Gets the ancestor directory (parent, grandparent, etc.) of a path.
-   *
-   * Ascends `n` levels up the directory hierarchy. If the path does not have
-   * that many ancestors, returns the root directory.
-   *
-   * @param path - The starting path. Can be relative or absolute.
-   * @param n - The number of levels to ascend. Defaults to 1 (direct parent).
-   * @returns The ancestor path string. If `n` exceeds the depth, returns root.
-   *
-   * @example
-   * ```typescript
-   * const parent = path.toAncestor('/home/user/docs/file.txt');
-   * // Returns: '/home/user/docs'
-   *
-   * const grandparent = path.toAncestor('/home/user/docs/file.txt', 2);
-   * // Returns: '/home/user'
-   * ```
-   */
-  export function toAncestor(path: string, n: number = 1) {
-    return fs_path_ancestor_n(path, n);
-  }
+    /**
+     * Gets the ancestor directory (parent, grandparent, etc.) of a path.
+     *
+     * Ascends `n` levels up the directory hierarchy. If the path does not have
+     * that many ancestors, returns the root directory.
+     *
+     * @param path - The starting path. Can be relative or absolute.
+     * @param n - The number of levels to ascend. Defaults to 1 (direct parent).
+     * @returns The ancestor path string. If `n` exceeds the depth, returns root.
+     *
+     * @example
+     * ```typescript
+     * const parent = path.toAncestor('/home/user/docs/file.txt');
+     * // Returns: '/home/user/docs'
+     *
+     * const grandparent = path.toAncestor('/home/user/docs/file.txt', 2);
+     * // Returns: '/home/user'
+     * ```
+     */
+    export function toAncestor(path: string, n: number = 1) {
+        return fs_path_ancestor_n(path, n);
+    }
 
-  /**
-   * Gets the file extension of a path, including the leading dot.
-   *
-   * Returns only the extension part (e.g., ".txt", ".json"). If the path has
-   * no extension, returns an empty string.
-   *
-   * @param path - The file path. Can be relative or absolute.
-   * @returns The extension string including the dot, or empty string if no extension.
-   *
-   * @example
-   * ```typescript
-   * const ext1 = path.extension('/path/to/file.txt');
-   * // Returns: '.txt'
-   *
-   * const ext2 = path.extension('/path/to/README');
-   * // Returns: ''
-   * ```
-   */
-  export function extension(path: string): string {
-    return fs_path_extension(path);
-  }
+    /**
+     * Gets the file extension of a path, including the leading dot.
+     *
+     * Returns only the extension part (e.g., ".txt", ".json"). If the path has
+     * no extension, returns an empty string.
+     *
+     * @param path - The file path. Can be relative or absolute.
+     * @returns The extension string including the dot, or empty string if no extension.
+     *
+     * @example
+     * ```typescript
+     * const ext1 = path.extension('/path/to/file.txt');
+     * // Returns: '.txt'
+     *
+     * const ext2 = path.extension('/path/to/README');
+     * // Returns: ''
+     * ```
+     */
+    export function extension(path: string): string {
+        return fs_path_extension(path);
+    }
 
-  /**
-   * Computes the relative path from a base directory to a target path.
-   *
-   * Both paths are converted to absolute form before computing the relative path.
-   * The result is a path that, when joined with the base, yields the target path.
-   *
-   * @param base - The base directory path. Can be relative or absolute.
-   * @param path - The target path. Can be relative or absolute.
-   * @returns The relative path from base to target.
-   *
-   * @example
-   * ```typescript
-   * const rel = path.relativeTo('/home/user', '/home/user/docs/file.txt');
-   * // Returns: 'docs/file.txt'
-   * ```
-   */
-  export function relativeTo(base: string, path: string): string {
-    return fs_path_relative_to(base, path);
-  }
+    /**
+     * Computes the relative path from a base directory to a target path.
+     *
+     * Both paths are converted to absolute form before computing the relative path.
+     * The result is a path that, when joined with the base, yields the target path.
+     *
+     * @param base - The base directory path. Can be relative or absolute.
+     * @param path - The target path. Can be relative or absolute.
+     * @returns The relative path from base to target.
+     *
+     * @example
+     * ```typescript
+     * const rel = path.relativeTo('/home/user', '/home/user/docs/file.txt');
+     * // Returns: 'docs/file.txt'
+     * ```
+     */
+    export function relativeTo(base: string, path: string): string {
+        return fs_path_relative_to(base, path);
+    }
 
-  /**
-   * Gets the filename component (the last segment) of a path.
-   *
-   * Returns only the filename, not the directory path. For a directory path,
-   * returns the directory name itself.
-   *
-   * @param path - The file or directory path. Can be relative or absolute.
-   * @returns The filename/directory name string.
-   *
-   * @example
-   * ```typescript
-   * const name1 = path.filename('/home/user/file.txt');
-   * // Returns: 'file.txt'
-   *
-   * const name2 = path.filename('/home/user/');
-   * // Returns: 'user'
-   * ```
-   */
-  export function filename(path: string): string {
-    return fs_path_filename(path);
-  }
+    /**
+     * Gets the filename component (the last segment) of a path.
+     *
+     * Returns only the filename, not the directory path. For a directory path,
+     * returns the directory name itself.
+     *
+     * @param path - The file or directory path. Can be relative or absolute.
+     * @returns The filename/directory name string.
+     *
+     * @example
+     * ```typescript
+     * const name1 = path.filename('/home/user/file.txt');
+     * // Returns: 'file.txt'
+     *
+     * const name2 = path.filename('/home/user/');
+     * // Returns: 'user'
+     * ```
+     */
+    export function filename(path: string): string {
+        return fs_path_filename(path);
+    }
 
-  /**
-   * Converts a path to its lexically normalized form.
-   * Removes redundant components like "." and ".." without accessing the filesystem and replace the separators to platform-specific ones.
-   *
-   * See https://en.cppreference.com/w/cpp/filesystem/path/lexically_normal.
-   *
-   * @param path - The input path string.
-   * @returns The lexically normalized path string.
-   *
-   * @example
-   * ```typescript
-   * const normalized = path.lexicalNormal("src/./generated/../main.cc");
-   * // "src/main.cc"
-   * ```
-   */
-  export function lexicalNormal(path: string): string {
-    return fs_path_lexical_normal(path);
-  }
+    /**
+     * Converts a path to its lexically normalized form.
+     * Removes redundant components like "." and ".." without accessing the filesystem and replace the separators to platform-specific ones.
+     *
+     * See https://en.cppreference.com/w/cpp/filesystem/path/lexically_normal.
+     *
+     * @param path - The input path string.
+     * @returns The lexically normalized path string.
+     *
+     * @example
+     * ```typescript
+     * const normalized = path.lexicalNormal("src/./generated/../main.cc");
+     * // "src/main.cc"
+     * ```
+     */
+    export function lexicalNormal(path: string): string {
+        return fs_path_lexical_normal(path);
+    }
 }

@@ -37,15 +37,10 @@ jobs:
         with:
           filters: |
             format:
-              - '**/*.{h,hpp,c,cc,cpp,ts,js,mjs,py,md,yml,yaml}'
-              - '.pre-commit-config.yaml'
+              - '**/*.{h,hpp,c,cc,cpp,ts,tsx,mts,cts,js,mjs,cjs,css,py,pyi,md,json,jsonc,toml,yml,yaml}'
               - '.clang-format'
               - '.prettierignore'
-              - 'eslint.config.js'
-              - 'pixi.toml'
               - 'pixi.lock'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
             docs:
               - 'docs/**'
             # The pages, or the checker release lint.yml pins.

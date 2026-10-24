@@ -54,43 +54,43 @@ const RENDER_SEPARATE = 1 << 3;
 const ALL_OPTION_VISIBILITY = 0xffff_ffff;
 
 function joinedTokens(key: string, values: string[]): string[] {
-  if (values.length === 0) {
-    return [key];
-  }
-  return [key + values[0], ...values.slice(1)];
+    if (values.length === 0) {
+        return [key];
+    }
+    return [key + values[0], ...values.slice(1)];
 }
 
 function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
-  if (info.flags & RENDER_JOINED) {
-    return joinedTokens(info.prefixedKey, item.values);
-  }
-  if (info.flags & RENDER_SEPARATE) {
-    return [info.prefixedKey, ...item.values];
-  }
+    if (info.flags & RENDER_JOINED) {
+        return joinedTokens(info.prefixedKey, item.values);
+    }
+    if (info.flags & RENDER_SEPARATE) {
+        return [info.prefixedKey, ...item.values];
+    }
 
-  switch (info.kind) {
-    case OptionKindClass.Group:
-    case OptionKindClass.Input:
-    case OptionKindClass.Unknown:
-      return [item.key, ...item.values];
-    case OptionKindClass.Joined:
-    case OptionKindClass.JoinedAndSeparate:
-      return joinedTokens(info.prefixedKey, item.values);
-    case OptionKindClass.CommaJoined:
-      return item.values.length === 0
-        ? [info.prefixedKey]
-        : [info.prefixedKey + item.values.join(",")];
-    case OptionKindClass.Flag:
-    case OptionKindClass.Values:
-    case OptionKindClass.Separate:
-    case OptionKindClass.MultiArg:
-    case OptionKindClass.JoinedOrSeparate:
-    case OptionKindClass.RemainingArgs:
-    case OptionKindClass.RemainingArgsJoined:
-      return [info.prefixedKey, ...item.values];
-    default:
-      return [item.key, ...item.values];
-  }
+    switch (info.kind) {
+        case OptionKindClass.Group:
+        case OptionKindClass.Input:
+        case OptionKindClass.Unknown:
+            return [item.key, ...item.values];
+        case OptionKindClass.Joined:
+        case OptionKindClass.JoinedAndSeparate:
+            return joinedTokens(info.prefixedKey, item.values);
+        case OptionKindClass.CommaJoined:
+            return item.values.length === 0
+                ? [info.prefixedKey]
+                : [info.prefixedKey + item.values.join(",")];
+        case OptionKindClass.Flag:
+        case OptionKindClass.Values:
+        case OptionKindClass.Separate:
+        case OptionKindClass.MultiArg:
+        case OptionKindClass.JoinedOrSeparate:
+        case OptionKindClass.RemainingArgs:
+        case OptionKindClass.RemainingArgsJoined:
+            return [info.prefixedKey, ...item.values];
+        default:
+            return [item.key, ...item.values];
+    }
 }
 
 /**
@@ -115,8 +115,8 @@ function renderTokensCanonical(info: OptionInfo, item: OptionItem): string[] {
  * ```
  */
 export function stringify(table: OptionTable, item: OptionItem): string {
-  const info = option_get_info(table, item.id) as OptionInfo;
-  return renderTokensCanonical(info, item).join(" ");
+    const info = option_get_info(table, item.id) as OptionInfo;
+    return renderTokensCanonical(info, item).join(" ");
 }
 
 /**
@@ -138,26 +138,26 @@ export function stringify(table: OptionTable, item: OptionItem): string {
  * ```
  */
 export function collect(
-  table: OptionTable,
-  args: string[],
-  visibility = ALL_OPTION_VISIBILITY,
+    table: OptionTable,
+    args: string[],
+    visibility = ALL_OPTION_VISIBILITY,
 ): Result<OptionItem[], string> {
-  const items: OptionItem[] = [];
-  let failure: string | undefined;
-  option_parse(
-    table,
-    args,
-    (parseRes) => {
-      if (typeof parseRes === "string") {
-        failure = parseRes;
-        return false;
-      }
-      items.push(parseRes);
-      return true;
-    },
-    visibility,
-  );
-  return failure === undefined ? ok(items) : err(failure);
+    const items: OptionItem[] = [];
+    let failure: string | undefined;
+    option_parse(
+        table,
+        args,
+        (parseRes) => {
+            if (typeof parseRes === "string") {
+                failure = parseRes;
+                return false;
+            }
+            items.push(parseRes);
+            return true;
+        },
+        visibility,
+    );
+    return failure === undefined ? ok(items) : err(failure);
 }
 
 /**
@@ -183,60 +183,56 @@ export function collect(
  * ```
  */
 export function replace(
-  table: OptionTable,
-  args: string[],
-  cb: (
-    parseRes: Result<Readonly<OptionItem>, string>,
-  ) => OptionItem | boolean | undefined | string | string[],
+    table: OptionTable,
+    args: string[],
+    cb: (
+        parseRes: Result<Readonly<OptionItem>, string>,
+    ) => OptionItem | boolean | undefined | string | string[],
 ): string {
-  let nextToAdd = 0;
-  let prevIndex = -1;
-  let newPart = "";
-  let finalArgs: string[] = [];
-  const concatParts = (endIndex: number) => {
-    finalArgs = finalArgs.concat([
-      ...args.slice(nextToAdd, prevIndex),
-      newPart,
-    ]);
-    nextToAdd = endIndex;
-  };
-  option_parse(table, args, (parseRes) => {
-    const res: Result<Readonly<OptionItem>, string> = typeof parseRes ===
-    "string"
-      ? err(parseRes)
-      : ok(parseRes);
+    let nextToAdd = 0;
+    let prevIndex = -1;
+    let newPart = "";
+    let finalArgs: string[] = [];
+    const concatParts = (endIndex: number) => {
+        finalArgs = finalArgs.concat([...args.slice(nextToAdd, prevIndex), newPart]);
+        nextToAdd = endIndex;
+    };
+    option_parse(table, args, (parseRes) => {
+        const res: Result<Readonly<OptionItem>, string> = typeof parseRes === "string"
+            ? err(parseRes)
+            : ok(parseRes);
+        if (prevIndex != -1) {
+            concatParts(res.isErr() ? args.length : res.value.index);
+            prevIndex = -1;
+        }
+        const cbRes = cb(res);
+        if (cbRes === undefined) {
+            return true;
+        }
+        if (typeof cbRes === "boolean") {
+            return cbRes;
+        }
+
+        if (typeof cbRes === "string") {
+            newPart = cbRes;
+        } else if (Array.isArray(cbRes)) {
+            newPart = cbRes.join(" ");
+        } else {
+            newPart = stringify(table, cbRes);
+        }
+
+        if (res.isOk()) {
+            prevIndex = res.value.index;
+        }
+        return true;
+    });
     if (prevIndex != -1) {
-      concatParts(res.isErr() ? args.length : res.value.index);
-      prevIndex = -1;
+        concatParts(args.length);
     }
-    const cbRes = cb(res);
-    if (cbRes === undefined) {
-      return true;
-    }
-    if (typeof cbRes === "boolean") {
-      return cbRes;
-    }
-
-    if (typeof cbRes === "string") {
-      newPart = cbRes;
-    } else if (Array.isArray(cbRes)) {
-      newPart = cbRes.join(" ");
-    } else {
-      newPart = stringify(table, cbRes);
-    }
-
-    if (res.isOk()) {
-      prevIndex = res.value.index;
-    }
-    return true;
-  });
-  if (prevIndex != -1) {
-    concatParts(args.length);
-  }
-  prevIndex = args.length;
-  concatParts(-1);
-  finalArgs.pop();
-  return finalArgs.join(" ");
+    prevIndex = args.length;
+    concatParts(-1);
+    finalArgs.pop();
+    return finalArgs.join(" ");
 }
 
 /**
@@ -261,19 +257,19 @@ export function replace(
  * ```
  */
 export function parse(
-  table: OptionTable,
-  args: string[],
-  cb: (parseRes: Result<OptionItem, string>) => boolean,
-  visibility = ALL_OPTION_VISIBILITY,
+    table: OptionTable,
+    args: string[],
+    cb: (parseRes: Result<OptionItem, string>) => boolean,
+    visibility = ALL_OPTION_VISIBILITY,
 ): void {
-  option_parse(
-    table,
-    args,
-    (parseRes) => {
-      return cb(typeof parseRes === "string" ? err(parseRes) : ok(parseRes));
-    },
-    visibility,
-  );
+    option_parse(
+        table,
+        args,
+        (parseRes) => {
+            return cb(typeof parseRes === "string" ? err(parseRes) : ok(parseRes));
+        },
+        visibility,
+    );
 }
 
 /**
@@ -295,7 +291,7 @@ export function parse(
  * ```
  */
 export function info(table: OptionTable, item: OptionItem) {
-  return option_get_info(table, item.id) as OptionInfo;
+    return option_get_info(table, item.id) as OptionInfo;
 }
 
 /**
@@ -320,34 +316,34 @@ export function info(table: OptionTable, item: OptionItem) {
  * error string returned while collecting `from`.
  */
 export function table2table(
-  from: OptionTable,
-  to: OptionTable,
-  args: string[],
-  excludeID: number[] = [/*invliad default*/ 0],
+    from: OptionTable,
+    to: OptionTable,
+    args: string[],
+    excludeID: number[] = [/*invliad default*/ 0],
 ): Result<string[], string> {
-  const fromRes = collect(from, args);
-  if (fromRes.isErr()) {
-    return err(fromRes.error);
-  }
-  const optArgs = fromRes.value.map((val, idx) => {
-    if (idx == fromRes.value.length - 1) {
-      return args.slice(val.index);
+    const fromRes = collect(from, args);
+    if (fromRes.isErr()) {
+        return err(fromRes.error);
     }
-    return args.slice(val.index, fromRes.value[idx + 1].index);
-  });
-  return ok(
-    optArgs
-      .filter((optArg) => {
-        const toCheck = collect(to, optArg);
-        return (
-          toCheck.isOk() &&
-          toCheck.value.every(
-            (val) =>
-              !excludeID.includes(val.id) &&
-              info(to, val).kind != OptionKindClass.Unknown,
-          )
-        );
-      })
-      .flat(),
-  );
+    const optArgs = fromRes.value.map((val, idx) => {
+        if (idx == fromRes.value.length - 1) {
+            return args.slice(val.index);
+        }
+        return args.slice(val.index, fromRes.value[idx + 1].index);
+    });
+    return ok(
+        optArgs
+            .filter((optArg) => {
+                const toCheck = collect(to, optArg);
+                return (
+                    toCheck.isOk() &&
+                    toCheck.value.every(
+                        (val) =>
+                            !excludeID.includes(val.id) &&
+                            info(to, val).kind != OptionKindClass.Unknown,
+                    )
+                );
+            })
+            .flat(),
+    );
 }

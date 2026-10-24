@@ -8,12 +8,12 @@ catter [options] <script> [script-args] -- <build-command>
 
 ### 选项
 
-| 选项 | 说明 | 默认值 |
-|------|------|--------|
-| `-m, --mode <mode>` | runtime 模式，即选用哪种 runtime，控制 catter 拦截进程的方式。 | `inject` |
-| `-d, --dir <path>` | 目标进程的工作目录。 | 当前目录 |
-| `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。 | `inherit` |
-| `-h, --help` | 显示帮助信息。 | |
+| 选项                  | 说明                                                           | 默认值    |
+| --------------------- | -------------------------------------------------------------- | --------- |
+| `-m, --mode <mode>`   | runtime 模式，即选用哪种 runtime，控制 catter 拦截进程的方式。 | `inject`  |
+| `-d, --dir <path>`    | 目标进程的工作目录。                                           | 当前目录  |
+| `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。                         | `inherit` |
+| `-h, --help`          | 显示帮助信息。                                                 |           |
 
 ### `--stdio-mode`
 
@@ -32,11 +32,11 @@ catter script::<name> [script-args] -- <build-command>
 
 可用的内置脚本：
 
-| 名称 | 说明 |
-|------|------|
-| `script::cdb` | 生成 `compile_commands.json` |
-| `script::cmd-tree` | 展示构建命令树 |
-| `script::target-tree` | 展示构建目标树 |
+| 名称                  | 说明                         |
+| --------------------- | ---------------------------- |
+| `script::cdb`         | 生成 `compile_commands.json` |
+| `script::cmd-tree`    | 展示构建命令树               |
+| `script::target-tree` | 展示构建目标树               |
 
 **自定义脚本**使用文件路径：
 
@@ -54,10 +54,10 @@ catter ./path/to/script.js [script-args] -- <build-command>
 catter-proxy [options] -- <command>
 ```
 
-| 选项 | 说明 |
-|------|------|
-| `-p <id>` | 用于 IPC 会话的父进程 ID |
-| `<executable>` | 已解析的可执行文件路径 |
+| 选项           | 说明                     |
+| -------------- | ------------------------ |
+| `-p <id>`      | 用于 IPC 会话的父进程 ID |
+| `<executable>` | 已解析的可执行文件路径   |
 
 ## 环境变量
 
@@ -65,16 +65,16 @@ catter-proxy [options] -- <command>
 
 ### Unix（Linux / macOS）
 
-| 变量 | 用途 |
-|------|------|
-| `__key_catter_proxy_path_v1` | `catter-proxy` 可执行文件的路径 |
-| `__key_catter_command_id_v1` | IPC 命令标识符 |
-| `LD_PRELOAD`（Linux） | 注入 catter 钩子共享库 |
-| `DYLD_INSERT_LIBRARIES`（macOS） | 注入 catter 钩子共享库 |
+| 变量                             | 用途                            |
+| -------------------------------- | ------------------------------- |
+| `__key_catter_proxy_path_v1`     | `catter-proxy` 可执行文件的路径 |
+| `__key_catter_command_id_v1`     | IPC 命令标识符                  |
+| `LD_PRELOAD`（Linux）            | 注入 catter 钩子共享库          |
+| `DYLD_INSERT_LIBRARIES`（macOS） | 注入 catter 钩子共享库          |
 
 ### Windows
 
-| 变量 | 用途 |
-|------|------|
-| `CATTER_IPC_ID` | IPC 会话标识符 |
+| 变量                | 用途                            |
+| ------------------- | ------------------------------- |
+| `CATTER_IPC_ID`     | IPC 会话标识符                  |
 | `CATTER_PROXY_PATH` | `catter-proxy` 可执行文件的路径 |

@@ -11,10 +11,10 @@ Catter is distributed as prebuilt packages on [GitHub Releases](https://github.c
 Prebuilt packages are currently available for:
 
 | Platform | Architecture |
-|----------|--------------|
-| Windows  | x64 |
-| Linux    | x64 |
-| macOS    | arm64 |
+| -------- | ------------ |
+| Windows  | x64          |
+| Linux    | x64          |
+| macOS    | arm64        |
 
 ::: info
 Catter is under active development; always use the latest package from the Releases page. If there is no prebuilt package for your platform, see [Building from Source](../dev/build).
@@ -38,12 +38,12 @@ catter [options] <script> [script-args] -- <build-command>
 
 Breaking down the CDB example:
 
-| Part | Meaning |
-|------|---------|
-| `script::cdb` | Use the built-in CDB generation script (`script::` prefix selects built-in scripts) |
-| `-o compile_commands.json` | Script-specific option: output file path |
-| `--` | Separator between catter/script arguments and the build command |
-| `make` | The actual build command to intercept |
+| Part                       | Meaning                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| `script::cdb`              | Use the built-in CDB generation script (`script::` prefix selects built-in scripts) |
+| `-o compile_commands.json` | Script-specific option: output file path                                            |
+| `--`                       | Separator between catter/script arguments and the build command                     |
+| `make`                     | The actual build command to intercept                                               |
 
 ## More Examples
 

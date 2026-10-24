@@ -1,8 +1,8 @@
 import type { CompilerIdentity } from "../types.js";
 import {
-  buildClangClDriverModel,
-  CLANG_CL_VISIBILITY,
-  collectClangDriverOptions,
+    buildClangClDriverModel,
+    CLANG_CL_VISIBILITY,
+    collectClangDriverOptions,
 } from "./clang-driver.js";
 import type { CompilerParseResult } from "../types.js";
 
@@ -13,12 +13,12 @@ import type { CompilerParseResult } from "../types.js";
  * option table adapter and clang driver semantics.
  */
 export function parseMsvcCommand(
-  cmd: readonly string[],
-  identity: CompilerIdentity,
+    cmd: readonly string[],
+    identity: CompilerIdentity,
 ): CompilerParseResult {
-  const args = cmd.slice(1);
-  return buildClangClDriverModel(
-    collectClangDriverOptions(args, CLANG_CL_VISIBILITY),
-    identity.dialect,
-  );
+    const args = cmd.slice(1);
+    return buildClangClDriverModel(
+        collectClangDriverOptions(args, CLANG_CL_VISIBILITY),
+        identity.dialect,
+    );
 }

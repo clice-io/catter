@@ -11,10 +11,10 @@ Script authors only need to understand two things:
 
 "Intercepting process creation" differs greatly in feasibility across platforms: hooks are the most general, but are restricted on some platforms (for example, macOS requires special development entitlements). Catter therefore abstracts capture mechanisms as runtimes. One runtime is one capture implementation, exposed to scripts through a fixed capability description (`CatterRuntime`):
 
-| Field | Meaning |
-|-------|---------|
-| `type` | Runtime type: `inject` / `eslogger` / `env` |
-| `supportActions` | Script actions supported by the current runtime (see Actions below) |
+| Field             | Meaning                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `type`            | Runtime type: `inject` / `eslogger` / `env`                                                  |
+| `supportActions`  | Script actions supported by the current runtime (see Actions below)                          |
 | `supportParentId` | Whether captured commands can report a parent command ID (command trees, target trees, etc.) |
 
 The runtime is selected with `-m/--mode` and defaults to `inject`. Scripts can inspect the current runtime's capabilities in the config passed to `onStart`, so they can be written compatibly across runtimes.
@@ -78,12 +78,12 @@ sequenceDiagram
 
 The runtime driver maps script-layer actions to protocol-layer actions. The current `inject` runtime mapping:
 
-| Script action | Semantics | Protocol mapping |
-|---------------|-----------|------------------|
-| `skip` | Execute as-is, catter does not intervene | `INJECT` (run with hooks mounted; descendants can still be captured) |
-| `drop` | Do not execute; return exit code 0 | `DROP` |
-| `abort` | Abort the whole build and report an error | not implemented yet (see below) |
-| `modify` | Execute the command with replacement data | `INJECT` (carrying the modified command) |
+| Script action | Semantics                                 | Protocol mapping                                                     |
+| ------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| `skip`        | Execute as-is, catter does not intervene  | `INJECT` (run with hooks mounted; descendants can still be captured) |
+| `drop`        | Do not execute; return exit code 0        | `DROP`                                                               |
+| `abort`       | Abort the whole build and report an error | not implemented yet (see below)                                      |
+| `modify`      | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
 
 Two things are easy to confuse:
 
@@ -94,11 +94,11 @@ Two things are easy to confuse:
 
 A single `catter <script> -- <build command>` run involves several processes and components. They are all part of the runtime implementation, and script authors usually do not need to know about them:
 
-| Component | Role |
-|-----------|------|
-| `catter` (daemon) | Loads and runs the script, owns the JS runtime, receives commands over IPC and returns decisions |
-| `catter-proxy` | Executes commands and relays IPC; has an injector mode (launching the build) and a wrapper mode (standing in for intercepted commands) |
-| hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation |
+| Component           | Role                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `catter` (daemon)   | Loads and runs the script, owns the JS runtime, receives commands over IPC and returns decisions                                       |
+| `catter-proxy`      | Executes commands and relays IPC; has an injector mode (launching the build) and a wrapper mode (standing in for intercepted commands) |
+| hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation                                 |
 
 > Earlier documentation described these three components as catter's "three-part architecture". The current view is one level higher: they are **implementation details of the inject runtime**, and the runtime abstraction itself is the center of the architecture. See [Runtime](runtime.md) and [Hook mechanism](hook-mechanism.md).
 

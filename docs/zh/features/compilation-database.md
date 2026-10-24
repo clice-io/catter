@@ -12,11 +12,11 @@ catter script::cdb [options] -- <build-command>
 
 ## 脚本选项
 
-| 选项 | 说明 |
-|------|------|
-| `-o, --output <path>` | `compile_commands.json` 的输出路径。默认为 `build/compile_commands.json`。 |
-| `--abort-on-command-failure` | 任一被拦截的命令失败时，中止整个构建。 |
-| `--save-on-failure` | 即使构建失败，也保存已收集的部分 CDB。 |
+| 选项                         | 说明                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| `-o, --output <path>`        | `compile_commands.json` 的输出路径。默认为 `build/compile_commands.json`。 |
+| `--abort-on-command-failure` | 任一被拦截的命令失败时，中止整个构建。                                     |
+| `--save-on-failure`          | 即使构建失败，也保存已收集的部分 CDB。                                     |
 
 ## 行为
 

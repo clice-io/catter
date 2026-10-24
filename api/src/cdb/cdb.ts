@@ -12,10 +12,10 @@ import type { CDBItem } from "./cdb-manager.js";
  * ```
  */
 export type CDBCommand = {
-  /** Working directory of the captured command. */
-  cwd: string;
-  /** Raw argv of the captured command. */
-  argv: string[];
+    /** Working directory of the captured command. */
+    cwd: string;
+    /** Raw argv of the captured command. */
+    argv: string[];
 };
 
 /**
@@ -30,10 +30,10 @@ export type CDBCommand = {
  * ```
  */
 export type CDBEntry = {
-  /** Translation unit source file recorded by the entry. */
-  file: string;
-  /** Optional object output associated with `file`. */
-  output?: string;
+    /** Translation unit source file recorded by the entry. */
+    file: string;
+    /** Optional object output associated with `file`. */
+    output?: string;
 };
 
 /**
@@ -47,21 +47,18 @@ export type CDBEntry = {
  * }, [{ file: "src/main.c", output: "main.o" }]);
  * ```
  */
-export function cdbItemsOf(
-  command: CDBCommand,
-  entries: Iterable<CDBEntry>,
-): CDBItem[] {
-  return Array.from(entries, (entry) => {
-    const item: CDBItem = {
-      directory: command.cwd,
-      file: entry.file,
-      arguments: [...command.argv],
-    };
+export function cdbItemsOf(command: CDBCommand, entries: Iterable<CDBEntry>): CDBItem[] {
+    return Array.from(entries, (entry) => {
+        const item: CDBItem = {
+            directory: command.cwd,
+            file: entry.file,
+            arguments: [...command.argv],
+        };
 
-    if (entry.output !== undefined) {
-      item.output = entry.output;
-    }
+        if (entry.output !== undefined) {
+            item.output = entry.output;
+        }
 
-    return item;
-  });
+        return item;
+    });
 }

@@ -15,7 +15,7 @@ export {};
  * ```
  */
 export function platform(): "linux" | "windows" | "macos" {
-  return os_name();
+    return os_name();
 }
 
 /**
@@ -29,5 +29,5 @@ export function platform(): "linux" | "windows" | "macos" {
  * ```
  */
 export function arch(): "x86" | "x64" | "arm" | "arm64" {
-  return os_arch();
+    return os_arch();
 }

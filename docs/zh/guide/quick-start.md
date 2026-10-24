@@ -10,11 +10,11 @@ Catter 通过 GitHub Releases 分发预编译包。前往 [GitHub Releases](http
 
 预编译包当前支持的平台：
 
-| 平台 | 架构 |
-|------|------|
-| Windows | x64 |
-| Linux | x64 |
-| macOS | arm64 |
+| 平台    | 架构  |
+| ------- | ----- |
+| Windows | x64   |
+| Linux   | x64   |
+| macOS   | arm64 |
 
 ::: info
 Catter 目前仍在积极开发中，请以 Releases 页面为准获取最新版本。如果您的平台没有预编译包，可以参阅[从源码构建](../dev/build)自行编译。
@@ -38,12 +38,12 @@ catter [options] <script> [script-args] -- <build-command>
 
 以上面的 CDB 示例为例：
 
-| 部分 | 含义 |
-|------|------|
-| `script::cdb` | 使用内置的 CDB 生成脚本（`script::` 前缀表示内置脚本） |
-| `-o compile_commands.json` | 脚本特定选项：输出文件路径 |
-| `--` | catter/脚本参数与构建命令之间的分隔符 |
-| `make` | 实际要拦截的构建命令 |
+| 部分                       | 含义                                                   |
+| -------------------------- | ------------------------------------------------------ |
+| `script::cdb`              | 使用内置的 CDB 生成脚本（`script::` 前缀表示内置脚本） |
+| `-o compile_commands.json` | 脚本特定选项：输出文件路径                             |
+| `--`                       | catter/脚本参数与构建命令之间的分隔符                  |
+| `make`                     | 实际要拦截的构建命令                                   |
 
 ## 更多示例
 

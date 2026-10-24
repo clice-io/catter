@@ -57,4 +57,4 @@ scope 应与源码目录或功能名称一致。标题行不超过 70 个字符�
 - C++23 标准
 - C++ 格式化使用 `.clang-format`
 - TypeScript 使用 ESLint + Prettier
-- 已配置 pre-commit 钩子（`.pre-commit-config.yaml`）
+- `pixi run -e format format` 格式化所有源文件；CI 发现它会改动文件即失败

@@ -1,41 +1,37 @@
 import {
-  service_on_command,
-  service_on_execution,
-  service_on_finish,
-  service_on_start,
+    service_on_command,
+    service_on_execution,
+    service_on_finish,
+    service_on_start,
 } from "catter/native";
 import { err, ok, type Result } from "catter/neverthrow";
-import type {
-  CatterErr,
-  CommandCaptureResult,
-  CommandData,
-} from "catter/native";
+import type { CatterErr, CommandCaptureResult, CommandData } from "catter/native";
 
 import {
-  ServiceRuntime,
-  type CatterContextService,
-  type CatterService,
-  type CatterServiceAdapter,
-  type ContextCommandHandler,
-  type ContextExecutionHandler,
-  type LegacyCommandHandler,
-  type LegacyExecutionHandler,
-  type RegisterableService,
-  type ServiceFinishHandler,
-  type ServiceStartHandler,
+    ServiceRuntime,
+    type CatterContextService,
+    type CatterService,
+    type CatterServiceAdapter,
+    type ContextCommandHandler,
+    type ContextExecutionHandler,
+    type LegacyCommandHandler,
+    type LegacyExecutionHandler,
+    type RegisterableService,
+    type ServiceFinishHandler,
+    type ServiceStartHandler,
 } from "./runtime.js";
 
 export * from "./runtime.js";
 
 export type {
-  Action,
-  ActionType,
-  CatterConfig,
-  CatterErr,
-  CatterStdioMode,
-  CatterRuntime,
-  CommandData,
-  ProcessResult,
+    Action,
+    ActionType,
+    CatterConfig,
+    CatterErr,
+    CatterStdioMode,
+    CatterRuntime,
+    CommandData,
+    ProcessResult,
 } from "catter/native";
 
 import type { ActionType } from "catter/native";
@@ -46,46 +42,46 @@ import type { ActionType } from "catter/native";
  * These string literals are the valid `type` values for {@link Action}.
  */
 export const ActionKind = [
-  "skip",
-  "drop",
-  "abort",
-  "modify",
+    "skip",
+    "drop",
+    "abort",
+    "modify",
 ] as const satisfies readonly ActionType[];
 
 const defaultRuntime = new ServiceRuntime();
 let runtimeInstalled = false;
 
 function installRuntime(): void {
-  if (runtimeInstalled) {
-    return;
-  }
+    if (runtimeInstalled) {
+        return;
+    }
 
-  runtimeInstalled = true;
-  service_on_start((config) => defaultRuntime.start(config));
-  service_on_finish((result) => defaultRuntime.finish(result));
-  // The native bridge reports captures as a tagged CommandCaptureResult; the
-  // service layer converts it once into a Result so handlers never see the
-  // native shape.
-  service_on_command((id, data) => defaultRuntime.command(id, toResult(data)));
-  service_on_execution((id, result) => defaultRuntime.execution(id, result));
+    runtimeInstalled = true;
+    service_on_start((config) => defaultRuntime.start(config));
+    service_on_finish((result) => defaultRuntime.finish(result));
+    // The native bridge reports captures as a tagged CommandCaptureResult; the
+    // service layer converts it once into a Result so handlers never see the
+    // native shape.
+    service_on_command((id, data) => defaultRuntime.command(id, toResult(data)));
+    service_on_execution((id, result) => defaultRuntime.execution(id, result));
 }
 
 function toResult(data: CommandCaptureResult): Result<CommandData, CatterErr> {
-  return data.success ? ok(data.data) : err(data.error);
+    return data.success ? ok(data.data) : err(data.error);
 }
 
 /**
  * Registers a callback that can inspect and modify the runtime config before catter starts.
  */
 export function onStart(cb: ServiceStartHandler): void {
-  register({ onStart: cb });
+    register({ onStart: cb });
 }
 
 /**
  * Registers a callback that runs after catter finishes.
  */
 export function onFinish(cb: ServiceFinishHandler): void {
-  register({ onFinish: cb });
+    register({ onFinish: cb });
 }
 
 /**
@@ -93,11 +89,9 @@ export function onFinish(cb: ServiceFinishHandler): void {
  */
 export function onCommand(cb: LegacyCommandHandler): void;
 export function onCommand(cb: ContextCommandHandler): void;
-export function onCommand(
-  cb: LegacyCommandHandler | ContextCommandHandler,
-): void {
-  installRuntime();
-  defaultRuntime.use({ onCommand: cb } as RegisterableService);
+export function onCommand(cb: LegacyCommandHandler | ContextCommandHandler): void {
+    installRuntime();
+    defaultRuntime.use({ onCommand: cb } as RegisterableService);
 }
 
 /**
@@ -105,11 +99,9 @@ export function onCommand(
  */
 export function onExecution(cb: LegacyExecutionHandler): void;
 export function onExecution(cb: ContextExecutionHandler): void;
-export function onExecution(
-  cb: LegacyExecutionHandler | ContextExecutionHandler,
-): void {
-  installRuntime();
-  defaultRuntime.use({ onExecution: cb } as RegisterableService);
+export function onExecution(cb: LegacyExecutionHandler | ContextExecutionHandler): void {
+    installRuntime();
+    defaultRuntime.use({ onExecution: cb } as RegisterableService);
 }
 
 /**
@@ -119,6 +111,6 @@ export function register(service: CatterService): void;
 export function register(service: CatterContextService): void;
 export function register(service: CatterServiceAdapter): void;
 export function register(service: RegisterableService): void {
-  installRuntime();
-  defaultRuntime.use(service);
+    installRuntime();
+    defaultRuntime.use(service);
 }

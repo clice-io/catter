@@ -4,18 +4,11 @@
   "private": true,
   "description": "",
   "type": "module",
-  "scripts": {
-    "eslint-all": "eslint -c eslint.config.js --cache ./api/src/**/*.ts ./scripts/**/*.ts",
-    "eslint": "eslint -c eslint.config.js --cache",
-    "prettier-all": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts",
-    "prettier": "prettier --write ./api/src/**/*.ts ./scripts/**/*.ts"
-  },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
     "eslint": "^9.39.1",
-    "prettier": "3.6.2",
     "turbo": "^2.6.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4"

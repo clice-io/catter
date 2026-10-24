@@ -9,9 +9,9 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "u
 const input = {};
 const specToFile = {};
 for (const [spec, entry] of Object.entries(manifest)) {
-  const name = spec.replace(/^script::/, "");
-  input[name] = `build/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
-  specToFile[spec] = `${name}.js`;
+    const name = spec.replace(/^script::/, "");
+    input[name] = `build/${entry.replace(/^src\//, "").replace(/\.ts$/, ".js")}`;
+    specToFile[spec] = `${name}.js`;
 }
 
 /**
@@ -19,35 +19,32 @@ for (const [spec, entry] of Object.entries(manifest)) {
  * file into a single embedded blob without maintaining a duplicate list.
  */
 function writeManifest() {
-  return {
-    name: "write-manifest",
-    generateBundle(outputOptions, bundle) {
-      const files = Object.keys(bundle)
-        .filter((fileName) => fileName.endsWith(".js"))
-        .sort();
-      const manifest = { modules: specToFile, files };
-      this.emitFile({
-        type: "asset",
-        fileName: "manifest.json",
-        source: JSON.stringify(manifest, null, 2),
-      });
-    },
-  };
+    return {
+        name: "write-manifest",
+        generateBundle(outputOptions, bundle) {
+            const files = Object.keys(bundle)
+                .filter((fileName) => fileName.endsWith(".js"))
+                .sort();
+            const manifest = { modules: specToFile, files };
+            this.emitFile({
+                type: "asset",
+                fileName: "manifest.json",
+                source: JSON.stringify(manifest, null, 2),
+            });
+        },
+    };
 }
 
 export default {
-  input,
-  output: [
-    {
-      dir: "dist",
-      format: "es",
-      entryFileNames: "[name].js",
-      sourcemap: true
-    },
-  ],
-  plugins: [
-    writeManifest(),
-    terser({}),
-  ],
-  external: [/^catter/],
+    input,
+    output: [
+        {
+            dir: "dist",
+            format: "es",
+            entryFileNames: "[name].js",
+            sourcemap: true,
+        },
+    ],
+    plugins: [writeManifest(), terser({})],
+    external: [/^catter/],
 };

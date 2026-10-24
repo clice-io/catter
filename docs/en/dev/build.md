@@ -8,11 +8,11 @@
 
 ## Supported Platforms
 
-| Platform | Toolchain |
-|---|---|
-| Windows (win-64) | MSVC (VS2022) |
-| Linux (linux-64) | GCC 14.2 |
-| macOS (osx-arm64) | xclang 23.1.2 |
+| Platform                              | Toolchain             |
+| ------------------------------------- | --------------------- |
+| Windows (win-64)                      | MSVC (VS2022)         |
+| Linux (linux-64)                      | GCC 14.2              |
+| macOS (osx-arm64)                     | xclang 23.1.2         |
 | Windows (win-64), `mingw` environment | xclang 23.1.2 (MinGW) |
 
 The `mingw` environment builds for Windows with [xclang](https://github.com/clice-io/xclang) instead of MSVC: `pixi run -e mingw cfg debug`, then `pixi run -e mingw build`.

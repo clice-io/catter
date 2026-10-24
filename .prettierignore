@@ -1,26 +1,2 @@
-*.js
-*.jsx
-
-*.tsx
-
-*.css
-*.scss
-*.less
-
-*.html
-*.md
-
-*.json
-*.yaml
-*.yml
-
-!*.ts
-
-# Generated / tool outputs
-build
-api/build
-api/output
-scripts/build
-scripts/output
-.pixi
-.xmake
+# Written by pnpm.
+pnpm-lock.yaml

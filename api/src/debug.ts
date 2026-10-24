@@ -21,9 +21,9 @@ import { stdout_print } from "catter/native";
  * ```
  */
 export function assertDo(cond: boolean, otherwise: () => void) {
-  if (!cond) {
-    otherwise();
-  }
+    if (!cond) {
+        otherwise();
+    }
 }
 
 /**
@@ -39,9 +39,9 @@ export function assertDo(cond: boolean, otherwise: () => void) {
  * ```
  */
 export function assertPrint(cond: boolean) {
-  assertDo(cond, () => {
-    stdout_print("assertion failed!");
-  });
+    assertDo(cond, () => {
+        stdout_print("assertion failed!");
+    });
 }
 
 /**
@@ -58,7 +58,7 @@ export function assertPrint(cond: boolean) {
  * ```
  */
 export function assertThrow(cond: boolean) {
-  assertDo(cond, () => {
-    throw new Error("assertion failed!");
-  });
+    assertDo(cond, () => {
+        throw new Error("assertion failed!");
+    });
 }

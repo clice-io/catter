@@ -12,8 +12,8 @@ import type { Result } from "catter/neverthrow";
  * ```
  */
 export type Edge = {
-  output: string;
-  inputs: readonly string[];
+    output: string;
+    inputs: readonly string[];
 };
 
 /**
@@ -23,16 +23,16 @@ export type Edge = {
  * vector as captured for the process, including the executable argument.
  */
 export type AnalyzedData = {
-  readonly exe: string;
-  readonly argv: readonly string[];
+    readonly exe: string;
+    readonly argv: readonly string[];
 };
 
 export abstract class AnalysisError extends Error {
-  abstract readonly kind: string;
-  constructor(message: string) {
-    super(message);
-    this.name = new.target.name;
-  }
+    abstract readonly kind: string;
+    constructor(message: string) {
+        super(message);
+        this.name = new.target.name;
+    }
 }
 
 /**
@@ -57,18 +57,18 @@ export abstract class AnalysisError extends Error {
  * ```
  */
 export interface Analysis {
-  /** Discriminator used to narrow concrete analysis variants. */
-  readonly kind: string;
-  /** Executable path or name used for analysis. */
-  readonly exe: string;
-  /** Full argument vector used for analysis. */
-  readonly argv: readonly string[];
-  /** Files read by the command. */
-  readonly reads: readonly string[];
-  /** Files written by the command. */
-  readonly writes: readonly string[];
-  /** Explicit output-to-input dependency edges for this analysis. */
-  readonly edges: readonly Edge[];
+    /** Discriminator used to narrow concrete analysis variants. */
+    readonly kind: string;
+    /** Executable path or name used for analysis. */
+    readonly exe: string;
+    /** Full argument vector used for analysis. */
+    readonly argv: readonly string[];
+    /** Files read by the command. */
+    readonly reads: readonly string[];
+    /** Files written by the command. */
+    readonly writes: readonly string[];
+    /** Explicit output-to-input dependency edges for this analysis. */
+    readonly edges: readonly Edge[];
 }
 
 /**
@@ -78,14 +78,11 @@ export interface Analysis {
  * `Registry` stores this contract, so registered analyzers may be duck-typed
  * implementations rather than `Analyzer` subclasses.
  */
-export interface IAnalyzer<
-  T extends Analysis = Analysis,
-  R extends AnalysisError = AnalysisError,
-> {
-  /** Stable identity of the analyzer, used for diagnostics and reporting. */
-  readonly kind: string;
-  /** Performs analysis and returns a typed result when successful. */
-  analyze(command: AnalyzedData): Result<T, R>;
+export interface IAnalyzer<T extends Analysis = Analysis, R extends AnalysisError = AnalysisError> {
+    /** Stable identity of the analyzer, used for diagnostics and reporting. */
+    readonly kind: string;
+    /** Performs analysis and returns a typed result when successful. */
+    analyze(command: AnalyzedData): Result<T, R>;
 }
 
 /**
@@ -131,7 +128,7 @@ export interface IAnalyzer<
  * ```
  */
 export abstract class Analyzer implements IAnalyzer<Analysis, AnalysisError> {
-  abstract readonly kind: string;
-  /** Performs analysis and returns a typed result when successful. */
-  abstract analyze(command: AnalyzedData): Result<Analysis, AnalysisError>;
+    abstract readonly kind: string;
+    /** Performs analysis and returns a typed result when successful. */
+    abstract analyze(command: AnalyzedData): Result<Analysis, AnalysisError>;
 }

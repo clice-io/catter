@@ -212,8 +212,9 @@ def clean(body):
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
     text = re.sub(
         r"https://github\.com/[^/\s]+/[^/\s]+/blob/[0-9a-f]+/([^\s#]+)#L(\d+)(?:-L(\d+))?",
-        lambda m: f"{m.group(1)}:{m.group(2)}"
-        + (f"-{m.group(3)}" if m.group(3) else ""),
+        lambda m: (
+            f"{m.group(1)}:{m.group(2)}" + (f"-{m.group(3)}" if m.group(3) else "")
+        ),
         text,
     )
     text = strip_markup(text)

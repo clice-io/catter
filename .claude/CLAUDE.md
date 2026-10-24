@@ -56,7 +56,7 @@ Decided, not yet done — write code for where it stands today, and don't build 
 - `pixi run -e <env> ci-build <mode>` is what CI runs on every leg: npm-install, configure, build, the unit tests and the lit suite. `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
 - **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
 - CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every leg must pass.
-- Format and lint gate: `pixi run -e dev format` (pre-commit: clang-format, ruff, ESLint, Prettier), and `pixi run -e dev ci-check` adds the JS module check, as the lint workflow does.
+- Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint and the module boundaries of `api/`).
 
 ## Branches and Commits
 

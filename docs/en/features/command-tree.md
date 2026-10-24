@@ -12,10 +12,10 @@ catter script::cmd-tree [options] -- <build-command>
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `-d, --depth <n>` | Limit render depth. |
-| `-a, --args <n>` | Number of arguments to show per command. Default: all. |
+| Option               | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `-d, --depth <n>`    | Limit render depth.                                            |
+| `-a, --args <n>`     | Number of arguments to show per command. Default: all.         |
 | `-w, --argWidth <n>` | Truncate long arguments to this width. Default: 10 characters. |
 
 ## Output

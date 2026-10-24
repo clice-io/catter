@@ -18,11 +18,13 @@ The Unix hook is a shared library loaded via the dynamic linker's preload mechan
 The hook replaces all standard POSIX functions for creating new processes:
 
 **exec family**:
+
 - `execve()`, `execv()`
 - `execvpe()`, `execvp()`, `execvP()`
 - `execl()`, `execlp()`, `execle()`
 
 **posix_spawn family**:
+
 - `posix_spawn()`
 - `posix_spawnp()`
 
@@ -51,10 +53,10 @@ The hook library is loaded via the dynamic linker's constructor mechanism (`on_l
 
 The hook reads session information from these environment variables, set by the proxy when it launches the build command:
 
-| Variable | Purpose |
-|----------|---------|
+| Variable                     | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
 | `__key_catter_proxy_path_v1` | Absolute path to the `catter-proxy` binary |
-| `__key_catter_command_id_v1` | Session ID of the parent process |
+| `__key_catter_command_id_v1` | Session ID of the parent process           |
 
 ### Interception Flow
 
@@ -67,9 +69,11 @@ When any process creation function is called (e.g., `execve("/usr/bin/g++", argv
 3. **`Resolver`** resolves the target executable to an absolute path. For functions like `execvp()` and `execvpe()`, it searches directories in `PATH`. For `execve()`, it resolves relative to the current directory.
 
 4. **`Command`** (`build_proxy_command()`) constructs the proxy command:
+
    ```
    <proxy_path> -p <self_id> --exec <resolved_path> -- <original_argv...>
    ```
+
    The original `argv[0]` and all subsequent arguments are preserved after the `--` separator.
 
 5. **`SanitizedEnv`** (`sanitize_environment()`) modifies the environment array:
@@ -122,9 +126,9 @@ The hook is compiled as `catter-hook-win64.dll`. It uses MinHook, a lightweight 
 
 ### Environment Variables
 
-| Variable | Purpose |
-|----------|---------|
-| `CATTER_IPC_ID` | Session ID of the parent process |
+| Variable            | Purpose                                        |
+| ------------------- | ---------------------------------------------- |
+| `CATTER_IPC_ID`     | Session ID of the parent process               |
 | `CATTER_PROXY_PATH` | Absolute path to the `catter-proxy.exe` binary |
 
 ### DLL Injection Process
@@ -160,6 +164,7 @@ The hook DLL installs MinHook trampoline hooks on these functions during `DLL_PR
 - **`CreateProcessAsUserW()`** -- Passthrough (currently not rewritten)
 
 MinHook works by:
+
 1. Saving the first few instructions of the target function
 2. Overwriting them with a jump to the detour function
 3. Providing a trampoline that contains the saved instructions followed by a jump back, so the original function can still be called
@@ -173,9 +178,11 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 2. **Resolve the absolute path**. The hook resolves the executable using `resolve_abspath()`, which searches the program directory, current directory, System32, Windows directory, and `PATH` (matching the standard Windows search order).
 
 3. **Rewrite the command line**:
+
    ```
    {proxy_path} -p {ipc_id} --exec {resolved_path} -- {original_cmdline}
    ```
+
    The `lpApplicationName` is set to `nullptr` so that the command line is parsed by `CreateProcess` normally.
 
 4. **Call the original `CreateProcess`** via the MinHook trampoline with the modified command line.
@@ -209,11 +216,11 @@ DLL_PROCESS_DETACH:
 
 ## Platform Comparison
 
-| Aspect | Linux | macOS | Windows |
-|--------|-------|-------|---------|
-| Hook library | `libcatter-hook-unix.so` | `libcatter-hook-unix.dylib` | `catter-hook-win64.dll` |
-| Injection method | `LD_PRELOAD` env var | `DYLD_INSERT_LIBRARIES` env var | `VirtualAllocEx` + `LoadLibraryA` |
-| Interposition | `dlsym(RTLD_NEXT, ...)` | `DYLD_INTERPOSE` macro | MinHook trampoline hooking |
-| Intercepted APIs | `execve`, `execvp`, `posix_spawn`, etc. | Same as Linux | `CreateProcessA`, `CreateProcessW` |
-| Recursive hooking | Automatic (env inherited) | Automatic (env inherited) | Explicit (DLL re-injected per process) |
-| Env vars for session | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux | `CATTER_PROXY_PATH`, `CATTER_IPC_ID` |
+| Aspect               | Linux                                                      | macOS                           | Windows                                |
+| -------------------- | ---------------------------------------------------------- | ------------------------------- | -------------------------------------- |
+| Hook library         | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`     | `catter-hook-win64.dll`                |
+| Injection method     | `LD_PRELOAD` env var                                       | `DYLD_INSERT_LIBRARIES` env var | `VirtualAllocEx` + `LoadLibraryA`      |
+| Interposition        | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` macro          | MinHook trampoline hooking             |
+| Intercepted APIs     | `execve`, `execvp`, `posix_spawn`, etc.                    | Same as Linux                   | `CreateProcessA`, `CreateProcessW`     |
+| Recursive hooking    | Automatic (env inherited)                                  | Automatic (env inherited)       | Explicit (DLL re-injected per process) |
+| Env vars for session | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux                   | `CATTER_PROXY_PATH`, `CATTER_IPC_ID`   |
