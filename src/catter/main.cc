@@ -13,6 +13,7 @@
 #include "util/log.h"
 
 #ifdef _WIN32
+#include <uv.h>
 #include <windows.h>
 #endif
 
@@ -24,6 +25,10 @@ int run(int argc, char* argv[]) {
 
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    // catter's standard handles, pipes of whoever runs catter, are not the
+    // build's: inherited by every program it starts, a server among them would
+    // hold them open after catter exits. libuv hands the build its stdio itself.
+    uv_disable_stdio_inheritance();
 #endif
 
     auto args = kota::deco::util::argvify(argc, argv, 1);

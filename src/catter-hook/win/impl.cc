@@ -1,5 +1,4 @@
 
-#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <coroutine>
@@ -25,7 +24,6 @@
 #include "util/data.h"
 #include "util/encoding.h"
 #include "util/exception.h"
-#include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
 #include "win/env.h"
@@ -267,53 +265,21 @@ StartedProcess start_process(data::command cmd,
     auto stdout_pipe = create_capture_pipe("stdout");
     auto stderr_pipe = create_capture_pipe("stderr");
 
-    STARTUPINFOEXW si{
-        .StartupInfo =
-            {
-                          .cb = sizeof(STARTUPINFOEXW),
-                          .dwFlags = STARTF_USESTDHANDLES,
-                          .hStdInput = GetStdHandle(STD_INPUT_HANDLE),
-                          .hStdOutput = stdout_pipe.write.get(),
-                          .hStdError = stderr_pipe.write.get(),
-                          },
+    STARTUPINFOW si{
+        .cb = sizeof(STARTUPINFOW),
+        .dwFlags = STARTF_USESTDHANDLES,
+        .hStdInput = GetStdHandle(STD_INPUT_HANDLE),
+        .hStdOutput = stdout_pipe.write.get(),
+        .hStdError = stderr_pipe.write.get(),
     };
     PROCESS_INFORMATION pi{};
 
-    // The command inherits its standard handles only. It would inherit every
-    // inheritable handle of the proxy otherwise, catter's own pipes among
-    // them, and hold the session open as long as it, or a server it started,
-    // lives.
-    std::vector<HANDLE> inherited;
-    for(HANDLE handle:
-        {si.StartupInfo.hStdInput, si.StartupInfo.hStdOutput, si.StartupInfo.hStdError}) {
-        DWORD flags = 0;
-        if(handle != nullptr && handle != INVALID_HANDLE_VALUE &&
-           GetHandleInformation(handle, &flags) && (flags & HANDLE_FLAG_INHERIT) &&
-           std::ranges::find(inherited, handle) == inherited.end()) {
-            inherited.push_back(handle);
-        }
-    }
-    SIZE_T attributes_size = 0;
-    InitializeProcThreadAttributeList(nullptr, 1, 0, &attributes_size);
-    std::vector<std::byte> attributes(attributes_size);
-    si.lpAttributeList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attributes.data());
-    if(!InitializeProcThreadAttributeList(si.lpAttributeList, 1, 0, &attributes_size)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to initialize the process attributes");
-    }
-    auto attributes_guard =
-        util::make_guard([&]() noexcept { DeleteProcThreadAttributeList(si.lpAttributeList); });
-    if(!UpdateProcThreadAttribute(si.lpAttributeList,
-                                  0,
-                                  PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-                                  inherited.data(),
-                                  inherited.size() * sizeof(HANDLE),
-                                  nullptr,
-                                  nullptr)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to set the inherited handles");
+    // The command writes to the capture pipes, which the proxy forwards: the
+    // proxy's own output handles, catter's pipes, are not the command's.
+    // Inherited, they would hold the session open as long as the command, or a
+    // server it started, lives.
+    for(auto own: {STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
+        SetHandleInformation(GetStdHandle(own), HANDLE_FLAG_INHERIT, 0);
     }
 
     auto cmdline = cmdline_of(cmd);
@@ -329,10 +295,10 @@ StartedProcess start_process(data::command cmd,
                        nullptr,
                        nullptr,
                        TRUE,
-                       CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT,
+                       CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
                        env_block.data(),
                        cwd.empty() ? nullptr : cwd.c_str(),
-                       &si.StartupInfo,
+                       &si,
                        &pi)) {
         throw catter::system_error(GetLastError(),
                                    std::system_category(),
