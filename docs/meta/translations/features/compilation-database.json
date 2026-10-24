@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "pairs": [
+    { "kind": "heading", "en": "ecf69aa22bdf1cf3", "zh": "63c3d86d79855217" },
+    { "kind": "paragraph", "en": "9ee9d531215ac6ac", "zh": "945ac433feb7b22c" },
+    { "kind": "paragraph", "en": "5e14203d86d88538", "zh": "d6065fce47202186" },
+    { "kind": "heading", "en": "63bfd61a0561b255", "zh": "898cf1ff9fecac7c" },
+    { "kind": "heading", "en": "c71f889c0c2bbf7f", "zh": "5fe67a3352c8db6c" },
+    { "kind": "tableRow", "en": "2e6980819c66cc6b", "zh": "1073a07297d8bcb6" },
+    { "kind": "tableRow", "en": "05e7815880aac0a7", "zh": "2f8879efaaca5341" },
+    { "kind": "tableRow", "en": "86c045f8e60f386b", "zh": "c5670b6faa41d922" },
+    { "kind": "tableRow", "en": "4d9adb0d89c4c325", "zh": "970b903249ffd0e4" },
+    { "kind": "heading", "en": "ad6603b23935f990", "zh": "cc225070ff19bf5b" },
+    { "kind": "paragraph", "en": "1938d4632700fea3", "zh": "29d178dfaee0a1eb" },
+    { "kind": "paragraph", "en": "75479de09cc12ff8", "zh": "e63937c7be64ee8c" },
+    { "kind": "listItem", "en": "a1f57eca3276ba8e", "zh": "be94e320e44cbe17" },
+    { "kind": "listItem", "en": "7227bff170d948d2", "zh": "45ec49eb97a36f1a" },
+    { "kind": "listItem", "en": "b964aad2103ff7df", "zh": "69342f9a4c9748d4" },
+    { "kind": "listItem", "en": "97670a26b911750b", "zh": "aa19fb30361be0bc" },
+    { "kind": "heading", "en": "ce37c7290c4b7135", "zh": "73b60866d06bd472" },
+    { "kind": "paragraph", "en": "bd5bccc04fd15671", "zh": "75f79f131705c7cc" },
+    { "kind": "heading", "en": "5069a8abf9138a9a", "zh": "513f5d33dc3bb043" },
+    { "kind": "listItem", "en": "23c310bcd83d8b8d", "zh": "a3f4af1030055235" },
+    { "kind": "paragraph", "en": "f34b8ca76142c0bb", "zh": "dfdba3c79bbc5236" },
+    { "kind": "heading", "en": "0d19ab4631978576", "zh": "32ca6ef85f16922d" }
+  ]
+}

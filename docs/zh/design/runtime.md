@@ -33,14 +33,14 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 - **限制**：实现依赖平台特性（预加载 / DLL 注入）。macOS 上 `DYLD_INSERT_LIBRARIES` 受系统保护机制限制，需要特殊开发权限；Windows 的 DLL 注入可能与强签名或安全软件策略冲突。
 - **实现细节**：[钩子机制](hook-mechanism.md)、[IPC 协议](ipc-protocol.md)。
 
-### env（规划中）
+### env（计划中）
 
 - **原理**：通过设置 `CC` / `CXX` 等环境变量，把编译器调用重定向到 `catter-proxy`（包装模式）。
 - **适用场景**：构建系统遵守标准编译器环境变量约定时，无需 hook 即可捕获编译命令。
 - **预期限制**：只能捕获经由这些环境变量发起的调用；硬编码编译器路径、内嵌 `cc` 的构建脚本可能绕过；预期无法报告父命令 ID。
 - **状态**：尚未实现，具体能力（如 `supportActions`）待实现后确认。
 
-### eslogger（规划中）
+### eslogger（计划中）
 
 - **原理**：使用 macOS 的 Event Stream 监控 API 观察进程创建 / 执行事件，属于旁路式监控。
 - **适用场景**：macOS 上 hook 受权限限制时的替代机制。
@@ -52,8 +52,8 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 | 机制 | 平台 | 捕获方式 | supportActions | supportParentId | 状态 |
 |------|------|---------|----------------|-----------------|------|
 | inject | Linux / macOS / Windows | hook 拦截进程创建 | `skip` `drop` `modify` | 是 | 已实现（默认） |
-| env | 跨平台 | `CC` / `CXX` 环境变量 | 待定 | 预期否 | 规划中 |
-| eslogger | macOS | Event Stream API | 待定 | 待定 | 规划中 |
+| env | 跨平台 | `CC` / `CXX` 环境变量 | 待定 | 预期否 | 计划中 |
+| eslogger | macOS | Event Stream API | 待定 | 待定 | 计划中 |
 
 ## 选择与检查
 

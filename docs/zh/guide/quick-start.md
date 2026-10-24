@@ -33,7 +33,7 @@ catter script::cdb -o compile_commands.json -- make
 ## 命令格式
 
 ```
-catter [选项] <脚本> [脚本参数] -- <构建命令>
+catter [options] <script> [script-args] -- <build-command>
 ```
 
 以上面的 CDB 示例为例：

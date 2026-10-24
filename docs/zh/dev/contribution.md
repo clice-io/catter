@@ -5,13 +5,13 @@
 三种方式运行测试：
 
 ```bash
-# 运行全部（构建 + 单元测试 + 集成测试）
+# Run everything (build + unit tests + integration tests)
 pixi run -e dev test
 
-# 仅单元测试
+# Unit tests only
 pixi run -e dev unit-test
 
-# 仅集成测试
+# Integration tests only
 pixi run -e dev integration-test
 ```
 
@@ -26,7 +26,7 @@ pixi run -e dev integration-test
 启用测试目标：
 
 ```bash
-pixi run cfg  # 或: xmake config --test=y
+pixi run cfg  # or: xmake config --test=y
 ```
 
 每个测试程序把测试分给一组 worker 进程同时运行，每个测试限时 60 秒。用到固定文件名或目录名的 suite 必须单独运行：用 `ZEST_SUITE_ATTRS(serial = true);` 标记。调试某个测试时，用 `--no-isolation --test-filter=<suite>.<test>` 让它在测试程序自己的进程里运行；其他选项见 `--help`。
@@ -36,19 +36,19 @@ pixi run cfg  # 或: xmake config --test=y
 集成测试使用 [LLVM Lit](https://llvm.org/docs/CommandGuide/lit.html) 框架。位于 `tests/integration/`，编译并运行 C++ 测试程序，使用 FileCheck 进行输出验证。
 
 ```bash
-# 以详细输出运行集成测试
+# Run integration tests with verbose output
 lit ./tests/integration -sav
 ```
 
 ## 提交信息格式
 
-使用[约定式提交](https://www.conventionalcommits.org/zh-hans/)：
+使用[约定式提交](https://www.conventionalcommits.org/)：
 
 ```
-<type>(<scope>): <简短描述>
+<type>(<scope>): <short description>
 ```
 
-**类型**：`feat`、`fix`、`refactor`、`chore`、`docs`、`ci`、`test`、`perf`、`style`、`revert`
+**类型**：`feat`、`fix`、`refactor`、`chore`、`build`、`docs`、`ci`、`test`、`perf`、`style`、`revert`
 
 scope 应与源码目录或功能名称一致。标题行不超过 70 个字符。
 

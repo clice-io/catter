@@ -61,10 +61,15 @@ vsxmake*/
 !.pixi/config.toml
 
 # Agent
-.claude
-CLAUDE.md
+*/**/.claude/
+.claude/*
+!.claude/CLAUDE.md
+!.claude/skills/
+!.claude/skills/build/
+/CLAUDE.md
 .codex
 AGENTS.md
+__pycache__/
 
 # Release assets
 release-assets/

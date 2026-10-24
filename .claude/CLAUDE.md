@@ -1,0 +1,65 @@
+# catter — Project Guide
+
+catter intercepts the processes a build starts and turns them into a compilation database and other analyses (command trees, target trees, build profiles, fake compilation). A hook library injected into the build (`LD_PRELOAD` / `DYLD_INSERT_LIBRARIES` on Unix, DLL injection on Windows) sends every new process through `catter-proxy`, which asks the `catter` daemon over IPC what to do with the command.
+
+The detailed rules live in the skills under `.claude/skills/`; each skill's description says when to load it. Load it at that moment — don't work from memory.
+
+## Hard Rules
+
+- **Never skip, disable, or weaken a failing test** — no `continue-on-error`, no expected-failure markers, no retries around flakiness. Fix the root cause. A failure on your branch is yours to fix now, even if it looks pre-existing (main is green), and never deferred to a follow-up PR.
+- **Never leave a push unverified.** Pushing and verifying run side by side: push without waiting, while a box (the build skill) and CI run the relevant build and tests; the work is done only when both are green, and "it compiles" is not verified. A failure is reproduced and fixed on a box, not by pushing guesses at CI.
+- **Never rewrite history on an open PR branch** — no `--amend`, no force push, no rebase without asking first. Append ordinary commits; squash merge cleans up.
+- **Never create or push tags, trigger release workflows, or publish anything** without explicit maintainer approval. Never change repository settings, rulesets, or branch protection.
+- **Never merge without the maintainer's explicit authorization for that PR.** Approval of the plan or of another PR does not carry over. A PR that is green with every review thread handled is reported as ready, then left alone.
+
+## Working Style
+
+Distilled from real correction history — these mistakes keep recurring:
+
+- **Read before you write.** The project already has the option tables (`src/common/option`), the program resolver (`src/common/resolver`), cross-platform paths and process helpers (`src/common/util`), `PipeProxy`, and kotatsu's async runtime, IPC peers, option parser and zest — search before adding anything that feels generic. New features copy the structure of 2-3 existing features of the same kind. When unsure whether to extend or create, ask.
+- **Understand and design yourself.** Read the code in order and think in this conversation. A subagent is for a narrow factual lookup — one or two at most — never for a judgment or a design. Mechanical batches (migrations, scans, multi-dimension review) go to Opus subagents (`model: "opus"`) whose prompt fixes the spec and the acceptance criteria.
+- **Optimize the real scenario.** First ask when the code actually runs and what the user experiences (e.g. the hook and `catter-proxy` run once for every process of a build that may start tens of thousands of them; the daemon starts once per build).
+- **Ask who hits a corner case, and how often.** A rare state a real workflow reaches gets an explicit error that names it, never a silent fallback that guesses; a state no real workflow reaches gets no code and is reported as a known limitation. Unknown compilers, odd arguments and failing build commands are not corner cases: they are ordinary input, and the build under catter behaves as it would without it.
+- **Stay in scope.** A problem outside the task is reported, not fixed.
+- **Refactoring means improving the abstraction**, not moving code. Understand what design problem the refactor solves before touching anything.
+- **Comments talk to the future reader, not the diff reviewer.** The default for any change is zero new comments. Add one only when the final code, read on its own, would trap or mislead a competent reader — a non-obvious why, an invariant nothing enforces, a workaround for an external quirk that cost real debugging. Never comment what the code does, why the change is correct, or what was there before: that belongs in the PR description and becomes noise the moment it merges. Litmus test: cover the comment; if the surrounding code already tells the reader everything it said, delete it. When moving or rewriting code, existing explanatory comments DO survive — this rule is about adding, not preserving.
+- **Apply cleanup and style instructions project-wide.** Grep for every occurrence and fix them in one pass, not just the file under discussion.
+- **Calibrate confirmation to impact.** Small reversible changes: just do them. Architecture decisions, API changes, large refactors: propose first. Creating PRs, modifying CI: confirm. Once told "go ahead", execute fully without re-asking mid-way — follow-up pushes inside an approved PR flow are covered by the go-ahead.
+
+## Source Layout
+
+C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targets:
+
+- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the runtime driver, replaying a recorded build, and `js/`: the embedded QuickJS engine, the ES module loader and the native side of the script API (`js/capi/`)
+- `src/catter-proxy/` — `catter-proxy`: launches the build with the hook attached, and stands in for every intercepted command, relaying it to the daemon and running what the daemon decides
+- `src/catter-hook/` — launching a command with the hook (`hook.h`, linked into `catter-proxy`) and the hook libraries themselves: `unix/payload/` is the shared library preloaded into every process (the exec-family hooks, the environment it keeps), `win/` injects `win/payload/`, the DLL that hooks process creation with MinHook
+- `src/common/` — shared static libraries: `option/` (the option tables of clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and of nvcc, read by kotatsu's option parser), `util/` (logging, data paths, processes, pipes), `config/` (names and paths every process agrees on), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`
+- `api/` — the TypeScript script API: `api/src` holds the `catter/*` modules, including compiler identification and argument parsing (`cmd/`) and the database (`cdb/`); `api/native` declares the native functions; `api/dev` builds and bundles it, and xmake embeds the bundle into `catter`
+- `scripts/` — the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`), in TypeScript, embedded the same way; `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
+- `tests/` — `unit/`, the zest unit tests, mirroring `src/`; `integration/`, the lit suite: test programs and recorded builds replayed through the scripts, checked with FileCheck
+- `docs/` — the `docs/en` and `docs/zh` pages published at docs.clice.io/catter (the docs skill)
+
+`api/dev` and `scripts/` are one pnpm workspace rooted at the repo top level: run `pixi run -e dev npm-install` from the root, never `pnpm install` inside a package.
+
+### Where it is going
+
+Decided, not yet done — write code for where it stands today, and don't build on what is about to go:
+
+- **Tests**: a snapshot case suite like clice's (`tests/<topic>/<case>/`, `test.ts` + `snap.toml`) is being built to replace the lit suite, which is deleted once the cases cover it; the zest unit tests stay and move to `unittests/`. The test and write-tests skills arrive with it; until then, the build skill's `ci-build` runs both current suites.
+- **Built-ins in C++**: the built-in logic in `api/src` and `scripts/` (compiler identification, argument parsing, the database, the trees) is to be rewritten in C++. Once it and the protocol below pass the snapshot suite, QuickJS, the JS bridge (`src/catter/core/js`), `api/`, `scripts/` and the pnpm/rollup build are deleted.
+- **User scripts**: they are to move out of process: catter speaking JSON-RPC to a handler process, with thin SDKs for Python, TypeScript and Rust. The embedded TS API is what users script today.
+- **Staying for now**: the Windows hook on MinHook (Detours is planned, later), and the xmake build (Bazel, then C++20 modules, later).
+
+## Build & Test
+
+- **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, MSVC on Windows) and `mingw` (Windows, xclang for `x86_64-w64-mingw32`); `clang` (conda-forge clang 20) is a local convenience CI does not use. Modes `debug` (ASan, except MinGW), `release`, `releasedbg`.
+- `pixi run -e <env> ci-build <mode>` is what CI runs on every leg: npm-install, configure, build, the unit tests and the lit suite. `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
+- **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
+- CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every leg must pass.
+- Format and lint gate: `pixi run -e dev format` (pre-commit: clang-format, ruff, ESLint, Prettier), and `pixi run -e dev ci-check` adds the JS module check, as the lint workflow does.
+
+## Branches and Commits
+
+- Branches are `<type>/<short-topic>`, always created from freshly fetched `origin/main` (`git fetch origin && git switch -c <branch> origin/main`) — never from the local `main`, which goes stale.
+- Commit with the repository's configured identity (`git config user.email`), never an email the session environment supplies.
+- Commit and PR title format and everything from "code is ready" to "ready to merge" is the **pr** skill.

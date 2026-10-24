@@ -196,13 +196,13 @@ MinHook 的工作原理：
 
 ```
 DLL_PROCESS_ATTACH:
-  MH_Initialize()       -- 初始化 MinHook
-  MH_CreateHook(...)    -- 在 CreateProcess 系列函数上安装钩子
-  MH_EnableHook(...)    -- 激活所有钩子
+  MH_Initialize()       -- Initialize MinHook
+  MH_CreateHook(...)    -- Install hooks on CreateProcess variants
+  MH_EnableHook(...)    -- Activate all hooks
 
 DLL_PROCESS_DETACH:
-  MH_DisableHook(...)   -- 停用所有钩子
-  MH_Uninitialize()     -- 清理 MinHook
+  MH_DisableHook(...)   -- Deactivate all hooks
+  MH_Uninitialize()     -- Clean up MinHook
 ```
 
 在 attach 阶段调用 `DisableThreadLibraryCalls()` 以抑制 `DLL_THREAD_ATTACH` 和 `DLL_THREAD_DETACH` 通知，减少运行开销。

@@ -22,19 +22,19 @@
 所有构建通过 pixi 任务管理：
 
 ```bash
-# 配置构建（mode 可选：debug、release、releasedbg）
+# Configure the build (mode: debug, release, or releasedbg)
 pixi run cfg debug
 
-# 构建项目
+# Build the project
 pixi run build
 
-# 以 release 模式配置
+# Configure in release mode
 pixi run cfg release
 
-# 构建 JavaScript/TypeScript API
+# Build JavaScript/TypeScript API
 pixi run build-js
 
-# 安装 npm 依赖
+# Install npm dependencies
 pixi run npm-install
 ```
 
@@ -46,8 +46,8 @@ pixi run npm-install
 
 - `catter` -- 主 CLI 可执行文件（DECISION 守护进程）
 - `catter-proxy` -- 代理进程管理器
-- `catter-hook-unix` -- Unix hook 共享库（Linux/macOS）
-- `catter-hook-win64` -- Windows hook DLL
+- `catter-hook-unix` -- Unix 钩子共享库（Linux/macOS）
+- `catter-hook-win64` -- Windows 钩子 DLL
 - `catter-core` -- 核心库
 - `common` -- 共享工具库
 
@@ -63,7 +63,7 @@ pixi run build-js
 
 ## 主要依赖
 
-- [QuickJS-ng](https://github.com/quickjs-ng/quickjs) (v0.11.0) -- 内嵌 JavaScript 引擎
+- [QuickJS-ng](https://github.com/quickjs-ng/quickjs) (v0.15.0) -- 内嵌 JavaScript 引擎
 - [spdlog](https://github.com/gabime/spdlog) (1.15.3) -- 日志
 - [kotatsu](https://github.com/clice-io/kotatsu) -- 异步运行时、测试框架、选项解析
 - [MinHook](https://github.com/TsudaKageworyo/MinHook) (v1.3.4) -- Windows API 钩子（仅 Windows）

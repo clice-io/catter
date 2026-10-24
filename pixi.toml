@@ -74,6 +74,10 @@ unit-test = "xmake test --verbose"
 # All catter/catter-proxy processes share one global IPC pipe, so integration
 # tests must run one at a time to avoid cross-talk on the same socket.
 integration-test = "lit ./tests/integration -sav -j 1"
+check-doc-translations = "node tools/docs/translations.ts check"
+report-doc-translations = "node tools/docs/translations.ts report"
+record-doc-translations = "node tools/docs/translations.ts record"
+review-doc-translations = "node tools/docs/translations.ts review --glossary=.claude/skills/translate-docs/SKILL.md"
 ut = [{ task = "unit-test" }]
 it = [{ task = "integration-test" }]
 test = [{ task = "build" }, { task = "ut" }, { task = "it" }]
