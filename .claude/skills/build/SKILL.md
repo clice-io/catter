@@ -28,6 +28,7 @@ The box belongs to the calling session, not to this skill: build on the id the c
 
 ```bash
 win=$(box up clice-io/catter --os windows)
+box push $win
 box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev ci-build debug"'     # MSVC
 box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e mingw ci-build debug"'   # MinGW
 ```
