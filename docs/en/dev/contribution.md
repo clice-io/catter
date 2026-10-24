@@ -48,7 +48,7 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 <type>(<scope>): <short description>
 ```
 
-**Types**: `feat`, `fix`, `refactor`, `chore`, `docs`, `ci`, `test`, `perf`, `style`, `revert`
+**Types**: `feat`, `fix`, `refactor`, `chore`, `build`, `docs`, `ci`, `test`, `perf`, `style`, `revert`
 
 Scopes should match source directories or feature names. Keep the subject line under 70 characters.
 

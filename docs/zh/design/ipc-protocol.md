@@ -131,11 +131,11 @@ enum class RequestType : uint8_t {
 ### 注入模式（第一个代理）
 
 ```
-代理 -> 守护进程:  CHECK_MODE(INJECT)
-守护进程 -> 代理:  true
-[代理启动挂载了钩子的构建命令]
-[代理等待构建完成]
-[构建完成后代理退出]
+Proxy -> Daemon:  CHECK_MODE(INJECT)
+Daemon -> Proxy:  true
+[Proxy launches build command with hook attached]
+[Proxy waits for build to complete]
+[Proxy exits when build finishes]
 ```
 
 注入模式的代理同样会为顶层构建命令发送 `CREATE`、`MAKE_DECISION` 和 `FINISH`，因此构建系统命令本身也会像其他被拦截的命令一样经过 `onCommand`/`onExecution`。
@@ -143,24 +143,24 @@ enum class RequestType : uint8_t {
 ### 包装模式（被拦截的命令）
 
 ```
-代理 -> 守护进程:  CHECK_MODE(INJECT)
-守护进程 -> 代理:  true
-代理 -> 守护进程:  CREATE(parent_id)
-守护进程 -> 代理:  new_session_id
-代理 -> 守护进程:  MAKE_DECISION(command)
-守护进程 -> 代理:  action {type, cmd}
-[代理执行或丢弃命令]
-代理 -> 守护进程:  FINISH(process_result)
-守护进程 -> 代理:  null
-[代理断开连接]
+Proxy -> Daemon:  CHECK_MODE(INJECT)
+Daemon -> Proxy:  true
+Proxy -> Daemon:  CREATE(parent_id)
+Daemon -> Proxy:  new_session_id
+Proxy -> Daemon:  MAKE_DECISION(command)
+Daemon -> Proxy:  action {type, cmd}
+[Proxy executes or drops the command]
+Proxy -> Daemon:  FINISH(process_result)
+Daemon -> Proxy:  null
+[Proxy disconnects]
 ```
 
 ### 错误情况
 
 ```
-代理 -> 守护进程:  REPORT_ERROR(parent_id, error_message)
-守护进程 -> 代理:  null
-[代理以退出码 -1 退出]
+Proxy -> Daemon:  REPORT_ERROR(parent_id, error_message)
+Daemon -> Proxy:  null
+[Proxy exits with code -1]
 ```
 
 ## 会话模型
@@ -168,18 +168,18 @@ enum class RequestType : uint8_t {
 守护进程维护一棵与构建进程树对应的会话树：
 
 ```
-会话 0（根 -- 注入模式代理）
-  +-- 会话 1（make -> gcc file1.c）
-  +-- 会话 2（make -> gcc file2.c）
-  +-- 会话 3（make -> ar rcs libfoo.a file1.o file2.o）
-  +-- 会话 4（make -> sh -c "gcc file3.c"）
-       +-- 会话 5（sh -> gcc file3.c）
+Session 0 (root -- injector proxy)
+  +-- Session 1 (make -> gcc file1.c)
+  +-- Session 2 (make -> gcc file2.c)
+  +-- Session 3 (make -> ar rcs libfoo.a file1.o file2.o)
+  +-- Session 4 (make -> sh -c "gcc file3.c")
+       +-- Session 5 (sh -> gcc file3.c)
 ```
 
 每个会话由唯一的 `ipcid_t`（32 位整数）标识。会话树随着 `CREATE` 请求的到达而增量构建，每个请求都指定了 `parent_id`。这种结构支持以下功能：
 
 - **目标树重建** -- 通过了解哪些目标文件链接到哪些目标
-- **构建性能分析** -- 通过跟踪每个会话的计时数据并可视化并行度
+- **构建分析** -- 通过跟踪每个会话的计时数据并可视化并行度
 - **错误归因** -- 通过追溯错误到引发错误的构建命令
 
 ## 连接生命周期
@@ -195,31 +195,31 @@ enum class RequestType : uint8_t {
 跨 IPC 边界使用的核心数据结构：
 
 ```cpp
-// IPC 会话的唯一标识符
+// Unique identifier for an IPC session
 using ipcid_t = int32_t;
 
-// 从构建系统捕获的命令
+// Captured command from the build system
 struct command {
-    std::string cwd;                   // 工作目录
-    std::string executable;            // 已解析的可执行文件路径
-    std::vector<std::string> args;     // 参数数组
-    std::vector<std::string> env;      // 环境变量（KEY=VALUE 条目）
+    std::string cwd;                   // Working directory
+    std::string executable;            // Resolved executable path
+    std::vector<std::string> args;     // Argument array
+    std::vector<std::string> env;      // Environment (KEY=VALUE entries)
 };
 
-// 命令执行结果
+// Result of executing a command
 struct process_result {
-    int64_t code = -1;                 // 退出码
-    std::string std_out;               // 捕获的标准输出
-    std::string std_err;               // 捕获的标准错误
+    int64_t code = -1;                 // Exit code
+    std::string std_out;               // Captured stdout
+    std::string std_err;               // Captured stderr
 };
 
-// 守护进程返回的决策
+// Decision returned by the daemon
 struct action {
     enum : uint8_t {
-        DROP,    // 不执行
-        INJECT,  // 挂载钩子后执行
-        WRAP,    // 不挂载钩子直接执行
+        DROP,    // Do not execute
+        INJECT,  // Execute with hook attached
+        WRAP,    // Execute without hook
     } type;
-    command cmd;                       // 可能已修改的命令
+    command cmd;                       // Possibly modified command
 };
 ```

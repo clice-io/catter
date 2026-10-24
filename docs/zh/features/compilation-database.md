@@ -53,15 +53,15 @@ catter script::cdb [options] -- <build-command>
 ## 示例
 
 ```bash
-# 配合 make 基本使用
+# Basic usage with make
 catter script::cdb -- make -j8
 
-# 指定输出路径
+# Specify output path
 catter script::cdb -o build/compile_commands.json -- ninja
 
-# 配合 CMake
+# With CMake
 catter script::cdb -- cmake --build build
 
-# 配合任意构建系统
+# With any build system
 catter script::cdb -- ./build.sh
 ```

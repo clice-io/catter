@@ -19,7 +19,7 @@ Catter 是一个围绕 **runtime**（运行机制）展开的构建过程拦截�
 
 runtime 通过 `-m/--mode` 选择，默认 `inject`。脚本在 `onStart` 收到的配置中即可查看当前 runtime 的能力，从而写出跨 runtime 兼容的脚本。
 
-目前 `inject`（基于 hook）已实现，`env` 与 `eslogger` 在规划中。各机制的原理、平台限制与能力差异见[运行机制](runtime.md)。
+目前 `inject`（基于 hook）已实现，`env` 与 `eslogger` 在计划中。各机制的原理、平台限制与能力差异见[运行机制](runtime.md)。
 
 ## 脚本生命周期
 
@@ -27,24 +27,24 @@ runtime 通过 `-m/--mode` 选择，默认 `inject`。脚本在 `onStart` 收到
 
 ```mermaid
 sequenceDiagram
-    participant Script as 用户脚本
-    participant Catter as catter 守护进程
-    participant Runtime as Runtime（捕获机制）
-    participant Build as 构建系统
+    participant Script as User script
+    participant Catter as catter daemon
+    participant Runtime as Runtime (capture mechanism)
+    participant Build as Build system
 
-    Catter->>Catter: 加载脚本
+    Catter->>Catter: Load script
     Catter->>Script: onStart(config)
-    Script-->>Catter: 返回（可修改的）config
-    Catter->>Runtime: 启动构建（若 config.execute）
-    loop 每条被捕获的命令
-        Runtime->>Catter: 命令事件
+    Script-->>Catter: Return (possibly modified) config
+    Catter->>Runtime: Start build (if config.execute)
+    loop For each captured command
+        Runtime->>Catter: Command event
         Catter->>Script: onCommand(ctx)
-        Script-->>Catter: 动作（skip / drop / abort / modify）
-        Catter->>Runtime: 按动作执行
-        Runtime->>Catter: 执行结果
+        Script-->>Catter: Action (skip / drop / abort / modify)
+        Catter->>Runtime: Execute according to action
+        Runtime->>Catter: Execution result
         Catter->>Script: onExecution(ctx)
     end
-    Runtime-->>Catter: 构建进程结束
+    Runtime-->>Catter: Build process finished
     Catter->>Script: onFinish(result)
 ```
 
@@ -92,7 +92,7 @@ runtime 驱动负责把脚本层动作映射到协议层动作。当前 `inject`
 
 ## 组件与进程
 
-一次 `catter <脚本> -- <构建命令>` 会涉及多个进程与组件，它们都属于 runtime 的实现，脚本作者通常无需关心：
+一次 `catter <script> -- <build command>` 会涉及多个进程与组件，它们都属于 runtime 的实现，脚本作者通常无需关心：
 
 | 组件 | 角色 |
 |------|------|

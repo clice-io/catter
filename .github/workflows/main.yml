@@ -72,6 +72,7 @@ jobs:
     uses: ./.github/workflows/lint.yml
     with:
       format: ${{ needs.changes.outputs.format == 'true' }}
+      docs: ${{ needs.changes.outputs.docs == 'true' }}
 
   deploy-docs:
     needs: changes

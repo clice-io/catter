@@ -3,14 +3,14 @@
 ## catter 命令行
 
 ```
-catter [选项] <脚本> [脚本参数] -- <构建命令>
+catter [options] <script> [script-args] -- <build-command>
 ```
 
 ### 选项
 
 | 选项 | 说明 | 默认值 |
 |------|------|--------|
-| `-m, --mode <mode>` | 运行模式，控制 catter 拦截进程的方式。 | `inject` |
+| `-m, --mode <mode>` | runtime 模式，即选用哪种 runtime，控制 catter 拦截进程的方式。 | `inject` |
 | `-d, --dir <path>` | 目标进程的工作目录。 | 当前目录 |
 | `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。 | `inherit` |
 | `-h, --help` | 显示帮助信息。 | |
@@ -27,7 +27,7 @@ catter [选项] <脚本> [脚本参数] -- <构建命令>
 **内置脚本**使用 `script::` 前缀：
 
 ```bash
-catter script::<名称> [脚本参数] -- <构建命令>
+catter script::<name> [script-args] -- <build-command>
 ```
 
 可用的内置脚本：
@@ -41,7 +41,7 @@ catter script::<名称> [脚本参数] -- <构建命令>
 **自定义脚本**使用文件路径：
 
 ```bash
-catter ./path/to/script.js [脚本参数] -- <构建命令>
+catter ./path/to/script.js [script-args] -- <build-command>
 ```
 
 ## catter-proxy 命令行
@@ -51,7 +51,7 @@ catter ./path/to/script.js [脚本参数] -- <构建命令>
 :::
 
 ```
-catter-proxy [选项] -- <命令>
+catter-proxy [options] -- <command>
 ```
 
 | 选项 | 说明 |

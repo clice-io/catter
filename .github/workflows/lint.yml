@@ -7,6 +7,10 @@ on:
         description: Run the format check.
         type: boolean
         default: false
+      docs:
+        description: Run the translation check of docs/.
+        type: boolean
+        default: false
   workflow_dispatch:
 
 # sync-labels widens its own scope at the job level.
@@ -88,6 +92,21 @@ jobs:
             failed=1
           fi
           exit $failed
+
+  # docs/zh against docs/en, segment by segment, as the hash pairs in
+  # docs/meta/translations attest. An exact release: tools/docs/translations.ts
+  # runs this one locally.
+  translations:
+    if: ${{ inputs.docs || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Check translations
+        uses: clice-io/docs/check-translations@v1.0.0
 
   # Labels are synced from main only: skip-delete is off, so a branch's
   # labels.yml would otherwise rewrite the repository's labels.
