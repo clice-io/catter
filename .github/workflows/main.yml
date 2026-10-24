@@ -22,10 +22,10 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      format: false
-      docs: false
-      translations: false
-      build: false
+      format: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.format == 'true' }}
+      docs: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docs == 'true' }}
+      translations: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.translations == 'true' }}
+      build: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.build == 'true' }}
 
     steps:
       - uses: actions/checkout@v7
