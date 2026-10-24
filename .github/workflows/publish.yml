@@ -29,7 +29,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ inputs.release_tag }}
-      # One per release build in test.yml that packages.
+      # The packages of test.yml but MinGW's, which is not released.
       PACKAGES: package-windows-2025 package-ubuntu-24.04 package-macos-15
     steps:
       - name: Locate the green build run

@@ -1,9 +1,5 @@
 name: test
 
-# Every target and build mode CI builds, each calling test-target.yml. The
-# release builds that name a package build what releases promote
-# (publish.yml).
-
 on:
   workflow_call:
 

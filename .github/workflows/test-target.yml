@@ -22,8 +22,8 @@ on:
       mode:
         type: string
         default: release
-      # The package artifact of a release build, which releases promote
-      # (publish.yml).
+      # The package artifact of a release build; publish.yml lists the ones
+      # releases promote.
       package:
         type: string
         default: ""
@@ -55,8 +55,8 @@ jobs:
           actions-cache-key: ${{ inputs.os }}
           package-cache: true
           # Debug builds install their packages with sanitizer configs, so
-          # the two modes must not share one package cache. agent-box.yml
-          # restores these entries by this prefix.
+          # the two modes must not share one package cache. agent-box.yml, on
+          # the agent-box branch, restores these entries by this prefix.
           package-cache-key: ${{ inputs.os }}-${{ inputs.env }}-${{ inputs.mode }}-pixi
 
       - uses: ./.github/actions/setup-pixi
@@ -68,15 +68,17 @@ jobs:
       # cache pool faster than the next run can reuse it. main starts empty
       # and saves what its build compiled, once per merge: xmake does not
       # mark the entries it reads, so a restored cache could never shed the
-      # ones the tree no longer compiles.
+      # ones the tree no longer compiles. Its entries name the compiler by
+      # path, not by version: pixi.lock in the key keeps a toolchain update
+      # from reusing what the old compiler made.
       - name: Restore the build cache
         if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: build/.build_cache
-          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ github.sha }}
+          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-${{ github.sha }}
           restore-keys: |
-            xmake-build-${{ inputs.target }}-${{ inputs.mode }}-
+            xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-
 
       # Configures, builds, and runs the unit tests.
       - name: Build and test
@@ -88,7 +90,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: build/.build_cache
-          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ github.sha }}
+          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-${{ github.sha }}
 
       # The programs the cases run, side by side as catter finds them.
       - name: Collect programs
