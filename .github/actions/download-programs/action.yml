@@ -1,0 +1,27 @@
+name: "Download programs"
+description: "pixi's dev environment and the programs of a build-<target>-<mode> artifact, in programs/"
+
+inputs:
+  target:
+    required: true
+  mode:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/setup-pixi
+      with:
+        environments: dev
+
+    - name: Download programs
+      uses: actions/download-artifact@v8
+      with:
+        name: build-${{ inputs.target }}-${{ inputs.mode }}
+        path: programs
+
+    # An artifact keeps no file modes.
+    - name: Make programs executable
+      if: runner.os != 'Windows'
+      shell: bash
+      run: chmod +x programs/*

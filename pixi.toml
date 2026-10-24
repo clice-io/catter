@@ -162,7 +162,8 @@ cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""
 
 # What a CI build job runs: the build and the unit tests. The cases run in
-# jobs of their own, on the programs it uploads (.github/workflows/test.yml).
+# jobs of their own, on the programs it uploads
+# (.github/workflows/test-target.yml).
 [tasks.ci-build]
 args = [
     { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },

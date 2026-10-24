@@ -17,5 +17,10 @@ runs:
         environments: ${{ inputs.environments }}
         # Tasks select their environment explicitly (`pixi run -e dev ...`).
         activate-environment: false
+        # Restoring an environment beats installing it from the CDN, most on
+        # Windows. Saved from main only, as the build cache is (test-target.yml).
         cache: true
+        cache-write: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         locked: true
+        # Runners are thrown away after the job.
+        post-cleanup: false

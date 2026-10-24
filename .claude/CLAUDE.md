@@ -54,9 +54,9 @@ Decided, not yet done — write code for where it stands today, and don't build 
 ## Build & Test
 
 - **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, MSVC on Windows) and `mingw` (Windows, xclang for `x86_64-w64-mingw32`); `clang` (conda-forge clang 20) is a local convenience CI does not use. Modes `debug` (ASan, except MinGW), `release`, `releasedbg`.
-- `pixi run -e <env> ci-build <mode>` is what CI runs on every leg: npm-install, configure, build and the unit tests; a `cases` job per leg then runs the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
+- `pixi run -e <env> ci-build <mode>` is what every CI build job runs: npm-install, configure, build and the unit tests; `cases` jobs then run the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
 - **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
-- CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every leg must pass.
+- CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every one must pass.
 - Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint, the module boundaries of `api/`, and `check-testing`: the types, lint and tests of `tools/` and `tests/`).
 
 ## Branches and Commits

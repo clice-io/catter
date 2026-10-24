@@ -51,7 +51,7 @@ approval like any release trigger.
 ## Plumbing changes
 
 There is no separate dry run: packaging runs on every building CI run (the
-release legs of `test.yml` run `pixi run -e <env> package` and upload the
-artifacts), so it is exercised by every code-touching PR. Only the promote
-glue (`publish.yml`) is release-time-only, and it has no dry run either:
+release builds of `test.yml` that name a package run `pixi run -e <env>
+package` in `test-target.yml` and upload the artifacts), so it is exercised
+by every code-touching PR. Only the promote glue (`publish.yml`) is release-time-only, and it has no dry run either:
 dispatching it for an existing tag replaces that release's assets.
