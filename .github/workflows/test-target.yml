@@ -45,6 +45,10 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Fail (probe)
+        if: inputs.target != 'x86_64-pc-windows-msvc' || inputs.mode != 'debug'
+        run: exit 1
+
       # The package cache is keyed by a hash of every package's
       # configuration, so a run saves one only when that changed.
       - name: Setup xmake
@@ -84,6 +88,15 @@ jobs:
       - name: Build and test
         timeout-minutes: 60
         run: pixi run -e ${{ inputs.env }} ci-build ${{ inputs.mode }}
+
+      - name: PDBs from the build cache, then from a fresh compile (probe)
+        if: inputs.target == 'x86_64-pc-windows-msvc' && inputs.mode == 'debug'
+        run: |
+          Get-ChildItem build/windows/x64/debug/*.pdb | Format-Table Name, Length
+          Remove-Item -Recurse -Force build/.build_cache
+          pixi run -e dev xmake build -r catter
+          Get-ChildItem build/windows/x64/debug/*.pdb | Format-Table Name, Length
+          exit 1
 
       - name: Save the build cache
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
