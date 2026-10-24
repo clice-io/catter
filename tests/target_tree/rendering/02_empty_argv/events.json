@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "name": "a compiler started with no argv at all",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "gcc",
+      "argv": []
+    }
+  ],
+  "finish": {
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

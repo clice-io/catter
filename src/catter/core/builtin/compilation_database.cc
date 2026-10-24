@@ -75,6 +75,9 @@ std::vector<JSON> read(std::string_view path, const fs::path& file) {
         throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
     }
     std::ifstream stream(file, std::ios::binary);
+    if(!stream) {
+        throw cpptrace::runtime_error(std::format("Failed to read the CDB file: {}", path));
+    }
     std::string text(std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{});
 
     // As JavaScript trims it: spaces, line ends and a byte order mark.

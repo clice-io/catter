@@ -80,7 +80,7 @@ page texts stay out of the main context.
 ## What the docs describe
 
 The docs describe what catter does today, for its users. Planned work
-(the C++ built-ins, the scripting protocol, Detours, Bazel) appears only
+(the scripting protocol, Detours, Bazel) appears only
 where a page already says it is planned, and leaves the page when it
 ships or is dropped. A change to behavior, options or output a page
 describes updates the page — both trees — in the same PR.

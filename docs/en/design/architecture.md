@@ -67,7 +67,7 @@ sequenceDiagram
 - The script chooses an action via `ctx.skip()` / `ctx.drop()` / `ctx.abort()` / `ctx.modify(data)` / `ctx.setAction(action)`; if none is chosen, the default is `skip` (execute as-is).
 - `ctx.ignoreDescendants()` prevents all descendant commands of this command from triggering `onCommand` / `onExecution`. Combine it with `skip` to "capture this command but ignore its subtree".
 
-**`onExecution(ctx)`** is called after each command finishes. `ctx.result` is the command's exit code and output. Scripts can aggregate statistics or failures here (for example, the cdb script's `--abort-on-command-failure`).
+**`onExecution(ctx)`** is called after each command finishes. `ctx.result` is the command's exit code and output. Scripts can aggregate statistics or failures here.
 
 ## Actions: separating script semantics from execution mechanics
 

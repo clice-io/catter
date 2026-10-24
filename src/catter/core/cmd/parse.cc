@@ -1,6 +1,7 @@
 #include "cmd/parse.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <format>
@@ -24,7 +25,8 @@ using namespace opt::clang;
 
 std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::string> argv,
                                                            std::uint32_t visibility) {
-    auto args = argv.subspan(1);
+    // A replayed command may have no argv at all.
+    auto args = argv.subspan(std::min<std::size_t>(argv.size(), 1));
     std::vector<Argument> arguments;
     for(const auto& result: table().parse(args,
                                           {

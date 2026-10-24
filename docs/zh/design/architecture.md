@@ -67,7 +67,7 @@ sequenceDiagram
 - 脚本通过 `ctx.skip()` / `ctx.drop()` / `ctx.abort()` / `ctx.modify(data)` / `ctx.setAction(action)` 指定动作；不指定时默认 `skip`（原样执行）。
 - `ctx.ignoreDescendants()` 让该命令的所有子孙命令不再触发 `onCommand` / `onExecution`。想"捕获这条命令但跳过它的子树"时与 `skip` 搭配使用。
 
-**`onExecution(ctx)`** 在每条命令执行完毕后调用。`ctx.result` 是该命令的退出码与输出。脚本可在这里做统计与失败聚合（例如 cdb 脚本的 `--abort-on-command-failure`）。
+**`onExecution(ctx)`** 在每条命令执行完毕后调用。`ctx.result` 是该命令的退出码与输出。脚本可在这里做统计与失败聚合。
 
 ## Action：脚本语义与执行机制的分层
 
