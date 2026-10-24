@@ -53,21 +53,25 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
 #endif
 }
 
+kota::process::options process_options(const data::command& cmd, bool verbatim_arguments) {
+    return {
+        .file = cmd.executable,
+        .args = cmd.args,
+        .env = cmd.env,
+        .cwd = cmd.cwd,
+        .creation = {.windows_hide = true, .windows_verbatim_arguments = verbatim_arguments},
+        .streams = {kota::process::stdio::inherit(),
+                     kota::process::stdio::pipe(false, true),
+                     kota::process::stdio::pipe(false, true)}
+    };
+}
+
 kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::string pipe_name) {
     using catter::data::action;
 
     switch(act.type) {
         case action::WRAP: {
-            kota::process::options opts{
-                .file = act.cmd.executable,
-                .args = act.cmd.args,
-                .env = act.cmd.env,
-                .cwd = act.cmd.cwd,
-                .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
-                .streams = {kota::process::stdio::inherit(),
-                             kota::process::stdio::pipe(false, true),
-                             kota::process::stdio::pipe(false, true)}
-            };
+            auto opts = process_options(act.cmd, true);
             co_return co_await capture_process_result(make_process_event(opts));
         }
         case action::INJECT: {
@@ -184,7 +188,10 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
                  *opt.ipc,
                  ret.error().message());
         try {
-            auto result = co_await run({.type = action::WRAP, .cmd = command_of(opt)}, 0, "");
+            // The arguments are the ones the hook took apart: quoted back,
+            // not joined as they are.
+            auto opts = process_options(command_of(opt), false);
+            auto result = co_await capture_process_result(make_process_event(opts));
             co_return static_cast<int>(result.code);
         } catch(const std::exception& ex) {
             LOG_ERROR("Run `{}` failed: {}", format_args(argc, argv), ex.what());

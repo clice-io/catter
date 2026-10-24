@@ -5,9 +5,11 @@ import { writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 
 const server = createServer((socket) => {
-  const output = execFileSync("node", ["-e", "console.log('compiled')"], {
-    encoding: "utf8",
-  });
+  const output = execFileSync(
+    "node",
+    ["-e", "console.log(`compiled ${process.argv[1]}`)", "with space"],
+    { encoding: "utf8" },
+  );
   socket.end(output, () => server.close());
 });
 server.listen(0, "127.0.0.1", () => {

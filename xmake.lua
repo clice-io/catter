@@ -301,7 +301,7 @@ target("catter")
     add_files("src/catter/main.cc")
     -- main is wmain on Windows (src/catter/main.cc).
     if is_plat("mingw") then
-        add_ldflags("-municode")
+        add_ldflags("-municode", {force = true})
     end
 
 
@@ -391,7 +391,7 @@ target("catter-proxy")
     add_files("src/catter-proxy/**.cc")
     -- main is wmain on Windows (src/catter-proxy/main.cc).
     if is_plat("mingw") then
-        add_ldflags("-municode")
+        add_ldflags("-municode", {force = true})
     end
 
 rule("ut-base")

@@ -8,7 +8,7 @@ exit = 0
 
 [test."$ catter script::cmd-tree -w 1000 -- node client.mjs"]
 stdout = '''
-server: compiled
+server: compiled with space
 node client.mjs
 '''
 exit = 0
