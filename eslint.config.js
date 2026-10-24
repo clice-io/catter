@@ -20,6 +20,9 @@ export default defineConfig(
             "scripts/output/**",
             "release-assets/**",
             "**/.turbo/**",
+            // Linted by their own configs, with the type-checked rules.
+            "tools/**",
+            "tests/**",
         ],
     },
     tseslint.configs.recommended,

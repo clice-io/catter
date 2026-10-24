@@ -19,7 +19,7 @@ of it), brings two conda packages (channel `https://conda.clice.io`):
   clang, lld (COFF, ELF, MachO, MinGW, wasm), llvm-lib and llvm-dlltool,
   which `src/common/option` includes (`<llvm-options-td/*.inc>`);
 - `xclang` — the toolchain: the clang and lld that build catter on macOS
-  and for MinGW, and the FileCheck of the lit suite.
+  and for MinGW.
 
 They always move together:
 
@@ -31,8 +31,9 @@ They always move together:
    `pixi run -e dev node scripts/js-gen/generate_llvm_option.mjs`. An
    option catter names that was renamed or removed upstream shows up as a
    C++ build error or a tsc error; the unit tests under
-   `tests/unit/common/opt` pin the parsing.
-4. Build and run the suites on every CI leg (the build skill): Linux,
+   `unittests/common/opt` and the `tests/inspect` cases pin the parsing.
+4. Build and run the unit tests and the cases on every CI leg (the build
+   and test skills): Linux,
    macOS and Windows MSVC and MinGW, debug and release. macOS and MinGW
    are the legs xclang's clang compiles.
 
@@ -49,8 +50,9 @@ configs catter consumes (`async`, `deco`, `ztest` on, `http` off).
 3. Read kotatsu's history since the old pin
    (`git log --oneline <old>..<new>`) for API changes, adapt catter to
    them, and list them in the PR body.
-4. Build and run the suites on every CI leg, debug and release (the build
-   skill). A new version is in no package cache: CI and every box install
+4. Build and run the unit tests and the cases on every CI leg, debug and
+   release (the build and test skills): the cases are what exercises
+   kotatsu's IPC, pipes and processes. A new version is in no package cache: CI and every box install
    it first.
 
 catter and clice pin kotatsu separately (clice through Bazel), so the two

@@ -12,6 +12,7 @@
 #include "../apitool.h"
 #include "../js.h"
 #include "../qjs.h"
+#include "util/encoding.h"
 
 namespace fs = std::filesystem;
 namespace qjs = catter::qjs;
@@ -51,7 +52,7 @@ kota::task<void, kota::error> create_directories_async(fs::path path) {
             continue;
         }
 
-        auto status = co_await kota::fs::stat(current.string());
+        auto status = co_await kota::fs::stat(catter::util::to_utf8(current));
         if(status) {
             if(!is_directory(*status)) {
                 co_await kota::fail(kota::error::not_a_directory);
@@ -63,7 +64,7 @@ kota::task<void, kota::error> create_directories_async(fs::path path) {
             co_await kota::fail(status.error());
         }
 
-        auto made = co_await kota::fs::mkdir(current.string(), DEFAULT_DIR_MODE);
+        auto made = co_await kota::fs::mkdir(catter::util::to_utf8(current), DEFAULT_DIR_MODE);
         if(!made && made.error() != kota::error::file_already_exists) {
             co_await kota::fail(made.error());
         }
@@ -72,7 +73,7 @@ kota::task<void, kota::error> create_directories_async(fs::path path) {
 }
 
 kota::task<void, kota::error> remove_all_async(fs::path path) {
-    auto status = co_await kota::fs::lstat(path.string());
+    auto status = co_await kota::fs::lstat(catter::util::to_utf8(path));
     if(!status) {
         if(is_missing(status.error())) {
             co_return;
@@ -81,20 +82,20 @@ kota::task<void, kota::error> remove_all_async(fs::path path) {
     }
 
     if(is_directory(*status)) {
-        auto entries = co_await kota::fs::scandir(path.string());
+        auto entries = co_await kota::fs::scandir(catter::util::to_utf8(path));
         if(!entries) {
             co_await kota::fail(entries.error());
         }
 
         for(const auto& entry: *entries) {
-            co_await remove_all_async(path / entry.name).or_fail();
+            co_await remove_all_async(path / catter::util::from_utf8(entry.name)).or_fail();
         }
 
-        co_await kota::fs::rmdir(path.string()).or_fail();
+        co_await kota::fs::rmdir(catter::util::to_utf8(path)).or_fail();
         co_return;
     }
 
-    co_await kota::fs::unlink(path.string()).or_fail();
+    co_await kota::fs::unlink(catter::util::to_utf8(path)).or_fail();
     co_return;
 }
 
@@ -133,7 +134,7 @@ CAPI(fs_is_dir, (std::string path)->bool) {
 
 CAPI(fs_pwd, ()->std::string) {
     std::error_code ec;
-    return catter::js::get_global_runtime_config().pwd.string();
+    return catter::util::to_utf8(catter::js::get_global_runtime_config().pwd);
 }
 
 CAPI(fs_path_join_all, (catter::qjs::Object path_parts)->std::string) {
@@ -142,46 +143,46 @@ CAPI(fs_path_join_all, (catter::qjs::Object path_parts)->std::string) {
     for(size_t i = 0; i < len; ++i) {
         auto part = path_parts[std::to_string(i)].as<std::string>();
         if(i == 0) {
-            result = fs::path(part);
+            result = catter::util::from_utf8(part);
         } else {
-            result /= part;
+            result /= catter::util::from_utf8(part);
         }
     }
-    return result.string();
+    return catter::util::to_utf8(result);
 }
 
 /// return root if no ancestor when doing this part
 CAPI(fs_path_ancestor_n, (std::string path, uint32_t n)->std::string) {
-    fs::path p = path;
+    fs::path p = catter::util::from_utf8(path);
     for(uint32_t i = 0; i < n; ++i) {
         p = p.parent_path();
     }
-    return p.string();
+    return catter::util::to_utf8(p);
 }
 
 /// use it when it is a file please
 CAPI(fs_path_filename, (std::string path)->std::string) {
-    fs::path p = path;
-    return p.filename().string();
+    fs::path p = catter::util::from_utf8(path);
+    return catter::util::to_utf8(p.filename());
 }
 
 CAPI(fs_path_extension, (std::string path)->std::string) {
-    fs::path p = path;
-    return p.extension().string();
+    fs::path p = catter::util::from_utf8(path);
+    return catter::util::to_utf8(p.extension());
 }
 
 CAPI(fs_path_relative_to, (std::string base, std::string path)->std::string) {
     auto rel = fs::relative(absolute_of(path), absolute_of(base));
-    return rel.string();
+    return catter::util::to_utf8(rel);
 }
 
 CAPI(fs_path_absolute, (std::string path)->std::string) {
-    return absolute_of(path).string();
+    return catter::util::to_utf8(absolute_of(path));
 }
 
 CAPI(fs_path_lexical_normal, (std::string path)->std::string) {
-    fs::path p = path;
-    return p.lexically_normal().string();
+    fs::path p = catter::util::from_utf8(path);
+    return catter::util::to_utf8(p.lexically_normal());
 }
 
 CAPI(fs_create_dir_recursively, (std::string path)->bool) {
@@ -208,7 +209,7 @@ CAPI(fs_create_empty_file_recursively, (std::string path)->bool) {
             path,
             ec.message());
     }
-    std::ofstream ofs(p.string(), std::ios::app);
+    std::ofstream ofs(p, std::ios::app);
     if(!ofs.is_open()) {
         return false;
     }
@@ -250,7 +251,7 @@ CTX_CAPI(fs_list_dir, (JSContext * ctx, std::string path)->catter::qjs::Object) 
     }
     auto res_arr = catter::qjs::Array<std::string>::empty_one(ctx);
     for(const auto& entry: fs::directory_iterator(p, ec)) {
-        res_arr.push(entry.path().string());
+        res_arr.push(catter::util::to_utf8(entry.path()));
     }
     if(ec) {
         throw catter::qjs::Exception("Failed to list directory `{}` because `{}`",
@@ -261,7 +262,7 @@ CTX_CAPI(fs_list_dir, (JSContext * ctx, std::string path)->catter::qjs::Object) 
 }
 
 CTX_ASYNC_CAPI(fs_async_exists, (JSContext * ctx, std::string path)->JsTask<bool>) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto result = co_await kota::fs::access(abs_path, ACCESS_EXISTS);
     if(result) {
         co_return true;
@@ -278,7 +279,7 @@ CTX_ASYNC_CAPI(fs_async_exists, (JSContext * ctx, std::string path)->JsTask<bool
 }
 
 CTX_ASYNC_CAPI(fs_async_is_file, (JSContext * ctx, std::string path)->JsTask<bool>) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto result = co_await kota::fs::stat(abs_path);
     if(result) {
         co_return is_regular_file(*result);
@@ -295,7 +296,7 @@ CTX_ASYNC_CAPI(fs_async_is_file, (JSContext * ctx, std::string path)->JsTask<boo
 }
 
 CTX_ASYNC_CAPI(fs_async_is_dir, (JSContext * ctx, std::string path)->JsTask<bool>) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto result = co_await kota::fs::stat(abs_path);
     if(result) {
         co_return is_directory(*result);
@@ -313,7 +314,7 @@ CTX_ASYNC_CAPI(fs_async_is_dir, (JSContext * ctx, std::string path)->JsTask<bool
 
 CTX_ASYNC_CAPI(fs_async_list_dir,
                (JSContext * ctx, std::string path)->JsTask<catter::qjs::Object>) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto entries = co_await kota::fs::scandir(abs_path);
     if(!entries) {
         co_await kota::fail(qjs::Error::internal_error(ctx,
@@ -324,14 +325,15 @@ CTX_ASYNC_CAPI(fs_async_list_dir,
 
     auto result = qjs::Array<std::string>::empty_one(ctx);
     for(const auto& entry: *entries) {
-        result.push((fs::path(abs_path) / entry.name).string());
+        result.push(catter::util::to_utf8(catter::util::from_utf8(abs_path) /
+                                          catter::util::from_utf8(entry.name)));
     }
     co_return qjs::Object::from(std::move(result));
 }
 
 CTX_ASYNC_CAPI(fs_async_create_dir_recursively, (JSContext * ctx, std::string path)->JsTask<bool>) {
-    auto abs_path = absolute_of(path).string();
-    auto result = co_await create_directories_async(abs_path);
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
+    auto result = co_await create_directories_async(catter::util::from_utf8(abs_path));
     if(!result) {
         co_await kota::fail(qjs::Error::internal_error(ctx,
                                                        "Failed to create directory `{}`: {}",
@@ -344,8 +346,9 @@ CTX_ASYNC_CAPI(fs_async_create_dir_recursively, (JSContext * ctx, std::string pa
 
 CTX_ASYNC_CAPI(fs_async_create_empty_file_recursively,
                (JSContext * ctx, std::string path)->JsTask<bool>) {
-    auto abs_path = absolute_of(path).string();
-    auto parent_result = co_await create_directories_async(fs::path(abs_path).parent_path());
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
+    auto parent_result =
+        co_await create_directories_async(catter::util::from_utf8(abs_path).parent_path());
     if(!parent_result) {
         co_await kota::fail(
             qjs::Error::internal_error(ctx,
@@ -375,8 +378,8 @@ CTX_ASYNC_CAPI(fs_async_create_empty_file_recursively,
 }
 
 CTX_ASYNC_CAPI(fs_async_remove_recursively, (JSContext * ctx, std::string path)->JsVoidTask) {
-    auto abs_path = absolute_of(path).string();
-    auto result = co_await remove_all_async(abs_path);
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
+    auto result = co_await remove_all_async(catter::util::from_utf8(abs_path));
     if(!result) {
         co_await kota::fail(qjs::Error::internal_error(ctx,
                                                        "Failed to remove `{}`: {}",
@@ -388,8 +391,8 @@ CTX_ASYNC_CAPI(fs_async_remove_recursively, (JSContext * ctx, std::string path)-
 
 CTX_ASYNC_CAPI(fs_async_rename_if_exists,
                (JSContext * ctx, std::string js_old_path, std::string js_new_path)->JsTask<bool>) {
-    auto old_path = absolute_of(js_old_path).string();
-    auto new_path = absolute_of(js_new_path).string();
+    auto old_path = catter::util::to_utf8(absolute_of(js_old_path));
+    auto new_path = catter::util::to_utf8(absolute_of(js_new_path));
     auto exists = co_await kota::fs::access(old_path, ACCESS_EXISTS);
     if(!exists) {
         if(is_missing(exists.error())) {
@@ -414,7 +417,7 @@ CTX_ASYNC_CAPI(fs_async_rename_if_exists,
 }
 
 CTX_ASYNC_CAPI(fs_async_read_text, (JSContext * ctx, std::string path)->JsTask<std::string>) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto opened = co_await kota::fs::open(abs_path, UV_FS_O_RDONLY);
     if(!opened) {
         co_await kota::fail(qjs::Error::internal_error(ctx,
@@ -456,7 +459,7 @@ CTX_ASYNC_CAPI(fs_async_read_text, (JSContext * ctx, std::string path)->JsTask<s
 
 CTX_ASYNC_CAPI(fs_async_write_text,
                (JSContext * ctx, std::string path, std::string content)->JsVoidTask) {
-    auto abs_path = absolute_of(path).string();
+    auto abs_path = catter::util::to_utf8(absolute_of(path));
     auto opened = co_await kota::fs::open(abs_path,
                                           UV_FS_O_CREAT | UV_FS_O_TRUNC | UV_FS_O_WRONLY,
                                           DEFAULT_FILE_MODE);

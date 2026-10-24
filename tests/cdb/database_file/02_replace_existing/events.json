@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "clang++", "argv": ["clang++", "-c", "src/main.cc", "-o", "obj/main.o"] }
+  ],
+  "finish": { "code": 0, "stdout": "", "stderr": "" }
+}

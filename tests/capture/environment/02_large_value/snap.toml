@@ -1,0 +1,11 @@
+[test."$ node build.mjs"]
+stdout = "30000 characters, all v: true"
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+stdout = '''
+30000 characters, all v: true
+node build.mjs
+└── node child.mjs
+'''
+exit = 0

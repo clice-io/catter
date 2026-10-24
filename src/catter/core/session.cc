@@ -1,18 +1,21 @@
 #include "session.h"
 
 #include <cassert>
+#include <filesystem>
 #include <format>
 #include <list>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 
 #include "config/catter-proxy.h"
 #include "config/ipc.h"
 #include "util/crossplat.h"
+#include "util/encoding.h"
 #include "util/guard.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
@@ -21,13 +24,12 @@ namespace catter {
 
 kota::task<data::process_result> Session::run(RunPlan run_plan) {
 #ifndef _WIN32
-    if(std::filesystem::exists(config::ipc::pipe_name())) {
-        std::filesystem::remove(config::ipc::pipe_name());
-    }
+    // A socket a session of the same pid left behind.
+    std::error_code ec;
+    std::filesystem::remove(util::from_utf8(run_plan.pipe_name), ec);
 #endif
     auto& current_loop = kota::event_loop::current();
-    auto acc_ret =
-        kota::pipe::listen(config::ipc::pipe_name(), kota::pipe::options(), current_loop);
+    auto acc_ret = kota::pipe::listen(run_plan.pipe_name, kota::pipe::options(), current_loop);
 
     if(!acc_ret) {
         throw cpptrace::runtime_error(
@@ -43,6 +45,9 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
                                   run_plan.launch_plan.mode);
 
     auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
+#ifndef _WIN32
+    std::filesystem::remove(util::from_utf8(run_plan.pipe_name), ec);
+#endif
     co_return std::move(process_result);
 }
 

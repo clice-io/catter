@@ -35,17 +35,18 @@ C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targ
 - `src/catter-hook/` — launching a command with the hook (`hook.h`, linked into `catter-proxy`) and the hook libraries themselves: `unix/payload/` is the shared library preloaded into every process (the exec-family hooks, the environment it keeps), `win/` injects `win/payload/`, the DLL that hooks process creation with MinHook
 - `src/common/` — shared static libraries: `option/` (the option tables of clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and of nvcc, read by kotatsu's option parser), `util/` (logging, data paths, processes, pipes), `config/` (names and paths every process agrees on), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`
 - `api/` — the TypeScript script API: `api/src` holds the `catter/*` modules, including compiler identification and argument parsing (`cmd/`) and the database (`cdb/`); `api/native` declares the native functions; `api/dev` builds and bundles it, and xmake embeds the bundle into `catter`
-- `scripts/` — the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`), in TypeScript, embedded the same way; `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
-- `tests/` — `unit/`, the zest unit tests, mirroring `src/`; `integration/`, the lit suite: test programs and recorded builds replayed through the scripts, checked with FileCheck
+- `scripts/` — the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), in TypeScript, embedded the same way; `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
+- `tests/` — the snapshot cases, `tests/<topic>/<subtopic>/NN_name/`: a small project, `test.ts` and `snap.toml`, run against the built `catter` (`tests/README.md` is their contract; the test and write-tests skills)
+- `tools/` — the `@catter/tools` package: the case runner (`tools/testing`), the repository's ESLint rules (`tools/lint`), the docs translation check (`tools/docs`)
+- `unittests/` — the zest unit tests, mirroring `src/`
 - `docs/` — the `docs/en` and `docs/zh` pages published at docs.clice.io/catter (the docs skill)
 
-`api/dev` and `scripts/` are one pnpm workspace rooted at the repo top level: run `pixi run -e dev npm-install` from the root, never `pnpm install` inside a package.
+`api/dev`, `scripts/`, `tools/` and `tests/` are one pnpm workspace rooted at the repo top level: run `pixi run -e dev npm-install` from the root, never `pnpm install` inside a package.
 
 ### Where it is going
 
 Decided, not yet done — write code for where it stands today, and don't build on what is about to go:
 
-- **Tests**: a snapshot case suite like clice's (`tests/<topic>/<case>/`, `test.ts` + `snap.toml`) is being built to replace the lit suite, which is deleted once the cases cover it; the zest unit tests stay and move to `unittests/`. The test and write-tests skills arrive with it; until then, the build skill's `ci-build` runs both current suites.
 - **Built-ins in C++**: the built-in logic in `api/src` and `scripts/` (compiler identification, argument parsing, the database, the trees) is to be rewritten in C++. Once it and the protocol below pass the snapshot suite, QuickJS, the JS bridge (`src/catter/core/js`), `api/`, `scripts/` and the pnpm/rollup build are deleted.
 - **User scripts**: they are to move out of process: catter speaking JSON-RPC to a handler process, with thin SDKs for Python, TypeScript and Rust. The embedded TS API is what users script today.
 - **Staying for now**: the Windows hook on MinHook (Detours is planned, later), and the xmake build (Bazel, then C++20 modules, later).
@@ -53,10 +54,10 @@ Decided, not yet done — write code for where it stands today, and don't build 
 ## Build & Test
 
 - **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, MSVC on Windows) and `mingw` (Windows, xclang for `x86_64-w64-mingw32`); `clang` (conda-forge clang 20) is a local convenience CI does not use. Modes `debug` (ASan, except MinGW), `release`, `releasedbg`.
-- `pixi run -e <env> ci-build <mode>` is what CI runs on every leg: npm-install, configure, build, the unit tests and the lit suite. `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
+- `pixi run -e <env> ci-build <mode>` is what CI runs on every leg: npm-install, configure, build and the unit tests; a `cases` job per leg then runs the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
 - **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
 - CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every leg must pass.
-- Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint and the module boundaries of `api/`).
+- Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint, the module boundaries of `api/`, and `check-testing`: the types, lint and tests of `tools/` and `tests/`).
 
 ## Branches and Commits
 

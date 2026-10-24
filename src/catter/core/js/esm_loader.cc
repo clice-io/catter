@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "builtin_files.h"
+#include "util/encoding.h"
 
 namespace catter::js {
 
@@ -15,7 +16,7 @@ constexpr std::string_view kJsLibPrefix = "catter";
 
 bool is_path_specifier(std::string_view specifier) {
     return specifier.starts_with("./") || specifier.starts_with("../") || specifier == "." ||
-           specifier == ".." || std::filesystem::path(specifier).is_absolute();
+           specifier == ".." || util::from_utf8(specifier).is_absolute();
 }
 
 }  // namespace
@@ -28,7 +29,7 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
                              module_name);
     }
 
-    auto referrer = std::filesystem::path(referrer_name);
+    auto referrer = util::from_utf8(referrer_name);
 
     if(referrer.is_relative()) {
         throw qjs::Exception(
@@ -36,9 +37,9 @@ std::filesystem::path EsmModuleLoader::resolve_path(std::string_view referrer_na
             referrer_name);
     }
 
-    std::filesystem::path path = referrer.parent_path() / std::filesystem::path(module_name);
+    std::filesystem::path path = referrer.parent_path() / util::from_utf8(module_name);
 
-    return path.lexically_normal().string();
+    return path.lexically_normal();
 }
 
 std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
@@ -59,12 +60,12 @@ std::string EsmModuleLoader::normalizer(std::string_view referrer_name,
                              referrer_name);
     }
     if(std::filesystem::is_directory(resolved, ec)) {
-        throw qjs::Exception("Directory import `{}` is not supported", resolved.string());
+        throw qjs::Exception("Directory import `{}` is not supported", util::to_utf8(resolved));
     }
     if(ec || !std::filesystem::is_regular_file(resolved, ec) || ec) {
-        throw qjs::Exception("Cannot load module `{}`", resolved.string());
+        throw qjs::Exception("Cannot load module `{}`", util::to_utf8(resolved));
     }
-    return resolved.string();
+    return util::to_utf8(resolved);
 }
 
 qjs::Module EsmModuleLoader::loader(qjs::Context ctx, std::string_view module_name) {
@@ -76,10 +77,10 @@ qjs::Module EsmModuleLoader::loader(qjs::Context ctx, std::string_view module_na
         return ctx.load_module(source, module_name.data());
     }
 
-    std::filesystem::path path = module_name;
+    std::filesystem::path path = util::from_utf8(module_name);
     std::ifstream input(path, std::ios::binary);
     if(!input) {
-        throw qjs::Exception("Failed to read module `{}`", path.string());
+        throw qjs::Exception("Failed to read module `{}`", module_name);
     }
     std::string source{std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{}};
     return ctx.load_module(source, module_name.data());

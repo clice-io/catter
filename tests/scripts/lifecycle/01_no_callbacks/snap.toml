@@ -1,0 +1,7 @@
+[test."$ catter script.js -- node -e \"console.log('the build ran')\""]
+wrong = "a script that registers no callbacks cannot run (catter#142)"
+stdout = '''
+a script without callbacks
+service.onStart is not registered
+'''
+exit = 1

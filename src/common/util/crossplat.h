@@ -18,7 +18,9 @@ std::filesystem::path get_catter_root_path();
 std::filesystem::path get_executable_path();
 
 /**
- * @return the data path used by catter
+ * @return the data path used by catter: CATTER_HOME when it is set (an
+ * absolute path, or it throws), else ~/.catter, or catter under the local
+ * application data on Windows
  */
 std::filesystem::path get_catter_data_path();
 

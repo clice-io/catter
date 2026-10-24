@@ -1,0 +1,37 @@
+[test."$ catter script::cdb -o compile_commands.json -- make"]
+stdout = '''
+g++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
+cd src && g++ -DCATTER_TEST=1 -I../include -c util.cc -o ../util.o
+g++ main.o util.o -o hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[test."$ catter script::cdb -o compile_commands.json -- make".darwin]
+wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
+stderr = '''
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+'''
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-Iinclude", "-c", "src/main.cc", "-o", "main.o"],
+    },
+    {
+        file = "util.cc",
+        directory = "${WS}/src",
+        output = "${WS}/util.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-I../include", "-c", "util.cc", "-o", "../util.o"],
+    },
+]
+
+[test."compile_commands.json".darwin]
+wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+entries = []

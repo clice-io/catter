@@ -1,0 +1,18 @@
+[test."$ spawn.exe CreateProcessW command.txt"]
+stdout = '''
+first
+"quoted arg"
+third
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+wrong = "the command line rebuilt for cmd.exe moves its quotes (catter#140)"
+stdout = '''
+first
+quoted" "arg
+third
+spawn.exe CreateProcessW command.txt
+└── cmd.exe /d /c "echo first&& echo quoted" "arg&& echo third"
+'''
+exit = 0

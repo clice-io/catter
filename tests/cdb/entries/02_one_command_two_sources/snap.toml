@@ -1,0 +1,71 @@
+[posix."$ catter script::cdb -o compile_commands.json -- c++ -DCATTER_TEST=1 -Iinclude src/main.cc src/util.cc -o hello"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
+exit = 0
+
+[posix."$ catter script::cdb -o compile_commands.json -- c++ -DCATTER_TEST=1 -Iinclude src/main.cc src/util.cc -o hello".darwin]
+wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
+stderr = '''
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+'''
+exit = 0
+
+[posix."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/hello",
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/main.cc", "src/util.cc", "-o", "hello"],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/hello",
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/main.cc", "src/util.cc", "-o", "hello"],
+    },
+]
+
+[msvc."$ catter script::cdb -o compile_commands.json -- cl /nologo /EHsc /DCATTER_TEST=1 /Iinclude src/main.cc src/util.cc /Fehello.exe"]
+stdout = '''
+main.cc
+util.cc
+Generating Code...
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[msvc."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/hello.exe",
+        arguments = [
+            "cl",
+            "/nologo",
+            "/EHsc",
+            "/DCATTER_TEST=1",
+            "/Iinclude",
+            "src/main.cc",
+            "src/util.cc",
+            "/Fehello.exe",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/hello.exe",
+        arguments = [
+            "cl",
+            "/nologo",
+            "/EHsc",
+            "/DCATTER_TEST=1",
+            "/Iinclude",
+            "src/main.cc",
+            "src/util.cc",
+            "/Fehello.exe",
+        ],
+    },
+]

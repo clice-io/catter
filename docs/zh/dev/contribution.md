@@ -2,26 +2,26 @@
 
 ## 测试
 
-三种方式运行测试：
+测试分两种：C++ 单元测试，以及用例（case）：在小项目上运行构建出的 catter，把每一项输出和快照比较。
 
 ```bash
-# Run everything (build + unit tests + integration tests)
+# Run everything: configure, build, unit tests and cases (debug, or another mode)
 pixi run -e dev test
 
 # Unit tests only
 pixi run -e dev unit-test
 
-# Integration tests only
-pixi run -e dev integration-test
+# Cases only, against the release build (or debug, releasedbg)
+pixi run -e dev cases-test release
 ```
 
 ### 单元测试
 
-单元测试使用 Kotatsu 测试框架（`kota::zest`）。位于 `tests/unit/`，目录结构与 `src/` 对应：
+单元测试使用 Kotatsu 测试框架（`kota::zest`）。位于 `unittests/`，目录结构与 `src/` 对应：
 
-- `tests/unit/common/` -- 共享工具和选项解析的测试
-- `tests/unit/catter/` -- 核心逻辑的测试（编译器识别、JS 运行时）
-- `tests/unit/catter-hook/unix/` -- Unix hook payload 的测试
+- `unittests/common/` -- 共享工具和选项解析的测试
+- `unittests/catter/` -- 核心逻辑的测试（编译器识别、JS 运行时）
+- `unittests/catter-hook/unix/` -- Unix hook payload 的测试
 
 启用测试目标：
 
@@ -31,13 +31,19 @@ pixi run cfg  # or: xmake config --test=y
 
 每个测试程序把测试分给一组 worker 进程同时运行，每个测试限时 60 秒。用到固定文件名或目录名的 suite 必须单独运行：用 `ZEST_SUITE_ATTRS(serial = true);` 标记。调试某个测试时，用 `--no-isolation --test-filter=<suite>.<test>` 让它在测试程序自己的进程里运行；其他选项见 `--help`。
 
-### 集成测试
+### 用例
 
-集成测试使用 [LLVM Lit](https://llvm.org/docs/CommandGuide/lit.html) 框架。位于 `tests/integration/`，编译并运行 C++ 测试程序，使用 FileCheck 进行输出验证。
+catter 行为的每个测试都是 `tests/<topic>/<subtopic>/NN_name/` 下的一个用例：一个小项目的输入、可选的 `test.ts`（说明运行什么），以及记录用例全部输出的 `snap.toml`。运行器（`tools/testing/`，基于 vitest 的 TypeScript）运行构建出的 catter，因此用例不依赖 catter 用什么构建、用什么语言实现。约定见 `tests/README.md`：如何编写用例、路径归一化用的占位符、平台差异和已知 bug。
 
 ```bash
-# Run integration tests with verbose output
-lit ./tests/integration -sav
+# The cases under a path
+CATTER_CASES=builds/make pixi run -e dev cases-test
+
+# Accept the new outputs of the cases that changed; review the diff of snap.toml
+UPDATE_SNAPSHOTS=1 pixi run -e dev cases-test
+
+# Another catter than a build's
+CATTER_EXECUTABLE=/path/to/catter pixi run -e dev pnpm --dir tests run cases
 ```
 
 ## 提交信息格式

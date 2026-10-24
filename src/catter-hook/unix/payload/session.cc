@@ -24,12 +24,22 @@ Session Session::make(const char* const envp[]) noexcept {
     } else {
         session.self_id = self_id;
     }
+    auto ipc = catter::env::get_env_value(envp, config::hook::KEY_CATTER_IPC);
+    if(ipc == nullptr) {
+        WARN("catter ipc pipe not found in environment");
+        return session;
+    } else {
+        session.ipc = ipc;
+    }
     if(!session.is_valid()) {
         WARN("session is invalid");
         return session;
     }
 
-    INFO("session from env: catter_proxy={}, self_id={}", session.proxy_path, session.self_id);
+    INFO("session from env: catter_proxy={}, self_id={}, ipc={}",
+         session.proxy_path,
+         session.self_id,
+         session.ipc);
     return session;
 }
 }  // namespace catter

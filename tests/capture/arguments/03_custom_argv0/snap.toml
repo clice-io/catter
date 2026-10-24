@@ -1,0 +1,11 @@
+[test."$ node build.mjs"]
+stdout = "custom-argv0"
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+stdout = '''
+custom-argv0
+node build.mjs
+└── custom-argv0 child.mjs
+'''
+exit = 0

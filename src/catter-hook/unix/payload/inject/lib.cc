@@ -51,8 +51,12 @@ extern "C" EXPORT_SYMBOL void on_load() {
     if(LOADED.exchange(true))
         return;
 #ifdef DEBUG
-    auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;
-    catter::log::init_logger("catter-hook", path, false);
+    try {
+        auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;
+        catter::log::init_logger("catter-hook", path, false);
+    } catch(const std::exception&) {
+        catter::log::mute_logger();
+    }
 #endif
     INFO("catter hook library loaded, from executable path: {}", get_executable_path());
     EXECUTOR.init(environment());

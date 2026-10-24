@@ -1,0 +1,7 @@
+[test."$ catter script.js -- node -e 0"]
+stdout = '''
+JavaScript SyntaxError: unexpected token in expression: ''
+JavaScript Stack trace:
+    at ${WS}/script.js:4:1
+'''
+exit = 1

@@ -1,0 +1,140 @@
+[test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -j 1"]
+stdout = '''
+[1/6] Scanning '${WS}/main.cc' for CXX dependencies
+[2/6] Scanning '${WS}/greet.cppm' for CXX dependencies
+[3/6] Generating CXX dyndep file CMakeFiles/modules.dir/CXX.dd
+[4/6] Building CXX object CMakeFiles/modules.dir/greet.cppm.o
+[5/6] Building CXX object CMakeFiles/modules.dir/main.cc.o
+[6/6] Linking CXX executable modules
+'''
+exit = 0
+
+[test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -j 1".win32]
+wrong = "command output gets its line endings rewritten, which leaves blank lines in Ninja's output (catter#139)"
+stdout = '''
+[1/6] Scanning ${WS}/main.cc for CXX dependencies
+
+[2/6] Scanning ${WS}/greet.cppm for CXX dependencies
+greet.cppm
+
+[3/6] Generating CXX dyndep file CMakeFiles\modules.dir\CXX.dd
+[4/6] Building CXX object CMakeFiles\modules.dir\greet.cppm.obj
+greet.cppm
+
+[5/6] Building CXX object CMakeFiles\modules.dir\main.cc.obj
+
+[6/6] Linking CXX executable modules.exe
+'''
+exit = 0
+
+[test."compile_commands.json"]
+wrong = "the module interface greet.cppm gets no entry (catter#131), and main.cc's dependency scan, a preprocess, gets one (catter#118)"
+entries = [
+    {
+        file = "${WS}/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/modules.dir/main.cc.o",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-std=gnu++20",
+            "-MD",
+            "-MT",
+            "CMakeFiles/modules.dir/main.cc.o",
+            "-MF",
+            "CMakeFiles/modules.dir/main.cc.o.d",
+            "-fmodules-ts",
+            "-fmodule-mapper=CMakeFiles/modules.dir/main.cc.o.modmap",
+            "-MD",
+            "-fdeps-format=p1689r5",
+            "-x",
+            "c++",
+            "-o",
+            "CMakeFiles/modules.dir/main.cc.o",
+            "-c",
+            "${WS}/main.cc",
+        ],
+    },
+    {
+        file = "${WS}/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/modules.dir/main.cc.o.ddi.i",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-std=gnu++20",
+            "-E",
+            "-x",
+            "c++",
+            "${WS}/main.cc",
+            "-MT",
+            "CMakeFiles/modules.dir/main.cc.o.ddi",
+            "-MD",
+            "-MF",
+            "CMakeFiles/modules.dir/main.cc.o.ddi.d",
+            "-fmodules-ts",
+            "-fdeps-file=CMakeFiles/modules.dir/main.cc.o.ddi",
+            "-fdeps-target=CMakeFiles/modules.dir/main.cc.o",
+            "-fdeps-format=p1689r5",
+            "-o",
+            "CMakeFiles/modules.dir/main.cc.o.ddi.i",
+        ],
+    },
+]
+
+[test."compile_commands.json".win32]
+wrong = "greet.cppm gets no entry (catter#131), main.cc's module map comes in a response file, which is not expanded (catter#123), and its dependency scan gets one (catter#118)"
+entries = [
+    {
+        file = "${WS}/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/modules.dir/main.cc.obj",
+        arguments = [
+            "${MSVC}/bin/Hostx64/x64/cl.exe",
+            "/nologo",
+            "/TP",
+            "-DCATTER_TEST=1",
+            "/DWIN32",
+            "/D_WINDOWS",
+            "/EHsc",
+            "/Ob0",
+            "/Od",
+            "/RTC1",
+            "-std:c++20",
+            "-MDd",
+            "-Zi",
+            "/showIncludes",
+            '@CMakeFiles\modules.dir\main.cc.obj.modmap',
+            '/FoCMakeFiles\modules.dir\main.cc.obj',
+            '/FdCMakeFiles\modules.dir\',
+            "/FS",
+            "-c",
+            "${WS}/main.cc",
+        ],
+    },
+    {
+        file = "${WS}/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/main.exe",
+        arguments = [
+            "${MSVC}/bin/Hostx64/x64/cl.exe",
+            "-DCATTER_TEST=1",
+            "/DWIN32",
+            "/D_WINDOWS",
+            "/EHsc",
+            "/Ob0",
+            "/Od",
+            "/RTC1",
+            "-std:c++20",
+            "-MDd",
+            "-Zi",
+            "${WS}/main.cc",
+            "-nologo",
+            "-TP",
+            "-showIncludes",
+            "-scanDependencies",
+            'CMakeFiles\modules.dir\main.cc.obj.ddi',
+            '-FoCMakeFiles\modules.dir\main.cc.obj',
+        ],
+    },
+]

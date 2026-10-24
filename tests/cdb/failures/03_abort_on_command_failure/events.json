@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "clang++", "argv": ["clang++", "-c", "src/broken.cc", "-o", "obj/broken.o"], "execution": { "code": 2, "stdout": "", "stderr": "" } }
+  ],
+  "finish": { "code": 0, "stdout": "", "stderr": "" }
+}

@@ -1,0 +1,1 @@
+cmd.exe /d /c "echo first&& echo "quoted arg"&& echo third"

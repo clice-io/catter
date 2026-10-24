@@ -14,6 +14,8 @@ void push_proxy_args(std::vector<std::string>& argv,
     argv.emplace_back(sess.self_id);
     argv.emplace_back("--exec");
     argv.emplace_back(exec_path);
+    argv.emplace_back("--ipc");
+    argv.emplace_back(sess.ipc);
     if(!error) {
         argv.emplace_back("--");
     }

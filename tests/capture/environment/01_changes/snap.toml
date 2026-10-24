@@ -1,0 +1,19 @@
+[test."$ node build.mjs"]
+stdout = '''
+CATTER_PROBE_SPACES="a b  c"
+CATTER_PROBE_UNICODE="中文-é"
+CATTER_PROBE_EMPTY=""
+CATTER_PROBE_REMOVED=null
+'''
+exit = 0
+
+[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+stdout = '''
+CATTER_PROBE_SPACES="a b  c"
+CATTER_PROBE_UNICODE="中文-é"
+CATTER_PROBE_EMPTY=""
+CATTER_PROBE_REMOVED=null
+node build.mjs
+└── node child.mjs CATTER_PROBE_SPACES CATTER_PROBE_UNICODE CATTER_PROBE_EMPTY CATTER_PROBE_REMOVED
+'''
+exit = 0

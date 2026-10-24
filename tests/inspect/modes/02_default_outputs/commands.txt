@@ -1,0 +1,3 @@
+gcc -c a.c
+gcc a.c
+cl /nologo /c a.cc

@@ -1,0 +1,7 @@
+[test."$ catter -m replay script::target-tree -- events.json"]
+stdout = '''
+app
+└── main.o
+    └── main.cc
+'''
+exit = 0
