@@ -6,6 +6,9 @@ stdout = '''
 
   Building Custom Rule ${WS}/CMakeLists.txt
 
+  main.cc
+  util.cc
+  Generating Code...
   hello.vcxproj -> ${WS}/build/Debug/hello.exe
   Building Custom Rule ${WS}/CMakeLists.txt
 '''

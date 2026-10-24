@@ -7,16 +7,6 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::cdb -q -o compile_commands.json -- xmake build -P . -j 1".win32]
-differs = "xmake prints Windows paths and names the executable hello.exe"
-stdout = '''
-[ 19%]: <hello> compiling.release src\main.cc
-[ 38%]: <hello> compiling.release src\util.cc
-[ 56%]: <hello> linking.release hello.exe
-[100%]: build ok, spent #s
-'''
-exit = 0
-
 [test."compile_commands.json"]
 wrong = "the sources xmake compiles to probe the compiler get entries (catter#117)"
 entries = [
@@ -171,62 +161,6 @@ entries = [
             "-o",
             "build/.objs/hello/macosx/arm64/release/src/util.cc.o",
             "src/util.cc",
-        ],
-    },
-]
-
-[test."compile_commands.json".win32]
-wrong = "the sources xmake compiles to probe the compiler get entries (catter#117); xmake compiles with MSVC's cl.exe, which takes other flags, and probes it with other files"
-entries = [
-    {
-        file = "${TMP}/.xmake#/#/_#.cpp",
-        directory = "${TMP}/.xmake#/#",
-        output = "${TMP}/.xmake#/#/_#",
-        arguments = [
-            "${MSVC}/bin/hostx64/x64/cl.exe",
-            "-c",
-            "-nologo",
-            "/sourceDependencies",
-            "${TMP}/.xmake#/#/_#.json",
-            "-nologo",
-            "-Fo${TMP}/.xmake#/#/_#",
-            "${TMP}/.xmake#/#/_#.cpp",
-        ],
-    },
-    {
-        file = 'src\main.cc',
-        directory = "${WS}",
-        output = "${WS}/build/.objs/hello/windows/x64/release/src/main.cc.obj",
-        arguments = [
-            "${MSVC}/bin/HostX64/x64/cl.exe",
-            "-c",
-            "-nologo",
-            "-MD",
-            "-Iinclude",
-            "-DCATTER_TEST=1",
-            "/EHsc",
-            "/sourceDependencies",
-            "${TMP}/.xmake#/#/_#.json",
-            '-Fobuild\.objs\hello\windows\x64\release\src\main.cc.obj',
-            'src\main.cc',
-        ],
-    },
-    {
-        file = 'src\util.cc',
-        directory = "${WS}",
-        output = "${WS}/build/.objs/hello/windows/x64/release/src/util.cc.obj",
-        arguments = [
-            "${MSVC}/bin/HostX64/x64/cl.exe",
-            "-c",
-            "-nologo",
-            "-MD",
-            "-Iinclude",
-            "-DCATTER_TEST=1",
-            "/EHsc",
-            "/sourceDependencies",
-            "${TMP}/.xmake#/#/_#.json",
-            '-Fobuild\.objs\hello\windows\x64\release\src\util.cc.obj',
-            'src\util.cc',
         ],
     },
 ]

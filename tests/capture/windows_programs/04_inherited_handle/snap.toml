@@ -1,0 +1,11 @@
+[test."$ handle.exe"]
+stdout = 'through the handle: "through the handle", child exit 0'
+exit = 0
+
+[test."$ catter script::cmd-tree -a 0 -- handle.exe"]
+stdout = '''
+through the handle: "through the handle", child exit 0
+handle.exe
+└── "C:\\....exe" ...
+'''
+exit = 0
