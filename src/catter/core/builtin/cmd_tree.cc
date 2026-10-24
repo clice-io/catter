@@ -104,18 +104,14 @@ public:
     explicit CmdTree(std::vector<std::string> args) : args(std::move(args)) {}
 
     kota::task<std::optional<core::Build>> on_start(core::Build build) override {
-        auto options = parse_options<Options>(help, args);
-        if(!options.has_value()) {
+        auto parsed = parse_options<Options>(help, args);
+        if(!parsed.has_value()) {
             co_return std::nullopt;
         }
-        check_at_least<Options>(help, "--depth", options->depth.as_optional(), 0);
-        check_at_least<Options>(help, "--args", *options->args, -1);
-        check_at_least<Options>(help, "--argWidth", *options->arg_width, 4);
-        if(options->depth.has_value()) {
-            max_depth = static_cast<std::uint32_t>(*options->depth);
-        }
-        visible_args = *options->args;
-        arg_width = *options->arg_width;
+        check_at_least<Options>(help, "--depth", parsed->depth.as_optional(), 0);
+        check_at_least<Options>(help, "--args", *parsed->args, -1);
+        check_at_least<Options>(help, "--argWidth", *parsed->arg_width, 4);
+        options = std::move(*parsed);
         co_return build;
     }
 
@@ -150,7 +146,7 @@ public:
         const auto text = [&](const Tree::Node& node) {
             return text_of(node.content);
         };
-        std::print("{}", render(tree, text, max_depth));
+        std::print("{}", render(tree, text, max_depth_of(options.depth.as_optional())));
         if(!cycles.empty()) {
             std::println("");
             std::println("Detected command cycles:");
@@ -182,12 +178,13 @@ private:
         if(argv.empty()) {
             return "<empty command>";
         }
-        const auto shown = visible_args < 0
+        const auto visible = *options.args;
+        const auto shown = visible < 0
                                ? argv.size() - 1
-                               : std::min(argv.size() - 1, static_cast<std::size_t>(visible_args));
+                               : std::min(argv.size() - 1, static_cast<std::size_t>(visible));
         auto line = argv | std::views::take(shown + 1) |
                     std::views::transform([&](const std::string& argument) {
-                        return format_argument(argument, arg_width);
+                        return format_argument(argument, *options.arg_width);
                     }) |
                     std::views::join_with(' ') | std::ranges::to<std::string>();
         if(shown + 1 < argv.size()) {
@@ -196,13 +193,10 @@ private:
         return line;
     }
 
+private:
     std::vector<std::string> args;
 
-    std::optional<std::uint32_t> max_depth;
-
-    std::int64_t visible_args = -1;
-
-    std::int64_t arg_width = 10;
+    Options options;
 
     Tree tree;
 };

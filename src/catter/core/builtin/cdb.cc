@@ -5,6 +5,7 @@
 #include <optional>
 #include <print>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -97,7 +98,7 @@ const Help help{
 std::string quote_argument(std::string_view argument) {
     const auto plain = !argument.empty() && std::ranges::all_of(argument, [](char c) {
         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-               std::string_view("_@%+=:,./\\-").contains(c);
+               std::string_view(R"(_@%+=:,./\-)").contains(c);
     });
     return plain ? std::string(argument) : quote(to_utf16(argument));
 }
@@ -111,7 +112,7 @@ std::string command_line(const data::command& command) {
 }
 
 /// `label:` and the values a line each, or that none is.
-std::string list(std::string_view label, const std::vector<std::string>& values) {
+std::string list(std::string_view label, std::span<const std::string> values) {
     if(values.empty()) {
         return std::format("  {}: none recognized", label);
     }
@@ -151,12 +152,10 @@ std::vector<std::string> notes_of(const cmd::CompilerAnalysis& analysis) {
 std::string success_log(data::ipcid_t id,
                         const data::command& command,
                         const cmd::CompilerAnalysis& analysis) {
-    std::vector<std::string> sources;
-    for(const auto& read: analysis.reads) {
-        if(read.role == cmd::InputRole::Source) {
-            sources.push_back(read.path);
-        }
-    }
+    const auto sources = analysis.reads | std::views::filter([](const cmd::Read& read) {
+                             return read.role == cmd::InputRole::Source;
+                         }) |
+                         std::views::transform(&cmd::Read::path) | std::ranges::to<std::vector>();
     std::vector<std::string> outputs;
     for(const auto& write: analysis.writes) {
         switch(write.origin) {
@@ -356,7 +355,8 @@ private:
             files.size(),
             generated.size()));
 
-        CompilationDatabase database(output_path, cwd, !*options.replace);
+        const auto inherit = !*options.replace;
+        CompilationDatabase database(output_path, cwd, inherit);
         for(auto& entry: generated) {
             database.add(std::move(entry));
         }
@@ -366,6 +366,7 @@ private:
                         database.entries().size()));
     }
 
+private:
     std::vector<std::string> args;
 
     Options options;

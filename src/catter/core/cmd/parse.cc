@@ -55,13 +55,14 @@ std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::
     return arguments;
 }
 
-bool is_action(const Argument& argument) {
+/// Whether `argument` is one of clang's Action_Group options, which select the mode.
+bool selects_mode(const Argument& argument) {
     auto group = table().option(argument.id)->group();
     return group.has_value() && group->id() == ID_Action_Group;
 }
 
 /// Builds the parsed command from its arguments, one at a time, and the phase and artifact
-/// from the actions they ask for, in the order they ask.
+/// from the options that select the mode, in the order they come.
 struct Builder {
     enum class LinkPlan : std::uint8_t {
         Executable,
@@ -122,8 +123,7 @@ struct Builder {
 
     /// The location of the value of option `position`, which takes one.
     Location value_location(std::uint32_t position) const {
-        const auto& argument = command.arguments[position];
-        return {.argument = position, .index = argument.index + argument.count - 1};
+        return {.argument = position, .index = command.arguments[position].value_index(0)};
     }
 
     void output(std::uint32_t position, OutputKind kind) {
@@ -166,7 +166,7 @@ struct Builder {
             case ID_x: language = argument.values[0]; break;
             case ID_INPUT: candidate(position); break;
             default:
-                if(is_action(argument)) {
+                if(selects_mode(argument)) {
                     compile_unknown();
                 }
                 break;
@@ -194,9 +194,8 @@ struct Builder {
             case ID__SLASH_Fa:
                 command.listing = true;
                 // `/Fa` alone names each listing after its source, as `/FA` does.
-                if(!argument.values[0].empty()) {
-                    command.listing_path = argument.values[0];
-                }
+                command.listing_path =
+                    argument.values[0].empty() ? std::nullopt : std::optional(argument.values[0]);
                 break;
             case ID__SLASH_TC: language = "c"; break;
             case ID__SLASH_TP: language = "c++"; break;
@@ -211,7 +210,7 @@ struct Builder {
             case ID__SLASH_link: apply_linker_arguments(position); break;
             case ID_INPUT: candidate(position); break;
             default:
-                if(is_action(argument)) {
+                if(selects_mode(argument)) {
                     return Error{
                         .kind = Error::Kind::CompilerParse,
                         .message =
@@ -226,8 +225,8 @@ struct Builder {
     /// What the arguments after `/link`, which go to the linker, say about the files of the
     /// link: only `/dll`, `/out` and its inputs, until catter analyzes linkers of their own.
     void apply_linker_arguments(std::uint32_t position) {
-        const auto& values = command.arguments[position].values;
-        const auto first = command.arguments[position].index + 1;
+        const auto& argument = command.arguments[position];
+        const auto& values = argument.values;
         for(std::uint32_t i = 0; i < values.size(); i += 1) {
             const auto& token = values[i];
             const auto lower = lowercase(token);
@@ -236,21 +235,21 @@ struct Builder {
             } else if(lower.starts_with("/out:")) {
                 command.outputs.push_back(Output{
                     .path = token.substr(5),
-                    .location = {.argument = position, .index = first + i},
+                    .location = {.argument = position, .index = argument.value_index(i)},
                     .kind = OutputKind::LinkedArtifact,
                 });
             } else if(lower == "/out" && i + 1 < values.size()) {
                 i += 1;
                 command.outputs.push_back(Output{
                     .path = values[i],
-                    .location = {.argument = position, .index = first + i},
+                    .location = {.argument = position, .index = argument.value_index(i)},
                     .kind = OutputKind::LinkedArtifact,
                 });
             } else if(!token.starts_with('@') && !token.starts_with('-') &&
                       !token.starts_with('/')) {
                 command.inputs.push_back(Read{
                     .path = token,
-                    .location = {.argument = position, .index = first + i},
+                    .location = {.argument = position, .index = argument.value_index(i)},
                     .role = InputRole::Link,
                 });
             }

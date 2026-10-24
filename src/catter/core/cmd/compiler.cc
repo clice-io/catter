@@ -2,6 +2,7 @@
 
 #include <array>
 #include <expected>
+#include <format>
 #include <optional>
 #include <regex>
 #include <span>
@@ -26,14 +27,12 @@ struct Rule {
     std::regex executable;
 };
 
-/// The rule of `compiler`, whose executable is `name`, perhaps followed by a version.
-Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, bool versioned) {
-    std::string pattern = R"(^(?:.*[\\/])?)";
-    pattern += name;
-    if(versioned) {
-        pattern += R"((?:[-_]?\d+(?:[._-][0-9a-zA-Z]+)*)?)";
-    }
-    pattern += R"((?:\.exe)?$)";
+/// What follows a compiler's name for its version: `-12`, `_13.2.0`, `18`.
+constexpr std::string_view version = R"((?:[-_]?\d+(?:[._-][0-9a-zA-Z]+)*)?)";
+
+/// The rule of `compiler`, whose executable is `name`, followed by what `suffix` matches.
+Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, std::string_view suffix) {
+    const auto pattern = std::format(R"(^(?:.*[\\/])?{}{}(?:\.exe)?$)", name, suffix);
 #ifdef CATTER_WINDOWS
     constexpr auto flags = std::regex::ECMAScript | std::regex::icase;
 #else
@@ -45,18 +44,18 @@ Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, bool ver
 /// In match order. A rule whose name has a group captures the target prefix.
 const auto& rules() {
     const static std::array rules = {
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:cc|c\+\+))", false),
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:gcc|g\+\+))", true),
-        rule_of(Compiler::Clang, Dialect::Clang, R"((?:([^\\/]+)-)?clang(?:\+\+)?)", true),
-        rule_of(Compiler::ClangCL, Dialect::MSVC, R"((?:([^\\/]+)-)?clang-cl)", true),
-        rule_of(Compiler::MSVC, Dialect::MSVC, "cl", false),
-        rule_of(Compiler::NVCC, Dialect::NVCC, R"((?:[^\\/]+-)?nvcc)", true),
+        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:cc|c\+\+))", ""),
+        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:gcc|g\+\+))", version),
+        rule_of(Compiler::Clang, Dialect::Clang, R"((?:([^\\/]+)-)?clang(?:\+\+)?)", version),
+        rule_of(Compiler::ClangCL, Dialect::MSVC, R"((?:([^\\/]+)-)?clang-cl)", version),
+        rule_of(Compiler::MSVC, Dialect::MSVC, "cl", ""),
+        rule_of(Compiler::NVCC, Dialect::NVCC, R"((?:[^\\/]+-)?nvcc)", version),
     };
     return rules;
 }
 
-}  // namespace
-
+/// The compiler `executable` is, by its name; none for a program that is no compiler catter
+/// knows.
 std::optional<Identity> identify(std::string_view executable) {
     for(const auto& rule: rules()) {
         std::match_results<std::string_view::const_iterator> match;
@@ -70,6 +69,8 @@ std::optional<Identity> identify(std::string_view executable) {
     }
     return std::nullopt;
 }
+
+}  // namespace
 
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
                                                         std::span<const std::string> argv) {

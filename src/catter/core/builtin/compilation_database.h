@@ -18,7 +18,8 @@ namespace catter::builtin {
 class CompilationDatabase {
 public:
     /// The database whose file the user names `path`, from the working directory `cwd`; with
-    /// `inherit`, the entries of that file. Throws for a file that holds no database.
+    /// `inherit`, the entries of that file. Throws for a path that is no file, and with
+    /// `inherit` for a file that holds no database.
     CompilationDatabase(std::string_view path, std::string cwd, bool inherit);
 
     /// Adds an entry: `directory`, `file`, `arguments` and `output`.

@@ -498,3 +498,85 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter script::inspect -- cl /nologo /c /Faout/ /Fa a.cc"]
+stdout = '''
+{
+  "analyzer": "compiler",
+  "compiler": "builtin:msvc",
+  "dialect": "msvc",
+  "phase": "compile",
+  "artifact": "object",
+  "target": {
+    "triple": "unknown-pc-windows-msvc",
+    "os": "windows",
+    "objectFormat": "coff",
+    "env": "msvc",
+    "artifactModel": "coff-msvc",
+    "from": "driver-default"
+  },
+  "sources": [
+    "a.cc"
+  ],
+  "reads": [
+    "a.cc"
+  ],
+  "writes": [
+    "a.obj",
+    "a.asm"
+  ],
+  "edges": [
+    {
+      "output": "a.obj",
+      "inputs": [
+        "a.cc"
+      ]
+    },
+    {
+      "output": "a.asm",
+      "inputs": [
+        "a.cc"
+      ]
+    }
+  ],
+  "inferred": [
+    {
+      "path": "a.obj",
+      "reason": "default-output"
+    },
+    {
+      "path": "a.asm",
+      "reason": "assembly-listing"
+    }
+  ],
+  "entries": [
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "cl",
+        "/nologo",
+        "/c",
+        "/Faout/",
+        "/Fa",
+        "a.cc"
+      ],
+      "output": "${WS}/a.obj"
+    },
+    {
+      "directory": "${WS}",
+      "file": "a.cc",
+      "arguments": [
+        "cl",
+        "/nologo",
+        "/c",
+        "/Faout/",
+        "/Fa",
+        "a.cc"
+      ],
+      "output": "${WS}/a.asm"
+    }
+  ]
+}
+'''
+exit = 0

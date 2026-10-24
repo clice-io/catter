@@ -40,6 +40,7 @@ private:
         return it == parents.end() ? std::nullopt : it->second;
     }
 
+private:
     std::unordered_map<data::ipcid_t, std::optional<data::ipcid_t>> parents;
 
     /// The commands whose descendants are left out.

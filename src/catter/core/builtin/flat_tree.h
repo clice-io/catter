@@ -3,15 +3,19 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include "util/output.h"
 
 namespace catter::builtin {
 
@@ -191,7 +195,7 @@ private:
 
         /// A cycle of a strongly connected component: its first node's links within it, followed
         /// until a node comes again.
-        std::vector<Id> cycle_of(const std::vector<std::size_t>& component) const {
+        std::vector<Id> cycle_of(std::span<const std::size_t> component) const {
             std::unordered_map<std::size_t, std::size_t> seen;
             std::vector<Id> path;
             auto current = component.front();
@@ -215,6 +219,7 @@ private:
         return it->second;
     }
 
+private:
     std::vector<Node> pool;
 
     std::unordered_map<Id, std::size_t> positions;
@@ -227,7 +232,12 @@ template <typename Id, typename Content, typename Text>
 std::string render(const FlatTree<Id, Content>& tree,
                    Text&& text,
                    std::optional<std::uint32_t> max_depth) {
-    constexpr std::string_view colors[] = {"\033[34m", "\033[32m", "\033[33m", "\033[31m"};
+    constexpr std::format_string<std::string> colors[] = {
+        output::BLUE,
+        output::GREEN,
+        output::YELLOW,
+        output::RED,
+    };
     std::string out;
     std::vector<Id> path;
     const auto walk = [&](this const auto& self,
@@ -242,9 +252,8 @@ std::string render(const FlatTree<Id, Content>& tree,
         if(branch) {
             out += last ? "└── " : "├── ";
         }
-        out += colors[depth % std::size(colors)];
-        out += text(node);
-        out += "\033[0m\n";
+        out += std::format(colors[depth % std::size(colors)], text(node));
+        out += '\n';
         if(!max_depth.has_value() || depth < *max_depth) {
             const auto children = node.children | std::views::filter([&](const Id& child) {
                                       return !std::ranges::contains(path, child);

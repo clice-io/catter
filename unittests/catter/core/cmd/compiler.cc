@@ -17,13 +17,16 @@ std::vector<std::string> split(std::string_view command) {
 }
 
 /// Commands of every dialect: options that take their value joined and separate, a directory
-/// output, inputs after `--` and after `/link`, an output the phase does not take.
+/// output, inputs after `--` and after `/link`, joined to it or not, an output the phase does not
+/// take.
 constexpr std::string_view commands[] = {
     "gcc -c -Iinclude -isystem /usr/include a.c -o a.o",
     "clang++ -x c++ -c a.cc b.cc -o out/ -- -dash.cc",
     "clang --driver-mode=cl /c /Foout\\ a.cc /Tcb.c /Tc c.c",
     "cl /nologo /EHsc /Tp a.cc /Fea.exe b.cc /link /out:x.exe lib.lib /dll",
     "cl /c a.cc /FA /link /out x.exe",
+    "cl /nologo a.cc /link/out:x.exe lib.lib",
+    "clang-cl /c a.cc /link/out:a.exe",
     "gcc a.o b.o -o app -lm",
 };
 

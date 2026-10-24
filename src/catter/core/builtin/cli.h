@@ -80,6 +80,14 @@ std::optional<T> parse_options(const Help& help, std::span<const std::string> ar
     return std::move(result->options);
 }
 
+/// The depth a tree renders to, as `-d` gives it.
+inline std::optional<std::uint32_t> max_depth_of(std::optional<std::int64_t> depth) {
+    if(!depth.has_value()) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint32_t>(*depth);
+}
+
 /// Throws for a value of `option` below `least`, with the help of the built-in whose options
 /// `T` declares.
 template <typename T>

@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <memory>
@@ -61,9 +63,7 @@ Object describe(const cmd::Target& target) {
 /// How the command gives the path of a diagnostic: as a positional argument, as the value of an
 /// option, or after `/link`, where the only paths a diagnostic is about are the outputs `/out`
 /// names.
-Object source_of(const cmd::Location& location,
-                 const cmd::CompilerAnalysis& analysis,
-                 std::span<const std::string> argv) {
+Object source_of(const cmd::Location& location, const cmd::CompilerAnalysis& analysis) {
     const auto& argument = analysis.arguments[location.argument];
     if(argument.id == opt::clang::ID_INPUT) {
         return Object{
@@ -77,20 +77,23 @@ Object source_of(const cmd::Location& location,
             {"optionIndex", argument.index   },
         };
     }
-    const std::string_view token = argv[location.index];
+    const auto& values = argument.values;
+    const auto value =
+        *std::ranges::find_if(std::views::iota(0uz, values.size()), [&](std::size_t i) {
+            return argument.value_index(i) == location.index;
+        });
+    const std::string_view token = values[value];
     const bool joined = cmd::lowercase(token).starts_with("/out:");
     return Object{
         {"kind", "remainder-option"},
         {"boundary", argument.spelling},
         {"boundaryIndex", argument.index},
-        {"option", joined ? token.substr(0, 5) : std::string_view(argv[location.index - 1])},
-        {"optionIndex", joined ? location.index : location.index - 1},
+        {"option", joined ? token.substr(0, 5) : std::string_view(values[value - 1])},
+        {"optionIndex", argument.value_index(joined ? value : value - 1)},
     };
 }
 
-Object describe(const cmd::Diagnostic& diagnostic,
-                const cmd::CompilerAnalysis& analysis,
-                std::span<const std::string> argv) {
+Object describe(const cmd::Diagnostic& diagnostic, const cmd::CompilerAnalysis& analysis) {
     Object object{
         {"code",    name(diagnostic.code)},
         {"message", diagnostic.message   },
@@ -100,7 +103,7 @@ Object describe(const cmd::Diagnostic& diagnostic,
     }
     if(diagnostic.location.has_value()) {
         object.insert("index", diagnostic.location->index);
-        object.insert("source", source_of(*diagnostic.location, analysis, argv));
+        object.insert("source", source_of(*diagnostic.location, analysis));
     }
     return object;
 }
@@ -166,7 +169,7 @@ Object describe(std::string_view cwd,
     if(!analysis.diagnostics.empty()) {
         Array diagnostics;
         for(const auto& diagnostic: analysis.diagnostics) {
-            diagnostics.push_back(describe(diagnostic, analysis, argv));
+            diagnostics.push_back(describe(diagnostic, analysis));
         }
         object.insert("diagnostics", std::move(diagnostics));
     }

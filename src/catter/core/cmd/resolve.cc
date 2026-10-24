@@ -23,17 +23,44 @@ namespace {
 /// The suffixes a target names its files by.
 struct Convention {
     std::string_view object;
+
     std::string_view executable;
+
     std::string_view shared_library;
+
     std::string_view static_library;
 };
 
 Convention convention_of(ArtifactModel model) {
     switch(model) {
-        case ArtifactModel::ELF: return {".o", "", ".so", ".a"};
-        case ArtifactModel::MachO: return {".o", "", ".dylib", ".a"};
-        case ArtifactModel::COFFGNU: return {".o", ".exe", ".dll", ".a"};
-        case ArtifactModel::COFFMSVC: return {".obj", ".exe", ".dll", ".lib"};
+        case ArtifactModel::ELF:
+            return {
+                .object = ".o",
+                .executable = "",
+                .shared_library = ".so",
+                .static_library = ".a",
+            };
+        case ArtifactModel::MachO:
+            return {
+                .object = ".o",
+                .executable = "",
+                .shared_library = ".dylib",
+                .static_library = ".a",
+            };
+        case ArtifactModel::COFFGNU:
+            return {
+                .object = ".o",
+                .executable = ".exe",
+                .shared_library = ".dll",
+                .static_library = ".a",
+            };
+        case ArtifactModel::COFFMSVC:
+            return {
+                .object = ".obj",
+                .executable = ".exe",
+                .shared_library = ".dll",
+                .static_library = ".lib",
+            };
     }
     std::unreachable();
 }
@@ -73,6 +100,69 @@ Target host_target() {
             .model = ArtifactModel::ELF,
             .source = TargetSource::HostFallback};
 #endif
+}
+
+/// The target of a triple, alone: what it says, and the conventions of its files.
+Target target_of(std::string_view triple, TargetSource source) {
+    const auto lower = lowercase(triple);
+    std::vector<std::string_view> tokens;
+    for(std::string_view rest = lower; !rest.empty();) {
+        const auto end = rest.find_first_of("-_");
+        if(end != 0) {
+            tokens.push_back(rest.substr(0, end));
+        }
+        if(end == std::string_view::npos) {
+            break;
+        }
+        rest.remove_prefix(end + 1);
+    }
+    const auto has = [&](std::string_view value) {
+        return std::ranges::contains(tokens, value);
+    };
+    const auto has_any = [&](std::initializer_list<std::string_view> values) {
+        return std::ranges::any_of(values, has);
+    };
+
+    Target target{.triple = std::string(triple), .source = source};
+    if(has_any({"windows", "win32", "mingw32", "mingw64", "cygwin", "msys"})) {
+        target.os = OS::Windows;
+        target.object_format = ObjectFormat::COFF;
+    } else if(has_any({"darwin", "macos", "ios", "apple"})) {
+        target.os = OS::Darwin;
+        target.object_format = ObjectFormat::MachO;
+    } else if(has("linux")) {
+        target.os = OS::Linux;
+        target.object_format = ObjectFormat::ELF;
+    }
+
+    if(has("msvc")) {
+        target.env = Environment::MSVC;
+    } else if(std::ranges::any_of(tokens,
+                                  [](std::string_view token) { return token.contains("mingw"); })) {
+        target.env = Environment::MinGW;
+    } else if(std::ranges::any_of(tokens, [](std::string_view token) {
+                  return token.starts_with("gnu") || token == "musl" || token == "eabi" ||
+                         token == "eabihf";
+              })) {
+        target.env = Environment::GNU;
+    }
+
+    if(!target.os.has_value()) {
+        // A triple that names no OS is a bare-metal or a wasm target, whose files are named as
+        // ELF's are.
+        target.model = ArtifactModel::ELF;
+    } else if(target.os == OS::Darwin) {
+        target.model = ArtifactModel::MachO;
+    } else if(target.os == OS::Linux) {
+        target.model = ArtifactModel::ELF;
+    } else if(target.env == Environment::GNU || target.env == Environment::MinGW ||
+              has_any({"cygwin", "msys"})) {
+        target.model = ArtifactModel::COFFGNU;
+    } else {
+        // Windows with no environment is MSVC's, as LLVM takes it.
+        target.model = ArtifactModel::COFFMSVC;
+    }
+    return target;
 }
 
 Target select_target(const Identity& identity, const ParsedCommand& parsed) {
@@ -375,68 +465,6 @@ struct Builder {
 
 }  // namespace
 
-Target target_of(std::string_view triple, TargetSource source) {
-    const auto lower = lowercase(triple);
-    std::vector<std::string_view> tokens;
-    for(std::string_view rest = lower; !rest.empty();) {
-        const auto end = rest.find_first_of("-_");
-        if(end != 0) {
-            tokens.push_back(rest.substr(0, end));
-        }
-        if(end == std::string_view::npos) {
-            break;
-        }
-        rest.remove_prefix(end + 1);
-    }
-    const auto has = [&](std::string_view value) {
-        return std::ranges::contains(tokens, value);
-    };
-    const auto has_any = [&](std::initializer_list<std::string_view> values) {
-        return std::ranges::any_of(values, has);
-    };
-
-    Target target{.triple = std::string(triple), .source = source};
-    if(has_any({"windows", "win32", "mingw32", "mingw64", "cygwin", "msys"})) {
-        target.os = OS::Windows;
-        target.object_format = ObjectFormat::COFF;
-    } else if(has_any({"darwin", "macos", "ios", "apple"})) {
-        target.os = OS::Darwin;
-        target.object_format = ObjectFormat::MachO;
-    } else if(has("linux")) {
-        target.os = OS::Linux;
-        target.object_format = ObjectFormat::ELF;
-    }
-
-    if(has("msvc")) {
-        target.env = Environment::MSVC;
-    } else if(std::ranges::any_of(tokens,
-                                  [](std::string_view token) { return token.contains("mingw"); })) {
-        target.env = Environment::MinGW;
-    } else if(std::ranges::any_of(tokens, [](std::string_view token) {
-                  return token.starts_with("gnu") || token == "musl" || token == "eabi" ||
-                         token == "eabihf";
-              })) {
-        target.env = Environment::GNU;
-    }
-
-    if(!target.os.has_value()) {
-        // A triple that names no OS is a bare-metal or a wasm target, whose files are named as
-        // ELF's are.
-        target.model = ArtifactModel::ELF;
-    } else if(target.os == OS::Darwin) {
-        target.model = ArtifactModel::MachO;
-    } else if(target.os == OS::Linux) {
-        target.model = ArtifactModel::ELF;
-    } else if(target.env == Environment::GNU || target.env == Environment::MinGW ||
-              has_any({"cygwin", "msys"})) {
-        target.model = ArtifactModel::COFFGNU;
-    } else {
-        // Windows with no environment is MSVC's, as LLVM takes it.
-        target.model = ArtifactModel::COFFMSVC;
-    }
-    return target;
-}
-
 CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     auto target = select_target(identity, parsed);
     Builder builder{.parsed = parsed, .convention = convention_of(target.model)};
@@ -445,7 +473,6 @@ CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     builder.resolve_listing();
     return CompilerAnalysis{
         .identity = std::move(identity),
-        .dialect = parsed.dialect,
         .arguments = std::move(parsed.arguments),
         .phase = parsed.phase,
         .artifact = parsed.artifact,

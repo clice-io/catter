@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <expected>
 #include <optional>
@@ -53,7 +54,7 @@ enum class Artifact : std::uint8_t {
     LLVMBitcode,
     PCH,
     PCM,
-    /// Made by a compile action catter does not model.
+    /// Made by a mode of compiling catter does not model.
     Unknown,
 };
 
@@ -139,6 +140,14 @@ struct Argument {
     std::string spelling;
 
     std::vector<std::string> values;
+
+    /// The element of argv `values[i]` is in: the values after the argument's first element
+    /// take one each, and those before are joined to the option, as in `-Iinclude`, `-Wl,a,b`
+    /// or `/link/out:a.exe`.
+    std::uint32_t value_index(std::size_t i) const {
+        const auto joined = values.size() - (count - 1);
+        return i < joined ? index : index + 1 + static_cast<std::uint32_t>(i - joined);
+    }
 };
 
 /// Where a path is given: the argument it is in, a position in `CompilerAnalysis::arguments`,
@@ -212,10 +221,6 @@ struct Diagnostic {
 struct CompilerAnalysis {
     Identity identity;
 
-    /// The syntax the arguments were parsed in: the identity's, but MSVC's for clang in its
-    /// `--driver-mode=cl`.
-    Dialect dialect;
-
     /// Every argument after argv[0].
     std::vector<Argument> arguments;
 
@@ -233,10 +238,6 @@ struct CompilerAnalysis {
 
     std::vector<Diagnostic> diagnostics;
 };
-
-/// The compiler `executable` is, by its name; none for a program that is no compiler catter
-/// knows.
-std::optional<Identity> identify(std::string_view executable);
 
 /// Analyzes the command that runs `executable` with `argv`, argv[0] included.
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,

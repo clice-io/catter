@@ -1,6 +1,5 @@
 #include "builtin/json.h"
 
-#include <cmath>
 #include <cstddef>
 #include <format>
 #include <string>
@@ -55,7 +54,7 @@ void write(std::string& out, const JSON& value, std::size_t depth) {
             } else if constexpr(std::is_same_v<T, bool>) {
                 out += v ? "true" : "false";
             } else if constexpr(std::is_same_v<T, double>) {
-                out += std::isfinite(v) ? std::format("{}", v) : "null";
+                out += std::format("{}", v);
             } else if constexpr(std::is_integral_v<T>) {
                 out += std::format("{}", v);
             } else if constexpr(std::is_same_v<T, std::string>) {

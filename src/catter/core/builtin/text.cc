@@ -10,8 +10,8 @@ namespace catter::builtin {
 
 namespace {
 
-/// The code point the UTF-8 sequence at `text[i]` encodes, and its length; none for a byte that
-/// starts no valid sequence.
+/// The code point the UTF-8 sequence at `text[i]` encodes, and its length; U+FFFD and 1 for a
+/// byte that starts no valid sequence.
 struct Decoded {
     char32_t code_point;
 
@@ -118,13 +118,13 @@ std::string quote(std::u16string_view text) {
     for(std::size_t i = 0; i < text.size(); i += 1) {
         const auto unit = text[i];
         switch(unit) {
-            case u'"': out += u"\\\""; continue;
-            case u'\\': out += u"\\\\"; continue;
-            case u'\b': out += u"\\b"; continue;
-            case u'\f': out += u"\\f"; continue;
-            case u'\n': out += u"\\n"; continue;
-            case u'\r': out += u"\\r"; continue;
-            case u'\t': out += u"\\t"; continue;
+            case u'"': out += uR"(\")"; continue;
+            case u'\\': out += uR"(\\)"; continue;
+            case u'\b': out += uR"(\b)"; continue;
+            case u'\f': out += uR"(\f)"; continue;
+            case u'\n': out += uR"(\n)"; continue;
+            case u'\r': out += uR"(\r)"; continue;
+            case u'\t': out += uR"(\t)"; continue;
             default: break;
         }
         const bool high = unit >= 0xD800 && unit < 0xDC00;

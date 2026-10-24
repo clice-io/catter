@@ -19,29 +19,27 @@ namespace {
 
 /// The name of an executable without its directory and `.exe`, lowered.
 std::string stem_of(std::string_view executable) {
-    auto name = lowercase(executable.substr(executable.find_last_of("/\\") + 1));
+    auto name = lowercase(executable.substr(executable.find_last_of(R"(/\)") + 1));
     if(name.ends_with(".exe")) {
         name.resize(name.size() - 4);
     }
     return name;
 }
 
-/// Options before the operation that change no file: `--format=gnu`, `--plugin x`, `-X64`, ...
+/// Options before the operation that change no file, but for `--thin`: `-X64`, `--version`, ...
+constexpr auto flags = std::to_array<std::string_view>(
+    {"-X32", "-X64", "-X32_64", "-Xany", "--version", "--help", "-h"});
+
+/// Those that take a value, `--format=gnu` or `--format gnu`.
+constexpr auto valued =
+    std::to_array<std::string_view>({"--format", "--plugin", "--rsp-quoting", "--output"});
+
 bool skips(std::string_view token) {
-    constexpr auto bare = std::to_array<std::string_view>(
-        {"-X32", "-X64", "-X32_64", "-Xany", "--version", "--help", "-h"});
-    constexpr auto valued =
-        std::to_array<std::string_view>({"--format", "--plugin", "--rsp-quoting", "--output"});
-    return std::ranges::contains(bare, token) ||
+    return std::ranges::contains(flags, token) ||
            std::ranges::any_of(valued, [&](std::string_view option) {
                return token.starts_with(option) &&
                       (token.size() == option.size() || token[option.size()] == '=');
            });
-}
-
-bool takes_value(std::string_view token) {
-    return token == "--format" || token == "--plugin" || token == "--rsp-quoting" ||
-           token == "--output";
 }
 
 struct OperationToken {
@@ -102,7 +100,7 @@ std::expected<ArchiverAnalysis, Error> analyze_archiver(std::string_view executa
         if(token == "--thin" || token == "-T") {
             thin = true;
         } else if(skips(token)) {
-            if(takes_value(token) && index + 1 < argv.size()) {
+            if(std::ranges::contains(valued, token) && index + 1 < argv.size()) {
                 index += 1;
             }
         } else if(token.starts_with("--") || token.starts_with('@')) {

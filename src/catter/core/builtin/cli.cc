@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <format>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,7 +20,7 @@ namespace text = kota::deco::cli::text;
 using Row = std::pair<std::string, std::string>;
 
 /// The rows of a section, a label and its description each, the descriptions in one column.
-std::string columns(const std::vector<Row>& rows) {
+std::string columns(std::span<const Row> rows) {
     std::size_t width = 0;
     for(const auto& [label, description]: rows) {
         width = std::max(width, label.size());

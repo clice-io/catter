@@ -14,6 +14,8 @@
 
 namespace catter::app {
 
+namespace {
+
 std::string load_script_content(const std::string& script_path) {
     std::ifstream ifs{util::from_utf8(script_path)};
     if(!ifs.good()) {
@@ -35,6 +37,8 @@ kota::task<> run(core::Handler& handler, const core::CatterConfig& config) {
         co_await handler.on_finish(std::move(result));
     }
 }
+
+}  // namespace
 
 kota::task<> async_run(const core::CatterConfig& config) {
     const auto& script_path = config.script_path.value();

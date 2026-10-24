@@ -1,0 +1,6 @@
+[test."$ catter -m replay script::cdb --replace -o out.json -- events.json"]
+stdout = "CDB path is not a file: out.json"
+exit = 1
+
+[test."out.json/"]
+value = ["out.json/keep.txt"]

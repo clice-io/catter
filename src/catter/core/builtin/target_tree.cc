@@ -46,7 +46,7 @@ const Help help{
 };
 
 /// The name a target shows by: its file's name, or, for a path that ends in none, the path.
-std::string name_of(const std::string& path) {
+std::string name_of(std::string_view path) {
     auto name = util::to_utf8(util::from_utf8(path).filename());
     return printable(name.empty() ? path : name);
 }
@@ -62,9 +62,7 @@ public:
             co_return std::nullopt;
         }
         check_at_least<Options>(help, "--depth", options->depth.as_optional(), 0);
-        if(options->depth.has_value()) {
-            max_depth = static_cast<std::uint32_t>(*options->depth);
-        }
+        max_depth = max_depth_of(options->depth.as_optional());
         co_return build;
     }
 

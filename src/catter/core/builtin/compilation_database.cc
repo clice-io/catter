@@ -71,9 +71,6 @@ std::vector<JSON> read(std::string_view path, const fs::path& file) {
     if(!fs::exists(file, error)) {
         return {};
     }
-    if(!fs::is_regular_file(file, error)) {
-        throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
-    }
     std::ifstream stream(file, std::ios::binary);
     if(!stream) {
         throw cpptrace::runtime_error(std::format("Failed to read the CDB file: {}", path));
@@ -157,6 +154,10 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
 
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
+    std::error_code error;
+    if(fs::exists(file, error) && !fs::is_regular_file(file, error)) {
+        throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
+    }
     if(inherit) {
         for(auto& entry: read(path, file)) {
             inherited.add(this->cwd, std::move(entry));

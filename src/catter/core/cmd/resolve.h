@@ -1,14 +1,9 @@
 #pragma once
 
-#include <string_view>
-
 #include "cmd/compiler.h"
 #include "cmd/parse.h"
 
 namespace catter::cmd {
-
-/// The target of a triple, alone: what it says, and the conventions of its files.
-Target target_of(std::string_view triple, TargetSource source);
 
 /// Resolves what the arguments say into the files the command reads and writes.
 ///

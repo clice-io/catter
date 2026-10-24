@@ -1,0 +1,2 @@
+cl /nologo /c /Fea.exe a.cc
+clang-cl /c a.cc /link/out:a.exe

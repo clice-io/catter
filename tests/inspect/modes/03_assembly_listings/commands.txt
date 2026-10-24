@@ -2,3 +2,4 @@ cl /nologo /c /FA a.cc
 cl /nologo /c /Fa a.cc
 cl /nologo /c /Faout/ a.cc b.cc
 cl /nologo /c /Fax.asm a.cc
+cl /nologo /c /Faout/ /Fa a.cc
