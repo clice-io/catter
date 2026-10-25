@@ -11,7 +11,7 @@ using namespace catter;
 namespace {
 
 std::string wrong(std::vector<protocol::Pattern> filter) {
-    return core::check_filter(filter).value_or("none");
+    return check_filter(filter).value_or("none");
 }
 
 using names = std::optional<std::vector<std::string>>;
@@ -51,7 +51,7 @@ ZEST_CASE(a_filter_names_kinds_names_and_phases_catter_knows) {
 
 ZEST_CASE(a_filter_names_commands_by_their_analysis) {
     auto matches = [](std::vector<std::string> argv, std::vector<protocol::Pattern> filter) {
-        return core::CommandAnalysis(argv[0], argv).matches(filter);
+        return CommandAnalysis(argv[0], argv).matches(filter);
     };
     const std::vector<protocol::Pattern> archivers{{.kind = "archiver"}};
     const std::vector<protocol::Pattern> coff{
@@ -81,7 +81,7 @@ ZEST_CASE(a_filter_names_commands_by_their_analysis) {
 
 ZEST_CASE(an_edit_of_an_unknown_kind_is_an_error) {
     std::vector<std::string> argv{"gcc", "-c", "a.c"};
-    auto edited = core::CommandAnalysis(argv[0], argv)
+    auto edited = CommandAnalysis(argv[0], argv)
                       .edit(argv, std::vector<protocol::CommandEdit>{{.kind = "replace"}});
     ASSERT(!edited.has_value());
     EXPECT(edited.error() == "`replace` is no kind of edit: give `remove`, `append` or `prepend`");

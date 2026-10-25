@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 
-namespace catter {
+namespace catter::hook {
 
 class PayloadError : public std::exception {
 public:
@@ -24,4 +24,4 @@ private:
     std::string m_message;
 };
 
-}  // namespace catter
+}  // namespace catter::hook

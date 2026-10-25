@@ -5,7 +5,7 @@
 #include <string_view>
 #include <kota/deco/option.h>
 
-namespace catter::opt::clang {
+namespace catter::option::clang {
 
 namespace kota_opt = kota::option;
 
@@ -164,4 +164,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::clang
+}  // namespace catter::option::clang

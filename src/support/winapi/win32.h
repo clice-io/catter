@@ -14,7 +14,7 @@
 #include <minwindef.h>
 // clang-format on
 
-namespace catter::win {
+namespace catter {
 
 template <typename char_t>
 concept CharT = std::is_same_v<char_t, char> || std::is_same_v<char_t, wchar_t>;
@@ -128,6 +128,6 @@ private:
 };
 
 std::string quote_win32_arg(std::string_view arg) noexcept;
-}  // namespace catter::win
+}  // namespace catter
 
 #endif

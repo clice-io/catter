@@ -4,7 +4,7 @@
 #include <regex>
 #include <string_view>
 
-namespace catter::cmd {
+namespace catter {
 
 std::regex executable_pattern(std::string_view name, std::string_view suffix) {
     const auto pattern = std::format(R"(^(?:.*[\\/])?(?:{}){}(?:\.exe)?$)", name, suffix);
@@ -16,4 +16,4 @@ std::regex executable_pattern(std::string_view name, std::string_view suffix) {
     return std::regex(pattern, flags);
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

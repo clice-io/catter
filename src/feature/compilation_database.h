@@ -10,7 +10,7 @@
 
 #include "feature/json.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 /// A JSON compilation database, `compile_commands.json`: the entries already in its file, when
 /// it inherits them, and those added, which replace the inherited entries of their source file.
@@ -57,4 +57,4 @@ private:
     Store added;
 };
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

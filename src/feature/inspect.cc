@@ -25,7 +25,7 @@
 #include "feature/path.h"
 #include "session/handler.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -41,7 +41,7 @@ Array strings(Strings&& values) {
     return array;
 }
 
-Object describe(const cmd::Target& target) {
+Object describe(const Target& target) {
     Object object;
     if(target.triple.has_value()) {
         object.insert("triple", *target.triple);
@@ -63,14 +63,14 @@ Object describe(const cmd::Target& target) {
 /// How the command gives the path of a diagnostic: as a positional argument, as the value of an
 /// option, or after `/link`, where the only paths a diagnostic is about are the outputs `/out`
 /// names.
-Object source_of(const cmd::Location& location, const cmd::CompilerAnalysis& analysis) {
+Object source_of(const Location& location, const CompilerAnalysis& analysis) {
     const auto& argument = analysis.arguments[location.argument];
-    if(argument.id == opt::clang::ID_INPUT) {
+    if(argument.id == option::clang::ID_INPUT) {
         return Object{
             {"kind", "argument"}
         };
     }
-    if(argument.id != opt::clang::ID__SLASH_link) {
+    if(argument.id != option::clang::ID__SLASH_link) {
         return Object{
             {"kind",        "option"         },
             {"option",      argument.spelling},
@@ -83,7 +83,7 @@ Object source_of(const cmd::Location& location, const cmd::CompilerAnalysis& ana
             return argument.value_index(i) == location.index;
         });
     const std::string_view token = values[value];
-    const bool joined = cmd::lowercase(token).starts_with("/out:");
+    const bool joined = lowercase(token).starts_with("/out:");
     return Object{
         {"kind", "remainder-option"},
         {"boundary", argument.spelling},
@@ -93,7 +93,7 @@ Object source_of(const cmd::Location& location, const cmd::CompilerAnalysis& ana
     };
 }
 
-Object describe(const cmd::Diagnostic& diagnostic, const cmd::CompilerAnalysis& analysis) {
+Object describe(const Diagnostic& diagnostic, const CompilerAnalysis& analysis) {
     Object object{
         {"code",    name(diagnostic.code)},
         {"message", diagnostic.message   },
@@ -110,12 +110,12 @@ Object describe(const cmd::Diagnostic& diagnostic, const cmd::CompilerAnalysis& 
 
 Object describe(std::string_view cwd,
                 std::span<const std::string> argv,
-                const cmd::CompilerAnalysis& analysis) {
+                const CompilerAnalysis& analysis) {
     const auto path_of = [&](std::uint32_t read) -> std::string_view {
         return analysis.reads[read].path;
     };
-    const auto is_source = [&](const cmd::Read& read) {
-        return read.role == cmd::InputRole::Source;
+    const auto is_source = [&](const Read& read) {
+        return read.role == InputRole::Source;
     };
 
     Array edges;
@@ -126,12 +126,12 @@ Object describe(std::string_view cwd,
             {"output", write.path                                           },
             {"inputs", strings(write.reads | std::views::transform(path_of))},
         });
-        if(write.origin != cmd::WriteOrigin::Explicit) {
+        if(write.origin != WriteOrigin::Explicit) {
             inferred.push_back(Object{
-                {"path",   write.path                                                },
+                {"path",   write.path                                           },
                 {"reason",
-                 write.origin == cmd::WriteOrigin::DefaultOutput ? "default-output"
-                                                                 : "assembly-listing"},
+                 write.origin == WriteOrigin::DefaultOutput ? "default-output"
+                                                            : "assembly-listing"},
             });
         }
         if(write.path == "-") {
@@ -158,9 +158,9 @@ Object describe(std::string_view cwd,
         {"target", describe(analysis.target)},
         {"sources",
          strings(analysis.reads | std::views::filter(is_source) |
-                 std::views::transform(&cmd::Read::path))},
-        {"reads", strings(analysis.reads | std::views::transform(&cmd::Read::path))},
-        {"writes", strings(analysis.writes | std::views::transform(&cmd::Write::path))},
+                 std::views::transform(&Read::path))},
+        {"reads", strings(analysis.reads | std::views::transform(&Read::path))},
+        {"writes", strings(analysis.writes | std::views::transform(&Write::path))},
         {"edges", std::move(edges)},
     };
     if(!inferred.empty()) {
@@ -192,7 +192,7 @@ Array letters(std::string_view modifiers) {
     return array;
 }
 
-Object describe(const cmd::ArchiverAnalysis& analysis) {
+Object describe(const ArchiverAnalysis& analysis) {
     Array edges;
     for(const auto& write: analysis.writes) {
         edges.push_back(Object{
@@ -213,7 +213,7 @@ Object describe(const cmd::ArchiverAnalysis& analysis) {
     };
 }
 
-Object describe(const cmd::Error& error) {
+Object describe(const Error& error) {
     return Object{
         {"kind",    name(error.kind)},
         {"message", error.message   }
@@ -224,11 +224,11 @@ Object describe(const cmd::Error& error) {
 /// what it found, with the outputs it inferred, the notes on how, and the entries `cdb`
 /// writes for it; or, when none does, why.
 JSON describe(std::string_view cwd, std::span<const std::string> argv) {
-    auto compiler = cmd::analyze_compiler(argv[0], argv);
+    auto compiler = analyze_compiler(argv[0], argv);
     if(compiler.has_value()) {
         return describe(cwd, argv, *compiler);
     }
-    auto archiver = cmd::analyze_archiver(argv[0], argv);
+    auto archiver = analyze_archiver(argv[0], argv);
     if(archiver.has_value()) {
         return describe(*archiver);
     }
@@ -257,11 +257,11 @@ const Help help{
 };
 
 /// Analyzes the build command, which it does not run, and prints what it makes of it.
-class Inspect final : public core::Handler {
+class Inspect final : public Handler {
 public:
     explicit Inspect(std::vector<std::string> args) : args(std::move(args)) {}
 
-    kota::task<std::optional<core::Build>> on_start(core::Build build) override {
+    kota::task<std::optional<Build>> on_start(Build build) override {
         if(!parse_options<Options>(help, args).has_value()) {
             co_return std::nullopt;
         }
@@ -272,9 +272,9 @@ public:
         co_return std::nullopt;
     }
 
-    kota::task<core::Action> on_command(data::ipcid_t,
-                                        std::optional<data::ipcid_t>,
-                                        data::command) override {
+    kota::task<Action> on_command(data::ipcid_t,
+                                  std::optional<data::ipcid_t>,
+                                  data::command) override {
         std::unreachable();
     }
 
@@ -296,8 +296,8 @@ private:
 
 }  // namespace
 
-std::unique_ptr<core::Handler> make_inspect(std::vector<std::string> args) {
+std::unique_ptr<Handler> make_inspect(std::vector<std::string> args) {
     return std::make_unique<Inspect>(std::move(args));
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

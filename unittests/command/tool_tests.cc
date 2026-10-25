@@ -22,8 +22,8 @@ ZEST_SUITE(cmd_tool_tests) {
 ZEST_CASE(tools_are_identified_by_name) {
     auto tool_of = [](std::string_view command) {
         const auto argv = split(command);
-        auto analysis = cmd::analyze_tool(argv[0], argv);
-        return analysis.has_value() ? std::string(cmd::name(analysis->tool)) : "none";
+        auto analysis = analyze_tool(argv[0], argv);
+        return analysis.has_value() ? std::string(name(analysis->tool)) : "none";
     };
     EXPECT(tool_of("ld.lld -o app a.o") == "lld-elf");
     EXPECT(tool_of("/usr/bin/aarch64-linux-gnu-ld.bfd -o app a.o") == "lld-elf");
@@ -46,12 +46,12 @@ ZEST_CASE(tools_are_identified_by_name) {
 
 ZEST_CASE(a_tool_s_arguments_are_read_by_its_table) {
     const auto argv = split("ld.lld --gc-sections -o app a.o -lm");
-    auto analysis = cmd::analyze_tool(argv[0], argv);
+    auto analysis = analyze_tool(argv[0], argv);
     ASSERT(analysis.has_value());
-    const auto syntax = cmd::syntax_of(analysis->tool);
+    const auto syntax = syntax_of(analysis->tool);
     std::vector<std::string> options;
     for(const auto& argument: analysis->arguments) {
-        options.emplace_back(cmd::option_name(syntax, argument.id));
+        options.emplace_back(option_name(syntax, argument.id));
     }
     EXPECT(options == std::vector<std::string>{"--gc-sections", "-o", "<input>", "-l"});
 };

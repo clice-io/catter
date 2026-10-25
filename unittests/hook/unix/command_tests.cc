@@ -9,7 +9,7 @@
 #include "hook/unix/command.h"
 #include "hook/unix/session.h"
 
-namespace ct = catter;
+namespace ct = catter::hook;
 
 namespace {
 ct::Session session{.proxy_path = "/usr/local/bin/catter-proxy",

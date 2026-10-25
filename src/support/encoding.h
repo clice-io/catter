@@ -10,7 +10,7 @@
 /// narrow string in the ANSI code page, which holds few characters past ASCII,
 /// so every call into it takes UTF-16 instead.
 
-namespace catter::util {
+namespace catter {
 
 /// The UTF-8 spelling of `path`.
 std::string to_utf8(const std::filesystem::path& path);
@@ -48,4 +48,4 @@ private:
 
 #endif
 
-}  // namespace catter::util
+}  // namespace catter

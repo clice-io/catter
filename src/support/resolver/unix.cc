@@ -11,7 +11,7 @@
 
 #include "support/resolver/resolver.h"
 
-namespace catter::resolver {
+namespace catter {
 namespace {
 
 constexpr char k_dir_separator = '/';
@@ -87,6 +87,6 @@ std::expected<fs::path, int> resolve_from_path_env(std::string_view file, const 
     }
 }
 
-}  // namespace catter::resolver
+}  // namespace catter
 
 #endif

@@ -2,7 +2,7 @@
 
 #include <kota/deco/option.h>
 
-namespace catter::opt::clang {
+namespace catter::option::clang {
 
 enum ID : unsigned {
     ID_INVALID = 0,
@@ -39,4 +39,4 @@ enum DriverClass : unsigned {
 
 const kota::option::OptTable& table();
 
-}  // namespace catter::opt::clang
+}  // namespace catter::option::clang

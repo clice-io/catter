@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace catter::builtin {
+namespace catter::feature {
 
 /// A file a command writes and the files it writes it from, absolute.
 struct Edge {
@@ -21,4 +21,4 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
                                           std::string_view executable,
                                           std::span<const std::string> argv);
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

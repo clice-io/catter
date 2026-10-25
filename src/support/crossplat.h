@@ -7,7 +7,7 @@
 #include <thread>
 #include <vector>
 
-namespace catter::util {
+namespace catter {
 std::vector<std::string> get_environment() noexcept;
 
 std::filesystem::path get_catter_root_path();
@@ -48,4 +48,4 @@ std::vector<T> merge_range_to_vector(Args&&... args) {
     return buffer;
 }
 
-}  // namespace catter::util
+}  // namespace catter

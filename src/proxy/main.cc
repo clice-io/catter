@@ -30,8 +30,7 @@ using catter::data::action;
 std::string resolve_executable(std::string_view exe, const std::vector<std::string>& env) {
 
 #ifdef CATTER_WINDOWS
-    return util::from_wide(
-        catter::resolver::resolve_command_line_token<wchar_t>(util::to_wide(exe)));
+    return from_wide(catter::resolve_command_line_token<wchar_t>(to_wide(exe)));
 #else
     std::string path_env;
     for(const auto& env_var: env) {
@@ -43,13 +42,13 @@ std::string resolve_executable(std::string_view exe, const std::vector<std::stri
     if(path_env.empty()) {
         throw cpptrace::runtime_error("PATH environment variable not found");
     }
-    auto resolved = catter::resolver::resolve_from_path_env(exe, path_env.c_str());
+    auto resolved = catter::resolve_from_path_env(exe, path_env.c_str());
     if(!resolved.has_value()) {
         // if not found, just return the original string and let the system handle it, which will
         // produce the same error as if we did not resolve it.
         return std::string(exe);
     }
-    return util::to_utf8(*resolved);
+    return to_utf8(*resolved);
 #endif
 }
 
@@ -72,7 +71,7 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::st
             co_return co_await run_process(opts);
         }
         case action::INJECT: {
-            co_return co_await proxy::hook::run(act.cmd, id, std::move(pipe_name));
+            co_return co_await run_with_hook(act.cmd, id, std::move(pipe_name));
         }
         case action::DROP: {
             co_return data::process_result{.code = 0};
@@ -93,9 +92,9 @@ data::command command_of(const catter::proxy::ProxyOption& opt) {
     }
 
     data::command cmd = {
-        .cwd = util::to_utf8(std::filesystem::current_path()),
+        .cwd = to_utf8(std::filesystem::current_path()),
         .args = *opt.args,
-        .env = catter::util::get_environment(),
+        .env = catter::get_environment(),
     };
 
     if(opt.exec.has_value()) {
@@ -118,11 +117,11 @@ std::string format_args(int argc, char* argv[]) {
 kota::task<int> handle_proxy_request(int argc,
                                      char* argv[],
                                      const catter::proxy::ProxyOption& opt,
-                                     proxy::ipc::Peer& peer) noexcept {
+                                     proxy::Peer& peer) noexcept {
     // ensure peer is closed when proxy_main exits, otherwise the peer might still be
     // running and trying to access resources that have been cleaned up after proxy_main
     // exits.
-    auto guard = util::make_guard([&]() noexcept {
+    auto guard = make_guard([&]() noexcept {
         auto err = peer.close();
         if(err.has_error()) {
             LOG_ERROR("Failed to close IPC peer: {}", err.error().message);
@@ -198,7 +197,7 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
             co_return -1;
         }
     }
-    auto peer = proxy::ipc::Peer{
+    auto peer = proxy::Peer{
         kota::ipc::BincodePeer{current,
                                std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
     };
@@ -215,7 +214,7 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
 int run(int argc, char* argv[]) {
     try {
         log::init_logger("catter-proxy.log",
-                         util::get_catter_data_path() / config::proxy::LOG_PATH_REL,
+                         get_catter_data_path() / config::PROXY_LOG_PATH,
                          false);
     } catch(const std::exception&) {
         log::mute_logger();
@@ -245,7 +244,7 @@ int run(int argc, char* argv[]) {
 
 #ifdef CATTER_WINDOWS
 int wmain(int argc, wchar_t* argv[]) {
-    util::Utf8Arguments arguments(argc, argv);
+    Utf8Arguments arguments(argc, argv);
     return run(argc, arguments.argv());
 }
 #else

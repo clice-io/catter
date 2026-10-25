@@ -22,15 +22,15 @@
 #include "support/encoding.h"
 #include "support/output.h"
 
-namespace catter::app {
+namespace catter::driver {
 
 namespace {
 
 /// Runs the session of `handler`: the build it starts, if any, and then its end.
-kota::task<> run(core::Handler& handler, const core::CatterConfig& config) {
+kota::task<> run(Handler& handler, const CatterConfig& config) {
     auto build = co_await handler.on_start({
         .command = config.command.value(),
-        .cwd = util::to_utf8(config.working_dir->path),
+        .cwd = to_utf8(config.working_dir->path),
     });
     if(build) {
         auto result = co_await config.mode->driver->execute(*build, handler);
@@ -102,14 +102,14 @@ std::string session_id() {
 
 }  // namespace
 
-kota::task<> async_run(const core::CatterConfig& config) {
+kota::task<> async_run(const CatterConfig& config) {
     if(!config.builtin.has_value() && config.handlers.empty()) {
         throw cpptrace::runtime_error(
             "catter needs a built-in, or a handler to give the build's commands to (--handler, --connect)");
     }
 
     const auto handler_options = [&, session = session_id()](std::string_view name) {
-        return core::RemoteHandler::Options{
+        return RemoteHandler::Options{
             .name = std::string(name),
             .session = session,
             .mode = std::string(config.mode->driver->name()),
@@ -117,9 +117,9 @@ kota::task<> async_run(const core::CatterConfig& config) {
         };
     };
 
-    std::unique_ptr<core::Handler> builtin_handler;
+    std::unique_ptr<Handler> builtin_handler;
     if(config.builtin.has_value()) {
-        builtin_handler = builtin::make(*config.builtin, config.builtin_args);
+        builtin_handler = feature::make(*config.builtin, config.builtin_args);
         if(!builtin_handler) {
             throw cpptrace::runtime_error(std::format(
                 "Unknown built-in `{}`: the built-ins are cdb, cmd-tree, target-tree and inspect",
@@ -127,28 +127,27 @@ kota::task<> async_run(const core::CatterConfig& config) {
         }
     }
 
-    std::vector<std::unique_ptr<core::RemoteHandler>> remotes;
+    std::vector<std::unique_ptr<RemoteHandler>> remotes;
     std::exception_ptr error;
     try {
         for(const auto& [connect, text]: config.handlers) {
             if(!connect) {
-                remotes.push_back(core::RemoteHandler::spawn(text, handler_options(text)));
+                remotes.push_back(RemoteHandler::spawn(text, handler_options(text)));
                 continue;
             }
             auto [hosts, port] = parse_address(text, *config.allow_remote);
-            remotes.push_back(co_await core::RemoteHandler::connect(std::move(hosts),
-                                                                    port,
-                                                                    handler_options(text)));
+            remotes.push_back(
+                co_await RemoteHandler::connect(std::move(hosts), port, handler_options(text)));
         }
 
-        std::vector<core::Handler*> chain;
+        std::vector<Handler*> chain;
         if(builtin_handler) {
             chain.push_back(builtin_handler.get());
         }
         for(const auto& remote: remotes) {
             chain.push_back(remote.get());
         }
-        core::HandlerChain handler(std::move(chain));
+        HandlerChain handler(std::move(chain));
         co_await run(handler, config);
     } catch(...) {
         error = std::current_exception();
@@ -163,4 +162,4 @@ kota::task<> async_run(const core::CatterConfig& config) {
     }
 }
 
-}  // namespace catter::app
+}  // namespace catter::driver

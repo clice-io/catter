@@ -9,7 +9,7 @@ using namespace catter;
 ZEST_SUITE(builtin_descendants_tests) {
 
 ZEST_CASE(leaves_out_every_descendant) {
-    builtin::Descendants descendants;
+    feature::Descendants descendants;
     descendants.add(1, std::nullopt);
     descendants.leave_out_descendants_of(1);
     descendants.add(2, 1);
@@ -23,7 +23,7 @@ ZEST_CASE(leaves_out_every_descendant) {
 };
 
 ZEST_CASE(a_parent_may_come_after_its_children) {
-    builtin::Descendants descendants;
+    feature::Descendants descendants;
     descendants.add(2, 1);
     EXPECT(!descendants.left_out(2));
 
@@ -33,7 +33,7 @@ ZEST_CASE(a_parent_may_come_after_its_children) {
 };
 
 ZEST_CASE(parents_in_a_cycle_end_the_walk) {
-    builtin::Descendants descendants;
+    feature::Descendants descendants;
     descendants.add(40, 41);
     descendants.add(41, 40);
     descendants.add(42, 41);

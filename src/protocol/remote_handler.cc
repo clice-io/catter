@@ -13,7 +13,7 @@
 #include "protocol/analysis.h"
 #include "support/log.h"
 
-namespace catter::core {
+namespace catter {
 
 namespace {
 
@@ -495,4 +495,4 @@ kota::task<> RemoteHandler::close() {
     co_await stopped.wait();
 }
 
-}  // namespace catter::core
+}  // namespace catter

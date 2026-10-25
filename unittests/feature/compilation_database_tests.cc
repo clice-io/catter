@@ -27,9 +27,7 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
 
     bool thrown = false;
     try {
-        builtin::CompilationDatabase database("compile_commands.json",
-                                              util::to_utf8(temp.root),
-                                              true);
+        feature::CompilationDatabase database("compile_commands.json", to_utf8(temp.root), true);
     } catch(const std::exception&) {
         thrown = true;
     }

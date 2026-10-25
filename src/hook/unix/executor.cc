@@ -18,9 +18,10 @@
 #include "hook/unix/session.h"
 #include "support/resolver/resolver.h"
 
+namespace catter::hook {
 namespace {
 
-catter::ArgvRef argv_span(const char* const argv[]) noexcept {
+ArgvRef argv_span(const char* const argv[]) noexcept {
     if(argv == nullptr) {
         return {};
     }
@@ -34,13 +35,13 @@ catter::ArgvRef argv_span(const char* const argv[]) noexcept {
 
 void require_path_arg(const char* value, std::string_view name) {
     if(value == nullptr) {
-        throw catter::PayloadError(EFAULT, std::format("Argument `{}` must not be null", name));
+        throw PayloadError(EFAULT, std::format("Argument `{}` must not be null", name));
     }
 }
 
 void require_va_list(va_list* ap) {
     if(ap == nullptr) {
-        throw catter::PayloadError(EFAULT, "va_list must not be null");
+        throw PayloadError(EFAULT, "va_list must not be null");
     }
 }
 
@@ -61,30 +62,28 @@ char** collect_variadic_envp(va_list* ap) {
 }
 
 std::filesystem::path resolve_path_like(const char* path) {
-    auto resolved = catter::resolver::resolve_path_like(path);
+    auto resolved = catter::resolve_path_like(path);
     if(!resolved.has_value()) {
-        throw catter::PayloadError(resolved.error(),
-                                   std::format("failed to resolve executable: {}", path));
+        throw PayloadError(resolved.error(), std::format("failed to resolve executable: {}", path));
     }
     return *resolved;
 }
 
 std::filesystem::path resolve_from_path(const char* file, const char* const envp[]) {
-    auto path_env = envp == nullptr ? nullptr : catter::env::get_env_value(envp, "PATH");
-    auto resolved = catter::resolver::resolve_from_path_env(file, path_env);
+    auto path_env = envp == nullptr ? nullptr : get_env_value(envp, "PATH");
+    auto resolved = catter::resolve_from_path_env(file, path_env);
     if(!resolved.has_value()) {
-        throw catter::PayloadError(resolved.error(),
-                                   std::format("failed to resolve executable from PATH: {}", file));
+        throw PayloadError(resolved.error(),
+                           std::format("failed to resolve executable from PATH: {}", file));
     }
     return *resolved;
 }
 
 std::filesystem::path resolve_from_search_path(const char* file, const char* search_path) {
-    auto resolved = catter::resolver::resolve_from_search_path(file, search_path);
+    auto resolved = catter::resolve_from_search_path(file, search_path);
     if(!resolved.has_value()) {
-        throw catter::PayloadError(
-            resolved.error(),
-            std::format("failed to resolve executable from search path: {}", file));
+        throw PayloadError(resolved.error(),
+                           std::format("failed to resolve executable from search path: {}", file));
     }
     return *resolved;
 }
@@ -92,7 +91,7 @@ std::filesystem::path resolve_from_search_path(const char* file, const char* sea
 /// A program that is not there or not executable fails to start as it would
 /// without catter: a build may expect that (a PATH search tries every entry).
 void report_failure([[maybe_unused]] std::string_view name,
-                    [[maybe_unused]] const catter::PayloadError& err) {
+                    [[maybe_unused]] const PayloadError& err) {
     if(err.code() == ENOENT || err.code() == EACCES || err.code() == ENOTDIR) {
         INFO("{} failed: {}", name, err.what());
     } else {
@@ -100,11 +99,12 @@ void report_failure([[maybe_unused]] std::string_view name,
     }
 }
 }  // namespace
+}  // namespace catter::hook
 
 // clang-format 23 splits `try BODY catch` apart.
 // clang-format off
 #define CATTER_EXEC_BOUNDARY(NAME, BODY)                                                           \
-    try BODY catch(const catter::PayloadError& err) {                                              \
+    try BODY catch(const catter::hook::PayloadError& err) {                                        \
         report_failure(NAME, err);                                                                 \
         errno = err.code();                                                                        \
         return -1;                                                                                 \
@@ -121,7 +121,7 @@ void report_failure([[maybe_unused]] std::string_view name,
     }
 
 #define CATTER_SPAWN_BOUNDARY(NAME, BODY)                                                          \
-    try BODY catch(const catter::PayloadError& err) {                                              \
+    try BODY catch(const catter::hook::PayloadError& err) {                                        \
         report_failure(NAME, err);                                                                 \
         errno = err.code();                                                                        \
         return err.code();                                                                         \
@@ -138,7 +138,7 @@ void report_failure([[maybe_unused]] std::string_view name,
     }
 // clang-format on
 
-namespace catter {
+namespace catter::hook {
 
 ExecveFn* resolve_execve() {
 #ifdef CATTER_MAC
@@ -301,17 +301,17 @@ int Executor::posix_spawnp(pid_t* pid,
 
 int Executor::run_execve(const char* executable, const char* const argv[], char* const envp[]) {
     if(this->m_execve == nullptr) {
-        throw catter::PayloadError(ENOSYS, "hook function \"execve\" not initialized");
+        throw PayloadError(ENOSYS, "hook function \"execve\" not initialized");
     }
 
-    auto clean_env = catter::sanitize_environment(envp);
+    auto clean_env = sanitize_environment(envp);
     auto args = argv_span(argv);
     if(!m_session.is_valid()) {
         auto command =
-            catter::build_error_command(m_session,
-                                        "invalid environment of hook library, lost required value",
-                                        executable,
-                                        args);
+            build_error_command(m_session,
+                                "invalid environment of hook library, lost required value",
+                                executable,
+                                args);
 
         return m_execve(command.path.c_str(), command.c_argv().data(), clean_env.data());
     }
@@ -333,16 +333,16 @@ int Executor::run_posix_spawn(pid_t* pid,
                               const char* const argv[],
                               char* const envp[]) {
     if(m_posix_spawn == nullptr) {
-        throw catter::PayloadError(ENOSYS, "hook function \"posix_spawn\" not initialized");
+        throw PayloadError(ENOSYS, "hook function \"posix_spawn\" not initialized");
     }
-    auto clean_env = catter::sanitize_environment(envp);
+    auto clean_env = sanitize_environment(envp);
     auto args = argv_span(argv);
     if(!m_session.is_valid()) {
         auto command =
-            catter::build_error_command(m_session,
-                                        "invalid environment of hook library, lost required value",
-                                        executable,
-                                        args);
+            build_error_command(m_session,
+                                "invalid environment of hook library, lost required value",
+                                executable,
+                                args);
 
         return m_posix_spawn(pid,
                              command.path.c_str(),
@@ -366,7 +366,7 @@ int Executor::run_posix_spawn(pid_t* pid,
                          clean_env.data());
 }
 
-}  // namespace catter
+}  // namespace catter::hook
 
 #undef CATTER_EXEC_BOUNDARY
 #undef CATTER_SPAWN_BOUNDARY

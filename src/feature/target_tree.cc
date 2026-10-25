@@ -21,7 +21,7 @@
 #include "session/handler.h"
 #include "support/encoding.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -47,16 +47,16 @@ const Help help{
 
 /// The name a target shows by: its file's name, or, for a path that ends in none, the path.
 std::string name_of(std::string_view path) {
-    auto name = util::to_utf8(util::from_utf8(path).filename());
+    auto name = to_utf8(from_utf8(path).filename());
     return printable(name.empty() ? path : name);
 }
 
 /// Renders the files a build makes as the forest of the files each is made from.
-class TargetTree final : public core::Handler {
+class TargetTree final : public Handler {
 public:
     explicit TargetTree(std::vector<std::string> args) : args(std::move(args)) {}
 
-    kota::task<std::optional<core::Build>> on_start(core::Build build) override {
+    kota::task<std::optional<Build>> on_start(Build build) override {
         auto options = parse_options<Options>(help, args);
         if(!options.has_value()) {
             co_return std::nullopt;
@@ -66,16 +66,16 @@ public:
         co_return build;
     }
 
-    kota::task<core::Action> on_command(data::ipcid_t id,
-                                        std::optional<data::ipcid_t> parent,
-                                        data::command command) override {
+    kota::task<Action> on_command(data::ipcid_t id,
+                                  std::optional<data::ipcid_t> parent,
+                                  data::command command) override {
         descendants.add(id, parent);
         if(descendants.left_out(id)) {
-            co_return core::Action{};
+            co_return Action{};
         }
         auto edges = edges_of(command.cwd, command.executable, command.args);
         if(!edges.has_value()) {
-            co_return core::Action{};
+            co_return Action{};
         }
         for(auto& edge: *edges) {
             tree.merge(edge.output, {});
@@ -84,7 +84,7 @@ public:
             }
         }
         descendants.leave_out_descendants_of(id);
-        co_return core::Action{};
+        co_return Action{};
     }
 
     kota::task<> on_error(data::ipcid_t id,
@@ -140,8 +140,8 @@ private:
 
 }  // namespace
 
-std::unique_ptr<core::Handler> make_target_tree(std::vector<std::string> args) {
+std::unique_ptr<Handler> make_target_tree(std::vector<std::string> args) {
     return std::make_unique<TargetTree>(std::move(args));
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

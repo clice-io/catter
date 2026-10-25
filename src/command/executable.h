@@ -3,7 +3,7 @@
 #include <regex>
 #include <string_view>
 
-namespace catter::cmd {
+namespace catter {
 
 /// What follows a program's name for its version: `-12`, `_13.2.0`, `18`.
 constexpr inline std::string_view version_suffix = R"((?:[-_]?\d+(?:[._-][0-9a-zA-Z]+)*)?)";
@@ -12,4 +12,4 @@ constexpr inline std::string_view version_suffix = R"((?:[-_]?\d+(?:[._-][0-9a-z
 /// matches: perhaps after a directory, before `.exe`, without case on Windows.
 std::regex executable_pattern(std::string_view name, std::string_view suffix);
 
-}  // namespace catter::cmd
+}  // namespace catter

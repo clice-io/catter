@@ -5,14 +5,14 @@
 
 #include "command/option/tablegen.h"
 
-namespace catter::opt::llvm_lib {
+namespace catter::option::llvm_lib {
 
 namespace kota_opt = kota::option;
 
 namespace detail {
 
-using namespace catter::opt::external_detail;
-namespace llvm = catter::opt::external_detail::llvm;
+using namespace catter::option::external_detail;
+namespace llvm = catter::option::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
 #include <llvm-options-td/llvm-lib-Options.inc>
@@ -91,4 +91,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::llvm_lib
+}  // namespace catter::option::llvm_lib

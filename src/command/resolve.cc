@@ -16,7 +16,7 @@
 
 #include "command/lowercase.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
@@ -508,4 +508,4 @@ CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     };
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

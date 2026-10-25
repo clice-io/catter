@@ -6,7 +6,7 @@
 
 namespace {
 void push_proxy_args(std::vector<std::string>& argv,
-                     const catter::Session& sess,
+                     const catter::hook::Session& sess,
                      std::string_view exec_path,
                      bool error = false) {
     argv.emplace_back(sess.proxy_path);
@@ -24,7 +24,7 @@ void push_proxy_args(std::vector<std::string>& argv,
 
 namespace fs = std::filesystem;
 
-namespace catter {
+namespace catter::hook {
 
 std::vector<char*> Command::c_argv() {
     std::vector<char*> res;
@@ -65,4 +65,4 @@ Command build_error_command(const Session& session,
     return cmd;
 }
 
-}  // namespace catter
+}  // namespace catter::hook

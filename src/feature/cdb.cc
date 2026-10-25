@@ -30,7 +30,7 @@
 #include "session/handler.h"
 #include "support/encoding.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -124,13 +124,13 @@ std::string list(std::string_view label, std::span<const std::string> values) {
 }
 
 /// The first three distinct diagnostics, those about outputs first and rejected inputs last.
-std::vector<std::string> notes_of(const cmd::CompilerAnalysis& analysis) {
-    const auto priority = [](const cmd::Diagnostic& diagnostic) {
+std::vector<std::string> notes_of(const CompilerAnalysis& analysis) {
+    const auto priority = [](const Diagnostic& diagnostic) {
         const auto code = name(diagnostic.code);
         if(code.contains("output") || code.contains("assembly")) {
             return 0;
         }
-        return diagnostic.code == cmd::Diagnostic::Code::InputCandidateRejected ? 2 : 1;
+        return diagnostic.code == Diagnostic::Code::InputCandidateRejected ? 2 : 1;
     };
     auto diagnostics = analysis.diagnostics;
     std::ranges::stable_sort(diagnostics, {}, priority);
@@ -151,19 +151,19 @@ std::vector<std::string> notes_of(const cmd::CompilerAnalysis& analysis) {
 
 std::string success_log(data::ipcid_t id,
                         const data::command& command,
-                        const cmd::CompilerAnalysis& analysis) {
-    const auto sources = analysis.reads | std::views::filter([](const cmd::Read& read) {
-                             return read.role == cmd::InputRole::Source;
-                         }) |
-                         std::views::transform(&cmd::Read::path) | std::ranges::to<std::vector>();
+                        const CompilerAnalysis& analysis) {
+    const auto sources =
+        analysis.reads |
+        std::views::filter([](const Read& read) { return read.role == InputRole::Source; }) |
+        std::views::transform(&Read::path) | std::ranges::to<std::vector>();
     std::vector<std::string> outputs;
     for(const auto& write: analysis.writes) {
         switch(write.origin) {
-            case cmd::WriteOrigin::Explicit: outputs.push_back(write.path); break;
-            case cmd::WriteOrigin::DefaultOutput:
+            case WriteOrigin::Explicit: outputs.push_back(write.path); break;
+            case WriteOrigin::DefaultOutput:
                 outputs.push_back(std::format("{} (inferred from compiler defaults)", write.path));
                 break;
-            case cmd::WriteOrigin::AssemblyListing:
+            case WriteOrigin::AssemblyListing:
                 outputs.push_back(std::format("{} (inferred assembly listing)", write.path));
                 break;
         }
@@ -183,7 +183,7 @@ std::string success_log(data::ipcid_t id,
     return text;
 }
 
-std::string failure_log(data::ipcid_t id, const data::command& command, const cmd::Error& error) {
+std::string failure_log(data::ipcid_t id, const data::command& command, const Error& error) {
     return std::format("Failed to analyze command #{}\n  at {}\n    {}\n  {}:\n    {}",
                        id,
                        command.cwd,
@@ -195,11 +195,11 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const cm
 /// Writes the compilation database of the compiler commands of a build: an entry per source
 /// file a compile reads and object it writes, which, when a command feeds another, names the
 /// output of the command that compiles the source, not the build's final target.
-class CDB final : public core::Handler {
+class CDB final : public Handler {
 public:
     explicit CDB(std::vector<std::string> args) : args(std::move(args)) {}
 
-    kota::task<std::optional<core::Build>> on_start(core::Build build) override {
+    kota::task<std::optional<Build>> on_start(Build build) override {
         auto parsed = parse_options<Options>(help, args);
         if(!parsed.has_value()) {
             co_return std::nullopt;
@@ -217,23 +217,23 @@ public:
         co_return build;
     }
 
-    kota::task<core::Action> on_command(data::ipcid_t id,
-                                        std::optional<data::ipcid_t> parent,
-                                        data::command command) override {
+    kota::task<Action> on_command(data::ipcid_t id,
+                                  std::optional<data::ipcid_t> parent,
+                                  data::command command) override {
         descendants.add(id, parent);
         if(descendants.left_out(id)) {
-            co_return core::Action{};
+            co_return Action{};
         }
-        auto analysis = cmd::analyze_compiler(command.executable, command.args);
+        auto analysis = analyze_compiler(command.executable, command.args);
         if(!analysis.has_value()) {
             verbose_log(failure_log(id, command, analysis.error()));
-            co_return core::Action{};
+            co_return Action{};
         }
         verbose_log(success_log(id, command, *analysis));
         compiler_commands.insert(id);
 
         for(const auto& read: analysis->reads) {
-            if(read.role == cmd::InputRole::Source && read.path != "-") {
+            if(read.role == InputRole::Source && read.path != "-") {
                 sources[absolute_path(command.cwd, read.path)] = read.path;
             }
         }
@@ -251,7 +251,7 @@ public:
             producers[output].push_back(Producer{.cwd = command.cwd, .argv = command.args});
         }
         descendants.leave_out_descendants_of(id);
-        co_return core::Action{};
+        co_return Action{};
     }
 
     kota::task<> on_error(data::ipcid_t id,
@@ -362,7 +362,7 @@ private:
         }
         const auto& file = database.save();
         log(std::format("CDB saved to {} with {} entries.",
-                        util::to_utf8(file),
+                        to_utf8(file),
                         database.entries().size()));
     }
 
@@ -393,8 +393,8 @@ private:
 
 }  // namespace
 
-std::unique_ptr<core::Handler> make_cdb(std::vector<std::string> args) {
+std::unique_ptr<Handler> make_cdb(std::vector<std::string> args) {
     return std::make_unique<CDB>(std::move(args));
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

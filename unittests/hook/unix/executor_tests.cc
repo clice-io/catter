@@ -14,8 +14,8 @@
 #include "support/config/hook_unix.h"
 #include "utils/temp_file_manager.h"
 
-namespace ct = catter;
-namespace cfg = catter::config::hook;
+namespace ct = catter::hook;
+namespace cfg = catter::config;
 namespace fs = std::filesystem;
 
 namespace {
@@ -36,7 +36,7 @@ struct CapturedCall {
     }
 };
 
-ct::TempFileManager manager("./tmp-executor");
+catter::TempFileManager manager("./tmp-executor");
 CapturedCall exec_call;
 CapturedCall spawn_call;
 

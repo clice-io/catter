@@ -12,7 +12,7 @@
 #include "command/error.h"
 #include "command/syntax.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// The programs catter reads the arguments of by their option tables, without analyzing the
 /// files they read and write: linkers and librarians.
@@ -47,4 +47,4 @@ Syntax syntax_of(Tool tool);
 /// The name of `tool` in catter's output, its option table's: "lld-elf", "llvm-lib", ...
 std::string_view name(Tool tool);
 
-}  // namespace catter::cmd
+}  // namespace catter

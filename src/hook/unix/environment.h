@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace catter::env {
+namespace catter::hook {
 
 bool is_entry_of(const char* entry, std::string_view key) noexcept;
 
@@ -26,4 +26,4 @@ const char* get_env_value(const char* const envp[], std::string_view key) noexce
 /// @return the entry of the environment.
 const char* get_env_entry(const char* const envp[], std::string_view key) noexcept;
 
-}  // namespace catter::env
+}  // namespace catter::hook

@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -94,4 +94,4 @@ std::string quote(std::string_view text) {
     return out;
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace catter::cmd {
+namespace catter {
 
 /// `text` with its ASCII letters lowered, as option and file names compare without case.
 inline std::string lowercase(std::string_view text) {
@@ -14,4 +14,4 @@ inline std::string lowercase(std::string_view text) {
            std::ranges::to<std::string>();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

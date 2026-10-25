@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace catter::cmd {
+namespace catter {
 
 /// Why a command could not be analyzed as the kind of command asked for.
 struct Error {
@@ -31,4 +31,4 @@ struct Error {
 /// The name of `kind` in catter's output: "compiler-unsupported", ...
 std::string_view name(Error::Kind kind);
 
-}  // namespace catter::cmd
+}  // namespace catter

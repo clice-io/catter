@@ -14,10 +14,10 @@
 
 #include "command/option/clang.h"
 
-namespace catter::cmd {
+namespace catter {
 
 Syntax syntax_of(Dialect dialect) {
-    using namespace opt::clang;
+    using namespace option::clang;
     switch(dialect) {
         case Dialect::Clang:
         case Dialect::GCC: return {.table = &table(), .visibility = DefaultVis};
@@ -61,4 +61,4 @@ std::string_view option_name(Syntax syntax, std::uint32_t id) {
     return syntax.table->option(id)->prefixed_name();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

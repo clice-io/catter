@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace catter {
+namespace catter::hook {
 
 struct SanitizedEnv {
     std::vector<char*> entries;
@@ -19,4 +19,4 @@ struct SanitizedEnv {
 /// Remove envs used by hook so the target process is not affected by them.
 [[nodiscard]]
 SanitizedEnv sanitize_environment(char* const envp[]) noexcept;
-}  // namespace catter
+}  // namespace catter::hook

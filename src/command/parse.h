@@ -10,7 +10,7 @@
 
 #include "command/compiler.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// A positional argument of a compiler: a file it reads, or not, as its suffix says.
 struct Candidate {
@@ -78,4 +78,4 @@ std::expected<ParsedCommand, Error> parse(const Identity& identity,
 
 std::string_view name(OutputKind kind);
 
-}  // namespace catter::cmd
+}  // namespace catter

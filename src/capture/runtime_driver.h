@@ -6,7 +6,7 @@
 #include "session/data.h"
 #include "session/handler.h"
 
-namespace catter::core {
+namespace catter {
 
 class RuntimeDriver {
 public:
@@ -20,4 +20,4 @@ public:
 const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept;
 const RuntimeDriver* default_runtime_driver() noexcept;
 
-}  // namespace catter::core
+}  // namespace catter

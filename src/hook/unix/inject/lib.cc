@@ -32,7 +32,7 @@ namespace {
 // This is used for being multi thread safe (loading time only).
 std::atomic<bool> LOADED(false);
 // These are related to the functionality of this library.
-catter::Executor EXECUTOR;
+catter::hook::Executor EXECUTOR;
 
 }  // namespace
 
@@ -48,7 +48,7 @@ extern "C" EXPORT_SYMBOL void on_load() {
         return;
 #ifdef DEBUG
     try {
-        auto path = catter::util::get_catter_data_path() / catter::config::hook::LOG_PATH_REL;
+        auto path = catter::get_catter_data_path() / catter::config::HOOK_LOG_PATH;
         catter::log::init_logger("catter-hook", path, false);
     } catch(const std::exception&) {
         catter::log::mute_logger();

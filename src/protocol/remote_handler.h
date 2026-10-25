@@ -13,7 +13,7 @@
 #include "protocol/protocol.h"
 #include "session/handler.h"
 
-namespace catter::core {
+namespace catter {
 
 /// A handler in another process, which catter speaks the protocol of
 /// protocol.h to: one catter starts, over its stdin and stdout, or one that
@@ -109,4 +109,4 @@ private:
     std::unordered_map<data::ipcid_t, std::chrono::steady_clock::time_point> decided;
 };
 
-}  // namespace catter::core
+}  // namespace catter

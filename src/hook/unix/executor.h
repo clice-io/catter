@@ -5,7 +5,7 @@
 
 #include "hook/unix/session.h"
 
-namespace catter {
+namespace catter::hook {
 
 using ExecveFn = int(const char* path, char* const argv[], char* const envp[]);
 using PosixSpawnFn = int(pid_t* pid,
@@ -73,4 +73,4 @@ private:
     PosixSpawnFn* m_posix_spawn = nullptr;
 };
 
-}  // namespace catter
+}  // namespace catter::hook

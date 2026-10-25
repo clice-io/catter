@@ -5,7 +5,7 @@
 #include <string_view>
 #include <kota/deco/option.h>
 
-namespace catter::opt::external_detail {
+namespace catter::option::external_detail {
 
 namespace kota_opt = kota::option;
 
@@ -78,4 +78,4 @@ constexpr inline unsigned FC1Option = 1u << 4;
 constexpr inline unsigned DXCOption = 1u << 5;
 constexpr inline unsigned FlangOption = 1u << 6;
 
-}  // namespace catter::opt::external_detail
+}  // namespace catter::option::external_detail

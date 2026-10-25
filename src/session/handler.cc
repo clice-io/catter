@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace catter::core {
+namespace catter {
 
 HandlerChain::HandlerChain(std::vector<Handler*> handlers) : handlers(std::move(handlers)) {}
 
@@ -56,4 +56,4 @@ kota::task<> HandlerChain::on_finish(data::process_result result) {
     }
 }
 
-}  // namespace catter::core
+}  // namespace catter

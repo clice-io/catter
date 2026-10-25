@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <limits>
 
-namespace catter::win {
+namespace catter {
 std::string quote_win32_arg(std::string_view arg) noexcept {
     // No quoting needed if it's empty or has no special characters.
     if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {
@@ -378,4 +378,4 @@ template std::basic_string<wchar_t>
                                std::basic_string_view<wchar_t> file_name,
                                const wchar_t* extension,
                                size_t initial_size);
-}  // namespace catter::win
+}  // namespace catter

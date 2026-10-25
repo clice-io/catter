@@ -11,7 +11,7 @@
 
 #include "command/error.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// The compilers catter recognizes by their executable's name.
 enum class Compiler : std::uint8_t {
@@ -129,7 +129,7 @@ struct Identity {
 
 /// One argument of a command as its compiler's option table reads it.
 struct Argument {
-    /// The option it is, after aliases: an id of the table (`opt::clang::ID`), the table's id
+    /// The option it is, after aliases: an id of the table (`option::clang::ID`), the table's id
     /// of an input or of an unknown option.
     std::uint32_t id;
 
@@ -271,4 +271,4 @@ std::string_view name(Diagnostic::Code code);
 std::string_view name(InputRole role);
 std::string_view name(WriteOrigin origin);
 
-}  // namespace catter::cmd
+}  // namespace catter

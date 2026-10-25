@@ -3,7 +3,7 @@
 #include "command/compiler.h"
 #include "command/parse.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// Resolves what the arguments say into the files the command reads and writes.
 ///
@@ -13,4 +13,4 @@ namespace catter::cmd {
 /// the inputs by the target's conventions.
 CompilerAnalysis resolve(Identity identity, ParsedCommand parsed);
 
-}  // namespace catter::cmd
+}  // namespace catter

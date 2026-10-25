@@ -7,9 +7,6 @@ namespace catter::config {
 constexpr static char OS_PATH_SEPARATOR = ':';
 constexpr static char OS_DIR_SEPARATOR = '/';
 
-}  // namespace catter::config
-
-namespace catter::config::hook {
 constexpr static char KEY_CATTER_PROXY_PATH[] = "__key_catter_proxy_path_v1";
 constexpr static char KEY_CATTER_COMMAND_ID[] = "__key_catter_command_id_v1";
 constexpr static char KEY_CATTER_IPC[] = "__key_catter_ipc_v1";
@@ -28,6 +25,6 @@ constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.dylib";
 constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.dylib";
 #endif
 
-constexpr static char LOG_PATH_REL[] = "log/catter-hook.log";
+constexpr static char HOOK_LOG_PATH[] = "log/catter-hook.log";
 
-}  // namespace catter::config::hook
+}  // namespace catter::config

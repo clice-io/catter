@@ -10,7 +10,7 @@
 
 #include "command/compiler.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// How a program's arguments are read: by an option table, and those of its options the
 /// program takes.
@@ -31,4 +31,4 @@ std::expected<std::vector<Argument>, std::string> read_arguments(Syntax syntax,
 /// input and of an option the table does not know.
 std::string_view option_name(Syntax syntax, std::uint32_t id);
 
-}  // namespace catter::cmd
+}  // namespace catter

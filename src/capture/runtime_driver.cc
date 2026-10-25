@@ -19,7 +19,7 @@
 #include "support/crossplat.h"
 #include "support/encoding.h"
 
-namespace catter::core {
+namespace catter {
 namespace {
 
 /// The error that ends a session: the first one a handler threw. The only
@@ -143,19 +143,19 @@ public:
             throw cpptrace::runtime_error("buildSystemCommand must not be empty");
         }
 
-        auto proxy_path = util::get_catter_root_path() / config::proxy::EXE_NAME;
-        auto pipe_name = config::ipc::session_pipe_name();
+        auto proxy_path = get_catter_root_path() / config::PROXY_EXE_NAME;
+        auto pipe_name = config::session_pipe_name();
         Session::ProcessLaunchPlan launch_plan{
             .cwd = build.cwd,
-            .executable = util::to_utf8(proxy_path),
+            .executable = to_utf8(proxy_path),
             .args =
                 {
-                       util::to_utf8(proxy_path),
+                       to_utf8(proxy_path),
                        "-p", "0",
                        "--ipc", pipe_name,
                        "--", },
         };
-        util::append_range_to_vector(launch_plan.args, build.command);
+        append_range_to_vector(launch_plan.args, build.command);
 
         Failure failure;
         Session session;
@@ -188,7 +188,7 @@ public:
             throw cpptrace::runtime_error(
                 "the replay mode takes a replay file for the build command: " "catter -m replay [--handler ...] [built-in] -- <file>");
         }
-        auto file = util::from_utf8(build.cwd) / util::from_utf8(build.command.front());
+        auto file = from_utf8(build.cwd) / from_utf8(build.command.front());
         co_return co_await replay_build(file.lexically_normal(), handler);
     }
 };
@@ -217,4 +217,4 @@ const RuntimeDriver* default_runtime_driver() noexcept {
     return inject_runtime_driver();
 }
 
-}  // namespace catter::core
+}  // namespace catter

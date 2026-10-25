@@ -78,43 +78,43 @@ ZEST_CASE(parse_lld_coff_link_command) {
     const auto argv =
         std::to_array<std::string>({"lld-link", "/out:app.exe", "/libpath:lib", "foo.obj", "/WX"});
 
-    auto parsed = parse_command(opt::lld_coff::table(), argv);
+    auto parsed = parse_command(option::lld_coff::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 4U);
 
-    EXPECT(canonical_spelling(opt::lld_coff::table(), parsed.args[0]) == "/out:");
+    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[0]) == "/out:");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "app.exe");
 
-    EXPECT(canonical_spelling(opt::lld_coff::table(), parsed.args[1]) == "/libpath:");
+    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[1]) == "/libpath:");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "lib");
 
-    EXPECT(parsed.args[2].id == opt::lld_coff::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::lld_coff::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.obj");
 
-    EXPECT(canonical_spelling(opt::lld_coff::table(), parsed.args[3]) == "/WX");
+    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[3]) == "/WX");
 };
 
 ZEST_CASE(parse_lld_elf_link_command) {
     const auto argv =
         std::to_array<std::string>({"ld.lld", "-o", "a.out", "--build-id=sha1", "foo.o"});
 
-    auto parsed = parse_command(opt::lld_elf::table(), argv);
+    auto parsed = parse_command(option::lld_elf::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(opt::lld_elf::table(), parsed.args[0]) == "-o");
+    EXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[0]) == "-o");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "a.out");
 
-    EXPECT(canonical_spelling(opt::lld_elf::table(), parsed.args[1]) == "--build-id=");
+    EXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[1]) == "--build-id=");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "sha1");
 
-    EXPECT(parsed.args[2].id == opt::lld_elf::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::lld_elf::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.o");
 };
 
@@ -122,42 +122,42 @@ ZEST_CASE(parse_lld_macho_link_command) {
     const auto argv =
         std::to_array<std::string>({"ld64.lld", "-o", "a.out", "--help-hidden", "foo.o"});
 
-    auto parsed = parse_command(opt::lld_macho::table(), argv);
+    auto parsed = parse_command(option::lld_macho::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(opt::lld_macho::table(), parsed.args[0]) == "-o");
+    EXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[0]) == "-o");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "a.out");
 
-    EXPECT(canonical_spelling(opt::lld_macho::table(), parsed.args[1]) == "--help-hidden");
-    EXPECT(opt::lld_macho::table()
-               .option(opt::lld_macho::ID_force_cpusubtype_ALL)
+    EXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[1]) == "--help-hidden");
+    EXPECT(option::lld_macho::table()
+               .option(option::lld_macho::ID_force_cpusubtype_ALL)
                .value()
                .has_flag(kota_opt::HelpHidden));
 
-    EXPECT(parsed.args[2].id == opt::lld_macho::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::lld_macho::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.o");
 };
 
 ZEST_CASE(parse_lld_mingw_link_command) {
     const auto argv = std::to_array<std::string>({"ld.lld", "-L", "lib", "-o", "app.exe", "foo.o"});
 
-    auto parsed = parse_command(opt::lld_mingw::table(), argv);
+    auto parsed = parse_command(option::lld_mingw::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(opt::lld_mingw::table(), parsed.args[0]) == "-L");
+    EXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[0]) == "-L");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "lib");
 
-    EXPECT(canonical_spelling(opt::lld_mingw::table(), parsed.args[1]) == "-o");
+    EXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[1]) == "-o");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "app.exe");
 
-    EXPECT(parsed.args[2].id == opt::lld_mingw::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::lld_mingw::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.o");
 };
 
@@ -165,18 +165,18 @@ ZEST_CASE(parse_lld_wasm_link_command) {
     const auto argv =
         std::to_array<std::string>({"wasm-ld", "-o", "a.wasm", "--export-all", "foo.o"});
 
-    auto parsed = parse_command(opt::lld_wasm::table(), argv);
+    auto parsed = parse_command(option::lld_wasm::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(opt::lld_wasm::table(), parsed.args[0]) == "-o");
+    EXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[0]) == "-o");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "a.wasm");
 
-    EXPECT(canonical_spelling(opt::lld_wasm::table(), parsed.args[1]) == "--export-all");
+    EXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[1]) == "--export-all");
 
-    EXPECT(parsed.args[2].id == opt::lld_wasm::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::lld_wasm::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.o");
 };
 
@@ -184,18 +184,18 @@ ZEST_CASE(parse_llvm_dlltool_aliases) {
     const auto argv = std::to_array<std::string>(
         {"llvm-dlltool", "--machine", "i386:x86-64", "--dllname", "foo.dll"});
 
-    auto parsed = parse_command(opt::llvm_dlltool::table(), argv);
+    auto parsed = parse_command(option::llvm_dlltool::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 2U);
 
-    EXPECT(parsed.args[0].id == opt::llvm_dlltool::ID_m);
-    EXPECT(canonical_spelling(opt::llvm_dlltool::table(), parsed.args[0]) == "-m");
+    EXPECT(parsed.args[0].id == option::llvm_dlltool::ID_m);
+    EXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[0]) == "-m");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "i386:x86-64");
 
-    EXPECT(parsed.args[1].id == opt::llvm_dlltool::ID_D);
-    EXPECT(canonical_spelling(opt::llvm_dlltool::table(), parsed.args[1]) == "-D");
+    EXPECT(parsed.args[1].id == option::llvm_dlltool::ID_D);
+    EXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[1]) == "-D");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "foo.dll");
 };
@@ -204,20 +204,20 @@ ZEST_CASE(parse_llvm_lib_command) {
     const auto argv =
         std::to_array<std::string>({"llvm-lib", "/out:foo.lib", "/libpath:lib", "foo.obj"});
 
-    auto parsed = parse_command(opt::llvm_lib::table(), argv);
+    auto parsed = parse_command(option::llvm_lib::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(opt::llvm_lib::table(), parsed.args[0]) == "/out:");
+    EXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[0]) == "/out:");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "foo.lib");
 
-    EXPECT(canonical_spelling(opt::llvm_lib::table(), parsed.args[1]) == "/libpath:");
+    EXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[1]) == "/libpath:");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "lib");
 
-    EXPECT(parsed.args[2].id == opt::llvm_lib::ID_INPUT);
+    EXPECT(parsed.args[2].id == option::llvm_lib::ID_INPUT);
     EXPECT(parsed.args[2].spelling == "foo.obj");
 };
 
@@ -225,30 +225,30 @@ ZEST_CASE(parse_nvcc_command_and_aliases) {
     const auto argv = std::to_array<std::string>(
         {"nvcc", "-ofoo.o", "-I=include", "--std=c++17", "-no-align-double", "kernel.cu"});
 
-    auto parsed = parse_command(opt::nvcc::table(), argv);
+    auto parsed = parse_command(option::nvcc::table(), argv);
 
     EXPECT(parsed.errors.empty());
     ASSERT(parsed.args.size() == 5U);
 
-    EXPECT(parsed.args[0].id == opt::nvcc::ID_output_file);
-    EXPECT(canonical_spelling(opt::nvcc::table(), parsed.args[0]) == "--output-file");
+    EXPECT(parsed.args[0].id == option::nvcc::ID_output_file);
+    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[0]) == "--output-file");
     ASSERT(parsed.args[0].values.size() == 1U);
     EXPECT(parsed.args[0].values[0] == "foo.o");
 
-    EXPECT(parsed.args[1].id == opt::nvcc::ID_include_path);
-    EXPECT(canonical_spelling(opt::nvcc::table(), parsed.args[1]) == "--include-path");
+    EXPECT(parsed.args[1].id == option::nvcc::ID_include_path);
+    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[1]) == "--include-path");
     ASSERT(parsed.args[1].values.size() == 1U);
     EXPECT(parsed.args[1].values[0] == "include");
 
-    EXPECT(parsed.args[2].id == opt::nvcc::ID_std);
-    EXPECT(canonical_spelling(opt::nvcc::table(), parsed.args[2]) == "--std");
+    EXPECT(parsed.args[2].id == option::nvcc::ID_std);
+    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[2]) == "--std");
     ASSERT(parsed.args[2].values.size() == 1U);
     EXPECT(parsed.args[2].values[0] == "c++17");
 
-    EXPECT(parsed.args[3].id == opt::nvcc::ID_no_align_double);
-    EXPECT(canonical_spelling(opt::nvcc::table(), parsed.args[3]) == "--no-align-double");
+    EXPECT(parsed.args[3].id == option::nvcc::ID_no_align_double);
+    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[3]) == "--no-align-double");
 
-    EXPECT(parsed.args[4].id == opt::nvcc::ID_INPUT);
+    EXPECT(parsed.args[4].id == option::nvcc::ID_INPUT);
     EXPECT(parsed.args[4].spelling == "kernel.cu");
 };
 };  // ZEST_SUITE(external_option_table_tests)

@@ -2,7 +2,7 @@
 
 #include <kota/deco/option.h>
 
-namespace catter::opt::nvcc {
+namespace catter::option::nvcc {
 
 // Source: /usr/local/cuda/bin/nvcc --help
 enum ID : unsigned {
@@ -397,4 +397,4 @@ enum ID : unsigned {
 
 const kota::option::OptTable& table();
 
-}  // namespace catter::opt::nvcc
+}  // namespace catter::option::nvcc

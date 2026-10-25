@@ -11,7 +11,7 @@
 #include <vector>
 #include <kota/deco/deco.h>
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -96,4 +96,4 @@ text::Renderer renderer_of(const Help& help) {
     return renderer;
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

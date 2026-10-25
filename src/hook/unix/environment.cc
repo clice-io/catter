@@ -5,7 +5,7 @@
 
 #include "hook/unix/debug.h"
 
-namespace catter::env {
+namespace catter::hook {
 
 bool is_entry_of(const char* entry, std::string_view key) noexcept {
     std::string_view sv = entry;
@@ -40,4 +40,4 @@ const char* get_env_entry(const char* const envp[], std::string_view key) noexce
     return nullptr;
 }
 
-}  // namespace catter::env
+}  // namespace catter::hook

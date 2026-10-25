@@ -22,7 +22,7 @@
 #include "support/exception.h"
 #include "support/log.h"
 
-namespace catter::proxy::hook {
+namespace catter {
 
 namespace {
 
@@ -107,7 +107,7 @@ std::optional<std::string> ascii_path(const std::filesystem::path& path) {
     if(size == 0) {
         throw catter::system_error(GetLastError(),
                                    std::system_category(),
-                                   std::format("Failed to find {}", util::to_utf8(path)));
+                                   std::format("Failed to find {}", to_utf8(path)));
     }
     std::wstring short_path(size, L'\0');
     short_path.resize(GetShortPathNameW(path.c_str(), short_path.data(), size));
@@ -123,15 +123,15 @@ std::filesystem::path temporary_copy(const std::filesystem::path& dll) {
     if(!GetFileAttributesExW(dll.c_str(), GetFileExInfoStandard, &data)) {
         throw catter::system_error(GetLastError(),
                                    std::system_category(),
-                                   std::format("Failed to find {}", util::to_utf8(dll)));
+                                   std::format("Failed to find {}", to_utf8(dll)));
     }
     const auto build = std::format(L"{}|{}|{}|{}",
                                    dll.native(),
                                    data.nFileSizeLow,
                                    data.ftLastWriteTime.dwHighDateTime,
                                    data.ftLastWriteTime.dwLowDateTime);
-    const auto dir = util::get_catter_data_path() /
-                     std::format("hook-{:016x}", std::hash<std::wstring>{}(build));
+    const auto dir =
+        get_catter_data_path() / std::format("hook-{:016x}", std::hash<std::wstring>{}(build));
     const auto copy = dir / dll.filename();
     if(std::filesystem::exists(copy)) {
         return copy;
@@ -151,7 +151,7 @@ std::filesystem::path temporary_copy(const std::filesystem::path& dll) {
             throw catter::system_error(
                 error,
                 std::system_category(),
-                std::format("Failed to copy {} to {}", util::to_utf8(dll), util::to_utf8(copy)));
+                std::format("Failed to copy {} to {}", to_utf8(dll), to_utf8(copy)));
         }
     }
     return copy;
@@ -172,13 +172,13 @@ std::string import_name(const std::filesystem::path& dll) {
     }
     throw cpptrace::runtime_error(
         std::format("Cannot load {} into a process: neither it nor its copy {} has an ASCII path",
-                    util::to_utf8(dll),
-                    util::to_utf8(copy)));
+                    to_utf8(dll),
+                    to_utf8(copy)));
 }
 
 }  // namespace
 
-void inject(HANDLE process, std::string_view executable) {
+void inject_hook(HANDLE process, std::string_view executable) {
     const USHORT machine = process_machine(process);
     const auto hook = std::ranges::find(HOOKS, machine, &Hook::machine);
     if(hook == std::ranges::end(HOOKS)) {
@@ -189,7 +189,7 @@ void inject(HANDLE process, std::string_view executable) {
     }
 
     const auto dll =
-        import_name(util::get_catter_root_path() / std::format("catter-hook-{}.dll", hook->arch));
+        import_name(get_catter_root_path() / std::format("catter-hook-{}.dll", hook->arch));
     LPCSTR dlls[] = {dll.c_str()};
     if(!DetourUpdateProcessWithDll(process, dlls, 1)) {
         throw catter::system_error(
@@ -202,4 +202,4 @@ void inject(HANDLE process, std::string_view executable) {
     }
 }
 
-}  // namespace catter::proxy::hook
+}  // namespace catter
