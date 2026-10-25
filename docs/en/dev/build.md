@@ -45,8 +45,7 @@ The project uses [XMake](https://xmake.io/) as the build system, managed through
 - `catter-proxy` -- Proxy process manager
 - `catter-hook-unix` -- Unix hook shared library (Linux/macOS)
 - `catter-hook-x64`, `catter-hook-arm64` -- Windows hook DLLs, one per architecture, both built by every Windows build
-- `catter-core` -- Core library
-- `common` -- Shared utilities library
+- `support` (with `support-resolver` and `support-winapi`), `command`, `session`, `capture` (with `capture-inject`), `protocol`, `feature` -- Static libraries, one per directory of `src/`
 
 ## Key Dependencies
 

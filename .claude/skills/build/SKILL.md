@@ -41,7 +41,7 @@ All from the repo root, in the environment CI uses (`-e dev`; `-e mingw` for Min
 - Everything a CI build job runs: `pixi run -e dev ci-build <mode>` = `cfg <mode>`, `build`, the unit tests, then `check-protocol` (the protocol's schema and the SDKs' generated types are what the build gives). The snapshot cases run on the built programs: the test skill.
 - Step by step: `pixi run -e dev cfg <mode> [toolchain]` (`xmake config --clean`: a full reconfigure; the toolchain defaults to the OS's: gcc, clang, msvc), `pixi run -e dev build` (all default targets, the test programs included).
 - The unit tests alone, on a built tree: `pixi run -e dev unit-test` (`xmake test`).
-- One unit test in the binary's own process, for debugging: `build/<plat>/<arch>/<mode>/ut-catter --no-isolation --test-filter=<suite>.<test>` (`ut-common`, `ut-catter-hook-unix`, `ut-catter-hook-win` likewise; `--help` lists the rest).
+- One unit test in the binary's own process, for debugging: `build/<plat>/<arch>/<mode>/unittests --no-isolation --test-filter=<suite>.<test>` (`unittests-hook-unix`, `unittests-hook-windows` likewise; `--help` lists the rest).
 - Release packages: `pixi run -e dev package` after a `release` build writes `release-assets/catter-<version>-<plat>-<arch>.*`, as CI's packaging step does.
 - `compile_commands.json` for catter's own sources: `build/compile_commands.json`, kept up to date by every build.
 

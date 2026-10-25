@@ -43,15 +43,16 @@ defending against ghosts.
 
 - C++23, in headers (`.h`, `#pragma once`, never include guards) and
   sources (`.cc`). File names are `snake_case`.
-- Includes name a path under the target's include directories
-  (`src/common`, `src/catter/core`, `src/catter-hook`, ...):
-  `"util/log.h"`, `"option/clang.h"`, `"unix/config.h"`. Code lives in
+- Includes name the header by its path under `src/`, whatever directory
+  includes it: `"support/log.h"`, `"command/option/clang.h"`,
+  `"hook/unix/session.h"`; a directory includes only the layers below it
+  (CLAUDE.md, `pixi run -e dev check-layers`). Code lives in
   `namespace catter` and a namespace per area (`catter::util`,
   `catter::opt::clang`, `catter::proxy::hook`).
 - Platform code is chosen by the macros xmake defines (`CATTER_LINUX`,
   `CATTER_MAC`, `CATTER_WINDOWS`), or by a file per platform when most of
-  it differs (`resolver/unix.cc` and `win.cc`, `catter-hook/unix` and
-  `win`).
+  it differs (`resolver/unix.cc` and `win.cc`, `hook/unix` and
+  `hook/windows`).
 - File-local helpers: a single one is `static`; a cluster of them goes in
   one anonymous namespace.
 
@@ -64,12 +65,12 @@ descriptors and signal dispositions it inherits, its terminal; and the
 build sees the command's real exit status and output. Open issues such as
 #119, #128, #145 and #153 are what breaking this costs.
 
-The hook payloads (`src/catter-hook/*/payload`) run inside every process
+The hook payloads (`src/hook`) run inside every process
 of the build, next to that program's own runtime. They:
 
-- link only what they must (the resolver: `common-resolver` on Unix,
+- link only what they must (the resolver: `support-resolver` on Unix,
   its sources compiled into each Windows DLL, for the DLL's architecture
-  and without ASan; the rest of `common` only in the Unix `debug` build,
+  and without ASan; the rest of `support` only in the Unix `debug` build,
   for logging), keep their symbols hidden (`exports.map`,
   `exports.def`), and on Unix carry a private C++ runtime (static
   libstdc++ on Linux, a force-loaded libc++ on macOS), so nothing they
@@ -147,14 +148,14 @@ of the build, next to that program's own runtime. They:
 ## Logging and Output
 
 - Log through the `LOG_TRACE` / `LOG_DEBUG` / `LOG_INFO` / `LOG_WARN` /
-  `LOG_ERROR` / `LOG_CRITICAL` macros of `util/log.h` (`std::format`
+  `LOG_ERROR` / `LOG_CRITICAL` macros of `support/log.h` (`std::format`
   syntax, source location captured automatically; `TRACE` and `DEBUG`
   compile away outside `debug`). Never call spdlog directly. The Unix hook
-  payload logs through its own macros (`unix/payload/debug.h`), which exist
+  payload logs through its own macros (`hook/unix/debug.h`), which exist
   only in `debug`.
 - stdout and stderr belong to the build under catter and to catter's
   results: diagnostics go to the log. What catter shows the user goes
-  through `util/output.h`.
+  through `support/output.h`.
 
 ## Naming Conventions
 

@@ -19,9 +19,10 @@ pixi run -e dev cases-test release
 
 单元测试使用 Kotatsu 测试框架（`kota::zest`）。位于 `unittests/`，目录结构与 `src/` 对应：
 
-- `unittests/common/` -- 共享工具和选项解析的测试
-- `unittests/catter/` -- 核心逻辑的测试（编译器识别、参数解析、内置功能、handler 协议）
-- `unittests/catter-hook/unix/` -- Unix hook payload 的测试
+- `unittests/support/` -- 共享工具的测试（程序解析器）
+- `unittests/command/` -- 命令分析的测试（编译器识别、参数解析、选项表）
+- `unittests/protocol/`、`unittests/feature/` -- handler 协议和内置功能的测试
+- `unittests/hook/` -- hook payload 的测试
 
 启用测试目标：
 

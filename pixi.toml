@@ -180,7 +180,7 @@ depends-on = [
     { task = "check-protocol" },
 ]
 
-# The protocol's schema, from the messages src/catter/core/protocol.h
+# The protocol's schema, from the messages src/protocol/protocol.h
 # defines, and the SDKs' types generated from it (sdk/generate.py), on a
 # built tree.
 [tasks.protocol]
@@ -195,7 +195,13 @@ depends-on = ["protocol"]
 depends-on = [
     { task = "check-testing" },
     { task = "check-sdk-ts" },
+    { task = "check-layers" },
 ]
+
+# Each directory of src/ includes only the layers below it
+# (scripts/check_layers.py).
+[tasks.check-layers]
+cmd = "python scripts/check_layers.py"
 
 # The TypeScript SDK (sdk/typescript): types and lint.
 [tasks.check-sdk-ts]

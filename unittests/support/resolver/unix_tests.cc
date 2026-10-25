@@ -1,0 +1,60 @@
+#ifndef CATTER_WINDOWS
+
+#include <filesystem>
+#include <format>
+#include <system_error>
+#include <kota/zest/zest.h>
+
+#include "support/resolver/resolver.h"
+#include "utils/temp_file_manager.h"
+
+namespace fs = std::filesystem;
+namespace resolver = catter::resolver;
+
+namespace {
+
+std::error_code ec;
+catter::TempFileManager manager("./tmp");
+
+ZEST_SUITE(shared_unix_resolver) {
+// Every worker process removes ./tmp when it exits, so these must run alone.
+ZEST_SUITE_ATTRS(serial = true);
+
+ZEST_CASE(resolve_path_like_supports_explicit_paths) {
+    manager.create("./tool", ec);
+    EXPECT(!ec);
+
+    auto resolved = resolver::resolve_path_like("./tmp/tool");
+    EXPECT((resolved.has_value() && resolved.value() == fs::path("./tmp/tool")));
+};
+
+ZEST_CASE(resolve_from_search_path_supports_search_semantics) {
+    manager.create("./runner", ec);
+    EXPECT(!ec);
+
+    auto search_path = std::format("/usr/bin:{}", fs::absolute(manager.root).string());
+    auto resolved = resolver::resolve_from_search_path("runner", search_path.c_str());
+    EXPECT(resolved.has_value());
+    EXPECT(resolved.value() == fs::absolute(manager.root / "runner"));
+};
+
+ZEST_CASE(resolve_from_path_env_uses_environment_PATH) {
+    manager.create("./path-tool", ec);
+    EXPECT(!ec);
+
+    auto path = fs::absolute(manager.root).string();
+    auto resolved = resolver::resolve_from_path_env("path-tool", path.c_str());
+    EXPECT(resolved.has_value());
+    EXPECT(resolved.value() == fs::absolute(manager.root / "path-tool"));
+};
+
+ZEST_CASE(resolve_from_search_path_rejects_missing_entries) {
+    auto resolved = resolver::resolve_from_search_path("missing-tool", "/usr/bin");
+    EXPECT(!resolved.has_value());
+};
+
+};  // ZEST_SUITE(shared_unix_resolver)
+
+}  // namespace
+
+#endif
