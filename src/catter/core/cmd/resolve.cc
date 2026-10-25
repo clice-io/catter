@@ -232,6 +232,19 @@ std::expected<InputRole, std::string_view> role_of(const Candidate& candidate,
     return std::unexpected("input candidate did not match suffix rules");
 }
 
+/// The language of the source `candidate` names: the one it is given, else its suffix's.
+std::optional<std::string> source_language(const Candidate& candidate) {
+    auto language = lowercase(candidate.language.value_or("none"));
+    if(language != "none") {
+        return language;
+    }
+    const auto path = lowercase(candidate.path);
+    const auto ends_with = [&](std::string_view suffix) {
+        return path.ends_with(suffix);
+    };
+    return std::ranges::any_of(c_suffixes, ends_with) ? "c" : "c++";
+}
+
 /// Builds the analysis from a parsed command: its reads first, then the writes made from them.
 struct Builder {
     const ParsedCommand& parsed;
@@ -280,6 +293,7 @@ struct Builder {
                 .path = candidate.path,
                 .location = candidate.location,
                 .role = *role,
+                .language = *role == InputRole::Source ? source_language(candidate) : std::nullopt,
             });
         }
         std::ranges::stable_sort(reads, {}, [](const Read& read) { return read.location.index; });
@@ -473,6 +487,7 @@ CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     builder.resolve_listing();
     return CompilerAnalysis{
         .identity = std::move(identity),
+        .syntax = parsed.dialect,
         .arguments = std::move(parsed.arguments),
         .phase = parsed.phase,
         .artifact = parsed.artifact,

@@ -1,0 +1,9 @@
+[test."$ catter -m replay --handler \"python decider.py\" --handler \"python observer.py\" -- events.json"]
+stderr = '''
+command 1: make
+command 2: gcc -fdiagnostics-color -msmall-data-limit=8 -Wl,--as-needed -I include -c -DNEW=1 -I generated a.c -o a.o
+command 3: cl /nologo /W3 /c /DNEW b.c /link /dll
+command 4: ld.lld -o app --gc-sections a.o
+command 5: clang -c -DNEW -- c.c
+'''
+exit = 0

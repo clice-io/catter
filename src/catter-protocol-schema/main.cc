@@ -15,9 +15,12 @@ struct Messages {
     InitializeResult initialize_result;
     Command command;
     Action action;
+    Analysis analysis;
     CaptureError capture_error;
     Exit exit;
     Finish finish;
+    AnalyzeParams analyze_params;
+    AnalyzeResult analyze_result;
 };
 
 }  // namespace

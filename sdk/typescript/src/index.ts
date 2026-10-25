@@ -18,6 +18,11 @@
 /// and `catter --handler "node handler.ts" -- make` runs the build with it.
 /// `listen()` serves catter's `--connect` instead.
 ///
+/// A handler may ask for what catter makes of each command (`analysis`), be
+/// told of only some commands (`filter`), edit a command's arguments
+/// (`{ action: "edit" }`), and ask what catter makes of commands of its own
+/// (`catter.analyze()`, through every callback's second argument).
+///
 /// Every callback is optional: a handler is told of the events it has a
 /// callback for. Once the SDK is imported, what the program prints with
 /// console goes to stderr: its stdout carries the protocol. An argument, a path or an environment entry that is not
@@ -35,17 +40,29 @@ import {
 
 import type {
     Action,
+    Analysis,
+    AnalyzeParams,
+    AnalyzeResult,
     CaptureError,
     Command,
     Exit,
     Finish,
     InitializeParams,
     InitializeResult,
+    Pattern,
+    Program,
 } from "./protocol.ts";
 
 export type * from "./protocol.ts";
 
 type MaybePromise<T> = T | Promise<T>;
+
+/// The catter whose session a handler serves, which every callback gets.
+export interface Catter {
+    /// What catter makes of programs the handler names, as of the commands it
+    /// sends: one for each, null for a program catter knows nothing of.
+    analyze(...programs: Program[]): Promise<(Analysis | null)[]>;
+}
 
 export interface Handler {
     /// Every command comes to onCommand, which returns its action, and the
@@ -53,16 +70,21 @@ export interface Handler {
     decides?: boolean;
     /// Commands carry their environment.
     env?: boolean;
+    /// Commands carry what catter makes of them, in `command.analysis`.
+    analysis?: boolean;
+    /// The commands the handler is told of: those a pattern names. Every
+    /// command when absent.
+    filter?: Pattern[];
     /// The session starts: what it runs, and how it captures commands.
-    onStart?(session: InitializeParams): MaybePromise<void>;
+    onStart?(session: InitializeParams, catter: Catter): MaybePromise<void>;
     /// A command is about to run; returning nothing runs it as it is.
-    onCommand?(command: Command): MaybePromise<Action | undefined | void>;
+    onCommand?(command: Command, catter: Catter): MaybePromise<Action | undefined | void>;
     /// catter could not capture a command.
-    onError?(error: CaptureError): MaybePromise<void>;
+    onError?(error: CaptureError, catter: Catter): MaybePromise<void>;
     /// A command has run.
-    onExit?(exit: Exit): MaybePromise<void>;
+    onExit?(exit: Exit, catter: Catter): MaybePromise<void>;
     /// The build has ended.
-    onFinish?(finish: Finish): MaybePromise<void>;
+    onFinish?(finish: Finish, catter: Catter): MaybePromise<void>;
 }
 
 /// A JSON-RPC error code outside the range JSON-RPC reserves: a callback threw.
@@ -105,9 +127,16 @@ function run(handler: Handler, input: Readable, output: Writable): Promise<void>
         new StreamMessageReader(input),
         new StreamMessageWriter(output),
     );
+    const catter: Catter = {
+        async analyze(...programs) {
+            const params: AnalyzeParams = { programs };
+            const result: AnalyzeResult = await connection.sendRequest("analyze", params);
+            return result.analyses;
+        },
+    };
     connection.onRequest("initialize", (session: InitializeParams): Promise<InitializeResult> =>
         answer(async () => {
-            await handler.onStart?.(session);
+            await handler.onStart?.(session, catter);
             return {
                 decides: handler.decides ?? false,
                 events: {
@@ -116,27 +145,29 @@ function run(handler: Handler, input: Readable, output: Writable): Promise<void>
                     exit: handler.onExit !== undefined,
                 },
                 env: handler.env ?? false,
+                analysis: handler.analysis ?? false,
+                filter: handler.filter ?? null,
             };
         }),
     );
     connection.onRequest("command", (command: Command): Promise<Action> =>
-        answer(async () => (await handler.onCommand?.(command)) ?? { action: "skip" }),
+        answer(async () => (await handler.onCommand?.(command, catter)) ?? { action: "skip" }),
     );
     connection.onRequest("finish", (finish: Finish): Promise<null> =>
         answer(async () => {
-            await handler.onFinish?.(finish);
+            await handler.onFinish?.(finish, catter);
             return null;
         }),
     );
     connection.onNotification("command", (command: Command) =>
         told(async () => {
-            await handler.onCommand?.(command);
+            await handler.onCommand?.(command, catter);
         }),
     );
     connection.onNotification("error", (error: CaptureError) =>
-        told(() => handler.onError?.(error)),
+        told(() => handler.onError?.(error, catter)),
     );
-    connection.onNotification("exit", (exit: Exit) => told(() => handler.onExit?.(exit)));
+    connection.onNotification("exit", (exit: Exit) => told(() => handler.onExit?.(exit, catter)));
 
     const closed = new Promise<void>((resolve) => connection.onClose(() => resolve()));
     connection.listen();

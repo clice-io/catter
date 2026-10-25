@@ -18,7 +18,8 @@ struct Candidate {
 
     Location location;
 
-    /// The language `-x`, `/TC` or `/TP` set for the inputs after it, when one did.
+    /// The language `-x` set for the inputs after it, or `/TC` or `/TP` for every input, when
+    /// one did.
     std::optional<std::string> language;
 };
 

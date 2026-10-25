@@ -1,0 +1,51 @@
+[test."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+stderr = '''
+command 1: NoneType
+command 2: CompilerAnalysis
+  gcc in gcc: compile to object
+  argument -c as '-c' at 1+1
+  argument -I as '-I' 'include' at 2+2
+  argument -D as '-D' 'X=1' at 4+1
+  argument <input> as 'a.c' at 5+1
+  argument -o as '-o' 'a.o' at 6+2
+  reads a.c at 5 for source in c
+  writes a.o from [0], explicit
+command 3: CompilerAnalysis
+  clang in clang: compile to object
+  argument --target= as '--target=' 'riscv64-linux-gnu' at 1+1
+  argument -G as '-msmall-data-limit=' '8' at 2+1
+  argument -c as '-c' at 3+1
+  argument -x as '-x' 'c++' at 4+2
+  argument <input> as 'b.cc' at 6+1
+  argument -x as '-x' 'none' at 7+2
+  argument <input> as 'c.c' at 9+1
+  reads b.cc at 6 for source in c++
+  reads c.c at 9 for source in c
+  writes b.o from [0], default-output
+  writes c.o from [1], default-output
+command 4: CompilerAnalysis
+  msvc in msvc: compile to object
+  argument /nologo as '/nologo' at 1+1
+  argument -c as '/c' at 2+1
+  argument -Wall as '/W3' at 3+1
+  argument /Tp as '/Tp' 'd.cxx' at 4+1
+  argument <input> as 'e.c' at 5+1
+  reads d.cxx at 4 for source in c++
+  reads e.c at 5 for source in c
+  writes d.obj from [0], default-output
+  writes e.obj from [1], default-output
+command 5: ArchiverAnalysis
+  rcs libx.a of ['a.o', 'b.o']
+  reads ['a.o', 'b.o'], writes ['libx.a']
+command 6: ToolAnalysis
+  lld-elf
+  argument --gc-sections as '--gc-sections' at 1+1
+  argument -o as '-o' 'app' at 2+2
+  argument <input> as 'a.o' at 4+1
+  argument -l as '-l' 'm' at 5+1
+command 7: UnparsedAnalysis
+  compiler gcc: compiler-parse: fatal error in parsing: failed to parse `-o` (arg #3) : missing argument value
+command 8: UnparsedAnalysis
+  compiler nvcc: compiler-unsupported: compiler dialect is not supported yet: nvcc
+'''
+exit = 0

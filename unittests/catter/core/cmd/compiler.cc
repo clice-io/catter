@@ -100,4 +100,21 @@ ZEST_CASE(missing_option_value_fails_the_parse) {
     EXPECT(analysis.error().kind == cmd::Error::Kind::CompilerParse);
 };
 
+ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
+    auto languages = [](std::string_view command) {
+        const auto argv = split(command);
+        auto analysis = cmd::analyze_compiler(argv[0], argv);
+        std::vector<std::string> languages;
+        for(const auto& read: analysis->reads) {
+            languages.push_back(read.path + ":" + read.language.value_or("none"));
+        }
+        return languages;
+    };
+    EXPECT(languages("gcc -c a.c -x c++ b.cc -x none c.c d.cpp") ==
+           std::vector<std::string>{"a.c:c", "b.cc:c++", "c.c:c", "d.cpp:c++"});
+    EXPECT(languages("cl /c a.c /TC b.c") == std::vector<std::string>{"a.c:c", "b.c:c"});
+    EXPECT(languages("cl /c /Tc a.cc /Tp b.c") == std::vector<std::string>{"a.cc:c", "b.c:c++"});
+    EXPECT(languages("gcc a.o -o app") == std::vector<std::string>{"a.o:none"});
+};
+
 };  // ZEST_SUITE(cmd_compiler_tests)

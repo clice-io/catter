@@ -1,0 +1,12 @@
+["phases and tools"."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+stderr = '''
+command 3: ['gcc', '-c', 'a.c']
+exit 3: code 0
+command 5: ['ld.lld', '-o', 'app', 'a.o']
+exit 5: code 0
+'''
+exit = 0
+
+["one compiler"."$ catter -m replay --handler \"python compilers.py\" -- events.json"]
+stderr = "command 7: ['clang', '-c', 'b.c', '-o']"
+exit = 0

@@ -17,6 +17,10 @@ struct Error {
         ArchiverNotRecognized,
         /// An archiver run in a way catter does not model.
         ArchiverUnsupported,
+        /// The executable is no tool catter reads the arguments of.
+        ToolNotRecognized,
+        /// The tool's arguments do not parse.
+        ToolParse,
     };
 
     Kind kind;

@@ -172,6 +172,10 @@ struct Read {
     Location location;
 
     InputRole role;
+
+    /// The language a source is read in: the one `-x` before it sets, `/TC` or `/TP` for all,
+    /// else its suffix's, `c` or `c++`. None for a file read for linking.
+    std::optional<std::string> language;
 };
 
 /// Why a command writes a file.
@@ -221,6 +225,9 @@ struct Diagnostic {
 struct CompilerAnalysis {
     Identity identity;
 
+    /// The syntax its arguments are read in: the identity's, or MSVC's for clang in cl mode.
+    Dialect syntax;
+
     /// Every argument after argv[0].
     std::vector<Argument> arguments;
 
@@ -239,6 +246,10 @@ struct CompilerAnalysis {
     std::vector<Diagnostic> diagnostics;
 };
 
+/// The compiler `executable` is, by its name; none for a program that is no compiler catter
+/// knows.
+std::optional<Identity> identify(std::string_view executable);
+
 /// Analyzes the command that runs `executable` with `argv`, argv[0] included.
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
                                                         std::span<const std::string> argv);
@@ -254,5 +265,7 @@ std::string_view name(ObjectFormat format);
 std::string_view name(ArtifactModel model);
 std::string_view name(TargetSource source);
 std::string_view name(Diagnostic::Code code);
+std::string_view name(InputRole role);
+std::string_view name(WriteOrigin origin);
 
 }  // namespace catter::cmd

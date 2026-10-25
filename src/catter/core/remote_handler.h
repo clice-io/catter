@@ -72,10 +72,10 @@ private:
                   Options options);
 
     /// The action on a command: the handler's, or skip from one that does
-    /// not decide.
-    kota::task<Action> decide(data::ipcid_t id,
-                              std::optional<data::ipcid_t> parent,
-                              data::command command);
+    /// not decide; none for a command the handler's filter leaves out.
+    kota::task<std::optional<Action>> decide(data::ipcid_t id,
+                                             std::optional<data::ipcid_t> parent,
+                                             data::command command);
 
     template <typename Result, typename Params>
     kota::task<Result> request(std::string_view method, std::string_view what, Params params);
