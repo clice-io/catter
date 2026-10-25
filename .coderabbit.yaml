@@ -1,0 +1,8 @@
+chat:
+  auto_reply: false
+reviews:
+  auto_review:
+    enabled: true
+  # The switch of the summary: the schema has no reviews.summary.enabled.
+  high_level_summary: false
+  sequence_diagrams: false

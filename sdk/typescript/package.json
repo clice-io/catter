@@ -6,13 +6,17 @@
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "check": "pnpm run typecheck && pnpm run lint"
   },
   "dependencies": {
     "vscode-jsonrpc": "^8.2.1"
   },
   "devDependencies": {
     "@types/node": "~24.0.0",
-    "typescript": "^5.9.3"
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4"
   }
 }

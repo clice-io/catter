@@ -37,7 +37,7 @@ jobs:
         with:
           filters: |
             format:
-              - '**/*.{h,hpp,c,cc,cpp,ts,tsx,mts,cts,js,mjs,cjs,css,py,pyi,md,json,jsonc,toml,yml,yaml}'
+              - '**/*.{h,hpp,c,cc,cpp,ts,tsx,mts,cts,js,mjs,cjs,css,py,pyi,md,json,toml,yml,yaml}'
               - '.clang-format'
               - '.prettierignore'
               - 'pixi.lock'
@@ -49,6 +49,7 @@ jobs:
               - '.github/workflows/lint.yml'
             build:
               - 'src/**'
+              - 'sdk/**'
               - 'tests/**'
               - 'tools/**'
               - 'unittests/**'

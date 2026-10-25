@@ -1,5 +1,4 @@
 # clang-format configuration
-# compatible with clang-format 18
 
 UseTab: Never
 ColumnLimit: 100
@@ -121,7 +120,7 @@ IncludeCategories:
     SortPriority: 11
 
   # 3. Third-party libraries with a subdir prefix
-  - Regex: "^<(spdlog|cpptrace|minhook)/"
+  - Regex: "^<(spdlog|cpptrace)/"
     Priority: 10
     SortPriority: 12
 
@@ -141,10 +140,6 @@ IncludeCategories:
   - Regex: "^<(kota/meta)/"
     Priority: 10
     SortPriority: 16
-
-  - Regex: "^<(kota/option)/"
-    Priority: 10
-    SortPriority: 17
 
   - Regex: "^<(kota/deco)/"
     Priority: 10
