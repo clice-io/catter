@@ -1,6 +1,6 @@
 # IPC Protocol (inject runtime implementation)
 
-> This page describes the communication protocol between the catter daemon and `catter-proxy`. It is the shared transport layer for all runtimes and is currently used by the inject runtime; script authors usually do not need to read it.
+> This page describes the communication protocol between the catter daemon and `catter-proxy`. It is the shared transport layer for all runtimes and is currently used by the inject runtime; handler authors usually do not need to read it.
 
 Catter uses inter-process communication between the daemon (`catter`) and proxy instances (`catter-proxy`). The daemon acts as a server, and each proxy instance connects as a client.
 
@@ -80,21 +80,21 @@ The core request. The proxy sends a captured command and the daemon decides what
 
 **Result** -- `action`:
 
-| Field  | Type           | Description                                            |
-| ------ | -------------- | ------------------------------------------------------ |
-| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, `WRAP`, or `FAIL`             |
-| `cmd`  | `command`      | The command to execute (may be modified by the script) |
+| Field  | Type           | Description                                           |
+| ------ | -------------- | ----------------------------------------------------- |
+| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, `WRAP`, or `FAIL`            |
+| `cmd`  | `command`      | The command to execute (may be modified by a handler) |
 
 **Action types**:
 
-- **`DROP` (0)** -- Do not execute the command. The proxy returns exit code 0 immediately. Used when the script determines a command is irrelevant (e.g., a compiler invocation the user wants to skip).
+- **`DROP` (0)** -- Do not execute the command. The proxy returns exit code 0 immediately. Used when a handler determines a command is irrelevant (e.g., a compiler invocation the user wants to skip).
 - **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD` (or performs DLL injection on Windows) so that child processes of this command are also intercepted. This is the default for build commands whose children should be monitored.
 - **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command and captures its stdout/stderr, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
-- **`FAIL` (3)** -- Do not execute the command: the proxy returns exit code 1 immediately. The session has ended with an error (a script or handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
+- **`FAIL` (3)** -- Do not execute the command: the proxy returns exit code 1 immediately. The session has ended with an error (a handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
 
-The daemon may modify the command in the returned action. For example, a script could change compiler flags, redirect output paths, or substitute a different executable.
+The daemon may modify the command in the returned action. For example, a handler could change compiler flags, redirect output paths, or substitute a different executable.
 
-> These actions belong to the **protocol layer** and are not the same layer as the `skip` / `drop` / `abort` / `modify` actions scripts see: script actions are mapped to protocol actions by the runtime driver. See the Actions section of [System Architecture](architecture.md) for the mapping and semantics.
+> These actions belong to the **protocol layer** and are not the same layer as the `skip` / `drop` / `abort` / `modify` actions handlers decide: handler actions are mapped to protocol actions by the runtime driver. See the Actions section of [System Architecture](architecture.md) for the mapping and semantics.
 
 ### REPORT_ERROR
 
@@ -125,7 +125,7 @@ Reports that a command has completed execution.
 
 **Result**: `null` (no response payload)
 
-After the daemon receives this request, it tells the session's handlers (the `onExecution()` JavaScript callback) the result. The proxy then disconnects.
+After the daemon receives this request, it tells the session's handlers the result (the handler protocol's `exit`). The proxy then disconnects.
 
 ## Typical Message Sequence
 
@@ -141,7 +141,7 @@ Daemon -> Proxy:  true
 [Proxy exits when build finishes]
 ```
 
-The injector proxy also sends `CREATE`, `MAKE_DECISION`, and `FINISH` for the top-level build command, so the build system command itself passes through `onCommand`/`onExecution` like any other intercepted command.
+The injector proxy also sends `CREATE`, `MAKE_DECISION`, and `FINISH` for the top-level build command, so the build system command itself reaches the handlers like any other intercepted command.
 
 ### Wrapper Mode (intercepted command)
 
@@ -190,7 +190,7 @@ Each session is identified by a unique `ipcid_t` (32-bit integer). The tree is b
 1. **Daemon starts** -- Creates and binds the Unix domain socket or named pipe.
 2. **Proxy connects** -- Opens a connection to the socket/pipe. The connection is established using `kota::pipe::connect()` on the proxy side.
 3. **Daemon accepts** -- For each incoming connection, the daemon creates a `kota::ipc::BincodePeer` and registers request handlers (`on_request<Request<Type>>(...)`) for each request type.
-4. **Request handling** -- The daemon's event loop dispatches incoming requests to the appropriate handler. Handlers may be async (using `co_await`) to interact with the JS runtime or other daemon state.
+4. **Request handling** -- The daemon's event loop dispatches incoming requests to the appropriate handler. Request handlers may be async (using `co_await`), to wait for the session's handlers or other daemon state.
 5. **Peer disconnects** -- When the proxy process exits, the transport closes and the `BincodePeer::run()` coroutine completes. The daemon logs the disconnection and cleans up the session.
 
 ## Data Types

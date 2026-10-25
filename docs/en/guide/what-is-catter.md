@@ -1,6 +1,6 @@
 # What is Catter?
 
-Catter is a build process interception tool. It hooks into child process creation during a build, captures compilation and linker commands, and lets you process them with JavaScript scripts powered by an embedded QuickJS runtime.
+Catter is a build process interception tool. It hooks into child process creation during a build, captures compilation and linker commands, and lets you process them with its built-in scripts or with handlers: programs of your own, written in any language.
 
 ## Motivation
 
@@ -14,7 +14,7 @@ No existing cross-platform tool solves all of these problems. That is why we cre
 
 ## How It Works
 
-Catter's approach is similar to [Bear](https://github.com/rizsotto/Bear) and [scan-build](https://github.com/rizsotto/scan-build). It intercepts child process creation using platform-specific hooks (`LD_PRELOAD` on Linux, `DYLD_INSERT_LIBRARIES` on macOS, DLL injection on Windows). Every intercepted command is sent to a decision-making daemon that runs user-provided JavaScript scripts via QuickJS, determining what to do with each command.
+Catter's approach is similar to [Bear](https://github.com/rizsotto/Bear) and [scan-build](https://github.com/rizsotto/scan-build). It intercepts child process creation using platform-specific hooks (`LD_PRELOAD` on Linux, `DYLD_INSERT_LIBRARIES` on macOS, DLL injection on Windows). Every intercepted command is sent to a decision-making daemon, which asks the session's handlers what to do with it.
 
 ## Core Capabilities
 
@@ -34,14 +34,14 @@ Instead of forwarding compilation to the real compiler, catter will be able to g
 
 Capture process timing, durations, and parent-child relationships during a build. The data can be rendered visually in a browser, letting you analyze parallelism and identify bottlenecks.
 
-### Custom Script Patching
+### Custom Handlers
 
-With the embedded QuickJS engine, users can write JavaScript scripts to dynamically modify, redirect, or inject logic into build commands -- without changing the original build files.
+A handler, a program of your own that catter speaks to over a small protocol, can observe every command, or decide on each one: run it as it is, run another command in its place, drop it, or abort the build -- without changing the original build files. SDKs for Python and TypeScript speak the protocol for you.
 
 ## Architecture at a Glance
 
-Catter is organized around **runtimes**: a runtime is the mechanism that actually captures build process creation. The default `inject` runtime intercepts child process creation through platform hooks (Linux `LD_PRELOAD`, macOS `DYLD_INSERT_LIBRARIES`, Windows DLL injection); every captured command is handed to a daemon running your JavaScript script.
+Catter is organized around **runtimes**: a runtime is the mechanism that actually captures build process creation. The default `inject` runtime intercepts child process creation through platform hooks (Linux `LD_PRELOAD`, macOS `DYLD_INSERT_LIBRARIES`, Windows DLL injection); every captured command is handed to the daemon, which passes it to the session's handlers.
 
-Scripts participate through four callbacks: `onStart` before the build, `onCommand` before each command, `onExecution` after each command, and `onFinish` after the whole build. A script can run a command as-is, run it modified, skip it, or abort; it can use the capability information in `config.runtime` to adapt to different runtimes.
+A handler is told when the session starts and how its commands are captured, of each command before it runs and once it has run, and when the build ends. A handler that decides runs each command as it is, runs it modified, drops it, or aborts the build; one that does not only observes.
 
 For details on the architecture concepts, runtimes, and the IPC flow, see the [design documentation](../design/architecture) and [Runtime](../design/runtime).

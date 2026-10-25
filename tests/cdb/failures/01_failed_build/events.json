@@ -4,5 +4,5 @@
   "events": [
     { "id": 1, "exe": "clang++", "argv": ["clang++", "-c", "src/main.cc", "-o", "obj/main.o"] }
   ],
-  "finish": { "code": 1, "stdout": "", "stderr": "" }
+  "finish": { "code": 1 }
 }

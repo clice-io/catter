@@ -19,14 +19,14 @@ docs skill.
 
 ## By position on the page
 
-| Where                             | Rule                                                                                                                                                                                                                           |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Sidebar groups                    | Translated: 指南 / 功能 / 脚本系统 / 设计 / 开发. Product names `catter`, `clice`, `kotatsu` stay lowercase English.                                                                                                           |
-| Page and section headings (h1–h3) | Translated on every page including design/. Headings that are identifiers stay verbatim: `--stdio-mode`, `catter-proxy`, `onCommand`. A planned feature's heading carries （计划中）, and planned status is 计划中 everywhere. |
-| Home page frontmatter             | `text`, `tagline`, the feature cards' `title` and `details`, the actions' `text` are translated; `link`, `src`, `theme` stay.                                                                                                  |
-| Callouts                          | The `> [!WARNING]` marker stays; its text is translated (此功能尚在计划中，尚未实现。).                                                                                                                                        |
-| Table headers                     | Field → 字段, Type → 类型, Description → 说明, Meaning → 含义, Option → 选项, Default → 默认值, Variable → 变量, Purpose → 用途.                                                                                               |
-| Script and command names          | `script::cdb`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and runtime names (`inject`, `env`, `eslogger`) are code, never translated.                                                 |
+| Where                             | Rule                                                                                                                                                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sidebar groups                    | Translated: 指南 / 功能 / 脚本系统 / 设计 / 开发. Product names `catter`, `clice`, `kotatsu` stay lowercase English.                                                                                                       |
+| Page and section headings (h1–h3) | Translated on every page including design/. Headings that are identifiers stay verbatim: `initialize`, `command`, `catter-proxy`. A planned feature's heading carries （计划中）, and planned status is 计划中 everywhere. |
+| Home page frontmatter             | `text`, `tagline`, the feature cards' `title` and `details`, the actions' `text` are translated; `link`, `src`, `theme` stay.                                                                                              |
+| Callouts                          | The `> [!WARNING]` marker stays; its text is translated (此功能尚在计划中，尚未实现。).                                                                                                                                    |
+| Table headers                     | Field → 字段, Type → 类型, Description → 说明, Meaning → 含义, Option → 选项, Default → 默认值, Variable → 变量, Purpose → 用途.                                                                                           |
+| Script and command names          | `script::cdb`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and runtime names (`inject`, `env`, `eslogger`) are code, never translated.                                             |
 
 ## By term
 
@@ -49,7 +49,7 @@ Translate:
 Keep English (never transliterate):
 
 - Product and tool names: CMake, Make, Ninja, MSBuild, xmake, Bazel,
-  Meson, GCC, Clang, MSVC, clang-cl, nvcc, LLVM, QuickJS, Bear, VS Code.
+  Meson, GCC, Clang, MSVC, clang-cl, nvcc, LLVM, Bear, VS Code.
 - Acronyms: CDB, IPC, DLL, ABI, API, CLI, JSON, LSP.
 - Platform mechanisms, as they are named: `LD_PRELOAD`,
   `DYLD_INSERT_LIBRARIES`, Endpoint Security, MinHook, Detours.

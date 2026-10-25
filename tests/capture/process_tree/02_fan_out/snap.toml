@@ -35,7 +35,7 @@ n31 exit 0
 '''
 exit = 0
 
-[test."$ catter script.js -- node build.mjs"]
+[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 n0 exit 0
 n1 exit 0
@@ -69,6 +69,6 @@ n28 exit 0
 n29 exit 0
 n30 exit 0
 n31 exit 0
-catter saw 32 programs
 '''
+stderr = "catter saw 32 programs"
 exit = 0

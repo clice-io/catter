@@ -9,7 +9,6 @@
 #include <vector>
 #include <kota/deco/deco.h>
 
-#include "handler.h"
 #include "runtime_driver.h"
 #include "util/encoding.h"
 
@@ -70,9 +69,11 @@ struct CatterConfig {
 
     DECO_CFG_START(category = catter_category)
 
-    DecoInput(meta_var = "<Script>",
-              help = "path to the custom js; or internal script, eg. script::cdb",
-              required = false)
+    DecoInput(
+        meta_var = "<Script>",
+        help =
+            "a builtin script: script::cdb, script::cmd-tree, script::target-tree or script::inspect",
+        required = false)
     <std::string> script_path;
 
     DecoKV(
@@ -118,19 +119,9 @@ struct CatterConfig {
            required = false)
     <config::WorkingDirectory> working_dir = config::WorkingDirectory{};
 
-    DecoKV(
-        names = {"--stdio-mode"},
-        meta_var = "<inherit|capture>",
-        help =
-            "control target stdio behavior when it is captured by catter; 'inherit' prints in real time, 'capture' only stores it; default to 'inherit'",
-        required = false)
-    <StdioMode> stdio_mode = StdioMode::inherit;
-
-    DecoPack(
-        meta_var = "<Args>",
-        help =
-            "the command you want catter to use, must be after a '--'; you can also pass it in your script",
-        required = false)
+    DecoPack(meta_var = "<Args>",
+             help = "the command you want catter to use, must be after a '--'",
+             required = false)
     <std::vector<std::string>> command = std::vector<std::string>{};
 
     std::vector<std::string> script_args;
@@ -139,8 +130,6 @@ struct CatterConfig {
     help = false;
 
     DECO_CFG_END()
-
-    bool log = true;
 
     /// A handler the command line names: a command for catter to start
     /// (--handler), or an address to connect to (--connect).

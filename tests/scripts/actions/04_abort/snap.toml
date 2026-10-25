@@ -1,7 +1,0 @@
-[test."$ catter script.js -- node build.mjs"]
-stdout = '''
-act-on-me: exit 1
-leave-me: exit 1
-The script aborted the build at command 2
-'''
-exit = 1

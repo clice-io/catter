@@ -1,6 +1,4 @@
 packages:
-  - "scripts"
-  - "api/dev"
   - "tools"
   - "tests"
   - "sdk/typescript"

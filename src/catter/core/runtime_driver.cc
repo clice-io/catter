@@ -154,7 +154,6 @@ public:
                        "-p", "0",
                        "--ipc", pipe_name,
                        "--", },
-            .mode = build.stdio_mode,
         };
         util::append_range_to_vector(launch_plan.args, build.command);
 

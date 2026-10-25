@@ -1,6 +1,5 @@
 #nodejs
 node_modules
-.rollup*
 .eslintcache
 
 # Prerequisites
@@ -53,10 +52,7 @@ node_modules
 .venv
 .vscode
 /build*/
-api/build/
-scripts/build/
 vsxmake*/
-.turbo/
 
 # pixi environments
 .pixi/*

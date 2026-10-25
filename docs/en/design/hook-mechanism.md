@@ -1,6 +1,6 @@
 # Hook Mechanism (inject runtime implementation)
 
-> This page describes the internals of the **inject runtime**. Script authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations scripts care about, see [Runtime](runtime.md).
+> This page describes the internals of the **inject runtime**. Handler authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations handlers care about, see [Runtime](runtime.md).
 
 The hook is the capture carrier of the inject runtime: a shared library loaded into every process spawned by the build system. Its sole job is to intercept process creation calls and rewrite them so that every child process goes through `catter-proxy` instead of executing directly.
 

@@ -1,0 +1,13 @@
+[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+stdout = '''
+fails: exit 3
+after it: exit 1
+Handler `python handler.py` stopped before it answered command 3
+'''
+stderr = '''
+Traceback (most recent call last):
+  File "${WS}/handler.py", line 9, in on_exit
+    raise RuntimeError(f"command {exit.id} exited with {exit.code}")
+RuntimeError: command 2 exited with 3
+'''
+exit = 1

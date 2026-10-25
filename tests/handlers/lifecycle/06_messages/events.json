@@ -15,9 +15,7 @@
       "exe": "cc",
       "argv": ["cc", "-c", "a.c"],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -32,8 +30,6 @@
     }
   ],
   "finish": {
-    "code": 0,
-    "stdout": "",
-    "stderr": ""
+    "code": 0
   }
 }

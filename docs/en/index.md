@@ -20,15 +20,15 @@ features:
   - icon:
       src: /icons/catter-cdb.webp
     title: Universal CDB Generation
-    details: Generate compile_commands.json from any build system — Make, Ninja, CMake, or custom scripts
+    details: Generate compile_commands.json from any build system — Make, Ninja, CMake, or custom build scripts
   - icon:
       src: /icons/catter-process-tree.webp
     title: Deep Process Interception
     details: Hooks into process creation at the OS level (LD_PRELOAD on Unix, DLL injection on Windows)
   - icon:
       src: /icons/catter-fake-compilation.webp
-    title: JavaScript Scripting
-    details: Write custom scripts with the embedded QuickJS engine to analyze, filter, or modify build commands
+    title: Handlers in Any Language
+    details: Analyze, filter, or modify build commands from a program of your own, with the Python and TypeScript SDKs or any language that speaks the protocol
   - icon:
       src: /icons/catter-profiling.webp
     title: Build Graph Analysis

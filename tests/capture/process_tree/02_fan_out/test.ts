@@ -1,7 +1,7 @@
 import { test } from "@catter/tools/testing";
 
-// The case's script.js counts what catter saw of build.mjs's programs.
+// The case's handler.py counts what catter saw of build.mjs's programs.
 test(async (t) => {
     await t.run("node build.mjs");
-    await t.cli("script.js -- node build.mjs");
+    await t.cli(["--handler", "python handler.py", "--", "node", "build.mjs"]);
 });

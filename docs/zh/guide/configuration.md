@@ -10,31 +10,23 @@ catter [options] [<script> [script-args]] -- <build-command>
 
 ### 选项
 
-| 选项                          | 说明                                                                                                       | 默认值    |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | --------- |
-| `-m, --mode <mode>`           | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject`  |
-| `-d, --dir <path>`            | 目标进程的工作目录。                                                                                       | 当前目录  |
-| `--stdio-mode <mode>`         | 子进程标准输入输出的处理方式，见下文。                                                                     | `inherit` |
-| `--handler <command>`         | 由 catter 启动的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                             |           |
-| `--connect <host:port>`       | 在该地址监听的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                               |           |
-| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                |           |
-| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                             | `60`      |
-| `-h, --help`                  | 显示帮助信息。                                                                                             |           |
+| 选项                          | 说明                                                                                                       | 默认值   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | -------- |
+| `-m, --mode <mode>`           | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject` |
+| `-d, --dir <path>`            | 目标进程的工作目录。                                                                                       | 当前目录 |
+| `--handler <command>`         | 由 catter 启动的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                             |          |
+| `--connect <host:port>`       | 在该地址监听的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                               |          |
+| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                |          |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                             | `60`     |
+| `-h, --help`                  | 显示帮助信息。                                                                                             |          |
 
 ### 数据目录
 
 catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。
 
-### `--stdio-mode`
+### 内置脚本
 
-控制被拦截进程的标准输出和标准错误流的处理方式：
-
-- **`inherit`** -- 实时透传。构建输出会像正常一样显示在终端中。
-- **`capture`** -- 缓冲 stdout 和 stderr。捕获的输出会传递给脚本的 `onFinish` 回调，而不是立即打印。
-
-### 脚本指定
-
-**内置脚本**使用 `script::` 前缀：
+内置脚本用 `script::` 前缀指定：
 
 ```bash
 catter script::<name> [script-args] -- <build-command>
@@ -48,12 +40,6 @@ catter script::<name> [script-args] -- <build-command>
 | `script::cmd-tree`    | 展示构建命令树                           |
 | `script::target-tree` | 展示构建目标树                           |
 | `script::inspect`     | 展示 catter 如何分析一条命令（不运行它） |
-
-**自定义脚本**使用文件路径：
-
-```bash
-catter ./path/to/script.js [script-args] -- <build-command>
-```
 
 ## catter-proxy 命令行
 

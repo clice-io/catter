@@ -6,5 +6,5 @@
     { "id": 2, "parent": 1, "exe": "clang++", "argv": ["clang++", "-c", "src/main.cc", "-o", "obj/main.o"] },
     { "id": 3, "parent": 1, "exe": "clang++", "argv": ["clang++", "obj/main.o", "-o", "bin/app"] }
   ],
-  "finish": { "code": 0, "stdout": "", "stderr": "" }
+  "finish": { "code": 0 }
 }

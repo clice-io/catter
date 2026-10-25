@@ -83,10 +83,6 @@ rules and the pitfalls. The framework is `tools/testing/`
 - A debug (ASan) catter on Linux puts the sanitizer runtime first in the
   preload of every program the hook enters, with leak detection off for
   them (`src/catter-hook/unix/impl.cc`): a case needs nothing for it.
-- A JavaScript script that throws prints its JavaScript stack, with
-  positions in the bundled `catter/*` modules: a block that pins one
-  changes whenever their source does. A built-in, C++, prints only its
-  message.
 - A native stack trace never reaches stdout (only the log): one in a block
   is a regression.
 

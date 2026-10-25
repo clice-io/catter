@@ -30,7 +30,6 @@ vc14_runtime = "==14.44.35208"
 ucrt = "==10.0.26100.0"
 
 [target.win-64.activation.env]
-PATH = "%PIXI_PROJECT_ROOT%/api/node_modules/.bin;%PATH%"
 CATTER_DEFAULT_TOOLCHAIN = "msvc"
 
 [target.linux-64.dependencies]
@@ -39,11 +38,9 @@ gcc = "==14.2.0"
 gxx = "==14.2.0"
 
 [target.linux.activation.env]
-PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 CATTER_DEFAULT_TOOLCHAIN = "gcc"
 
 [target.osx.activation.env]
-PATH = "$PIXI_PROJECT_ROOT/api/node_modules/.bin:$PATH"
 CATTER_DEFAULT_TOOLCHAIN = "clang"
 
 [feature.clang.dependencies]
@@ -153,8 +150,6 @@ npm-install = {
         "pnpm-lock.yaml",
         "pnpm-workspace.yaml",
         "package.json",
-        "api/dev/package.json",
-        "scripts/package.json",
         "sdk/typescript/package.json",
     ]
 }
@@ -177,7 +172,6 @@ args = [
     { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
 ]
 depends-on = [
-    { task = "npm-install" },
     { task = "cfg", args = ["{{ mode }}"] },
     { task = "build" },
     { task = "ut" },
@@ -202,7 +196,6 @@ depends-on = ["npm-install"]
 [tasks.ci-check]
 depends-on = [
     { task = "lint-ts" },
-    { task = "check-js-modules" },
     { task = "check-testing" },
     { task = "check-sdk-ts" },
 ]
@@ -216,28 +209,6 @@ depends-on = ["npm-install"]
 [tasks.check-testing]
 cmd = "pnpm --dir tools run check && pnpm --dir tools run test && pnpm --dir tests run check"
 depends-on = ["npm-install"]
-
-[tasks.build-js]
-cmd = "pnpm --dir api/dev run build"
-
-[tasks.build-js-runtime]
-cmd = "pnpm --dir api/dev run build:runtime"
-
-[tasks.build-js-scripts]
-cmd = "pnpm --dir scripts run build"
-
-[tasks.build-js-types]
-cmd = "pnpm --dir api/dev run build:types"
-
-[tasks.build-js-tests]
-cmd = "pnpm --dir api/dev run build:tests"
-depends-on = "build-js-types"
-
-[tasks.check-js-modules]
-cmd = "pnpm --dir api/dev run check:modules"
-
-[tasks.clean-js]
-cmd = "pnpm --dir api/dev run clean"
 
 [tasks.package]
 args = [{ arg = "outputdir", default = "release-assets" }]

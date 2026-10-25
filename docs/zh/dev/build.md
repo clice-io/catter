@@ -30,12 +30,6 @@ pixi run build
 
 # Configure in release mode
 pixi run cfg release
-
-# Build JavaScript/TypeScript API
-pixi run build-js
-
-# Install npm dependencies
-pixi run npm-install
 ```
 
 ## 构建系统
@@ -51,19 +45,8 @@ pixi run npm-install
 - `catter-core` -- 核心库
 - `common` -- 共享工具库
 
-## JavaScript 构建
-
-`api/` 下的 TypeScript API 会被编译为 JavaScript 并嵌入到 catter 二进制文件中。构建命令：
-
-```bash
-pixi run build-js
-```
-
-该命令通过 rollup 打包 TypeScript，生成的 JS 文件会作为资源编译进二进制文件。
-
 ## 主要依赖
 
-- [QuickJS-ng](https://github.com/quickjs-ng/quickjs) (v0.15.0) -- 内嵌 JavaScript 引擎
 - [spdlog](https://github.com/gabime/spdlog) (1.15.3) -- 日志
 - [kotatsu](https://github.com/clice-io/kotatsu) -- 异步运行时、测试框架、选项解析
 - [MinHook](https://github.com/TsudaKageworyo/MinHook) (v1.3.4) -- Windows API 钩子（仅 Windows）

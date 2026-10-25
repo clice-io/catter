@@ -51,8 +51,8 @@ which the symptom alone often does not tell:
   when it is the hook that rewrites it in the parent process.
 - Hangs or lost messages between catter, the proxy and the hook, and two
   sessions interfering → `area:ipc`.
-- The `catter/*` modules and the callbacks a user script sees →
-  `area:script-api`; the `catter` command line itself → `area:cli`.
+- The handler protocol, the SDKs and the callbacks a handler sees →
+  `area:handlers`; the `catter` command line itself → `area:cli`.
 
 If no area label fits, omit it and report the gap via `taxonomy_gap`.
 

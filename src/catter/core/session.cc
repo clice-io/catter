@@ -41,8 +41,7 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
     auto loop_task = this->loop(std::move(run_plan.callback));
     auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
                                   std::move(run_plan.launch_plan.args),
-                                  std::move(run_plan.launch_plan.cwd),
-                                  run_plan.launch_plan.mode);
+                                  std::move(run_plan.launch_plan.cwd));
 
     auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
 #ifndef _WIN32
@@ -88,8 +87,7 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
 
 kota::task<data::process_result> Session::spawn(std::string executable,
                                                 std::vector<std::string> args,
-                                                std::string cwd,
-                                                core::StdioMode mode) {
+                                                std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = util::make_guard([&]() noexcept {
@@ -122,14 +120,7 @@ kota::task<data::process_result> Session::spawn(std::string executable,
                      kota::process::stdio::pipe(false, true)}
     };
 
-    switch(mode) {
-        case core::StdioMode::inherit:
-            co_return co_await capture_process_result(make_process_event(opts), stdout, stderr);
-        case core::StdioMode::capture:
-            co_return co_await capture_process_result(make_process_event(opts), nullptr, nullptr);
-    }
-
-    std::abort();
+    co_return co_await capture_process_result(make_process_event(opts));
 }
 
 }  // namespace catter

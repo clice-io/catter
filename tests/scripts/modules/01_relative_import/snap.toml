@@ -1,3 +1,0 @@
-[test."$ catter script.js -- node -e 0"]
-stdout = "imported from a relative module"
-exit = 0

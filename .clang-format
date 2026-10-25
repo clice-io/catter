@@ -121,7 +121,7 @@ IncludeCategories:
     SortPriority: 11
 
   # 3. Third-party libraries with a subdir prefix
-  - Regex: "^<(spdlog|cpptrace|quickjs-ng|minhook)/"
+  - Regex: "^<(spdlog|cpptrace|minhook)/"
     Priority: 10
     SortPriority: 12
 

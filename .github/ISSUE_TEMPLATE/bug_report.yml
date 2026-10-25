@@ -71,7 +71,7 @@ body:
         - catter-proxy
         - IPC
         - Command-line interface
-        - Script API / JavaScript runtime
+        - Handlers and SDKs
         - Compilation database (script::cdb)
         - Compiler argument parsing
         - Replay

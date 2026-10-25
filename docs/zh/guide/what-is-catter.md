@@ -1,6 +1,6 @@
 # 什么是 Catter？
 
-Catter 是一个构建过程拦截工具。它通过钩子拦截构建过程中的子进程创建，捕获编译和链接命令，并允许用户使用内嵌的 QuickJS 引擎编写 JavaScript 脚本来处理这些命令。
+Catter 是一个构建过程拦截工具。它通过钩子拦截构建过程中的子进程创建，捕获编译和链接命令，并让你用它的内置脚本或 handler 处理这些命令。handler 是你自己编写的程序，可以用任何语言实现。
 
 ## 动机
 
@@ -14,7 +14,7 @@ Catter 是为 [clice](https://github.com/clice-io/clice) 这个新的 C++ 语言
 
 ## 工作原理
 
-Catter 的方式类似于 [Bear](https://github.com/rizsotto/Bear) 和 [scan-build](https://github.com/rizsotto/scan-build)。它使用平台特定的钩子（Linux 上的 `LD_PRELOAD`、macOS 上的 `DYLD_INSERT_LIBRARIES`、Windows 上的 DLL 注入）拦截子进程创建。每个被拦截的命令会发送到一个决策守护进程，该进程通过 QuickJS 运行用户提供的 JavaScript 脚本，决定如何处理每条命令。
+Catter 的方式类似于 [Bear](https://github.com/rizsotto/Bear) 和 [scan-build](https://github.com/rizsotto/scan-build)。它使用平台特定的钩子（Linux 上的 `LD_PRELOAD`、macOS 上的 `DYLD_INSERT_LIBRARIES`、Windows 上的 DLL 注入）拦截子进程创建。每个被拦截的命令会发送到一个决策守护进程，由它询问会话的各个 handler 如何处理这条命令。
 
 ## 核心功能
 
@@ -34,14 +34,14 @@ Catter 的方式类似于 [Bear](https://github.com/rizsotto/Bear) 和 [scan-bui
 
 捕获构建过程中的进程时间、持续时间和父子关系，可以在浏览器中可视化渲染，帮助分析构建并行度和识别性能瓶颈。
 
-### 自定义脚本修补
+### 自定义 handler
 
-借助内嵌的 QuickJS 引擎，用户可以编写 JavaScript 脚本来动态修改、重定向或注入构建命令的逻辑——无需修改原始构建文件。
+handler 是你自己编写的程序，catter 通过一个简单的协议与它通信。它可以观察每条命令，也可以对每条命令做决定：原样运行、换成另一条命令运行、丢弃，或中止构建——无需修改原始构建文件。Python 和 TypeScript 的 SDK 替你处理协议。
 
 ## 架构概览
 
-Catter 围绕 **runtime**（运行机制）展开：runtime 是实际捕获构建进程创建行为的机制。默认的 `inject` runtime 通过平台钩子（Linux 的 `LD_PRELOAD`、macOS 的 `DYLD_INSERT_LIBRARIES`、Windows 的 DLL 注入）拦截子进程创建；捕获到的每条命令都会交给运行着用户脚本的守护进程处理。
+Catter 围绕 **runtime**（运行机制）展开：runtime 是实际捕获构建进程创建行为的机制。默认的 `inject` runtime 通过平台钩子（Linux 的 `LD_PRELOAD`、macOS 的 `DYLD_INSERT_LIBRARIES`、Windows 的 DLL 注入）拦截子进程创建；捕获到的每条命令都会交给守护进程，再由守护进程转给会话的各个 handler。
 
-脚本通过四个回调参与整个过程：构建开始前的 `onStart`、每条命令执行前的 `onCommand`、每条命令结束后的 `onExecution`，以及整个构建结束后的 `onFinish`。脚本可以决定每条命令原样执行、修改后执行、跳过或中止，并使用 `config.runtime` 提供的能力信息适配不同的运行机制。
+handler 会在这些时刻收到通知：会话开始时（同时得知命令以何种方式捕获）、每条命令运行前和运行后，以及构建结束时。做决定的 handler 决定每条命令原样运行、修改后运行、丢弃，还是中止构建；不做决定的 handler 只观察。
 
 关于架构概念、运行机制和 IPC 流程的详细介绍，请参阅[设计文档](../design/architecture)与[运行机制](../design/runtime)。

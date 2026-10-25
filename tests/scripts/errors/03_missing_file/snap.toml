@@ -1,3 +1,0 @@
-[test."$ catter missing.js -- node -e 0"]
-stdout = "Failed to open script file `${WS}/missing.js`"
-exit = 1

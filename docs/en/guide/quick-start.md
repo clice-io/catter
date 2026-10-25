@@ -61,41 +61,10 @@ catter script::cmd-tree -- make
 catter script::cdb -o compile_commands.json -- cmake --build build
 ```
 
-### Custom scripts
+### Your own handler
 
-Use your own JavaScript script instead of a built-in one:
-
-```bash
-catter ./my-script.js -- cmake --build build
-```
-
-## IDE Support for Script Development
-
-After building, `api/` is a complete npm package: `api/package.json`, `api/dist/` (runtime JS modules), and `api/types/` (TypeScript declarations). Build it from the repository root:
+Hand the commands to a program of your own, a [handler](../scripting/handlers.md):
 
 ```bash
-pixi run -e dev npm-install
-pixi run -e dev build-js
+catter --handler "python my_handler.py" -- cmake --build build
 ```
-
-Then add `api/` to your script project as a local dependency (npm / pnpm / yarn):
-
-```bash
-npm install --save-dev /path/to/catter/api
-```
-
-Or declare it in `package.json`:
-
-```json
-{
-  "devDependencies": {
-    "catter": "file:../path/to/catter/api"
-  }
-}
-```
-
-This lets your script project import `catter/*` modules with full IDE autocompletion and type checking.
-
-::: info
-The `catter` npm package is not published to the registry yet; use the local dependency approach above until then. Once published, you can simply `npm install --save-dev catter`.
-:::
