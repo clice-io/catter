@@ -1,8 +1,8 @@
 [test."$ catter -m replay --handler \"node handler.ts\" --handler \"python observer.py\" -- events.json"]
 stderr = '''
 analyzed: compiler
-seen 1: make
 command 2: compile, reads a.c
+seen 1: make
 seen 2: gcc -c a.c -o a.o -DNEW
 seen 3: gcc a.o -o app
 '''
