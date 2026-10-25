@@ -1,4 +1,4 @@
-[test."$ catter -m replay --handler \"python decider.py\" --handler \"python observer.py\" -- events.json"]
+[test."$ catter run --handler \"python decider.py\" --handler \"python observer.py\" --from events.json"]
 stderr = '''
 command 1: make
 command 2: gcc -fdiagnostics-color -msmall-data-limit=8 -Wl,--as-needed -I include -c a.c -o a.o -DNEW=1 -I generated

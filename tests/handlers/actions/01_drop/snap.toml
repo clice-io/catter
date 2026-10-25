@@ -1,4 +1,4 @@
-[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+[test."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 act-on-me: exit 0
 ran with ["leave-me"]

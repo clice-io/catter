@@ -1,0 +1,8 @@
+[test."$ catter tree --from events.json"]
+stdout = '''
+make
+
+Detected command cycles:
+[cycle] ld main.o -o app -> clang++ main.cc -c -> ld main.o -o app
+'''
+exit = 0

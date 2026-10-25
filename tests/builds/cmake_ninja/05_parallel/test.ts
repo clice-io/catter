@@ -5,6 +5,6 @@ import { generate, test } from "@catter/tools/testing";
 test(async (t) => {
     t.disk.write(generate.sources(100));
     await t.setup("cmake -S . -B build -G Ninja");
-    await t.cli("cdb -q -o compile_commands.json -- cmake --build build -- --quiet");
+    await t.cli("compile-commands -q -o compile_commands.json -- cmake --build build -- --quiet");
     t.show("compile_commands.json", t.disk.cdb());
 });

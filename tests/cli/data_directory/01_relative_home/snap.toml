@@ -1,4 +1,4 @@
-[test."$ catter -d sub cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter tree -w 1000 -C sub -- node build.mjs"]
 stdout = "CATTER_HOME must be an absolute path, not `home`"
 exit = 1
 

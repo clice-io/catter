@@ -1,4 +1,4 @@
-[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+[test."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 fails: exit 3
 after it: exit 1

@@ -1,3 +1,0 @@
-[test."$ catter -m replay cmd-tree -- events.json"]
-stdout = "No commands found."
-exit = 0

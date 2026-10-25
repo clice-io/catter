@@ -47,6 +47,6 @@ For these reasons catter abstracts capture mechanisms as runtimes: one runtime i
 
 ## Selecting and checking
 
-- `inject` is the default and requires no configuration; other capture mechanisms will be selectable via `-m/--mode` once available, as `replay`, which plays a recorded build instead of capturing one, is today.
+- catter captures a build with `inject`, which requires no configuration; `--from` plays a recorded build instead of capturing one.
 - Handlers should not assume a mechanism: `initialize` names the current one (`mode`).
 - Under a runtime whose commands carry no parent command ID, a command's `parent` will be absent, and features relying on parent-child relationships (command trees, target trees) need to degrade gracefully.

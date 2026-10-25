@@ -1,4 +1,4 @@
-[test."$ catter cdb -o compile_commands.json -- make -j4"]
+[test."$ catter compile-commands -o compile_commands.json -- make -j4"]
 stdout = '''
 make -C sub
 make[1]: Entering directory '${WS}/sub'
@@ -9,7 +9,7 @@ CDB saved to ${WS}/compile_commands.json with 2 entries.
 '''
 exit = 0
 
-[test."$ catter cdb -o compile_commands.json -- make -j4".darwin]
+[test."$ catter compile-commands -o compile_commands.json -- make -j4".darwin]
 wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
 stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
 stderr = '''

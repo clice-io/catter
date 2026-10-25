@@ -28,7 +28,7 @@ They always move together:
 3. A new LLVM version, not only a new revision, changes the option tables.
    An option catter names that was renamed or removed upstream shows up as
    a C++ build error; the unit tests under
-   `unittests/command/option` and the `tests/inspect` cases pin the parsing.
+   `unittests/command/option` and the `tests/explain` cases pin the parsing.
 4. Build and run the unit tests and the cases on everything CI builds (the
    build and test skills): Linux,
    macOS and Windows MSVC and MinGW, debug and release. macOS and MinGW

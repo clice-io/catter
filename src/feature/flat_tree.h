@@ -225,7 +225,15 @@ private:
     std::unordered_map<Id, std::size_t> positions;
 };
 
-/// The tree of `tree` from its starts, as `cmd-tree` and `target-tree` print it: a line per
+/// The depth a tree renders to, as `-d` gives it.
+inline std::optional<std::uint32_t> max_depth_of(std::optional<std::int64_t> depth) {
+    if(!depth.has_value()) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint32_t>(*depth);
+}
+
+/// The tree of `tree` from its starts, as `catter tree` and `catter targets` print it: a line per
 /// node, the text `text` gives it colored by its depth, branching to its children down to
 /// `max_depth`; a node shows again under each of its parents, but not under itself.
 template <typename Id, typename Content, typename Text>

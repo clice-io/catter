@@ -2,7 +2,7 @@
 stdout = "the program is gone"
 exit = 0
 
-[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter tree -w 1000 -- node build.mjs"]
 wrong = "killing a command leaves the program running (catter#138)"
 stdout = '''
 the program is still running

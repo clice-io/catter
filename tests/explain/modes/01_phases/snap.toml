@@ -1,0 +1,959 @@
+[test."$ catter explain -- gcc -E a.c -o a.i"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.i"
+    ],
+    "edges": [
+        {
+            "output": "a.i",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "a.i"
+            ],
+            "output": "${WS}/a.i"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -E a.c -o a.i".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.i"
+    ],
+    "edges": [
+        {
+            "output": "a.i",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "a.i"
+            ],
+            "output": "${WS}/a.i"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -E a.c -o a.i".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.i"
+    ],
+    "edges": [
+        {
+            "output": "a.i",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "a.i"
+            ],
+            "output": "${WS}/a.i"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -fsyntax-only a.c"]
+wrong = "a compile that writes no object gets no entry (catter#132)"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "syntax-only",
+    "artifact": "none",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -fsyntax-only a.c".darwin]
+wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "syntax-only",
+    "artifact": "none",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -fsyntax-only a.c".win32]
+wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "syntax-only",
+    "artifact": "none",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -S a.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "asm",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.s"
+    ],
+    "edges": [
+        {
+            "output": "a.s",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.s",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-S",
+                "a.c"
+            ],
+            "output": "${WS}/a.s"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -S a.c".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "asm",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.s"
+    ],
+    "edges": [
+        {
+            "output": "a.s",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.s",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-S",
+                "a.c"
+            ],
+            "output": "${WS}/a.s"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -S a.c".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "asm",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.s"
+    ],
+    "edges": [
+        {
+            "output": "a.s",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.s",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-S",
+                "a.c"
+            ],
+            "output": "${WS}/a.s"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang -c -emit-llvm a.c -o a.bc"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "llvm-bc",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.bc"
+    ],
+    "edges": [
+        {
+            "output": "a.bc",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "-c",
+                "-emit-llvm",
+                "a.c",
+                "-o",
+                "a.bc"
+            ],
+            "output": "${WS}/a.bc"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang -c -emit-llvm a.c -o a.bc".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "llvm-bc",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.bc"
+    ],
+    "edges": [
+        {
+            "output": "a.bc",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "-c",
+                "-emit-llvm",
+                "a.c",
+                "-o",
+                "a.bc"
+            ],
+            "output": "${WS}/a.bc"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang -c -emit-llvm a.c -o a.bc".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "llvm-bc",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.bc"
+    ],
+    "edges": [
+        {
+            "output": "a.bc",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "-c",
+                "-emit-llvm",
+                "a.c",
+                "-o",
+                "a.bc"
+            ],
+            "output": "${WS}/a.bc"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.c b.c -o app"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c",
+        "b.c"
+    ],
+    "reads": [
+        "a.c",
+        "b.c"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.c",
+                "b.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.c b.c -o app".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c",
+        "b.c"
+    ],
+    "reads": [
+        "a.c",
+        "b.c"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.c",
+                "b.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.c b.c -o app".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c",
+        "b.c"
+    ],
+    "reads": [
+        "a.c",
+        "b.c"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.c",
+                "b.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.c",
+            "arguments": [
+                "gcc",
+                "a.c",
+                "b.c",
+                "-o",
+                "app"
+            ],
+            "output": "${WS}/app"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.o b.o -o app"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [],
+    "reads": [
+        "a.o",
+        "b.o"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.o",
+                "b.o"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.o b.o -o app".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [],
+    "reads": [
+        "a.o",
+        "b.o"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.o",
+                "b.o"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc a.o b.o -o app".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [],
+    "reads": [
+        "a.o",
+        "b.o"
+    ],
+    "writes": [
+        "app"
+    ],
+    "edges": [
+        {
+            "output": "app",
+            "inputs": [
+                "a.o",
+                "b.o"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -E a.c -o -"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "-"
+    ],
+    "edges": [
+        {
+            "output": "-",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -E a.c -o -".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "-"
+    ],
+    "edges": [
+        {
+            "output": "-",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -E a.c -o -".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "-"
+    ],
+    "edges": [
+        {
+            "output": "-",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0

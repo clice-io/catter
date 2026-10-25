@@ -4,6 +4,7 @@ import { test } from "@catter/tools/testing";
 // that names it: the command it was deciding does not run.
 test({ errors: ["failed on command 1"] }, async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python handler.py",
         "--",

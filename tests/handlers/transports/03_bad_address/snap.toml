@@ -1,3 +1,3 @@
-[test."$ catter --connect localhost -- node -e 0"]
+[test."$ catter run --connect localhost -- node -e 0"]
 stdout = "`localhost` is not an address for --connect: give it as host:port"
 exit = 1

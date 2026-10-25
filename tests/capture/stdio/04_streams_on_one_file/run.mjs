@@ -5,7 +5,7 @@ import { closeSync, openSync, readFileSync } from "node:fs";
 
 const runs = {
   "node build.mjs": ["node", "build.mjs"],
-  catter: [process.env.CATTER_EXECUTABLE, "cmd-tree", "-w", "1000", "--", "node", "build.mjs"],
+  catter: [process.env.CATTER_EXECUTABLE, "tree", "-w", "1000", "--", "node", "build.mjs"],
 };
 for (const [name, [program, ...args]] of Object.entries(runs)) {
   const output = openSync("output.txt", "w");

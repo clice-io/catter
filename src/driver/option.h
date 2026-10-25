@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdio>
 #include <exception>
 #include <filesystem>
 #include <format>
@@ -9,29 +8,9 @@
 #include <vector>
 #include <kota/deco/deco.h>
 
-#include "capture/runtime_driver.h"
 #include "support/encoding.h"
 
 namespace catter::driver {
-
-struct RunMode {
-    const RuntimeDriver* driver = default_runtime_driver();
-
-    auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
-        -> std::optional<std::string>;
-};
-
-inline auto RunMode::into(std::string_view text, const kota::deco::decl::IntoContext& context)
-    -> std::optional<std::string> {
-
-    auto* runtime_driver = find_runtime_driver(text);
-    if(runtime_driver == nullptr) {
-        return context.format_error(std::format("Unsupported mode: {}", text));
-    }
-
-    this->driver = runtime_driver;
-    return std::nullopt;
-}
 
 inline auto default_working_directory() noexcept -> std::filesystem::path {
     try {
@@ -55,74 +34,58 @@ struct WorkingDirectory {
     }
 };
 
-struct CatterConfig {
+/// `-C`: the directory the command runs in.
+struct DirectoryOption {
+    DECO_CFG_START(required = false)
 
-    constexpr inline static kota::deco::decl::Category catter_category = {
-        .exclusive = true,
-        .required = true,
-        .name = "OPTIONS",
-        .description = "options of catter",
-    };
+    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+                 names = {"-C", "--directory", "--directory="},
+                 meta_var = "<path>",
+                 help = "The directory the command runs in. [default: the current directory]")
+    <WorkingDirectory> directory = WorkingDirectory{};
 
-    DECO_CFG_START(category = catter_category)
+    DECO_CFG_END()
+};
 
-    DecoInput(meta_var = "<Built-in>",
-              help = "a built-in: cdb, cmd-tree, target-tree or inspect",
-              required = false)
-    <std::string> builtin;
+/// What a subcommand that runs a build takes besides its own options: the build, where it
+/// runs, and the handlers that decide on its commands.
+struct SessionOptions {
+    DirectoryOption directory;
+
+    DECO_CFG_START(required = false)
+
+    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+                 names = {"--from", "--from="},
+                 meta_var = "<file>",
+                 help = "Replay the build recorded in this file instead of running one.")
+    <std::string> from;
 
     DecoKV(
         names = {"--handler"},
-        meta_var = "<Command>",
+        meta_var = "<command>",
         help =
-            "a handler for catter to start, which decides or observes the build's commands over its stdin and stdout; may be given more than once",
-        required = false)
+            "Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.")
     <std::string> handler;
 
     DecoKV(
         names = {"--connect"},
-        meta_var = "<Host:Port>",
+        meta_var = "<host:port>",
         help =
-            "a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once",
-        required = false)
+            "Connect to a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once.")
     <std::string> connect;
 
-    DecoFlag(names = {"--allow-remote"},
-             help = "let --connect reach a handler on another machine",
-             required = false)
+    DecoFlag(names = {"--allow-remote"}, help = "Let --connect reach a handler on another machine.")
     allow_remote = false;
 
     DecoKV(
         names = {"--handler-timeout"},
-        meta_var = "<Seconds>",
+        meta_var = "<seconds>",
         help =
-            "how long catter waits for a handler to answer, and to exit once the session is over; 0 waits as long as it takes; default to 60",
-        required = false)
+            "How long catter waits for a handler to answer, and to exit once the session is over; 0 waits as long as it takes. [default: 60]")
     <unsigned> handler_timeout = 60;
 
-    DecoKV(
-        names = {"-m", "--mode"},
-        meta_var = "<Mode>",
-        help =
-            "mode of operation: 'inject' (the default) runs the build; 'replay' plays a recorded one, whose replay file is the build command",
-        required = false)
-    <RunMode> mode = RunMode{};
-
-    DecoKV(names = {"-d", "--dir"},
-           meta_var = "<Working Directory>",
-           help = "working directory for the target program, default to current directory",
-           required = false)
-    <WorkingDirectory> working_dir = WorkingDirectory{};
-
-    DecoPack(meta_var = "<Args>",
-             help = "the command you want catter to use, must be after a '--'",
-             required = false)
+    DecoPack(meta_var = "<build command>", help = "The build to run.")
     <std::vector<std::string>> command = std::vector<std::string>{};
-
-    std::vector<std::string> builtin_args;
-
-    DecoFlag(names = {"-h", "--help"}, help = "show this help message", required = false)
-    help = false;
 
     DECO_CFG_END()
 
@@ -135,7 +98,7 @@ struct CatterConfig {
     };
 
     /// The handlers, in the order of the command line: an option given
-    /// more than once keeps only its last value, so main collects them.
+    /// more than once keeps only its last value, so the parse collects them.
     std::vector<HandlerOption> handlers;
 };
 

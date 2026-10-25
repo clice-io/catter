@@ -1,0 +1,45 @@
+[test."$ catter explain --"]
+stdout = "explain: give the command to analyze after --"
+exit = 1
+
+[test."$ catter explain --help -- gcc -c a.c"]
+stdout = '''
+Print how catter analyzes the command after --, without running it.
+
+Usage:
+  catter explain [options] -- <command>...
+
+Arguments:
+  -- <command>...  The command to analyze.
+
+Options:
+  -C, --directory <path>  The directory the command runs in. [default: the current directory]
+  -h, --help              Print this help message.
+
+Examples:
+  catter explain -- clang++ -c src/main.cc -o main.o
+  # The compiler, its mode, target, sources and outputs.
+'''
+exit = 0
+
+[test."$ catter explain --bogus -- gcc -c a.c"]
+stdout = '''
+explain: unknown option '--bogus'
+
+Print how catter analyzes the command after --, without running it.
+
+Usage:
+  catter explain [options] -- <command>...
+
+Arguments:
+  -- <command>...  The command to analyze.
+
+Options:
+  -C, --directory <path>  The directory the command runs in. [default: the current directory]
+  -h, --help              Print this help message.
+
+Examples:
+  catter explain -- clang++ -c src/main.cc -o main.o
+  # The compiler, its mode, target, sources and outputs.
+'''
+exit = 1

@@ -1,4 +1,4 @@
-[test."$ catter cdb -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
+[test."$ catter compile-commands -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
 wrong = "MSBuild hands cl.exe its arguments in a response file, which is not expanded (catter#123)"
 stdout = '''
 

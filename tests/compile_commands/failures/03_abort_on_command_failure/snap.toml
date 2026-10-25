@@ -1,0 +1,16 @@
+[test."$ catter compile-commands --abort-on-command-failure --save-on-failure -o compile_commands.json --from events.json"]
+stdout = '''
+CDB saved to ${WS}/compile_commands.json with 1 entries.
+CDB aborting after compiler command 1 exited with code 2.
+'''
+exit = 1
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/broken.cc",
+        directory = "${WS}",
+        output = "${WS}/obj/broken.o",
+        arguments = ["clang++", "-c", "src/broken.cc", "-o", "obj/broken.o"],
+    },
+]

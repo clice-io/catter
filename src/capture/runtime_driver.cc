@@ -1,6 +1,5 @@
 #include "capture/runtime_driver.h"
 
-#include <array>
 #include <exception>
 #include <filesystem>
 #include <format>
@@ -170,11 +169,6 @@ public:
     }
 };
 
-const InjectRuntimeDriver* inject_runtime_driver() noexcept {
-    const static InjectRuntimeDriver driver;
-    return &driver;
-}
-
 /// Plays a recorded build (see replay.h) instead of running one: the build
 /// command is the replay file.
 class ReplayRuntimeDriver final : public RuntimeDriver {
@@ -186,35 +180,23 @@ public:
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
         if(build.command.size() != 1) {
             throw cpptrace::runtime_error(
-                "the replay mode takes a replay file for the build command: " "catter -m replay [--handler ...] [built-in] -- <file>");
+                "the command of a replayed build is its replay file alone, as --from gives it");
         }
         auto file = from_utf8(build.cwd) / from_utf8(build.command.front());
         co_return co_await replay_build(file.lexically_normal(), handler);
     }
 };
 
-const ReplayRuntimeDriver* replay_runtime_driver() noexcept {
-    const static ReplayRuntimeDriver driver;
-    return &driver;
-}
-
-auto runtime_drivers() noexcept {
-    return std::array<const RuntimeDriver*, 2>{inject_runtime_driver(), replay_runtime_driver()};
-}
-
 }  // namespace
 
-const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept {
-    for(const auto* driver: runtime_drivers()) {
-        if(driver->name() == name) {
-            return driver;
-        }
-    }
-    return nullptr;
+const RuntimeDriver& inject_runtime_driver() noexcept {
+    const static InjectRuntimeDriver driver;
+    return driver;
 }
 
-const RuntimeDriver* default_runtime_driver() noexcept {
-    return inject_runtime_driver();
+const RuntimeDriver& replay_runtime_driver() noexcept {
+    const static ReplayRuntimeDriver driver;
+    return driver;
 }
 
 }  // namespace catter

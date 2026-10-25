@@ -26,7 +26,7 @@ docs skill.
 | Home page frontmatter             | `text`, `tagline`, the feature cards' `title` and `details`, the actions' `text` are translated; `link`, `src`, `theme` stay.                                                                                              |
 | Callouts                          | The `> [!WARNING]` marker stays; its text is translated (此功能尚在计划中，尚未实现。).                                                                                                                                    |
 | Table headers                     | Field → 字段, Type → 类型, Description → 说明, Meaning → 含义, Option → 选项, Default → 默认值, Variable → 变量, Purpose → 用途.                                                                                           |
-| Built-in and command names        | `cdb`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and runtime names (`inject`, `env`, `eslogger`) are code, never translated.                                                     |
+| Built-in and command names        | `compile-commands`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and runtime names (`inject`, `env`, `eslogger`) are code, never translated.                                        |
 
 ## By term
 

@@ -1,17 +1,17 @@
 [test."$ catter --help"]
 stdout = '''
-Usage catter [options for catter] [built-in [options for it]] -- [build system command]
+catter runs a build, captures every command it starts, and analyzes them.
 
-Options
-  ◆ <OPTIONS> (options of catter), exclusive with other groups
-  <Built-in>                      a built-in: cdb, cmd-tree, target-tree or inspect
-  --handler <Command>             a handler for catter to start, which decides or observes the build's commands over its stdin and stdout; may be given more than once
-  --connect <Host:Port>           a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once
-  --allow-remote                  let --connect reach a handler on another machine
-  --handler-timeout <Seconds>     how long catter waits for a handler to answer, and to exit once the session is over; 0 waits as long as it takes; default to 60
-  -m|--mode <Mode>                mode of operation: 'inject' (the default) runs the build; 'replay' plays a recorded one, whose replay file is the build command
-  -d|--dir <Working Directory>    working directory for the target program, default to current directory
-  -- <Args>...                    the command you want catter to use, must be after a '--'
-  -h|--help                       show this help message
+Usage:
+  catter <command> [options] -- <build command>...
+
+Commands:
+  compile-commands  Generate a compile_commands.json file from captured compiler commands.
+  tree              Render captured commands as a command tree.
+  targets           Render captured build targets as a flat target forest.
+  explain           Print how catter analyzes the command after --, without running it.
+  run               Run the build with handlers alone, which decide on and observe its commands.
+
+Run `catter <command> --help` for the options of a command.
 '''
 exit = 0

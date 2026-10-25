@@ -11,13 +11,13 @@ handler 作者只需要理解两件事：
 
 不同平台对"拦截进程创建"的可行性差异很大：hook 最全能，但在部分平台受限（例如 macOS 需要特殊开发权限）。因此 catter 把捕获机制抽象为 runtime：一个 runtime 就是一种捕获实现；无论是哪一种，handler 看到的都是它捕获的命令。
 
-runtime 通过 `-m/--mode` 选择，默认 `inject`。handler 从会话的 `initialize` 消息得知当前 runtime：其中的 `mode` 为 `inject`，或者为 `replay`，表示 catter 不运行构建，而是回放一次录制的构建。
+catter 用 `inject` 捕获构建；指定 `--from` 时，它不运行构建，而是回放一次录制的构建。handler 从会话的 `initialize` 消息得知是哪一种：其中的 `mode` 为 `inject`，或者为 `replay`，表示录制的构建。
 
 目前 `inject`（基于 hook）是唯一的捕获机制，`env` 与 `eslogger` 在计划中。各机制的原理、平台限制与能力差异见[运行机制](runtime.md)。
 
 ## Handler
 
-会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令行指定的内置功能（如果有的话；`cdb`、`cmd-tree`、`target-tree`、`inspect`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置功能在前，其余按命令行中的顺序排列。
+会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令运行的内置功能（如果有的话；`compile-commands`、`tree`、`targets`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置功能在前，其余按命令行中的顺序排列。
 
 ## 会话生命周期
 

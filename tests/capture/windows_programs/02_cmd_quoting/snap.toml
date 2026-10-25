@@ -6,7 +6,7 @@ third
 '''
 exit = 0
 
-[test."$ catter cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+[test."$ catter tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
 wrong = "the command line rebuilt for cmd.exe moves its quotes (catter#140)"
 stdout = '''
 first

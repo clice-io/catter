@@ -15,8 +15,6 @@
 #include <cpptrace/exceptions.hpp>
 
 #include "capture/runtime_driver.h"
-#include "driver/option.h"
-#include "feature/builtin.h"
 #include "protocol/remote_handler.h"
 #include "session/handler.h"
 #include "support/encoding.h"
@@ -27,13 +25,10 @@ namespace catter::driver {
 namespace {
 
 /// Runs the session of `handler`: the build it starts, if any, and then its end.
-kota::task<> run(Handler& handler, const CatterConfig& config) {
-    auto build = co_await handler.on_start({
-        .command = config.command.value(),
-        .cwd = to_utf8(config.working_dir->path),
-    });
-    if(build) {
-        auto result = co_await config.mode->driver->execute(*build, handler);
+kota::task<> run(Handler& handler, const RuntimeDriver& driver, Build build) {
+    auto started = co_await handler.on_start(std::move(build));
+    if(started) {
+        auto result = co_await driver.execute(*started, handler);
         co_await handler.on_finish(std::move(result));
     }
 }
@@ -102,53 +97,53 @@ std::string session_id() {
 
 }  // namespace
 
-kota::task<> async_run(const CatterConfig& config) {
-    if(!config.builtin.has_value() && config.handlers.empty()) {
+kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
+    if(options.from.has_value() && !options.command->empty()) {
         throw cpptrace::runtime_error(
-            "catter needs a built-in, or a handler to give the build's commands to (--handler, --connect)");
+            "--from replays a recorded build in place of the build command after --: give one of them");
     }
+    if(!options.from.has_value() && options.command->empty()) {
+        throw cpptrace::runtime_error(
+            "give the build command after --, or a recorded build with --from");
+    }
+    const auto& driver =
+        options.from.has_value() ? replay_runtime_driver() : inject_runtime_driver();
+    Build build{
+        .command = options.from.has_value() ? std::vector{*options.from} : *options.command,
+        .cwd = to_utf8(options.directory.directory->path),
+    };
 
     const auto handler_options = [&, session = session_id()](std::string_view name) {
         return RemoteHandler::Options{
             .name = std::string(name),
             .session = session,
-            .mode = std::string(config.mode->driver->name()),
-            .timeout = std::chrono::seconds(*config.handler_timeout),
+            .mode = std::string(driver.name()),
+            .timeout = std::chrono::seconds(*options.handler_timeout),
         };
     };
-
-    std::unique_ptr<Handler> builtin_handler;
-    if(config.builtin.has_value()) {
-        builtin_handler = feature::make(*config.builtin, config.builtin_args);
-        if(!builtin_handler) {
-            throw cpptrace::runtime_error(std::format(
-                "Unknown built-in `{}`: the built-ins are cdb, cmd-tree, target-tree and inspect",
-                *config.builtin));
-        }
-    }
 
     std::vector<std::unique_ptr<RemoteHandler>> remotes;
     std::exception_ptr error;
     try {
-        for(const auto& [connect, text]: config.handlers) {
+        for(const auto& [connect, text]: options.handlers) {
             if(!connect) {
                 remotes.push_back(RemoteHandler::spawn(text, handler_options(text)));
                 continue;
             }
-            auto [hosts, port] = parse_address(text, *config.allow_remote);
+            auto [hosts, port] = parse_address(text, *options.allow_remote);
             remotes.push_back(
                 co_await RemoteHandler::connect(std::move(hosts), port, handler_options(text)));
         }
 
         std::vector<Handler*> chain;
-        if(builtin_handler) {
-            chain.push_back(builtin_handler.get());
+        if(builtin) {
+            chain.push_back(builtin.get());
         }
         for(const auto& remote: remotes) {
             chain.push_back(remote.get());
         }
         HandlerChain handler(std::move(chain));
-        co_await run(handler, config);
+        co_await run(handler, driver, std::move(build));
     } catch(...) {
         error = std::current_exception();
     }

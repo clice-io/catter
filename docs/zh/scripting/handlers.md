@@ -7,7 +7,7 @@ catter 通过一个简单的协议与 handler 通信（见 [Handler 协议](../d
 ## 运行 handler
 
 ```bash
-catter --handler "python handler.py" -- make
+catter run --handler "python handler.py" -- make
 ```
 
 catter 启动 handler，经它的 stdin 和 stdout 与它通信，并在构建结束时终止它。handler 输出到 stderr 的内容显示在终端中。handler 在构建之外运行：它启动的程序不会被捕获。
@@ -17,19 +17,21 @@ catter 启动 handler，经它的 stdin 和 stdout 与它通信，并在构建�
 已在运行、监听某个 TCP 端口的 handler，用 `--connect` 连接：
 
 ```bash
-catter --connect 127.0.0.1:9000 -- make
+catter run --connect 127.0.0.1:9000 -- make
 ```
 
 这适合在调试器下运行的 handler，或依次为多次构建服务的 handler。主机写 IP 地址或 `localhost`；对 `localhost`，catter 先尝试 `127.0.0.1`，再尝试 `::1`。除非指定了 `--allow-remote`，catter 只连接本机上的 handler，因为 handler 能修改、丢弃构建的命令。
 
 ### 选项
 
-| 选项                          | 说明                                                                           | 默认值 |
-| ----------------------------- | ------------------------------------------------------------------------------ | ------ |
-| `--handler <command>`         | 由 catter 启动的 handler。可多次指定。                                         |        |
-| `--connect <host:port>`       | 在该地址监听的 handler。可多次指定。                                           |        |
-| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                    |        |
-| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长。`0` 表示一直等下去。 | `60`   |
+| 选项                          | 说明                                                                                    | 默认值 |
+| ----------------------------- | --------------------------------------------------------------------------------------- | ------ |
+| `--handler <command>`         | 启动一个 handler，它经自己的 stdin 和 stdout 对构建的命令做决定或观察它们；可多次指定。 |        |
+| `--connect <host:port>`       | 连接在该地址监听的 handler，未指定 `--allow-remote` 时只限本机；可多次指定。            |        |
+| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                             |        |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。          | `60`   |
+
+`run` 只用 handler 运行构建。`compile-commands`、`tree` 和 `targets` 也接受这些选项，在各自的内置功能之后运行 handler。
 
 ## SDK
 
@@ -137,10 +139,10 @@ catter.serve(Handler())
 
 ## 多个 handler
 
-`--handler` 和 `--connect` 都可以多次指定，也可以与内置功能一起使用：
+`--handler` 和 `--connect` 都可以多次指定，也可以交给运行内置功能的命令：
 
 ```bash
-catter --handler "python observe.py" --handler "python decide.py" cdb -o compile_commands.json -- make
+catter compile-commands -o compile_commands.json --handler "python observe.py" --handler "python decide.py" -- make
 ```
 
 handler 按固定顺序组成一条链：内置功能在最前，其后是按命令行顺序排列的 handler。每条命令依次交给它们，每个 handler 看到的都是经前面的 handler 处理后的命令，直到有一个丢弃它为止；排在后面的 handler 永远看不到被丢弃的命令。只观察的 handler 若要看到每条命令，应放在最前面。

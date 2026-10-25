@@ -1,4 +1,4 @@
-[inject."$ catter --handler \"python handler.py\" -- node build.mjs"]
+[inject."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 fails: exit 3
 in sub: exit 0
@@ -16,7 +16,7 @@ served
 '''
 exit = 0
 
-[replay."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+[replay."$ catter run --handler \"python handler.py\" --from events.json"]
 wrong = "catter exits 0 though the build failed with 2 (catter#116)"
 stderr = '''
 start: version 1, mode replay, build ['events.json'] in ., session of 16 characters

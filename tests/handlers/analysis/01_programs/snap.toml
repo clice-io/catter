@@ -1,4 +1,4 @@
-[test."$ catter -m replay --handler \"python handler.py\" -- events.json"]
+[test."$ catter run --handler \"python handler.py\" --from events.json"]
 stderr = '''
 command 1: NoneType
 command 2: CompilerAnalysis

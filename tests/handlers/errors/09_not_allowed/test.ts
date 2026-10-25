@@ -6,6 +6,7 @@ import { test } from "@catter/tools/testing";
 // for good.
 test("not JSON", { errors: ["wrote what the protocol does not allow"] }, async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python not_json.py",
         "--handler-timeout",
@@ -19,6 +20,7 @@ test("not JSON", { errors: ["wrote what the protocol does not allow"] }, async (
 
 test("a notification", { errors: ["wrote what the protocol does not allow"] }, async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python notification.py",
         "--handler-timeout",

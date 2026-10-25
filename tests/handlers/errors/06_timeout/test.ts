@@ -5,6 +5,7 @@ import { test } from "@catter/tools/testing";
 // handler.
 test({ errors: ["did not answer command 2 within 5 s"] }, async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python handler.py",
         "--handler-timeout",

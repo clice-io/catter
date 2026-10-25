@@ -1,7 +1,7 @@
-["unknown action"."$ catter --handler \"python handler.py unknown\" -- node -e 0"]
+["unknown action"."$ catter run --handler \"python handler.py unknown\" -- node -e 0"]
 stdout = "Handler `python handler.py unknown` failed on command 1: unknown variant tag 'rerun'"
 exit = 1
 
-["bad base64"."$ catter --handler \"python handler.py base64\" -- node -e 0"]
+["bad base64"."$ catter run --handler \"python handler.py base64\" -- node -e 0"]
 stdout = "Handler `python handler.py base64` answered command 1 with an action catter cannot take: `not base64!` is not base64: its length is not a multiple of 4"
 exit = 1

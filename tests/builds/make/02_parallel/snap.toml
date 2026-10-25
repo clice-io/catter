@@ -1,8 +1,8 @@
-[test."$ catter cdb -o compile_commands.json -- make -j8 -s"]
+[test."$ catter compile-commands -o compile_commands.json -- make -j8 -s"]
 stdout = "CDB saved to ${WS}/compile_commands.json with 100 entries."
 exit = 0
 
-[test."$ catter cdb -o compile_commands.json -- make -j8 -s".darwin]
+[test."$ catter compile-commands -o compile_commands.json -- make -j8 -s".darwin]
 wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
 stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
 stderr = '''

@@ -2,21 +2,27 @@
 
 The compilation database (CDB) is catter's primary feature. It intercepts compiler invocations during a build and generates a standard `compile_commands.json` file, compatible with clang tooling, language servers, and IDEs.
 
-Built-in: `cdb`
+Command: `compile-commands`
 
 ## Usage
 
 ```bash
-catter cdb [options] -- <build-command>
+catter compile-commands [options] -- <build-command>
 ```
 
 ## Options
 
-| Option                       | Description                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| `-o, --output <path>`        | Output path for `compile_commands.json`. Defaults to `build/compile_commands.json`. |
-| `--abort-on-command-failure` | Abort the entire build if any intercepted command fails.                            |
-| `--save-on-failure`          | Save partial CDB even if the build fails.                                           |
+| Option                       | Description                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `-o, --output <path>`        | Write the compilation database to this path. Defaults to `build/compile_commands.json`. |
+| `--replace`                  | Ignore existing database entries and replace the output file.                           |
+| `--save-on-failure`          | Save collected entries even when the build exits with a non-zero code.                  |
+| `--abort-on-command-failure` | Abort when any captured command exits with a non-zero code.                             |
+| `--abort-on-capture-error`   | Abort when catter reports a command capture error.                                      |
+| `-q, --quiet`                | Suppress informational output.                                                          |
+| `-v, --verbose`              | Print detailed command analysis and generated entries.                                  |
+
+A relative output path is from the `-C` directory. `compile-commands` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Behavior
 
@@ -54,14 +60,14 @@ Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and h
 
 ```bash
 # Basic usage with make
-catter cdb -- make -j8
+catter compile-commands -- make -j8
 
 # Specify output path
-catter cdb -o build/compile_commands.json -- ninja
+catter compile-commands -o build/compile_commands.json -- ninja
 
 # With CMake
-catter cdb -- cmake --build build
+catter compile-commands -- cmake --build build
 
 # With any build system
-catter cdb -- ./build.sh
+catter compile-commands -- ./build.sh
 ```

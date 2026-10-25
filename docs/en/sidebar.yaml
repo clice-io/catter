@@ -11,7 +11,7 @@ features:
     - compilation-database
     - command-tree
     - target-tree
-    - inspect
+    - explain
     - fake-compilation
     - build-profiling
 

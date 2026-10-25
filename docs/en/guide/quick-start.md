@@ -25,7 +25,7 @@ Catter is under active development; always use the latest package from the Relea
 Run your build command through catter to capture all compiler invocations:
 
 ```bash
-catter cdb -o compile_commands.json -- make
+catter compile-commands -o compile_commands.json -- make
 ```
 
 This produces a `compile_commands.json` file in the current directory, ready for use with any language server or static analysis tool.
@@ -33,17 +33,19 @@ This produces a `compile_commands.json` file in the current directory, ready for
 ## Command Format
 
 ```
-catter [options] <built-in> [built-in options] -- <build-command>
+catter <command> [options] -- <build-command>
 ```
 
 Breaking down the CDB example:
 
-| Part                       | Meaning                                                                           |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `cdb`                      | Use the built-in that generates a CDB                                             |
-| `-o compile_commands.json` | An option of the built-in: the output file path                                   |
-| `--`                       | Separator between the arguments of catter and the built-in, and the build command |
-| `make`                     | The actual build command to intercept                                             |
+| Part                       | Meaning                                                         |
+| -------------------------- | --------------------------------------------------------------- |
+| `compile-commands`         | The command: generate a CDB                                     |
+| `-o compile_commands.json` | An option of the command: the output file path                  |
+| `--`                       | Separator between the command's arguments and the build command |
+| `make`                     | The actual build command to intercept                           |
+
+`catter --help` lists the commands, and `catter <command> --help` shows the options of one.
 
 ## More Examples
 
@@ -52,13 +54,13 @@ Breaking down the CDB example:
 View the captured build command DAG as an ASCII tree:
 
 ```bash
-catter cmd-tree -- make
+catter tree -- make
 ```
 
 ### Using with CMake
 
 ```bash
-catter cdb -o compile_commands.json -- cmake --build build
+catter compile-commands -o compile_commands.json -- cmake --build build
 ```
 
 ### Your own handler
@@ -66,5 +68,5 @@ catter cdb -o compile_commands.json -- cmake --build build
 Hand the commands to a program of your own, a [handler](../scripting/handlers.md):
 
 ```bash
-catter --handler "python my_handler.py" -- cmake --build build
+catter run --handler "python my_handler.py" -- cmake --build build
 ```

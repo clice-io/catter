@@ -16,6 +16,6 @@ test(
             "C:/Windows/Microsoft.NET/Framework64/v4.0.30319/csc.exe /nologo /platform:anycpu app.cs",
         );
         await t.run("spawn.exe CreateProcessW command.txt");
-        await t.cli("cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt");
+        await t.cli("tree -w 1000 -- spawn.exe CreateProcessW command.txt");
     },
 );

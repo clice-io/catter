@@ -8,6 +8,6 @@ test(
     },
     async (t) => {
         await t.run("node build.mjs");
-        await t.cli("cmd-tree -w 1000 -- node build.mjs");
+        await t.cli("tree -w 1000 -- node build.mjs");
     },
 );

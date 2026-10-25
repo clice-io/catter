@@ -4,6 +4,7 @@ import { test } from "@catter/tools/testing";
 // is told of every command as the build started it.
 test(async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python observer.py",
         "--handler",

@@ -1,0 +1,3 @@
+[test."$ catter tree --from events.json"]
+stdout = "No commands found."
+exit = 0

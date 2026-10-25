@@ -28,6 +28,7 @@ with catter.listen() as listener:
     build = subprocess.Popen(
         [
             os.environ["CATTER_EXECUTABLE"],
+            "run",
             "--connect",
             f"localhost:{listener.port}",
             "--",

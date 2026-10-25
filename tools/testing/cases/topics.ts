@@ -8,10 +8,10 @@ export const TOPICS: Readonly<Record<string, "engine" | "builtin" | "command">> 
     capture: "engine",
     builds: "engine",
     handlers: "engine",
-    cdb: "builtin",
-    cmd_tree: "builtin",
-    target_tree: "builtin",
-    inspect: "builtin",
+    compile_commands: "builtin",
+    tree: "builtin",
+    targets: "builtin",
+    explain: "builtin",
     cli: "command",
 };
 

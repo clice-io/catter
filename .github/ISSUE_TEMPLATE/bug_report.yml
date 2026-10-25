@@ -72,7 +72,7 @@ body:
         - IPC
         - Command-line interface
         - Handlers and SDKs
-        - Compilation database (cdb)
+        - Compilation database (compile-commands)
         - Compiler argument parsing
         - Replay
         - Performance
@@ -84,7 +84,7 @@ body:
       label: Command
       description: The full catter command you ran.
       render: shell
-      placeholder: catter cdb -o compile_commands.json -- make
+      placeholder: catter compile-commands -o compile_commands.json -- make
     validations:
       required: true
 

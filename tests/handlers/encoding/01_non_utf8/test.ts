@@ -13,7 +13,7 @@ test(
         errors: ["Process `./broken` spawn failed"],
     },
     async (t) => {
-        await t.cli(["--handler", "python handler.py", "--", "python", "build.py"]);
+        await t.cli(["run", "--handler", "python handler.py", "--", "python", "build.py"]);
     },
 );
 
@@ -26,6 +26,6 @@ test(
         errors: ["aborted the build at command 2"],
     },
     async (t) => {
-        await t.cli(["--handler", "python abort.py", "--", "python", "build.py"]);
+        await t.cli(["run", "--handler", "python abort.py", "--", "python", "build.py"]);
     },
 );
