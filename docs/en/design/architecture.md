@@ -34,7 +34,7 @@ sequenceDiagram
     loop For each captured command
         Runtime->>Catter: Command event
         Catter->>Handler: command
-        Handler-->>Catter: Action (skip / drop / abort / modify)
+        Handler-->>Catter: Action (skip / drop / abort / modify / edit)
         Catter->>Runtime: Execute according to action
         Runtime->>Catter: Execution result
         Catter->>Handler: exit
@@ -45,13 +45,13 @@ sequenceDiagram
 
 ### Build level: initialize / finish
 
-**`initialize`** starts the session, before the build: it carries the build command, its working directory and the runtime. The handler answers with whether it decides on each command, which events it wants to be told, and whether commands carry their environment.
+**`initialize`** starts the session, before the build: it carries the build command, its working directory and the runtime. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
 
 **`finish`** comes once the build has ended, with the build's exit code. A handler writes its final output here.
 
 ### Command level: command / error / exit
 
-**`command`** comes for each captured command before it runs: its working directory, executable, full argument vector, the parent command that started it, and, if the handler asked, its environment. A handler that decides answers with an action; one that does not is only told, and the build never waits for it.
+**`command`** comes for each captured command before it runs: its working directory, executable, full argument vector, the parent command that started it, and, if the handler asked, its environment and what catter makes of it: the compiler, archiver or tool it runs, and what its arguments say. A handler that decides answers with an action; one that does not is only told, and the build never waits for it.
 
 **`error`** comes instead when catter could not capture a command: the message says why.
 
@@ -61,7 +61,7 @@ sequenceDiagram
 
 "How to handle a command" is expressed at two layers in catter:
 
-1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` -- semantic and independent of the mechanism.
+1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` / `edit` -- semantic and independent of the mechanism.
 2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` / `FAIL` -- the concrete execution mechanics.
 
 The runtime driver maps handler-layer actions to protocol-layer actions. The current `inject` runtime mapping:
@@ -72,6 +72,7 @@ The runtime driver maps handler-layer actions to protocol-layer actions. The cur
 | `drop`         | Do not execute; return exit code 0        | `DROP`                                                               |
 | `abort`        | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)       |
 | `modify`       | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
+| `edit`         | Execute the command with edited arguments | `INJECT` (carrying the edited command)                               |
 
 Keep in mind:
 

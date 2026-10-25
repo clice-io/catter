@@ -18,6 +18,11 @@ decides, answers each with what catter does with it::
 and `catter --handler "python handler.py" -- make` runs the build with it.
 `listen()` serves catter's `--connect` instead.
 
+A handler may ask for what catter makes of each command (`analysis = True`),
+be told of only some commands (`filter`), edit a command's arguments
+(`catter.Edit`), and ask what catter makes of commands of its own
+(`self.analyze`).
+
 Every callback is optional: a handler is told of the events whose callback
 it overrides. Once catter is imported, what the program prints goes to
 stderr: its stdout carries the protocol. Arguments, paths and environment entries are strings, with the
@@ -31,39 +36,70 @@ import os
 import socket
 import sys
 import traceback
+from collections import deque
 from pathlib import Path
 from typing import Any, BinaryIO
 
 from .protocol import (
     Abort,
     Action,
+    Analysis,
+    AnalyzeParams,
+    AnalyzeResult,
+    ArchiverAnalysis,
+    Argument,
     Build,
     CaptureError,
     Command,
+    CommandEdit,
+    CompilerAnalysis,
+    Diagnostic,
     Drop,
+    Edit,
     Events,
     Exit,
     Finish,
     InitializeParams,
     InitializeResult,
     Modify,
+    Pattern,
+    Program,
+    Read,
     Skip,
+    Target,
+    ToolAnalysis,
+    UnparsedAnalysis,
+    Write,
 )
 
 __all__ = [
     "Abort",
     "Action",
+    "Analysis",
+    "ArchiverAnalysis",
+    "Argument",
     "Build",
     "CaptureError",
     "Command",
+    "CommandEdit",
+    "CompilerAnalysis",
+    "Diagnostic",
     "Drop",
+    "Edit",
     "Exit",
     "Finish",
     "Handler",
     "InitializeParams",
     "Listener",
     "Modify",
+    "Pattern",
+    "Program",
+    "Read",
     "Skip",
+    "Target",
+    "ToolAnalysis",
+    "UnparsedAnalysis",
+    "Write",
     "listen",
     "serve",
 ]
@@ -93,6 +129,28 @@ class Handler:
 
     #: Commands carry their environment.
     env: bool = False
+
+    #: Commands carry what catter makes of them, in `command.analysis`.
+    analysis: bool = False
+
+    #: The commands the handler is told of: those a pattern names. Every
+    #: command when None.
+    filter: list[Pattern] | None = None
+
+    _session: _Session | None = None
+
+    def analyze(self, *programs: Program) -> list[Analysis | None]:
+        """What catter makes of programs the handler names, as of the
+        commands it sends: one for each, None for a program catter knows
+        nothing of."""
+        if self._session is None:
+            raise RuntimeError(
+                "analyze() asks the catter whose session the handler serves"
+            )
+        params = AnalyzeParams(programs=list(programs)).to_json()
+        return AnalyzeResult.from_json(
+            self._session.request("analyze", params)
+        ).analyses
 
     def on_start(self, session: InitializeParams) -> None:
         """The session starts: what it runs, and how it captures commands."""
@@ -169,6 +227,41 @@ def _write(writer: BinaryIO, message: dict[str, Any]) -> None:
     writer.flush()
 
 
+class _Session:
+    """A session with catter: its messages, and the handler's."""
+
+    def __init__(self, reader: BinaryIO, writer: BinaryIO) -> None:
+        self.reader = reader
+        self.writer = writer
+        # catter's messages read while a request of the handler's waited for
+        # its answer.
+        self.early: deque[Any] = deque()
+        self.requests = 0
+
+    def next(self) -> Any | None:
+        """catter's next message, or None at the end of the session."""
+        return self.early.popleft() if self.early else _read(self.reader)
+
+    def request(self, method: str, params: Any) -> Any:
+        """The result of the handler's request to catter."""
+        self.requests += 1
+        id = f"handler-{self.requests}"
+        _write(
+            self.writer,
+            {"jsonrpc": "2.0", "id": id, "method": method, "params": params},
+        )
+        while (message := _read(self.reader)) is not None:
+            if "method" in message or message.get("id") != id:
+                self.early.append(message)
+            elif "error" in message:
+                raise RuntimeError(
+                    f"catter failed on {method}: {message['error']['message']}"
+                )
+            else:
+                return message.get("result")
+        raise EOFError(f"catter ended the session before it answered {method}")
+
+
 def _dispatch(handler: Handler, method: str, params: Any) -> Any:
     match method:
         case "initialize":
@@ -181,6 +274,8 @@ def _dispatch(handler: Handler, method: str, params: Any) -> Any:
                     exit=_overrides(handler, "on_exit"),
                 ),
                 env=handler.env,
+                analysis=handler.analysis,
+                filter=handler.filter,
             ).to_json()
         case "command":
             action = handler.on_command(Command.from_json(params))
@@ -196,7 +291,9 @@ def _dispatch(handler: Handler, method: str, params: Any) -> Any:
 
 def _run(handler: Handler, reader: BinaryIO, writer: BinaryIO) -> None:
     """Answers catter until it ends the session."""
-    while (message := _read(reader)) is not None:
+    session = _Session(reader, writer)
+    handler._session = session
+    while (message := session.next()) is not None:
         request = "id" in message
         try:
             result = _dispatch(handler, message["method"], message.get("params"))

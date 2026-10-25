@@ -31,7 +31,7 @@ while (message := read()) is not None:
     print(f"{message['method']}: {kind} {command}".rstrip(), file=sys.stderr, flush=True)
     if message["method"] == "initialize":
         events = {"command": not decides, "error": False, "exit": not decides}
-        answer(message, {"decides": decides, "events": events, "env": False})
+        answer(message, {"decides": decides, "events": events, "env": False, "analysis": False})
     elif message["method"] == "command" and "id" in message:
         answer(message, {"action": "skip"})
     elif message["method"] == "finish":

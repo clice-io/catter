@@ -9,7 +9,7 @@ Messages are [JSON-RPC 2.0](https://www.jsonrpc.org/specification), each framed 
 - A handler catter starts (`--handler`) reads catter's messages on its stdin and writes its own on its stdout. Its stderr is the terminal's.
 - A handler that listens (`--connect`) does the same over each TCP connection: one connection is one session.
 
-catter sends requests and notifications; a handler answers the requests and sends nothing else. Beside the messages below, catter may send `$/cancelRequest`, as the Language Server Protocol does, for a request it no longer waits for: a handler may ignore it.
+catter sends requests and notifications; a handler answers the requests and may send requests of its own, `analyze`, which catter answers (another method with an error), but no notifications. Beside the messages below, catter may send `$/cancelRequest`, as the Language Server Protocol does, for a request it no longer waits for: a handler may ignore it.
 
 ## A session
 
@@ -33,24 +33,37 @@ Commands of a parallel build overlap: `command` requests can be in flight togeth
 
 The result:
 
-| Field            | Type    | Description                                                   |
-| ---------------- | ------- | ------------------------------------------------------------- |
-| `decides`        | boolean | Every command comes as a request, which the build waits for.  |
-| `events.command` | boolean | A handler that does not decide is told of each command.       |
-| `events.error`   | boolean | The handler is told of the commands catter could not capture. |
-| `events.exit`    | boolean | The handler is told of each command's exit.                   |
-| `env`            | boolean | Commands carry their environment.                             |
+| Field            | Type                    | Description                                                                                                                                                   |
+| ---------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `decides`        | boolean                 | Every command comes as a request, which the build waits for.                                                                                                  |
+| `events.command` | boolean                 | A handler that does not decide is told of each command.                                                                                                       |
+| `events.error`   | boolean                 | The handler is told of the commands catter could not capture.                                                                                                 |
+| `events.exit`    | boolean                 | The handler is told of each command's exit.                                                                                                                   |
+| `env`            | boolean                 | Commands carry their environment.                                                                                                                             |
+| `analysis`       | boolean                 | Commands carry what catter makes of them (below).                                                                                                             |
+| `filter`         | pattern array, optional | The handler is told only of the commands a pattern names, and of their exits; to a handler that decides, the others are as `skip`. Every command when absent. |
+
+A pattern names commands by what catter makes of them:
+
+| Field    | Type                   | Description                                                                                                      |
+| -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `kind`   | string                 | The kind of program they run: `compiler`, `archiver` or `tool`.                                                  |
+| `names`  | string array, optional | Of compilers and tools, their names (`gcc`, `clang`, `clang-cl`, `msvc`, `nvcc`; `lld-elf`, …). Any when absent. |
+| `phases` | string array, optional | Of compilers, the phases of their commands (`preprocess`, `syntax-only`, `compile`, `link`, …). Any when absent. |
+
+A command whose arguments catter cannot read has no phase: a pattern with `phases` does not name it.
 
 ### `command`
 
-| Field        | Type                      | Description                                                  |
-| ------------ | ------------------------- | ------------------------------------------------------------ |
-| `id`         | integer                   | The command's id in the session.                             |
-| `parent`     | integer, optional         | The command that started it; absent for the build command.   |
-| `cwd`        | OS string                 | Its working directory.                                       |
-| `executable` | OS string                 | The program it runs.                                         |
-| `args`       | OS string array           | Its arguments, the program's name first.                     |
-| `env`        | OS string array, optional | Its environment, `NAME=value` entries, if the handler asked. |
+| Field        | Type                      | Description                                                                                  |
+| ------------ | ------------------------- | -------------------------------------------------------------------------------------------- |
+| `id`         | integer                   | The command's id in the session.                                                             |
+| `parent`     | integer, optional         | The command that started it; absent for the build command.                                   |
+| `cwd`        | OS string                 | Its working directory.                                                                       |
+| `executable` | OS string                 | The program it runs.                                                                         |
+| `args`       | OS string array           | Its arguments, the program's name first.                                                     |
+| `env`        | OS string array, optional | Its environment, `NAME=value` entries, if the handler asked.                                 |
+| `analysis`   | analysis, optional        | What catter makes of it, if the handler asked; absent for a program catter knows nothing of. |
 
 The result of the request is an action, named by its `action` field:
 
@@ -60,6 +73,36 @@ The result of the request is an action, named by its `action` field:
 | `drop`   |                                                   | Does not run it: it exits 0.                                                           |
 | `abort`  | `reason`: string                                  | Ends the session (below), reporting the reason.                                        |
 | `modify` | `args`, and optionally `executable`, `cwd`, `env` | Runs the command with these in place of its own; a field left out keeps the command's. |
+| `edit`   | `edits`: edit array                               | Runs the command with its arguments edited (below).                                    |
+
+### Analysis
+
+What catter makes of a command, named by its `kind`. catter knows a program by its executable's name: `cc` and `c++` are `gcc`, even where they run clang.
+
+- `compiler`: a command of gcc, clang, clang-cl or MSVC's cl. `compiler`; `dialect`, the syntax its arguments are read in (`gcc`, `clang`, or `msvc`, clang's in cl mode too); `phase` and `artifact`, what it makes; `target` (`triple`, `os`, `objectFormat`, `env`, `artifactModel`, `source`: what tells the target); `arguments`; `reads`, each with `path`, `argument` and `index` (where the command names it), `role` (`source` or `link`) and a source's `language`; `writes`, each with `path`, `reads` (the reads it is made from) and `origin`; and `diagnostics`, how catter inferred the files where the arguments leave them open.
+- `archiver`: a command of `ar`. `operation`, `modifiers`, `thin`, `archive`, `members`, `reads` and `writes`.
+- `tool`: a command of a linker or a librarian, whose arguments catter reads by its option table, `tool`: `lld-elf`, `lld-coff`, `lld-macho`, `lld-mingw`, `lld-wasm`, `llvm-lib` or `llvm-dlltool`. `arguments`.
+- `unparsed`: a command of such a program whose arguments catter cannot read, nvcc's for now. `of`, the kind of program, `name`, `error` and `message`.
+
+Each argument has `option`, the option it is after aliases, by its name with its prefix (`-I` for `/I` too; `<input>` for an input, `<unknown>` for an option the option table does not know); `spelling`, as the command writes it (`-msmall-data-limit=` of what is `-G`); `index` and `count`, the command's arguments it takes; and `values`.
+
+A source's language is `c` or `c++`: the one `/Tc` or `/Tp` names it with, the one the last `-x` before it sets (`-x none` resets it), the one `/TC` or `/TP` sets for every input, else its suffix's, `.C` being C++ but to cl, and `.c` and `.i` C++ to a C++ driver (`g++`, `c++`, `clang++`, `--driver-mode=g++`). For now catter reads a source of a set language only when its suffix names that language too.
+
+### Edits
+
+The edits of `edit` are made in turn. Each has `kind` and `flags`: arguments written as the command's program takes them.
+
+| `kind`    | What it does                                                                                                                                                                                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `remove`  | Takes out the arguments the flags name, and those an edit before it added: `-DX` the arguments `-DX` (`-DX=1` has another value), `-D*` (or `-D` last) every definition, `-W*` every option of `-W`'s group written with `-W` first. An option the table does not know is named as written, `=*` after it for any value. |
+| `append`  | Adds the flags after the command's own arguments, where they take effect over them and libraries go: before `--` and `/link`, which end the options.                                                                                                                                                                     |
+| `prepend` | Adds the flags right after the program.                                                                                                                                                                                                                                                                                  |
+
+The arguments no edit takes out keep the command's own spelling, and the added flags go as they are: catter writes no argument anew. Only a command whose arguments catter reads can be edited: a compiler's or a tool's, not `unparsed`.
+
+### `analyze`
+
+A request a handler sends catter, for what catter makes of commands of its own: `programs`, each with `executable` and `args` (the program's name first). The result is `analyses`, one for each, `null` for a program catter knows nothing of.
 
 ### `error`, `exit` and `finish`
 
@@ -78,6 +121,6 @@ The result of the request is an action, named by its `action` field:
 
 ## Errors
 
-A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error or with `abort`, stops (its output ends), writes what is not an answer to one of its requests, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running; once the build has ended, catter ends the handlers' input without a `finish`, prints the reason and exits 1.
+A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error, with `abort` or with an action catter cannot take, stops (its output ends), writes what the protocol does not allow, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running; once the build has ended, catter ends the handlers' input without a `finish`, prints the reason and exits 1.
 
 An observer cannot answer a notification: one that fails exits, which catter reports when it next writes to it.

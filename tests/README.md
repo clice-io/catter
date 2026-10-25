@@ -33,13 +33,14 @@ tests/<topic>/<subtopic>/NN_name/
   functions that start programs), `builds` (real build systems: make, CMake
   with Ninja, MSBuild, xmake), `handlers` (handlers over the protocol, on
   the SDKs: their actions, errors, lifecycle, transports, several at once,
-  arguments that are not UTF-8, the TypeScript SDK).
+  arguments that are not UTF-8, the analysis of commands, the TypeScript
+  SDK).
 - **Builtins**, what a builtin script answers on the commands it saw: `cdb`
   (`script::cdb`), `cmd_tree`, `target_tree`, and `inspect`
   (`script::inspect`, how catter analyzes one command, which it does not
   run: the compiler, its mode and target, the files it reads and writes).
-- **Command**, catter's own command line: `cli` (arguments, the data
-  directory, sessions).
+- **Command**, catter's own command line: `cli` (arguments, replay files,
+  the data directory, sessions).
 
 `tools/testing/cases/topics.ts` lists them; any other directory here is an
 error. C++ unit tests are not cases: they live in `unittests/` at the

@@ -10,6 +10,7 @@
 #include <variant>
 #include <cpptrace/exceptions.hpp>
 
+#include "analysis.h"
 #include "util/log.h"
 
 namespace catter::core {
@@ -19,7 +20,7 @@ namespace {
 using kota::ipc::ReadError;
 
 /// What is wrong with `message` from a handler, which answers catter's
-/// requests and writes nothing else; none for an answer.
+/// requests, asks its own, and writes nothing else; none for those.
 std::optional<std::string> not_an_answer(std::string_view message) {
     return std::visit(
         [](const auto& incoming) -> std::optional<std::string> {
@@ -32,7 +33,7 @@ std::optional<std::string> not_an_answer(std::string_view message) {
                 }
                 return std::format("an error that answers no request: {}", incoming.error.message);
             } else if constexpr(std::is_same_v<T, kota::ipc::IncomingRequest>) {
-                return std::format("a request `{}`", incoming.method);
+                return std::nullopt;
             } else if constexpr(std::is_same_v<T, kota::ipc::IncomingNotification>) {
                 return std::format("a notification `{}`", incoming.method);
             } else {
@@ -43,8 +44,8 @@ std::optional<std::string> not_an_answer(std::string_view message) {
 }
 
 /// The handler's transport, which keeps how the handler's output ended, and
-/// ends it at what is not an answer: the peer would answer that with an error,
-/// and go on waiting for the answers it asked for.
+/// ends it at what is no protocol message: the peer would answer that with an
+/// error, and go on waiting for the answers it asked for.
 class Transport final : public kota::ipc::Transport {
 public:
     Transport(std::unique_ptr<kota::ipc::Transport> inner, std::optional<ReadError>& end) :
@@ -172,6 +173,23 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
     peer(kota::event_loop::current(),
          std::make_unique<Transport>(std::move(transport), output_end)),
     process(std::move(process)) {
+    peer.on_request(
+        "analyze",
+        [](kota::ipc::JsonPeer::RequestContext&, const protocol::AnalyzeParams& params)
+            -> kota::task<protocol::AnalyzeResult, kota::ipc::Error> {
+            protocol::AnalyzeResult result;
+            for(const auto& program: params.programs) {
+                auto executable = protocol::to_bytes(program.executable);
+                auto args = protocol::to_bytes(program.args);
+                if(!executable || !args) {
+                    co_return kota::outcome_error(
+                        kota::ipc::Error(kota::ipc::protocol::ErrorCode::InvalidParams,
+                                         executable ? args.error() : executable.error()));
+                }
+                result.analyses.push_back(CommandAnalysis(*executable, *args).message());
+            }
+            co_return result;
+        });
     kota::event_loop::current().schedule([](RemoteHandler& self) -> kota::task<> {
         co_await self.peer.run();
         self.stopped.set();
@@ -232,7 +250,7 @@ kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::vector<st
 
 std::string RemoteHandler::stopped_message(std::string_view before) const {
     if(output_end->kind == ReadError::Kind::Malformed) {
-        return std::format("Handler `{}` wrote what is not an answer: {}",
+        return std::format("Handler `{}` wrote what the protocol does not allow: {}",
                            options.name,
                            output_end->message);
     }
@@ -291,6 +309,14 @@ kota::task<std::optional<Build>> RemoteHandler::on_start(Build build) {
                         .cwd = protocol::to_os_string(build.cwd),
                         },
     });
+    if(subscription.filter) {
+        if(auto wrong = check_filter(*subscription.filter)) {
+            throw cpptrace::runtime_error(
+                std::format("Handler `{}` answered initialize with a filter catter cannot take: {}",
+                            options.name,
+                            *wrong));
+        }
+    }
     co_return build;
 }
 
@@ -298,15 +324,25 @@ kota::task<Action> RemoteHandler::on_command(data::ipcid_t id,
                                              std::optional<data::ipcid_t> parent,
                                              data::command command) {
     auto action = co_await decide(id, parent, std::move(command));
+    if(!action) {
+        co_return Action{.type = Action::Type::Skip};
+    }
     if(subscription.events.exit) {
         decided[id] = std::chrono::steady_clock::now();
     }
-    co_return action;
+    co_return std::move(*action);
 }
 
-kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
-                                         std::optional<data::ipcid_t> parent,
-                                         data::command command) {
+kota::task<std::optional<Action>> RemoteHandler::decide(data::ipcid_t id,
+                                                        std::optional<data::ipcid_t> parent,
+                                                        data::command command) {
+    std::optional<CommandAnalysis> analysis;
+    if(subscription.analysis || subscription.filter) {
+        analysis.emplace(command.executable, command.args);
+        if(subscription.filter && !analysis->matches(*subscription.filter)) {
+            co_return std::nullopt;
+        }
+    }
     if(!subscription.decides && !subscription.events.command) {
         co_return Action{.type = Action::Type::Skip};
     }
@@ -319,6 +355,9 @@ kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
     };
     if(subscription.env) {
         params.env = protocol::to_os_string(command.env);
+    }
+    if(subscription.analysis) {
+        params.analysis = analysis->message();
     }
     if(!subscription.decides) {
         notify("command", params);
@@ -340,7 +379,6 @@ kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
                                                   abort->reason));
     }
 
-    auto& modify = std::get<protocol::Modify>(action);
     auto invalid = [&](std::string_view error) {
         return cpptrace::runtime_error(
             std::format("Handler `{}` answered {} with an action catter cannot take: {}",
@@ -348,6 +386,19 @@ kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
                         what,
                         error));
     };
+    if(auto* edit = std::get_if<protocol::Edit>(&action)) {
+        if(!analysis) {
+            analysis.emplace(command.executable, command.args);
+        }
+        auto args = analysis->edit(command.args, edit->edits);
+        if(!args) {
+            throw invalid(args.error());
+        }
+        command.args = std::move(*args);
+        co_return Action{.type = Action::Type::Modify, .command = std::move(command)};
+    }
+
+    auto& modify = std::get<protocol::Modify>(action);
     auto args = protocol::to_bytes(std::move(modify.args));
     if(!args) {
         throw invalid(args.error());

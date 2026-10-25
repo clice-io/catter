@@ -22,10 +22,11 @@ HEADER = "Generated from sdk/protocol.schema.json by sdk/generate.py: do not edi
 @dataclass
 class Type:
     """A field's type: `kind` is int, str, bool, os (bytes from the system),
-    list, optional or a message's name."""
+    list, optional, or a message's or a union's name."""
 
     kind: str
     item: Type | None = None
+    union: bool = False
 
 
 @dataclass
@@ -47,28 +48,33 @@ def is_os_string(node: dict) -> bool:
     return node.get("anyOf") == [{"type": "string"}, {"$ref": "#/$defs/Base64"}]
 
 
-def parse_type(node: dict) -> Type:
+def parse_type(node: dict, unions: dict[str, dict]) -> Type:
     if is_os_string(node):
         return Type("os")
+    if "oneOf" in node:
+        name = next(name for name, union in unions.items() if union == node)
+        return Type(name, union=True)
     if "$ref" in node:
         return Type(node["$ref"].removeprefix("#/$defs/"))
     if "anyOf" in node:
         options = [option for option in node["anyOf"] if option != {"type": "null"}]
         if len(options) != 1:
             raise SystemExit(f"unsupported anyOf: {node}")
-        return Type("optional", parse_type(options[0]))
+        return Type("optional", parse_type(options[0], unions))
     kinds = {"integer": "int", "string": "str", "boolean": "bool"}
     if node.get("type") in kinds:
         return Type(kinds[node["type"]])
     if node.get("type") == "array":
-        return Type("list", parse_type(node["items"]))
+        return Type("list", parse_type(node["items"], unions))
     raise SystemExit(f"unsupported schema node: {node}")
 
 
-def parse_message(name: str, node: dict, tag: str | None = None) -> Message:
+def parse_message(
+    name: str, node: dict, unions: dict[str, dict], tag: str | None = None
+) -> Message:
     required = set(node.get("required", []))
     fields = [
-        Field(field, parse_type(value), field in required)
+        Field(field, parse_type(value, unions), field in required)
         for field, value in node["properties"].items()
         if field != tag
     ]
@@ -77,32 +83,44 @@ def parse_message(name: str, node: dict, tag: str | None = None) -> Message:
     )
 
 
-def parse_union(node: dict) -> tuple[str, list[Message]]:
+def parse_union(
+    name: str, node: dict, unions: dict[str, dict]
+) -> tuple[str, list[Message]]:
     """A tagged union: every alternative is an object whose tag field is a
-    constant, which names it."""
+    constant, which names it, with the union's name after it (`CompilerAnalysis`),
+    but the actions, which a handler names alone (`Modify`)."""
     alternatives = node["oneOf"]
     tag = next(
         field
         for field, value in alternatives[0]["properties"].items()
         if "const" in value
     )
+    suffix = "" if name == "Action" else name
     messages = [
-        parse_message(alternative["properties"][tag]["const"].title(), alternative, tag)
+        parse_message(
+            alternative["properties"][tag]["const"].title() + suffix,
+            alternative,
+            unions,
+            tag,
+        )
         for alternative in alternatives
     ]
     return tag, messages
 
 
 def load(schema: dict) -> tuple[list[Message], dict[str, tuple[str, list[Message]]]]:
+    union_nodes = {
+        name[0].upper() + name[1:]: node
+        for name, node in schema["properties"].items()
+        if "oneOf" in node
+    }
     messages = [
-        parse_message(name, node)
+        parse_message(name, node, union_nodes)
         for name, node in schema["$defs"].items()
         if name != "Base64"
     ]
     unions = {
-        name[0].upper() + name[1:]: parse_union(node)
-        for name, node in schema["properties"].items()
-        if "oneOf" in node
+        name: parse_union(name, node, union_nodes) for name, node in union_nodes.items()
     }
     return messages, unions
 
@@ -133,6 +151,8 @@ def python_from(type: Type, value: str) -> str:
         case "optional":
             inner = python_from(type.item, value)
             return inner if inner == value else f"None if {value} is None else {inner}"
+        case _ if type.union:
+            return f"{type.kind.lower()}_from_json({value})"
         case _:
             return f"{type.kind}.from_json({value})"
 
@@ -146,7 +166,8 @@ def python_to(type: Type, value: str) -> str:
         case "list":
             return f"[{python_to(type.item, 'item')} for item in {value}]"
         case "optional":
-            return python_to(type.item, value)
+            inner = python_to(type.item, value)
+            return inner if inner == value else f"None if {value} is None else {inner}"
         case _:
             return f"{value}.to_json()"
 
@@ -192,9 +213,10 @@ def python_class(message: Message) -> list[str]:
                 f'        data["{field.name}"] = {python_to(field.type, value)}'
             )
         else:
+            present = field.type.item if field.type.kind == "optional" else field.type
             lines.append(f"        if {value} is not None:")
             lines.append(
-                f'            data["{field.name}"] = {python_to(field.type, value)}'
+                f'            data["{field.name}"] = {python_to(present, value)}'
             )
     lines.append("        return data")
     return lines
@@ -274,7 +296,8 @@ def typescript_type(type: Type) -> str:
         case "os":
             return "OsString"
         case "list":
-            return f"{typescript_type(type.item)}[]"
+            item = typescript_type(type.item)
+            return f"({item})[]" if "|" in item else f"{item}[]"
         case "optional":
             return f"{typescript_type(type.item)} | null"
         case _:

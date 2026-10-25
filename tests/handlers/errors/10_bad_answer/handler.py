@@ -30,6 +30,6 @@ def answer(message, result):
 
 while (message := read()) is not None:
     if message["method"] == "initialize":
-        answer(message, {"decides": True, "events": {"command": False, "error": False, "exit": False}, "env": False})
+        answer(message, {"decides": True, "events": {"command": False, "error": False, "exit": False}, "env": False, "analysis": False})
     elif message["method"] == "command":
         answer(message, action)

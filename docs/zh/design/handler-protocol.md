@@ -9,7 +9,7 @@
 - 由 catter 启动的 handler（`--handler`）从 stdin 读取 catter 的消息，把自己的消息写到 stdout。它的 stderr 就是终端的 stderr。
 - 监听端口的 handler（`--connect`）在每个 TCP 连接上做同样的事：一个连接就是一个会话。
 
-catter 发送请求和通知；handler 只应答请求，不发送其他任何消息。除下文的消息外，catter 还可能像 Language Server Protocol 那样，为它不再等待的请求发送 `$/cancelRequest`：handler 可以忽略它。
+catter 发送请求和通知；handler 应答这些请求，也可以发出自己的请求 `analyze`，由 catter 应答（其他方法的请求，catter 以错误应答），但不发送通知。除下文的消息外，catter 还可能像 Language Server Protocol 那样，为它不再等待的请求发送 `$/cancelRequest`：handler 可以忽略它。
 
 ## 一次会话
 
@@ -33,24 +33,37 @@ catter 发送请求和通知；handler 只应答请求，不发送其他任何�
 
 结果：
 
-| 字段             | 类型   | 说明                                             |
-| ---------------- | ------ | ------------------------------------------------ |
-| `decides`        | 布尔值 | 每条命令都以请求的形式发来，构建会等待它的应答。 |
-| `events.command` | 布尔值 | 不做决定的 handler 会收到每条命令的通知。        |
-| `events.error`   | 布尔值 | handler 会收到 catter 未能捕获的命令的通知。     |
-| `events.exit`    | 布尔值 | handler 会收到每条命令退出的通知。               |
-| `env`            | 布尔值 | 命令携带它的环境变量。                           |
+| 字段             | 类型               | 说明                                                                                                                         |
+| ---------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `decides`        | 布尔值             | 每条命令都以请求的形式发来，构建会等待它的应答。                                                                             |
+| `events.command` | 布尔值             | 不做决定的 handler 会收到每条命令的通知。                                                                                    |
+| `events.error`   | 布尔值             | handler 会收到 catter 未能捕获的命令的通知。                                                                                 |
+| `events.exit`    | 布尔值             | handler 会收到每条命令退出的通知。                                                                                           |
+| `env`            | 布尔值             | 命令携带它的环境变量。                                                                                                       |
+| `analysis`       | 布尔值             | 命令携带 catter 对它的分析（见下文）。                                                                                       |
+| `filter`         | pattern 数组，可选 | handler 只会收到某个 pattern 所指的命令及其退出的消息；对做决定的 handler 而言，其余命令都按 `skip` 处理。省略时为所有命令。 |
+
+pattern 按 catter 对命令的分析来指定命令：
+
+| 字段     | 类型             | 说明                                                                                        |
+| -------- | ---------------- | ------------------------------------------------------------------------------------------- |
+| `kind`   | 字符串           | 命令运行的程序种类：`compiler`、`archiver` 或 `tool`。                                      |
+| `names`  | 字符串数组，可选 | 编译器和工具的名字（`gcc`、`clang`、`clang-cl`、`msvc`、`nvcc`；`lld-elf`……）。省略时不限。 |
+| `phases` | 字符串数组，可选 | 编译器命令的阶段（`preprocess`、`syntax-only`、`compile`、`link`……）。省略时不限。          |
+
+catter 读不了参数的命令没有阶段：带 `phases` 的 pattern 不会指向它。
 
 ### `command`
 
-| 字段         | 类型                | 说明                                                             |
-| ------------ | ------------------- | ---------------------------------------------------------------- |
-| `id`         | 整数                | 命令在会话中的 id。                                              |
-| `parent`     | 整数，可选          | 启动它的命令；构建命令没有此字段。                               |
-| `cwd`        | OS 字符串           | 它的工作目录。                                                   |
-| `executable` | OS 字符串           | 它运行的程序。                                                   |
-| `args`       | OS 字符串数组       | 它的参数，第一个是程序名。                                       |
-| `env`        | OS 字符串数组，可选 | 它的环境变量，`NAME=value` 形式的条目；仅当 handler 要求时提供。 |
+| 字段         | 类型                | 说明                                                                        |
+| ------------ | ------------------- | --------------------------------------------------------------------------- |
+| `id`         | 整数                | 命令在会话中的 id。                                                         |
+| `parent`     | 整数，可选          | 启动它的命令；构建命令没有此字段。                                          |
+| `cwd`        | OS 字符串           | 它的工作目录。                                                              |
+| `executable` | OS 字符串           | 它运行的程序。                                                              |
+| `args`       | OS 字符串数组       | 它的参数，第一个是程序名。                                                  |
+| `env`        | OS 字符串数组，可选 | 它的环境变量，`NAME=value` 形式的条目；仅当 handler 要求时提供。            |
+| `analysis`   | 分析，可选          | catter 对它的分析，仅当 handler 要求时提供；catter 对其程序一无所知时省略。 |
 
 请求的结果是一个动作，由其 `action` 字段指明：
 
@@ -60,6 +73,36 @@ catter 发送请求和通知；handler 只应答请求，不发送其他任何�
 | `drop`   |                                               | 不运行命令：它以 0 退出。                                        |
 | `abort`  | `reason`：字符串                              | 结束会话（见下文），并报告原因。                                 |
 | `modify` | `args`，以及可选的 `executable`、`cwd`、`env` | 用这些字段代替命令自己的值运行命令；省略的字段沿用命令原有的值。 |
+| `edit`   | `edits`：编辑数组                             | 修改命令的参数后再运行它（见下文）。                             |
+
+### 分析
+
+catter 对一条命令的分析，由其 `kind` 指明。catter 按可执行文件的名字认程序：`cc` 和 `c++` 都算 `gcc`，即使它们实际运行的是 clang。
+
+- `compiler`：gcc、clang、clang-cl 或 MSVC 的 cl 的命令。包含 `compiler`；`dialect`，读取其参数所用的语法（`gcc`、`clang` 或 `msvc`，cl 模式下的 clang 也是 `msvc`）；`phase` 和 `artifact`，它产出什么；`target`（`triple`、`os`、`objectFormat`、`env`、`artifactModel`，以及 `source`：目标由什么决定）；`arguments`；`reads`，每项有 `path`、`argument` 和 `index`（命令在哪里指定它）、`role`（`source` 或 `link`），源文件还有 `language`；`writes`，每项有 `path`、`reads`（由哪些读入生成）和 `origin`；以及 `diagnostics`，参数没有说清时 catter 如何推断文件。
+- `archiver`：`ar` 的命令。包含 `operation`、`modifiers`、`thin`、`archive`、`members`、`reads` 和 `writes`。
+- `tool`：链接器或库管理工具的命令，catter 用它的选项表读取参数，`tool` 为 `lld-elf`、`lld-coff`、`lld-macho`、`lld-mingw`、`lld-wasm`、`llvm-lib` 或 `llvm-dlltool`。包含 `arguments`。
+- `unparsed`：上述程序中 catter 读不了参数的命令，目前包括 nvcc 的命令。包含 `of`（程序种类）、`name`、`error` 和 `message`。
+
+每个参数都有 `option`，即解析别名之后的选项，用带前缀的名字表示（`/I` 也写作 `-I`；输入是 `<input>`，选项表不认识的选项是 `<unknown>`）；`spelling`，命令里的原始写法（例如实际是 `-G` 的 `-msmall-data-limit=`）；`index` 和 `count`，它占用命令的哪些参数；以及 `values`。
+
+源文件的语言是 `c` 或 `c++`：`/Tc`、`/Tp` 指定它时用的语言，它前面最后一个 `-x` 设定的语言（`-x none` 会复位），`/TC`、`/TP` 为所有输入设定的语言，否则由后缀决定，其中 `.C` 是 C++（cl 除外），对 C++ 驱动（`g++`、`c++`、`clang++`、`--driver-mode=g++`）而言 `.c` 和 `.i` 也是 C++。目前，对设定了语言的源文件，catter 只在后缀也表示这种语言时才读取它。
+
+### 编辑
+
+`edit` 的各项编辑依次进行。每项有 `kind` 和 `flags`：按命令的程序接受的写法写出的参数。
+
+| `kind`    | 作用                                                                                                                                                                                                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `remove`  | 删掉 flags 所指的参数，以及之前的编辑添加的参数：`-DX` 删掉写作 `-DX` 的参数（`-DX=1` 的值不同，不会删掉），`-D*`（或放在最后、不带值的 `-D`）删掉所有定义，`-W*` 删掉 `-W` 所在选项组中以 `-W` 开头的所有选项。选项表不认识的选项按原样指定，后面加 `=*` 表示任意值。 |
+| `append`  | 把 flags 加在命令自己的参数之后，使其优先于这些参数生效，也正是库应在的位置：在结束选项的 `--` 和 `/link` 之前。                                                                                                                                                       |
+| `prepend` | 把 flags 加在程序名之后。                                                                                                                                                                                                                                              |
+
+没有被删掉的参数保留命令原有的写法，添加的 flags 也原样放入：catter 不会重新生成任何参数。只有 catter 读得懂参数的命令可以编辑：编译器或工具的命令，`unparsed` 的不行。
+
+### `analyze`
+
+handler 发给 catter 的请求，询问 catter 对 handler 自己给出的命令的分析：`programs`，每项有 `executable` 和 `args`（第一个是程序名）。结果是 `analyses`，每个程序一项，catter 对其一无所知的程序为 `null`。
 
 ### `error`、`exit` 和 `finish`
 
@@ -78,6 +121,6 @@ catter 发送请求和通知；handler 只应答请求，不发送其他任何�
 
 ## 错误
 
-handler 无法应答某个请求时，以 JSON-RPC 错误应答；catter 报告的就是其中的 `message`。handler 以错误或 `abort` 应答、停止运行（输出结束）、写出的内容不是对 catter 某个请求的应答，或没有在 `--handler-timeout` 内应答时，catter 结束会话：正在做决定的命令，以及构建在其后启动的每条命令，都不运行、直接失败；构建结束后，catter 不发送 `finish` 就结束各个 handler 的输入，打印原因并以退出码 1 退出。
+handler 无法应答某个请求时，以 JSON-RPC 错误应答；catter 报告的就是其中的 `message`。handler 以错误、`abort` 或 catter 无法执行的动作应答、停止运行（输出结束）、写出协议不允许的内容，或没有在 `--handler-timeout` 内应答时，catter 结束会话：正在做决定的命令，以及构建在其后启动的每条命令，都不运行、直接失败；构建结束后，catter 不发送 `finish` 就结束各个 handler 的输入，打印原因并以退出码 1 退出。
 
 只观察的 handler 无法应答通知：它出错时就退出，catter 在下一次向它写入时报告这一情况。

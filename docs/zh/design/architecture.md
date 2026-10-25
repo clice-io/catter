@@ -34,7 +34,7 @@ sequenceDiagram
     loop For each captured command
         Runtime->>Catter: Command event
         Catter->>Handler: command
-        Handler-->>Catter: Action (skip / drop / abort / modify)
+        Handler-->>Catter: Action (skip / drop / abort / modify / edit)
         Catter->>Runtime: Execute according to action
         Runtime->>Catter: Execution result
         Catter->>Handler: exit
@@ -45,13 +45,13 @@ sequenceDiagram
 
 ### 构建级：initialize / finish
 
-**`initialize`** 在构建开始前启动会话：它携带构建命令、构建命令的工作目录和 runtime。handler 在应答中说明它是否对每条命令做决定、想收到哪些事件的通知，以及命令是否携带环境变量。
+**`initialize`** 在构建开始前启动会话：它携带构建命令、构建命令的工作目录和 runtime。handler 在应答中说明它是否对每条命令做决定、想收到哪些事件的通知、想听到哪些命令，以及命令是否携带环境变量和 catter 对它的分析。
 
 **`finish`** 在构建结束后到来，携带构建的退出码。handler 在这里写出最终产物。
 
 ### 命令级：command / error / exit
 
-**`command`** 在每条被捕获的命令运行前到来，内容包括命令的工作目录、可执行文件、完整参数、启动它的父命令，以及（handler 要求时）它的环境变量。做决定的 handler 以一个动作应答；不做决定的 handler 只接收通知，构建从不等它。
+**`command`** 在每条被捕获的命令运行前到来，内容包括命令的工作目录、可执行文件、完整参数、启动它的父命令，以及（handler 要求时）它的环境变量和 catter 对它的分析：它运行的是哪种编译器、归档器或工具，以及它的参数表达了什么。做决定的 handler 以一个动作应答；不做决定的 handler 只接收通知，构建从不等它。
 
 **`error`** 在 catter 未能捕获某条命令时取而代之：消息说明原因。
 
@@ -61,7 +61,7 @@ sequenceDiagram
 
 "如何处理一条命令"在 catter 中分两层表达：
 
-1. **handler 层**（handler 决定的）：`skip` / `drop` / `abort` / `modify`，语义化、与机制无关。
+1. **handler 层**（handler 决定的）：`skip` / `drop` / `abort` / `modify` / `edit`，语义化、与机制无关。
 2. **协议层**（proxy 执行的）：`DROP` / `INJECT` / `WRAP` / `FAIL`，是具体的执行机制。
 
 runtime 驱动负责把 handler 层动作映射到协议层动作。当前 `inject` runtime 的映射如下：
@@ -72,6 +72,7 @@ runtime 驱动负责把 handler 层动作映射到协议层动作。当前 `inje
 | `drop`       | 不执行，直接返回退出码 0     | `DROP`                                               |
 | `abort`      | 中止整个构建并报错           | `FAIL`（这条命令及之后的每条命令都不运行，直接失败） |
 | `modify`     | 用修改后的命令替换原命令执行 | `INJECT`（携带修改后的命令）                         |
+| `edit`       | 用编辑后的参数执行命令       | `INJECT`（携带编辑后的命令）                         |
 
 需要注意的几点：
 

@@ -11,6 +11,8 @@ std::string_view name(Error::Kind kind) {
         case Error::Kind::CompilerParse: return "compiler-parse";
         case Error::Kind::ArchiverNotRecognized: return "archiver-not-recognized";
         case Error::Kind::ArchiverUnsupported: return "archiver-unsupported";
+        case Error::Kind::ToolNotRecognized: return "tool-not-recognized";
+        case Error::Kind::ToolParse: return "tool-parse";
     }
     std::unreachable();
 }
