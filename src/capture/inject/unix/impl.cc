@@ -28,7 +28,7 @@
 #endif
 #endif
 
-namespace catter::proxy::hook {
+namespace catter {
 
 #if defined(CATTER_LINUX) && defined(CATTER_ASAN)
 /// The sanitizer runtime this program loaded, which a sanitized hook library
@@ -75,12 +75,13 @@ static void add_sanitizer_runtime(std::vector<std::string>& env,
 }
 #endif
 
-kota::task<data::process_result>
-    run(data::command command, data::ipcid_t id, std::string pipe_name, std::string proxy_path) {
+kota::task<data::process_result> run_with_hook(data::command command,
+                                               data::ipcid_t id,
+                                               std::string pipe_name,
+                                               std::string proxy_path) {
     LOG_INFO("new command id is: {}", id);
 
-    const auto lib_path =
-        util::get_catter_root_path() / catter::config::hook::RELATIVE_PATH_OF_HOOK_LIB;
+    const auto lib_path = get_catter_root_path() / catter::config::RELATIVE_PATH_OF_HOOK_LIB;
 
     // check hook_lib exists
     if(!std::filesystem::exists(lib_path)) {
@@ -89,7 +90,7 @@ kota::task<data::process_result>
     }
 
     bool preload_injected = false;
-    std::string key_preload_prefix = std::string(catter::config::hook::KEY_PRELOAD) + "=";
+    std::string key_preload_prefix = std::string(catter::config::KEY_PRELOAD) + "=";
     for(auto& env_item: command.env) {
         if(env_item.starts_with(key_preload_prefix)) {
             env_item += catter::config::OS_PATH_SEPARATOR + lib_path.string();
@@ -99,16 +100,14 @@ kota::task<data::process_result>
     }
 
     if(!preload_injected) {
-        command.env.push_back(
-            std::format("{}={}", catter::config::hook::KEY_PRELOAD, lib_path.string()));
+        command.env.push_back(std::format("{}={}", catter::config::KEY_PRELOAD, lib_path.string()));
     }
 #if defined(CATTER_LINUX) && defined(CATTER_ASAN)
     add_sanitizer_runtime(command.env, key_preload_prefix);
 #endif
-    command.env.push_back(std::format("{}={}", catter::config::hook::KEY_CATTER_COMMAND_ID, id));
-    command.env.push_back(
-        std::format("{}={}", catter::config::hook::KEY_CATTER_PROXY_PATH, proxy_path));
-    command.env.push_back(std::format("{}={}", catter::config::hook::KEY_CATTER_IPC, pipe_name));
+    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_COMMAND_ID, id));
+    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_PROXY_PATH, proxy_path));
+    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_IPC, pipe_name));
 
     std::string cmd_for_print = "";
     for(auto& arg: command.args) {
@@ -126,4 +125,4 @@ kota::task<data::process_result>
     });
 };
 
-};  // namespace catter::proxy::hook
+};  // namespace catter

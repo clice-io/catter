@@ -10,8 +10,7 @@
 #include "support/resolver/resolver.h"
 #include "support/winapi/win32.h"
 
-namespace catter::resolver {
-using namespace catter::win;
+namespace catter {
 
 namespace {
 namespace detail {
@@ -205,6 +204,6 @@ template std::basic_string<wchar_t> resolve_application_name(std::basic_string_v
 template std::basic_string<char> resolve_command_line_token(std::basic_string_view<char>);
 template std::basic_string<wchar_t> resolve_command_line_token(std::basic_string_view<wchar_t>);
 
-}  // namespace catter::resolver
+}  // namespace catter
 
 #endif

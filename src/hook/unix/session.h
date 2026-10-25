@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace catter {
+namespace catter::hook {
 
 /// Represents an intercept session parameter set.
 ///
@@ -19,4 +19,4 @@ struct Session {
         return (!proxy_path.empty() && !self_id.empty() && !ipc.empty());
     }
 };
-}  // namespace catter
+}  // namespace catter::hook

@@ -8,7 +8,7 @@
 #include "support/config/hook_windows.h"
 #include "support/resolver/resolver.h"
 
-namespace catter::win::payload {
+namespace catter::hook {
 
 namespace {
 
@@ -60,7 +60,7 @@ std::basic_string<char_t> resolve_abspath_impl(const char_t* application_name,
     // is parsed from the first token in lpCommandLine.
     if(application_name != nullptr && application_name[0] != char_t('\0')) {
         raw_app_name.assign(application_name);
-        return catter::resolver::resolve_application_name<char_t>(raw_app_name);
+        return catter::resolve_application_name<char_t>(raw_app_name);
     }
 
     raw_app_name = extract_first_token<char_t>(command_line == nullptr
@@ -70,7 +70,7 @@ std::basic_string<char_t> resolve_abspath_impl(const char_t* application_name,
         return {};
     }
 
-    return catter::resolver::resolve_command_line_token<char_t>(raw_app_name);
+    return catter::resolve_command_line_token<char_t>(raw_app_name);
 }
 
 }  // namespace
@@ -83,17 +83,17 @@ std::basic_string<char_t> resolve_abspath(const char_t* application_name,
 
 template <CharT char_t>
 std::basic_string<char_t> get_proxy_path() {
-    return GetEnvironmentVariableDynamic<char_t>(catter::win::ENV_VAR_PROXY_PATH<char_t>, 256);
+    return GetEnvironmentVariableDynamic<char_t>(catter::config::ENV_VAR_PROXY_PATH<char_t>, 256);
 }
 
 template <CharT char_t>
 std::basic_string<char_t> get_ipc_id() {
-    return GetEnvironmentVariableDynamic<char_t>(catter::win::ENV_VAR_IPC_ID<char_t>, 64);
+    return GetEnvironmentVariableDynamic<char_t>(catter::config::ENV_VAR_IPC_ID<char_t>, 64);
 }
 
 template <CharT char_t>
 std::basic_string<char_t> get_ipc_pipe() {
-    return GetEnvironmentVariableDynamic<char_t>(catter::win::ENV_VAR_IPC_PIPE<char_t>, 64);
+    return GetEnvironmentVariableDynamic<char_t>(catter::config::ENV_VAR_IPC_PIPE<char_t>, 64);
 }
 
 template <CharT char_t>
@@ -133,4 +133,4 @@ template std::basic_string<wchar_t> build_proxy_command(std::basic_string_view<w
                                                         const wchar_t* application_name,
                                                         const wchar_t* command_line);
 
-}  // namespace catter::win::payload
+}  // namespace catter::hook

@@ -14,7 +14,7 @@
 #include "command/parse.h"
 #include "command/resolve.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
@@ -239,4 +239,4 @@ std::string_view name(WriteOrigin origin) {
     std::unreachable();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

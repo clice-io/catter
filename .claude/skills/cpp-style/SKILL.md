@@ -46,9 +46,14 @@ defending against ghosts.
 - Includes name the header by its path under `src/`, whatever directory
   includes it: `"support/log.h"`, `"command/option/clang.h"`,
   `"hook/unix/session.h"`; a directory includes only the layers below it
-  (CLAUDE.md, `pixi run -e dev check-layers`). Code lives in
-  `namespace catter` and a namespace per area (`catter::util`,
-  `catter::opt::clang`, `catter::proxy::hook`).
+  (CLAUDE.md, `pixi run -e dev check-layers`).
+- Code lives in `namespace catter`, flat as clice's: a namespace of its
+  own only for the top layers (`catter::feature`, `catter::driver`,
+  `catter::proxy`, `catter::hook`), for a vocabulary whose names would
+  clash in `catter` (the handler protocol's `catter::protocol`, the IPC
+  with `catter-proxy`'s `catter::ipc` and `catter::data`, each option
+  table's `catter::option::clang`), and for `catter::log`,
+  `catter::output` and `catter::config`.
 - Platform code is chosen by the macros xmake defines (`CATTER_LINUX`,
   `CATTER_MAC`, `CATTER_WINDOWS`), or by a file per platform when most of
   it differs (`resolver/unix.cc` and `win.cc`, `hook/unix` and
@@ -208,11 +213,11 @@ Domain words with one meaning each — use them only in that meaning:
 - **command**: one process the build starts, as catter captured it (cwd,
   executable, arguments, environment) — not a shell command line.
 - **handler**: what decides on a session's commands and is told of its
-  events (`core::Handler`): a built-in (`builtin::make`), or a
-  program catter speaks the handler protocol to (`core::RemoteHandler`).
+  events (`Handler`): a built-in (`feature::make`), or a
+  program catter speaks the handler protocol to (`RemoteHandler`).
 - **action**: what a handler decides for a command (`skip`, `drop`,
   `abort`, `modify`, and over the protocol `edit`: `protocol::Action`; in
-  `core::Action` an abort is the exception the handler throws, and an edit
+  `catter::Action` an abort is the exception the handler throws, and an edit
   the modified command). What the
   daemon then tells the proxy to do is the IPC protocol's `data::action`
   (`DROP`, `INJECT`, `WRAP`, `FAIL`); keep the two apart.

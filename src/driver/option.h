@@ -12,8 +12,7 @@
 #include "capture/runtime_driver.h"
 #include "support/encoding.h"
 
-namespace catter::core {
-namespace config {
+namespace catter::driver {
 
 struct RunMode {
     const RuntimeDriver* driver = default_runtime_driver();
@@ -48,15 +47,13 @@ struct WorkingDirectory {
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
         try {
-            path = std::filesystem::absolute(util::from_utf8(text));
+            path = std::filesystem::absolute(from_utf8(text));
         } catch(const std::exception& ex) {
             return context.format_error(std::format("Wrong Path: {}", ex.what()));
         }
         return std::nullopt;
     }
 };
-
-}  // namespace config
 
 struct CatterConfig {
 
@@ -109,13 +106,13 @@ struct CatterConfig {
         help =
             "mode of operation: 'inject' (the default) runs the build; 'replay' plays a recorded one, whose replay file is the build command",
         required = false)
-    <config::RunMode> mode = config::RunMode{};
+    <RunMode> mode = RunMode{};
 
     DecoKV(names = {"-d", "--dir"},
            meta_var = "<Working Directory>",
            help = "working directory for the target program, default to current directory",
            required = false)
-    <config::WorkingDirectory> working_dir = config::WorkingDirectory{};
+    <WorkingDirectory> working_dir = WorkingDirectory{};
 
     DecoPack(meta_var = "<Args>",
              help = "the command you want catter to use, must be after a '--'",
@@ -142,4 +139,4 @@ struct CatterConfig {
     std::vector<HandlerOption> handlers;
 };
 
-}  // namespace catter::core
+}  // namespace catter::driver

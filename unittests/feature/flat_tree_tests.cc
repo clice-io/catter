@@ -11,7 +11,7 @@ using namespace catter;
 
 namespace {
 
-using Tree = builtin::FlatTree<int, std::string>;
+using Tree = feature::FlatTree<int, std::string>;
 
 std::vector<int> children_of(const Tree& tree, int id) {
     return tree.find(id)->children;
@@ -68,7 +68,7 @@ ZEST_CASE(a_parent_may_come_after_its_children) {
 };
 
 ZEST_CASE(a_node_may_have_several_parents) {
-    builtin::FlatTree<std::string, std::string> tree;
+    feature::FlatTree<std::string, std::string> tree;
     tree.merge("app", "app");
     tree.merge("tool", "tool");
     tree.merge("main.o", "main.o", "app");

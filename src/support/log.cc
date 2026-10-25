@@ -52,11 +52,11 @@ void init_logger(const std::string& logger_name,
                  bool cmdline) noexcept {
     // add file sink and console sink
     auto file_sink = std::make_shared<path_file_sink>(file_path);
-    file_sink->set_pattern(catter::config::log::LOG_PATTERN_FILE);
+    file_sink->set_pattern(catter::config::LOG_PATTERN_FILE);
     std::vector<spdlog::sink_ptr> sinks{file_sink};
     if(cmdline) {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        console_sink->set_pattern(catter::config::log::LOG_PATTERN_CONSOLE);
+        console_sink->set_pattern(catter::config::LOG_PATTERN_CONSOLE);
         sinks.push_back(console_sink);
     }
     logger_instance = std::make_shared<spdlog::logger>(logger_name, begin(sinks), end(sinks));

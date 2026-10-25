@@ -13,7 +13,7 @@
 
 #include "command/lowercase.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
@@ -160,4 +160,4 @@ std::string_view name(Operation operation) {
     std::unreachable();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

@@ -2,7 +2,7 @@
 #include <concepts>
 #include <utility>
 
-namespace catter::util {
+namespace catter {
 
 template <typename Invokable>
     requires std::is_invocable_v<Invokable> && std::is_nothrow_invocable_v<Invokable>
@@ -28,4 +28,4 @@ template <typename Invokable, typename R = std::remove_reference_t<Invokable>>
 Guard<R> make_guard(Invokable&& invokable) {
     return Guard<R>(std::forward<Invokable>(invokable));
 }
-}  // namespace catter::util
+}  // namespace catter

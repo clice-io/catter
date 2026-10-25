@@ -1,5 +1,5 @@
 #pragma once
 
-namespace catter::config::core {
-constexpr static char LOG_PATH_REL[] = "log/catter.log";
-};  // namespace catter::config::core
+namespace catter::config {
+constexpr static char CATTER_LOG_PATH[] = "log/catter.log";
+};  // namespace catter::config

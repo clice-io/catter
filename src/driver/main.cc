@@ -48,15 +48,15 @@ int run(int argc, char* argv[]) {
 
     try {
         try {
-            log::init_logger("catter", util::get_catter_data_path() / config::core::LOG_PATH_REL);
+            log::init_logger("catter", get_catter_data_path() / config::CATTER_LOG_PATH);
         } catch(...) {
             // Without its log, catter reports what failed on the terminal only.
             log::mute_logger();
             throw;
         }
-        auto cli = kota::deco::cli::command<core::CatterConfig>(
+        auto cli = kota::deco::cli::command<driver::CatterConfig>(
             "catter [options for catter] [built-in [options for it]] -- [build system command]");
-        cli.after<&core::CatterConfig::builtin>([](auto& step) {
+        cli.after<&driver::CatterConfig::builtin>([](auto& step) {
                unsigned idx = step.next_cursor();
                std::span<std::string> original_argv = step.original_argv();
                while(idx < original_argv.size() && original_argv[idx] != "--") {
@@ -64,15 +64,15 @@ int run(int argc, char* argv[]) {
                }
                return step.seek(idx);
            })
-            .after<&core::CatterConfig::handler>([](auto& step) {
+            .after<&driver::CatterConfig::handler>([](auto& step) {
                 step.options().handlers.push_back({.connect = false, .text = step.value()});
                 return step.next();
             })
-            .after<&core::CatterConfig::connect>([](auto& step) {
+            .after<&driver::CatterConfig::connect>([](auto& step) {
                 step.options().handlers.push_back({.connect = true, .text = step.value()});
                 return step.next();
             })
-            .after<&core::CatterConfig::help>([&](auto& step) {
+            .after<&driver::CatterConfig::help>([&](auto& step) {
                 step.usage(std::cout);
                 ret = 0;
                 return step.stop();
@@ -85,7 +85,7 @@ int run(int argc, char* argv[]) {
             std::println("{}\nUse -h or --help for usage", res.error().message);
             return 1;
         }
-        kota::run(app::async_run(res->options));
+        kota::run(driver::async_run(res->options));
     } catch(const cpptrace::exception& ex) {
         std::println("{}", ex.message());
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
@@ -104,7 +104,7 @@ int run(int argc, char* argv[]) {
 
 #ifdef _WIN32
 int wmain(int argc, wchar_t* argv[]) {
-    util::Utf8Arguments arguments(argc, argv);
+    Utf8Arguments arguments(argc, argv);
     return run(argc, arguments.argv());
 }
 #else

@@ -4,12 +4,10 @@
 #include <string>
 #include <kota/async/runtime/task.h>
 
-namespace catter::core {
+namespace catter::driver {
+
 struct CatterConfig;
-}
 
-namespace catter::app {
+kota::task<> async_run(const CatterConfig& config);
 
-kota::task<> async_run(const core::CatterConfig& config);
-
-}  // namespace catter::app
+}  // namespace catter::driver

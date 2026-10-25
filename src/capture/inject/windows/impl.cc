@@ -26,15 +26,15 @@
 #include "support/log.h"
 #include "support/winapi/win32.h"
 
-namespace catter::proxy::hook {
+namespace catter {
 
 namespace {
 std::wstring cmdline_of(const catter::data::command& cmd) {
     std::string full_cmd;
     for(const auto& arg: cmd.args) {
-        full_cmd += win::quote_win32_arg(arg) + " ";
+        full_cmd += quote_win32_arg(arg) + " ";
     }
-    return util::to_wide(full_cmd);
+    return to_wide(full_cmd);
 }
 
 bool env_key_equals(std::string_view env_entry, std::string_view key) noexcept {
@@ -60,7 +60,7 @@ void upsert_environment_variable(std::vector<std::string>& env,
 std::vector<wchar_t> build_environment_block(const std::vector<std::string>& env) {
     std::vector<wchar_t> env_block;
     for(const auto& entry: env) {
-        auto wide = util::to_wide(entry);
+        auto wide = to_wide(entry);
         env_block.insert(env_block.end(), wide.begin(), wide.end());
         env_block.push_back(L'\0');
     }
@@ -71,7 +71,7 @@ std::vector<wchar_t> build_environment_block(const std::vector<std::string>& env
 
 /// The proxy's standard handle `which`, duplicated for the command to inherit
 /// as its own; null when the proxy has no valid one.
-win::Handle std_handle_for_command(DWORD which) {
+Handle std_handle_for_command(DWORD which) {
     HANDLE own = GetStdHandle(which);
     // INVALID_HANDLE_VALUE is also the pseudo handle of the current process,
     // which DuplicateHandle would duplicate.
@@ -94,7 +94,7 @@ win::Handle std_handle_for_command(DWORD which) {
         // None, or one the build passed without letting the proxy inherit it.
         return {};
     }
-    return win::Handle(duplicate);
+    return Handle(duplicate);
 }
 
 class RunningProcess {
@@ -138,8 +138,8 @@ private:
         }
     }
 
-    win::Handle process = INVALID_HANDLE_VALUE;
-    win::Handle thread = INVALID_HANDLE_VALUE;
+    Handle process = INVALID_HANDLE_VALUE;
+    Handle thread = INVALID_HANDLE_VALUE;
 };
 
 class ProcessWaiter {
@@ -215,9 +215,9 @@ RunningProcess start_process(data::command cmd,
                              const std::string& pipe_name,
                              std::string proxy_path) {
     auto env = std::move(cmd.env);
-    upsert_environment_variable(env, win::ENV_VAR_IPC_ID<char>, std::to_string(id));
-    upsert_environment_variable(env, win::ENV_VAR_PROXY_PATH<char>, proxy_path);
-    upsert_environment_variable(env, win::ENV_VAR_IPC_PIPE<char>, pipe_name);
+    upsert_environment_variable(env, config::ENV_VAR_IPC_ID<char>, std::to_string(id));
+    upsert_environment_variable(env, config::ENV_VAR_PROXY_PATH<char>, proxy_path);
+    upsert_environment_variable(env, config::ENV_VAR_IPC_PIPE<char>, pipe_name);
 
     auto env_block = build_environment_block(env);  // Double null termination
 
@@ -234,12 +234,12 @@ RunningProcess start_process(data::command cmd,
     PROCESS_INFORMATION pi{};
 
     auto cmdline = cmdline_of(cmd);
-    auto executable = util::to_wide(cmd.executable);
-    auto cwd = util::to_wide(cmd.cwd);
+    auto executable = to_wide(cmd.executable);
+    auto cwd = to_wide(cmd.cwd);
 
     LOG_INFO("| -> Catter-Proxy Final Executing command: \n    exe = {} \n    args = {}",
              cmd.executable,
-             util::from_wide(cmdline));
+             from_wide(cmdline));
 
     if(!CreateProcessW(executable.c_str(),
                        cmdline.data(),
@@ -258,7 +258,7 @@ RunningProcess start_process(data::command cmd,
 
     RunningProcess process = {pi};
 
-    inject(process.process_handle(), cmd.executable);
+    inject_hook(process.process_handle(), cmd.executable);
 
     if(ResumeThread(process.thread_handle()) == static_cast<DWORD>(-1)) {
         throw catter::system_error(GetLastError(),
@@ -270,8 +270,10 @@ RunningProcess start_process(data::command cmd,
 }
 }  // namespace
 
-kota::task<data::process_result>
-    run(data::command cmd, data::ipcid_t id, std::string pipe_name, std::string proxy_path) {
+kota::task<data::process_result> run_with_hook(data::command cmd,
+                                               data::ipcid_t id,
+                                               std::string pipe_name,
+                                               std::string proxy_path) {
     LOG_INFO("new command id is: {}", id);
     auto process = start_process(std::move(cmd), id, pipe_name, std::move(proxy_path));
 
@@ -283,4 +285,4 @@ kota::task<data::process_result>
     }
     co_return data::process_result{.code = exit->status};
 };
-};  // namespace catter::proxy::hook
+};  // namespace catter

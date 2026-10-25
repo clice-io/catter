@@ -8,7 +8,7 @@
 
 #include "session/data.h"
 
-namespace catter::core {
+namespace catter {
 
 /// The build a session runs.
 struct Build {
@@ -101,4 +101,4 @@ private:
     std::vector<Handler*> handlers;
 };
 
-}  // namespace catter::core
+}  // namespace catter

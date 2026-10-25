@@ -17,7 +17,7 @@
 
 #include "support/output.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 /// A graph built from flat nodes, each naming its parents: a node may come before its parents,
 /// name several, or name one that never comes, which makes it a start of the graph. Nodes keep
@@ -279,4 +279,4 @@ std::string render(const FlatTree<Id, Content>& tree,
     return out;
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

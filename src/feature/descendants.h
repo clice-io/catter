@@ -6,7 +6,7 @@
 
 #include "session/data.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 /// The commands of a build, by the command that started each, and those whose descendants a
 /// built-in leaves out: the programs a compiler driver runs, `cc1plus`, `as`, `ld`, are not the
@@ -47,4 +47,4 @@ private:
     std::unordered_set<data::ipcid_t> ancestors;
 };
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

@@ -7,14 +7,14 @@
 #include "hook/unix/environment.h"
 #include "support/config/hook_unix.h"
 
-namespace ct = catter;
-namespace cfg = catter::config::hook;
+namespace ct = catter::hook;
+namespace cfg = catter::config;
 
 namespace {
 
 const char* find_entry(char* const* envp, std::string_view key) {
     for(std::size_t i = 0; envp[i] != nullptr; ++i) {
-        if(ct::env::is_entry_of(envp[i], key)) {
+        if(ct::is_entry_of(envp[i], key)) {
             return envp[i];
         }
     }

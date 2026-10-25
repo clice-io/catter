@@ -17,7 +17,7 @@
 #include <unistd.h>
 extern char** environ;
 
-namespace catter::util {
+namespace catter {
 std::vector<std::string> get_environment() noexcept {
     std::vector<std::string> env_vars;
     for(int i = 0; environ[i] != nullptr; ++i) {
@@ -55,14 +55,14 @@ std::filesystem::path get_executable_path() {
     return std::filesystem::path(buf.data());
 }
 
-}  // namespace catter::util
+}  // namespace catter
 
 #elif defined(CATTER_MAC)
 
 #include <crt_externs.h>
 #include <mach-o/dyld.h>
 
-namespace catter::util {
+namespace catter {
 std::vector<std::string> get_environment() noexcept {
     std::vector<std::string> env_vars;
     auto envp = *_NSGetEnviron();
@@ -100,14 +100,14 @@ std::filesystem::path get_executable_path() {
     return std::filesystem::path(buf.data());
 }
 
-}  // namespace catter::util
+}  // namespace catter
 
 #elif defined(CATTER_WINDOWS)
 
 #include <ShlObj.h>
 #include <windows.h>
 
-namespace catter::util {
+namespace catter {
 std::vector<std::string> get_environment() noexcept {
     auto env_block = GetEnvironmentStringsW();
 
@@ -166,10 +166,10 @@ static std::filesystem::path default_catter_data_path() {
     return result / "catter";
 }
 
-}  // namespace catter::util
+}  // namespace catter
 #endif
 
-namespace catter::util {
+namespace catter {
 std::filesystem::path get_catter_root_path() {
     return get_executable_path().parent_path();
 };
@@ -186,4 +186,4 @@ std::filesystem::path get_catter_data_path() {
     }
     return default_catter_data_path();
 }
-}  // namespace catter::util
+}  // namespace catter

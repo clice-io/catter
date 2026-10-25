@@ -3,7 +3,7 @@
 #include <string>
 #include <kota/codec/dyn/dyn.h>
 
-namespace catter::builtin {
+namespace catter::feature {
 
 using JSON = kota::codec::dyn::Value;
 
@@ -11,4 +11,4 @@ using JSON = kota::codec::dyn::Value;
 /// string that is no part of valid UTF-8 as U+FFFD.
 std::string to_json(const JSON& value);
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

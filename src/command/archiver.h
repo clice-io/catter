@@ -9,7 +9,7 @@
 
 #include "command/error.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// The operations of `ar` catter models the files of.
 enum class Operation : std::uint8_t {
@@ -51,4 +51,4 @@ std::expected<ArchiverAnalysis, Error> analyze_archiver(std::string_view executa
 /// The letter of `operation`: "p", "q", "r" or "t".
 std::string_view name(Operation operation);
 
-}  // namespace catter::cmd
+}  // namespace catter

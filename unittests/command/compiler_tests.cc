@@ -37,7 +37,7 @@ ZEST_SUITE(cmd_compiler_tests) {
 ZEST_CASE(arguments_cover_argv) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = cmd::analyze_compiler(argv[0], argv);
+        auto analysis = analyze_compiler(argv[0], argv);
         ASSERT(analysis.has_value());
 
         std::uint32_t next = 1;
@@ -56,10 +56,10 @@ ZEST_CASE(arguments_cover_argv) {
 ZEST_CASE(locations_point_at_their_paths) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = cmd::analyze_compiler(argv[0], argv);
+        auto analysis = analyze_compiler(argv[0], argv);
         ASSERT(analysis.has_value());
 
-        const auto names = [&](const cmd::Location& location, std::string_view path) {
+        const auto names = [&](const Location& location, std::string_view path) {
             const auto& argument = analysis->arguments[location.argument];
             return location.index >= argument.index &&
                    location.index < argument.index + argument.count &&
@@ -79,10 +79,10 @@ ZEST_CASE(locations_point_at_their_paths) {
 ZEST_CASE(writes_are_made_from_reads_in_argv_order) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = cmd::analyze_compiler(argv[0], argv);
+        auto analysis = analyze_compiler(argv[0], argv);
         ASSERT(analysis.has_value());
 
-        EXPECT(std::ranges::is_sorted(analysis->reads, {}, [](const cmd::Read& read) {
+        EXPECT(std::ranges::is_sorted(analysis->reads, {}, [](const Read& read) {
             return read.location.index;
         }));
         for(const auto& write: analysis->writes) {
@@ -95,15 +95,15 @@ ZEST_CASE(writes_are_made_from_reads_in_argv_order) {
 
 ZEST_CASE(missing_option_value_fails_the_parse) {
     const auto argv = split("gcc -c a.c -o");
-    auto analysis = cmd::analyze_compiler(argv[0], argv);
+    auto analysis = analyze_compiler(argv[0], argv);
     ASSERT(!analysis.has_value());
-    EXPECT(analysis.error().kind == cmd::Error::Kind::CompilerParse);
+    EXPECT(analysis.error().kind == Error::Kind::CompilerParse);
 };
 
 ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     auto languages = [](std::string_view command) {
         const auto argv = split(command);
-        auto analysis = cmd::analyze_compiler(argv[0], argv);
+        auto analysis = analyze_compiler(argv[0], argv);
         std::vector<std::string> languages;
         for(const auto& read: analysis->reads) {
             languages.push_back(read.path + ":" + read.language.value_or("none"));

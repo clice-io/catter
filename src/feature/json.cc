@@ -7,7 +7,7 @@
 
 #include "feature/text.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 std::string to_json(const JSON& value) {
     auto compact = kota::codec::json::to_string(value);
@@ -18,4 +18,4 @@ std::string to_json(const JSON& value) {
     return std::move(*pretty);
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

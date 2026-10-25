@@ -14,7 +14,7 @@
 
 #include "command/lowercase.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
@@ -217,4 +217,4 @@ std::expected<std::vector<std::string>, std::string>
     return edited;
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

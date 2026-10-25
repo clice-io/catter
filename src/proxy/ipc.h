@@ -10,7 +10,7 @@
 
 #include "session/data.h"
 
-namespace catter::proxy::ipc {
+namespace catter::proxy {
 
 struct Peer {
     using RequestType = catter::ipc::RequestType;
@@ -69,4 +69,4 @@ public:
     kota::ipc::BincodePeer peer;
 };
 
-}  // namespace catter::proxy::ipc
+}  // namespace catter::proxy

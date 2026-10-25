@@ -14,7 +14,7 @@
 #include "command/tool.h"
 #include "protocol/protocol.h"
 
-namespace catter::core {
+namespace catter {
 
 /// What catter makes of a command, for the handlers that ask: the analysis of a compiler's or
 /// an archiver's command, the arguments of a tool's, or why the arguments of one of them do
@@ -41,18 +41,13 @@ private:
 
         std::string name;
 
-        cmd::Error error;
+        Error error;
     };
 
-    std::variant<std::monostate,
-                 cmd::CompilerAnalysis,
-                 cmd::ArchiverAnalysis,
-                 cmd::ToolAnalysis,
-                 Unparsed>
-        result;
+    std::variant<std::monostate, CompilerAnalysis, ArchiverAnalysis, ToolAnalysis, Unparsed> result;
 };
 
 /// What is wrong with `filter`, a handler's; none when catter takes it.
 std::optional<std::string> check_filter(std::span<const protocol::Pattern> filter);
 
-}  // namespace catter::core
+}  // namespace catter

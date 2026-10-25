@@ -2,7 +2,7 @@
 
 #include <kota/deco/option.h>
 
-namespace catter::opt::llvm_dlltool {
+namespace catter::option::llvm_dlltool {
 
 enum ID : unsigned {
     ID_INVALID = 0,
@@ -29,4 +29,4 @@ enum ID : unsigned {
 
 const kota::option::OptTable& table();
 
-}  // namespace catter::opt::llvm_dlltool
+}  // namespace catter::option::llvm_dlltool

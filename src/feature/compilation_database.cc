@@ -18,7 +18,7 @@
 #include "feature/path.h"
 #include "support/encoding.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -27,8 +27,8 @@ namespace dyn = kota::codec::dyn;
 namespace fs = std::filesystem;
 
 fs::path resolve(std::string_view cwd, std::string_view path) {
-    auto resolved = util::from_utf8(path);
-    return resolved.is_absolute() ? resolved : (util::from_utf8(cwd) / resolved).lexically_normal();
+    auto resolved = from_utf8(path);
+    return resolved.is_absolute() ? resolved : (from_utf8(cwd) / resolved).lexically_normal();
 }
 
 /// Throws unless `entry`, which `context` names, is an entry as the format has it: a non-empty
@@ -107,9 +107,8 @@ std::vector<JSON> read(std::string_view path, const fs::path& file) {
 
 void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     const auto& object = entry.as_object();
-    const auto file =
-        absolute_path(util::to_utf8(resolve(cwd, object.find("directory")->as_string())),
-                      object.find("file")->as_string());
+    const auto file = absolute_path(to_utf8(resolve(cwd, object.find("directory")->as_string())),
+                                    object.find("file")->as_string());
     const auto field = [&](std::string_view name, JSON absent) {
         const auto* value = object.find(name);
         return value == nullptr ? std::move(absent) : *value;
@@ -171,9 +170,9 @@ const fs::path& CompilationDatabase::save() const {
     stream << to_json(dyn::Array(entries()));
     if(!stream) {
         throw cpptrace::runtime_error(
-            std::format("Failed to write the compilation database `{}`", util::to_utf8(file)));
+            std::format("Failed to write the compilation database `{}`", to_utf8(file)));
     }
     return file;
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

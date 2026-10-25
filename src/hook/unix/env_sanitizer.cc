@@ -13,8 +13,8 @@
 
 namespace {
 bool should_drop_entry(const char* entry) noexcept {
-    for(const auto& key: catter::config::hook::KEYS_TO_INJECT) {
-        if(catter::env::is_entry_of(entry, key)) {
+    for(const auto& key: catter::config::KEYS_TO_INJECT) {
+        if(catter::hook::is_entry_of(entry, key)) {
             return true;
         }
     }
@@ -31,7 +31,7 @@ std::optional<std::string> sanitize_preload_entry(const char* entry) noexcept {
     std::string new_value;
     for(const auto& lib: value | std::views::split(catter::config::OS_PATH_SEPARATOR)) {
         std::string_view lib_sv(lib.begin(), lib.end());
-        if(lib_sv.ends_with(catter::config::hook::HOOK_LIB_NAME)) {
+        if(lib_sv.ends_with(catter::config::HOOK_LIB_NAME)) {
             continue;
         }
         if(!new_value.empty()) {
@@ -43,11 +43,11 @@ std::optional<std::string> sanitize_preload_entry(const char* entry) noexcept {
         // If the new value is empty, we just skip this entry.
         return std::nullopt;
     }
-    return catter::config::hook::LD_PRELOAD_INIT_ENTRY + new_value;
+    return catter::config::LD_PRELOAD_INIT_ENTRY + new_value;
 }
 }  // namespace
 
-namespace catter {
+namespace catter::hook {
 SanitizedEnv sanitize_environment(char* const envp[]) noexcept {
     SanitizedEnv env;
     env.entries.reserve(64);
@@ -62,7 +62,7 @@ SanitizedEnv sanitize_environment(char* const envp[]) noexcept {
             continue;
         }
 
-        if(catter::env::is_entry_of(envp[i], catter::config::hook::KEY_PRELOAD)) {
+        if(is_entry_of(envp[i], catter::config::KEY_PRELOAD)) {
             auto new_entry = sanitize_preload_entry(envp[i]);
             if(!new_entry.has_value()) {
                 continue;
@@ -77,4 +77,4 @@ SanitizedEnv sanitize_environment(char* const envp[]) noexcept {
 
     return env;
 }
-}  // namespace catter
+}  // namespace catter::hook

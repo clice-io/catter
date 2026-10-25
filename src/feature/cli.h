@@ -13,7 +13,7 @@
 #include <cpptrace/exceptions.hpp>
 #include <kota/deco/deco.h>
 
-namespace catter::builtin {
+namespace catter::feature {
 
 struct Example {
     std::string_view command;
@@ -105,4 +105,4 @@ void check_at_least(const Help& help,
     }
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

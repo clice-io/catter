@@ -19,7 +19,7 @@
 #include "command/option/llvm_dlltool.h"
 #include "command/option/llvm_lib.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
@@ -88,13 +88,13 @@ std::expected<ToolAnalysis, Error> analyze_tool(std::string_view executable,
 
 Syntax syntax_of(Tool tool) {
     switch(tool) {
-        case Tool::LLDELF: return {.table = &opt::lld_elf::table(), .visibility = ~0U};
-        case Tool::LLDCOFF: return {.table = &opt::lld_coff::table(), .visibility = ~0U};
-        case Tool::LLDMachO: return {.table = &opt::lld_macho::table(), .visibility = ~0U};
-        case Tool::LLDMinGW: return {.table = &opt::lld_mingw::table(), .visibility = ~0U};
-        case Tool::LLDWasm: return {.table = &opt::lld_wasm::table(), .visibility = ~0U};
-        case Tool::LLVMLib: return {.table = &opt::llvm_lib::table(), .visibility = ~0U};
-        case Tool::LLVMDlltool: return {.table = &opt::llvm_dlltool::table(), .visibility = ~0U};
+        case Tool::LLDELF: return {.table = &option::lld_elf::table(), .visibility = ~0U};
+        case Tool::LLDCOFF: return {.table = &option::lld_coff::table(), .visibility = ~0U};
+        case Tool::LLDMachO: return {.table = &option::lld_macho::table(), .visibility = ~0U};
+        case Tool::LLDMinGW: return {.table = &option::lld_mingw::table(), .visibility = ~0U};
+        case Tool::LLDWasm: return {.table = &option::lld_wasm::table(), .visibility = ~0U};
+        case Tool::LLVMLib: return {.table = &option::llvm_lib::table(), .visibility = ~0U};
+        case Tool::LLVMDlltool: return {.table = &option::llvm_dlltool::table(), .visibility = ~0U};
     }
     std::unreachable();
 }
@@ -112,4 +112,4 @@ std::string_view name(Tool tool) {
     std::unreachable();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

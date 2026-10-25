@@ -26,7 +26,7 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
 #ifndef _WIN32
     // A socket a session of the same pid left behind.
     std::error_code ec;
-    std::filesystem::remove(util::from_utf8(run_plan.pipe_name), ec);
+    std::filesystem::remove(from_utf8(run_plan.pipe_name), ec);
 #endif
     auto& current_loop = kota::event_loop::current();
     auto acc_ret = kota::pipe::listen(run_plan.pipe_name, kota::pipe::options(), current_loop);
@@ -45,7 +45,7 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
 
     auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
 #ifndef _WIN32
-    std::filesystem::remove(util::from_utf8(run_plan.pipe_name), ec);
+    std::filesystem::remove(from_utf8(run_plan.pipe_name), ec);
 #endif
     co_return std::move(process_result);
 }
@@ -90,7 +90,7 @@ kota::task<data::process_result> Session::spawn(std::string executable,
                                                 std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
-    auto guard = util::make_guard([&]() noexcept {
+    auto guard = make_guard([&]() noexcept {
         if(this->acc) {
             auto err = this->acc->stop();
             this->acc.reset();

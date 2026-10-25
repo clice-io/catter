@@ -7,7 +7,7 @@
 
 #include "hook/unix/session.h"
 
-namespace catter {
+namespace catter::hook {
 
 using ArgvRef = std::span<const char* const>;
 
@@ -35,4 +35,4 @@ Command build_error_command(const Session& session,
                             std::string_view message,
                             const std::filesystem::path& executable,
                             ArgvRef argv = {});
-}  // namespace catter
+}  // namespace catter::hook

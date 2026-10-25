@@ -25,29 +25,27 @@ std::string join(const std::vector<std::string>& argv) {
     return text;
 }
 
-cmd::CommandEdit removing(std::string_view flags) {
-    return {.kind = cmd::CommandEdit::Kind::Remove, .flags = split(flags)};
+CommandEdit removing(std::string_view flags) {
+    return {.kind = CommandEdit::Kind::Remove, .flags = split(flags)};
 }
 
-cmd::CommandEdit appending(std::string_view flags) {
-    return {.kind = cmd::CommandEdit::Kind::Append, .flags = split(flags)};
+CommandEdit appending(std::string_view flags) {
+    return {.kind = CommandEdit::Kind::Append, .flags = split(flags)};
 }
 
-cmd::CommandEdit prepending(std::string_view flags) {
-    return {.kind = cmd::CommandEdit::Kind::Prepend, .flags = split(flags)};
+CommandEdit prepending(std::string_view flags) {
+    return {.kind = CommandEdit::Kind::Prepend, .flags = split(flags)};
 }
 
 /// `command` with `edits` made, or the error.
-std::string edited(std::string_view command, std::initializer_list<cmd::CommandEdit> edits) {
+std::string edited(std::string_view command, std::initializer_list<CommandEdit> edits) {
     const auto argv = split(command);
-    auto analysis = cmd::analyze_compiler(argv[0], argv);
+    auto analysis = analyze_compiler(argv[0], argv);
     if(!analysis.has_value()) {
         return "analysis: " + analysis.error().message;
     }
-    auto result = cmd::apply_edits(argv,
-                                   analysis->arguments,
-                                   cmd::syntax_of(analysis->dialect),
-                                   std::vector(edits));
+    auto result =
+        apply_edits(argv, analysis->arguments, syntax_of(analysis->dialect), std::vector(edits));
     return result.has_value() ? join(*result) : "error: " + result.error();
 }
 

@@ -18,15 +18,15 @@
 #include "command/option/clang.h"
 #include "command/syntax.h"
 
-namespace catter::cmd {
+namespace catter {
 
 namespace {
 
-using namespace opt::clang;
+using namespace option::clang;
 
 std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::string> argv,
                                                            Dialect dialect) {
-    auto arguments = cmd::read_arguments(syntax_of(dialect), argv);
+    auto arguments = read_arguments(syntax_of(dialect), argv);
     if(!arguments.has_value()) {
         return std::unexpected(Error{
             .kind = Error::Kind::CompilerParse,
@@ -343,4 +343,4 @@ std::string_view name(OutputKind kind) {
     std::unreachable();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

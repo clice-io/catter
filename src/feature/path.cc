@@ -6,7 +6,7 @@
 
 #include "support/encoding.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -20,9 +20,8 @@ bool is_absolute(std::string_view path) {
 }  // namespace
 
 std::string absolute_path(std::string_view cwd, std::string_view file) {
-    auto path =
-        is_absolute(file) ? util::from_utf8(file) : util::from_utf8(cwd) / util::from_utf8(file);
-    return util::to_utf8(path.lexically_normal());
+    auto path = is_absolute(file) ? from_utf8(file) : from_utf8(cwd) / from_utf8(file);
+    return to_utf8(path.lexically_normal());
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

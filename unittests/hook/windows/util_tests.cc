@@ -5,7 +5,7 @@
 
 #include "hook/windows/util.h"
 
-namespace ct = catter;
+namespace ct = catter::hook;
 
 namespace {
 
@@ -36,23 +36,22 @@ struct ScopedEnvVar {
 ZEST_SUITE(win_payload_util) {
 ZEST_CASE(get_proxy_path_reads_environment_variable) {
     ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
-    EXPECT(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
-    EXPECT(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
+    EXPECT(ct::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
+    EXPECT(ct::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
 };
 
 ZEST_CASE(get_ipc_id_reads_environment_variable) {
     ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
-    EXPECT(ct::win::payload::get_ipc_id<char>() == "12345");
-    EXPECT(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
+    EXPECT(ct::get_ipc_id<char>() == "12345");
+    EXPECT(ct::get_ipc_id<wchar_t>() == L"12345");
 };
 
 ZEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
-    auto command =
-        ct::win::payload::build_proxy_command<char>(R"(C:\Program Files\Catter\catter-proxy.exe)",
-                                                    "12345",
-                                                    R"(\\.\pipe\catter-ipc-1)",
-                                                    R"(C:\Program Files\LLVM\bin\clang-cl.exe)",
-                                                    R"("clang-cl.exe" /c main.cc)");
+    auto command = ct::build_proxy_command<char>(R"(C:\Program Files\Catter\catter-proxy.exe)",
+                                                 "12345",
+                                                 R"(\\.\pipe\catter-ipc-1)",
+                                                 R"(C:\Program Files\LLVM\bin\clang-cl.exe)",
+                                                 R"("clang-cl.exe" /c main.cc)");
 
     EXPECT(
         command ==
@@ -60,12 +59,11 @@ ZEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
 };
 
 ZEST_CASE(build_proxy_command_supports_wide_strings) {
-    auto command = ct::win::payload::build_proxy_command<wchar_t>(
-        LR"(C:\Program Files\Catter\catter-proxy.exe)",
-        L"12345",
-        LR"(\\.\pipe\catter-ipc-1)",
-        LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
-        LR"("clang-cl.exe" /c main.cc)");
+    auto command = ct::build_proxy_command<wchar_t>(LR"(C:\Program Files\Catter\catter-proxy.exe)",
+                                                    L"12345",
+                                                    LR"(\\.\pipe\catter-ipc-1)",
+                                                    LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
+                                                    LR"("clang-cl.exe" /c main.cc)");
 
     EXPECT(
         command ==

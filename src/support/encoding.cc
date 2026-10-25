@@ -7,7 +7,7 @@
 #include <windows.h>
 #endif
 
-namespace catter::util {
+namespace catter {
 
 std::string to_utf8(const std::filesystem::path& path) {
     auto text = path.u8string();
@@ -60,4 +60,4 @@ Utf8Arguments::Utf8Arguments(int argc, wchar_t* argv[]) {
 
 #endif
 
-}  // namespace catter::util
+}  // namespace catter

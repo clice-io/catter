@@ -20,7 +20,7 @@
 #include "session/data.h"
 #include "session/handler.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -83,11 +83,11 @@ std::string format_argument(std::string_view argument, std::int64_t width) {
 }
 
 /// Renders the commands of a build as the tree of the commands that started them.
-class CmdTree final : public core::Handler {
+class CmdTree final : public Handler {
 public:
     explicit CmdTree(std::vector<std::string> args) : args(std::move(args)) {}
 
-    kota::task<std::optional<core::Build>> on_start(core::Build build) override {
+    kota::task<std::optional<Build>> on_start(Build build) override {
         auto parsed = parse_options<Options>(help, args);
         if(!parsed.has_value()) {
             co_return std::nullopt;
@@ -99,11 +99,11 @@ public:
         co_return build;
     }
 
-    kota::task<core::Action> on_command(data::ipcid_t id,
-                                        std::optional<data::ipcid_t> parent,
-                                        data::command command) override {
+    kota::task<Action> on_command(data::ipcid_t id,
+                                  std::optional<data::ipcid_t> parent,
+                                  data::command command) override {
         tree.merge(id, std::move(command.args), parent);
-        co_return core::Action{};
+        co_return Action{};
     }
 
     kota::task<> on_error(data::ipcid_t id,
@@ -187,8 +187,8 @@ private:
 
 }  // namespace
 
-std::unique_ptr<core::Handler> make_cmd_tree(std::vector<std::string> args) {
+std::unique_ptr<Handler> make_cmd_tree(std::vector<std::string> args) {
     return std::make_unique<CmdTree>(std::move(args));
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

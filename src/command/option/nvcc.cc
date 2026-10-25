@@ -5,13 +5,13 @@
 
 #include "command/option/tablegen.h"
 
-namespace catter::opt::nvcc {
+namespace catter::option::nvcc {
 
 namespace kota_opt = kota::option;
 
 namespace detail {
 
-using namespace catter::opt::external_detail;
+using namespace catter::option::external_detail;
 
 // Source: /usr/local/cuda/bin/nvcc --help
 constexpr auto OptionInfos = std::array<kota_opt::Option, 386>{
@@ -5715,4 +5715,4 @@ const kota_opt::OptTable& table() {
     return opt_table;
 }
 
-}  // namespace catter::opt::nvcc
+}  // namespace catter::option::nvcc

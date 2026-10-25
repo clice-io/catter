@@ -30,12 +30,12 @@ struct CreateProcessW {
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        auto converted_cmdline = catter::win::payload::build_proxy_command<wchar_t>(
-            catter::win::payload::get_proxy_path<wchar_t>(),
-            catter::win::payload::get_ipc_id<wchar_t>(),
-            catter::win::payload::get_ipc_pipe<wchar_t>(),
-            lpApplicationName,
-            lpCommandLine);
+        auto converted_cmdline =
+            catter::hook::build_proxy_command<wchar_t>(catter::hook::get_proxy_path<wchar_t>(),
+                                                       catter::hook::get_ipc_id<wchar_t>(),
+                                                       catter::hook::get_ipc_pipe<wchar_t>(),
+                                                       lpApplicationName,
+                                                       lpCommandLine);
 
         return original(nullptr,
                         converted_cmdline.data(),

@@ -5,7 +5,7 @@
 
 #include "support/winapi/win32.h"
 
-namespace catter::win {
+namespace catter::config {
 
 template <CharT char_t>
 constexpr char_t ENV_VAR_IPC_ID[] = {};
@@ -36,4 +36,4 @@ constexpr inline wchar_t ENV_VAR_PROXY_PATH<wchar_t>[] = L"CATTER_PROXY_PATH";
 
 using ipc_id_t = int64_t;
 
-}  // namespace catter::win
+}  // namespace catter::config

@@ -3,7 +3,7 @@
 #include <string_view>
 #include <utility>
 
-namespace catter::cmd {
+namespace catter {
 
 std::string_view name(Error::Kind kind) {
     switch(kind) {
@@ -17,4 +17,4 @@ std::string_view name(Error::Kind kind) {
     std::unreachable();
 }
 
-}  // namespace catter::cmd
+}  // namespace catter

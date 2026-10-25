@@ -13,7 +13,7 @@
 
 #include "support/encoding.h"
 
-namespace catter::core {
+namespace catter {
 namespace fs = std::filesystem;
 
 namespace {
@@ -77,15 +77,15 @@ void validate_replay_file(const ReplayFile& replay) {
 
 std::string command_cwd(const fs::path& base, const ReplayEvent& event) {
     if(!event.cwd.has_value()) {
-        return util::to_utf8(base);
+        return to_utf8(base);
     }
 
-    fs::path cwd = util::from_utf8(*event.cwd);
+    fs::path cwd = from_utf8(*event.cwd);
     if(!cwd.is_absolute()) {
         cwd = base / cwd;
     }
     cwd = cwd.lexically_normal();
-    return util::to_utf8(cwd.has_filename() ? cwd : cwd.parent_path());
+    return to_utf8(cwd.has_filename() ? cwd : cwd.parent_path());
 }
 
 /// A replay file's `parent` of 0, like an absent one, is no parent.
@@ -103,15 +103,14 @@ data::process_result to_process_result(const ReplayResult& result) {
 ReplayFile parse_replay_file(const fs::path& path) {
     std::ifstream input(path, std::ios::binary);
     if(!input) {
-        throw cpptrace::runtime_error("Failed to open replay file: " + util::to_utf8(path));
+        throw cpptrace::runtime_error("Failed to open replay file: " + to_utf8(path));
     }
     std::string content(std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{});
 
     auto replay = kota::codec::json::from_string<ReplayFile>(content);
     if(!replay.has_value()) {
-        throw cpptrace::runtime_error(std::format("Replay file is not valid: {}: {}",
-                                                  util::to_utf8(path),
-                                                  replay.error().message));
+        throw cpptrace::runtime_error(
+            std::format("Replay file is not valid: {}: {}", to_utf8(path), replay.error().message));
     }
     validate_replay_file(*replay);
     return std::move(*replay);
@@ -121,7 +120,7 @@ ReplayFile parse_replay_file(const fs::path& path) {
 
 kota::task<data::process_result> replay_build(const fs::path& path, Handler& handler) {
     const auto replay = parse_replay_file(path);
-    auto base = (path.parent_path() / util::from_utf8(replay.cwd.value_or("."))).lexically_normal();
+    auto base = (path.parent_path() / from_utf8(replay.cwd.value_or("."))).lexically_normal();
     if(!base.has_filename()) {
         base = base.parent_path();
     }
@@ -148,4 +147,4 @@ kota::task<data::process_result> replay_build(const fs::path& path, Handler& han
     co_return to_process_result(replay.finish.value_or(ReplayResult{.code = 0}));
 }
 
-}  // namespace catter::core
+}  // namespace catter

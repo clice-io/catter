@@ -13,7 +13,7 @@
 #include "command/compiler.h"
 #include "feature/path.h"
 
-namespace catter::builtin {
+namespace catter::feature {
 
 namespace {
 
@@ -39,7 +39,7 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
                                           std::string_view executable,
                                           std::span<const std::string> argv) {
     std::vector<Edge> edges;
-    if(auto compiler = cmd::analyze_compiler(executable, argv)) {
+    if(auto compiler = analyze_compiler(executable, argv)) {
         for(const auto& write: compiler->writes) {
             add(edges,
                 cwd,
@@ -50,7 +50,7 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
         }
         return edges;
     }
-    if(auto archiver = cmd::analyze_archiver(executable, argv)) {
+    if(auto archiver = analyze_archiver(executable, argv)) {
         for(const auto& write: archiver->writes) {
             add(edges, cwd, write, archiver->reads);
         }
@@ -59,4 +59,4 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
     return std::nullopt;
 }
 
-}  // namespace catter::builtin
+}  // namespace catter::feature

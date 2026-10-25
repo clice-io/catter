@@ -9,7 +9,7 @@
 #include "command/compiler.h"
 #include "command/syntax.h"
 
-namespace catter::cmd {
+namespace catter {
 
 /// One edit of a command's arguments: flags to remove from it, or to add to it, written as
 /// the command's program takes them.
@@ -42,4 +42,4 @@ std::expected<std::vector<std::string>, std::string>
                 Syntax syntax,
                 std::span<const CommandEdit> edits);
 
-}  // namespace catter::cmd
+}  // namespace catter
