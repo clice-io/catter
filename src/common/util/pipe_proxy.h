@@ -41,7 +41,7 @@ public:
 
 private:
     kota::pipe pipe{};
-    FILE* sink = nullptr;
+    FILE* sink;
     std::string name{};
     std::string output_buffer{};
     bool output_truncated = false;

@@ -17,7 +17,6 @@
 #include <kota/ipc/codec/bincode.h>
 
 #include "util/data.h"
-#include "util/enum.h"
 #include "util/log.h"
 
 namespace catter::ipc {

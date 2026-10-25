@@ -74,7 +74,7 @@ struct CatterConfig {
         help =
             "a builtin script: script::cdb, script::cmd-tree, script::target-tree or script::inspect",
         required = false)
-    <std::string> script_path;
+    <std::string> script;
 
     DecoKV(
         names = {"--handler"},

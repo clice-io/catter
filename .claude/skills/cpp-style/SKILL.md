@@ -158,7 +158,7 @@ of the build, next to that program's own runtime. They:
 
 - **Variables, member fields, function names**: `snake_case`. Class member fields do NOT use any special suffix/prefix (no trailing `_`, no `m_` prefix).
 - **Class names, template parameter names, enum names**: `PascalCase`. Exception: some types use `snake_case`, among them the plain data shared over IPC (`data::command`, `data::process_result`) — follow the existing style in the file.
-- **Enum values**: `PascalCase`. Existing enums in another style (`ActionType::skip`, `RequestType::CHECK_MODE`) keep it.
+- **Enum values**: `PascalCase`. Existing enums in another style (`RequestType::CHECK_MODE`) keep it.
 - **Acronyms stay uppercase in type names**: `OSString`, `JSON` — never `OsString`, `Json`.
 - **A file-local type is named by its role in the file**, without the
   words of the file's own subject: in an anonymous namespace, the type

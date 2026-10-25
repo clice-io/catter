@@ -103,8 +103,7 @@ std::string session_id() {
 }  // namespace
 
 kota::task<> async_run(const core::CatterConfig& config) {
-    const auto& script_path = config.script_path;
-    if(!script_path.has_value() && config.handlers.empty()) {
+    if(!config.script.has_value() && config.handlers.empty()) {
         throw cpptrace::runtime_error(
             "catter needs a script, or a handler to give the build's commands to (--handler, --connect)");
     }
@@ -119,10 +118,11 @@ kota::task<> async_run(const core::CatterConfig& config) {
     };
 
     std::unique_ptr<core::Handler> script;
-    if(script_path.has_value()) {
-        script = builtin::make(*script_path, config.script_args);
+    if(config.script.has_value()) {
+        script = builtin::make(*config.script, config.script_args);
         if(!script) {
-            throw cpptrace::runtime_error(std::format("Unknown builtin script `{}`", *script_path));
+            throw cpptrace::runtime_error(
+                std::format("Unknown builtin script `{}`", *config.script));
         }
     }
 

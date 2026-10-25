@@ -1,14 +1,10 @@
 #pragma once
 #include <filesystem>
-#include <iostream>
 #include <ranges>
 
 #include "spdlog/spdlog.h"
 
-/**
- * @file spdlog.h
- * @brief Provide spdlog logging functionality wrapped with macro
- */
+/// Logging through spdlog, wrapped in macros.
 
 #ifdef DEBUG
 #define LOG_TRACE(...) SPDLOG_TRACE(__VA_ARGS__)
@@ -46,30 +42,4 @@ inline std::string to_hex(const Range& range, size_t max_bytes = 0) {
     return hex_str;
 }
 
-inline std::string escape(const std::string& input) {
-    std::ostringstream result;
-    for(char c: input) {
-        switch(c) {
-            case '\\': result << "\\\\"; break;
-            case '"': result << "\\\""; break;
-            case '\'': result << "\\'"; break;
-            case '\n': result << "\\n"; break;
-            case '\r': result << "\\r"; break;
-            case '\t': result << "\\t"; break;
-            case '\b': result << "\\b"; break;
-            case '\f': result << "\\f"; break;
-            case '\v': result << "\\v"; break;
-            case '\0': result << "\\0"; break;
-            default:
-                if(static_cast<unsigned char>(c) < 0x20 || static_cast<unsigned char>(c) > 0x7E) {
-                    result << "\\x" << std::hex << std::setw(2) << std::setfill('0')
-                           << static_cast<int>(static_cast<unsigned char>(c));
-                } else {
-                    result << c;
-                }
-                break;
-        }
-    }
-    return result.str();
-}
 }  // namespace catter::log

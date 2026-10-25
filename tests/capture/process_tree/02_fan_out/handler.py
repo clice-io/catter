@@ -4,6 +4,8 @@ import catter
 
 
 class Handler(catter.Handler):
+    decides = True
+
     def __init__(self):
         self.seen = set()
 

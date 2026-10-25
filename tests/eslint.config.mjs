@@ -3,8 +3,7 @@ import tseslint from "typescript-eslint";
 import catter from "@catter/tools/lint";
 
 export default tseslint.config(
-    // A case's inputs are data, a script with a syntax error among them: only
-    // the test.ts files are code.
+    // A case's inputs are data: only the test.ts files are code.
     {
         ignores: ["**/*", "!**/", "!**/test.ts", "!eslint.config.mjs", "node_modules/"],
     },
