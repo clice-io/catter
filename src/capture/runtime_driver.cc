@@ -1,5 +1,6 @@
 #include "capture/runtime_driver.h"
 
+#include <cassert>
 #include <exception>
 #include <filesystem>
 #include <format>
@@ -8,7 +9,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <cpptrace/exceptions.hpp>
 
 #include "capture/replay.h"
 #include "session/ipc.h"
@@ -138,9 +138,7 @@ public:
     }
 
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
-        if(build.command.empty()) {
-            throw cpptrace::runtime_error("buildSystemCommand must not be empty");
-        }
+        assert(!build.command.empty());
 
         auto proxy_path = get_catter_root_path() / config::PROXY_EXE_NAME;
         auto pipe_name = config::session_pipe_name();
@@ -178,10 +176,7 @@ public:
     }
 
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
-        if(build.command.size() != 1) {
-            throw cpptrace::runtime_error(
-                "the command of a replayed build is its replay file alone, as --from gives it");
-        }
+        assert(build.command.size() == 1);
         auto file = from_utf8(build.cwd) / from_utf8(build.command.front());
         co_return co_await replay_build(file.lexically_normal(), handler);
     }

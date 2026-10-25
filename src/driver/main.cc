@@ -60,9 +60,10 @@ int run(int argc, char* argv[]) {
             std::println("catter: give a command\n\n{}", driver::usage_of_catter());
             return 1;
         }
-        auto entry =
-            std::ranges::find(driver::command_entries(), args.front(), &driver::CommandEntry::name);
-        if(entry == driver::command_entries().end()) {
+        auto entry = std::ranges::find(driver::subcommand_entries(),
+                                       args.front(),
+                                       &driver::SubcommandEntry::name);
+        if(entry == driver::subcommand_entries().end()) {
             std::println("catter: no command `{}`\n\n{}", args.front(), driver::usage_of_catter());
             return 1;
         }

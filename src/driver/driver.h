@@ -12,7 +12,7 @@
 namespace catter::driver {
 
 /// The subcommands, in the order `catter --help` lists them.
-enum class Command : std::uint8_t {
+enum class Subcommand : std::uint8_t {
     CompileCommands,
     Tree,
     Targets,
@@ -22,7 +22,7 @@ enum class Command : std::uint8_t {
 
 /// A subcommand as its file registers it: its name and line of `catter --help`, and what runs
 /// it on the arguments after its name, returning the exit code.
-struct CommandEntry {
+struct SubcommandEntry {
     std::string_view name;
 
     std::string_view description;
@@ -30,14 +30,14 @@ struct CommandEntry {
     int (*run)(std::span<std::string> args) = nullptr;
 };
 
-inline auto& command_entries() {
-    static std::array<CommandEntry, kota::meta::reflection<Command>::member_count> entries;
+inline auto& subcommand_entries() {
+    static std::array<SubcommandEntry, kota::meta::reflection<Subcommand>::member_count> entries;
     return entries;
 }
 
 /// Registers a subcommand, from the initializer of a variable at namespace scope of its file.
-inline bool register_command(Command command, CommandEntry entry) {
-    auto& registered = command_entries()[std::to_underlying(command)];
+inline bool register_subcommand(Subcommand subcommand, SubcommandEntry entry) {
+    auto& registered = subcommand_entries()[std::to_underlying(subcommand)];
     assert(registered.run == nullptr && "a subcommand registers once");
     registered = entry;
     return true;

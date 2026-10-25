@@ -87,7 +87,7 @@ std::string layout(const Help& help, const text::UsageDocument& document) {
 
 std::string usage_of_catter() {
     std::vector<Row> commands;
-    for(const auto& entry: command_entries()) {
+    for(const auto& entry: subcommand_entries()) {
         commands.emplace_back(std::string(entry.name), std::string(entry.description));
     }
     std::vector<std::string> sections = {

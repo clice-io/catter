@@ -45,12 +45,12 @@ int run(std::span<std::string> args) {
     return 0;
 }
 
-[[maybe_unused]] const bool registered = register_command(Command::Tree,
-                                                          {
-                                                              .name = help.name,
-                                                              .description = help.description,
-                                                              .run = run,
-                                                          });
+[[maybe_unused]] const bool registered = register_subcommand(Subcommand::Tree,
+                                                             {
+                                                                 .name = help.name,
+                                                                 .description = help.description,
+                                                                 .run = run,
+                                                             });
 
 }  // namespace
 
