@@ -19,7 +19,7 @@ of it), brings two conda packages (channel `https://conda.clice.io`):
   clang, lld (COFF, ELF, MachO, MinGW, wasm), llvm-lib and llvm-dlltool,
   which `src/command/option` includes (`<llvm-options-td/*.inc>`);
 - `xclang` — the toolchain: the clang and lld that build catter on macOS
-  and for MinGW.
+  and Windows (MinGW).
 
 They always move together:
 
@@ -30,9 +30,9 @@ They always move together:
    a C++ build error; the unit tests under
    `unittests/command/option` and the `tests/explain` cases pin the parsing.
 4. Build and run the unit tests and the cases on everything CI builds (the
-   build and test skills): Linux,
-   macOS and Windows MSVC and MinGW, debug and release. macOS and MinGW
-   are the builds xclang's clang compiles.
+   build and test skills): Linux, macOS and Windows x64, debug and
+   release, and the Windows ARM64 release. macOS and Windows are the builds
+   xclang's clang compiles.
 
 ## kotatsu
 

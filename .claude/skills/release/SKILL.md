@@ -18,8 +18,8 @@ tree. The binary reports no version. Releases so far are
 
 Nothing to operate. Every `main` push and PR run that builds packages the
 release-mode binaries its suites just validated, as workflow artifacts:
-`package-ubuntu-24.04`, `package-macos-15`, `package-windows-2025` (MSVC)
-and `package-windows-2025-mingw`, kept 30 days. To hand a fix to a user:
+`package-ubuntu-24.04`, `package-macos-15`, `package-windows-2025-mingw`
+(x64) and `package-windows-11-arm-mingw` (ARM64), kept 30 days. To hand a fix to a user:
 point them at the run's artifact (GitHub login required).
 
 ## Releasing a tag
@@ -34,9 +34,8 @@ Every step that tags or publishes needs the maintainer's explicit approval first
 3. The tag push runs the `release` job of `main.yml`, which calls
    `publish.yml`. It builds nothing: it waits for the commit's `main` run
    to finish, takes the newest green one that still has every package
-   artifact, downloads `package-windows-2025`, `package-ubuntu-24.04` and
-   `package-macos-15` (the MinGW package is not released), renames them to
-   the tag's version, and uploads them to a **draft** release (created with
+   artifact, downloads every package artifact above, renames them to the
+   tag's version, and uploads them to a **draft** release (created with
    generated notes, marked pre-release for a `-` tag; an existing release
    is reused, its assets replaced with `--clobber`). It fails loudly when no
    green run with live packages exists.
@@ -51,7 +50,7 @@ approval like any release trigger.
 ## Plumbing changes
 
 There is no separate dry run: packaging runs on every building CI run (the
-release builds of `test.yml` that name a package run `pixi run -e <env>
+release builds of `test.yml` that name a package run `pixi run -e dev
 package` in `test-target.yml` and upload the artifacts), so it is exercised
 by every code-touching PR. Only the promote glue (`publish.yml`) is release-time-only, and it has no dry run either:
 dispatching it for an existing tag replaces that release's assets.

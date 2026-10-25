@@ -29,8 +29,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ inputs.release_tag }}
-      # The packages of test.yml but MinGW's, which is not released.
-      PACKAGES: package-windows-2025 package-ubuntu-24.04 package-macos-15
+      # The packages of test.yml.
+      PACKAGES: package-windows-2025-mingw package-windows-11-arm-mingw package-ubuntu-24.04 package-macos-15
     steps:
       - name: Locate the green build run
         id: find
@@ -100,7 +100,7 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           for FILE in catter-*; do
-            NEW=$(echo "$FILE" | sed -E "s/^catter-.*-(linux|macosx|windows)-/catter-${VERSION}-\1-/")
+            NEW=$(echo "$FILE" | sed -E "s/^catter-.*-(linux|macosx|mingw)-/catter-${VERSION}-\1-/")
             [ "$FILE" = "$NEW" ] || mv "$FILE" "$NEW"
           done
           ls -l

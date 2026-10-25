@@ -8,9 +8,7 @@
 namespace catter {
 
 /// Starts a program on the streams `opts` gives it; the task waits for its
-/// exit. A coroutine passes `opts` as a variable of its own: a temporary one
-/// in the expression it awaits makes MSVC give up the tail call of symmetric
-/// transfer (error C4737 in release builds).
+/// exit.
 inline kota::task<data::process_result> run_process(const kota::process::options& opts) {
     auto spawned = kota::process::spawn(opts);
     if(!spawned) {

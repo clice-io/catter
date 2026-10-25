@@ -10,11 +10,11 @@ Catter 通过 GitHub Releases 分发预编译包。前往 [GitHub Releases](http
 
 预编译包当前支持的平台：
 
-| 平台    | 架构  |
-| ------- | ----- |
-| Windows | x64   |
-| Linux   | x64   |
-| macOS   | arm64 |
+| 平台    | 架构       |
+| ------- | ---------- |
+| Windows | x64、arm64 |
+| Linux   | x64        |
+| macOS   | arm64      |
 
 ::: info
 Catter 目前仍在积极开发中，请以 Releases 页面为准获取最新版本。如果您的平台没有预编译包，可以参阅[从源码构建](../dev/build)自行编译。

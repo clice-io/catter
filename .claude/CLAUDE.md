@@ -57,10 +57,10 @@ Decided, not yet done — write code for where it stands today, and don't build 
 
 ## Build & Test
 
-- **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, MSVC on Windows) and `mingw` (Windows, xclang for `x86_64-w64-mingw32`); `clang` (conda-forge clang 20) is a local convenience CI does not use. Modes `debug` (ASan, except MinGW), `release`, `releasedbg`.
-- `pixi run -e <env> ci-build <mode>` is what every CI build job runs: configure, build, the unit tests and `check-protocol` (the generated SDK types are up to date); `cases` jobs then run the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
+- **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, xclang for MinGW on Windows, `x86_64-w64-mingw32`, or `aarch64-w64-mingw32` with `cfg <mode> arm64`); `clang` (conda-forge clang 20, Linux and macOS) is a local convenience CI does not use. Modes `debug` (ASan, except Windows on ARM), `release`, `releasedbg`.
+- `pixi run -e dev ci-build <mode>` is what every CI build job runs: configure, build, the unit tests and `check-protocol` (the generated SDK types are up to date); `cases` jobs then run the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. Windows on ARM is cross-built on x64 Windows (`ci-cross-build`), and its unit tests and cases run on an ARM runner. The build skill has the steps one by one.
 - **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
-- CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW and a Windows ARM64 release; every one must pass.
+- CI (`test.yml`) builds debug and release on Linux, macOS and Windows x64, plus a Windows ARM64 release; every one must pass.
 - Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (`check-testing`: the types, lint and tests of `tools/` and `tests/`; `check-sdk-ts`: the types and lint of the TypeScript SDK; `check-layers`: the includes of `src/`).
 
 ## Branches and Commits

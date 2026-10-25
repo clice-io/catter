@@ -8,17 +8,14 @@
 
 ## Supported Platforms
 
-| Platform                              | Toolchain             |
-| ------------------------------------- | --------------------- |
-| Windows (win-64)                      | MSVC (VS2022)         |
-| Linux (linux-64)                      | GCC 14.2              |
-| macOS (osx-arm64)                     | xclang 23.1.2         |
-| Windows (win-64), `mingw` environment | xclang 23.1.2 (MinGW) |
-| Windows on ARM (win-64, emulated)     | MSVC, for ARM64       |
+| Platform                          | Toolchain                         |
+| --------------------------------- | --------------------------------- |
+| Linux (linux-64)                  | GCC 14.2                          |
+| macOS (osx-arm64)                 | xclang 23.1.3                     |
+| Windows (win-64)                  | xclang 23.1.3, for MinGW          |
+| Windows on ARM (win-64, emulated) | xclang 23.1.3, for MinGW on ARM64 |
 
-The `mingw` environment builds for Windows with [xclang](https://github.com/clice-io/xclang) instead of MSVC: `pixi run -e mingw cfg debug`, then `pixi run -e mingw build`.
-
-Every Windows build also makes the hook DLL of the other architecture, x64 and ARM64 both: with MSVC, install the C++ build tools for ARM64 (and on Windows on ARM, those for x64) beside the default ones in the Visual Studio Installer.
+Windows builds with [xclang](https://github.com/clice-io/xclang) for MinGW (`x86_64-w64-mingw32`); `pixi run cfg debug arm64` configures for ARM64 (`aarch64-w64-mingw32`) instead, on Windows on ARM, or on x64 Windows, which cannot run what it builds. Every Windows build also makes the hook DLL of the other architecture, x64 and ARM64 both.
 
 ## Build Commands
 

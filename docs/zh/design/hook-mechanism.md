@@ -132,7 +132,7 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 
 catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM 上，一次构建中既有原生 ARM64 工具，也有模拟运行的 x64 工具。32 位（x86）进程目前还没有对应的钩子 DLL：它不加载钩子直接运行，与没有 catter 时一样，它启动的命令也不会被捕获。catter-proxy 会记录一条警告，写明是哪个程序。
 
-两个 DLL 构建时都不启用 AddressSanitizer，并静态链接 C 运行时：它们运行在构建的每个进程中，这些进程未必带有运行时 DLL；而且 Detours 在地址空间中搜索时会读到 ASan 的影子内存（shadow memory）。
+两个 DLL 构建时都不启用 AddressSanitizer，并把 C++ 运行时链接进 DLL 本身，只导入 Windows 自带的 DLL（包括 UCRT）：它们运行在构建的每个进程中，这些进程未必带有其他运行时 DLL；而且 Detours 在地址空间中搜索时会读到 ASan 的影子内存（shadow memory）。
 
 ### 环境变量
 

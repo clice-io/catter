@@ -19,18 +19,9 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 pnpm = "*"
 # From xclang (clice-io/xclang): the option tables of clang, lld, llvm-lib
 # and llvm-dlltool, and the toolchain whose clang builds catter on macOS and
-# for MinGW.
-llvm-option-inc = "==23.1.2.4"
-xclang = "==23.1.2.4"
-
-# Bug, see https://github.com/prefix-dev/setup-pixi/issues/258
-[target.win-64.dependencies]
-vs2022_win-64 = "==19.44.35207"
-vc14_runtime = "==14.44.35208"
-ucrt = "==10.0.26100.0"
-
-[target.win-64.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "msvc"
+# Windows.
+llvm-option-inc = "==23.1.3.4"
+xclang = "==23.1.3.4"
 
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
@@ -43,6 +34,31 @@ CATTER_DEFAULT_TOOLCHAIN = "gcc"
 [target.osx.activation.env]
 CATTER_DEFAULT_TOOLCHAIN = "clang"
 
+# Windows builds with xclang for MinGW: x86_64-w64-mingw32, or
+# aarch64-w64-mingw32 with arch=arm64.
+[target.win-64.tasks.cfg]
+args = [
+    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
+    { arg = "arch", choices = ["x86_64", "arm64"], default = "x86_64" },
+]
+cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --plat=mingw --arch={{ arch }} \
+--toolchain=llvm --sdk=$CONDA_PREFIX/opt/xclang"""
+
+# What the CI build job of aarch64-w64-mingw32 runs, on x64 Windows: the
+# build alone. Its unit tests and cases run on Windows on ARM, on the
+# programs it uploads (.github/workflows/test-target.yml).
+[target.win-64.tasks.ci-cross-build]
+args = [
+    { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
+]
+depends-on = [
+    { task = "cfg", args = ["{{ mode }}", "arm64"] },
+    { task = "build" },
+]
+
+[feature.clang]
+platforms = ["linux-64", "osx-arm64"]
+
 [feature.clang.dependencies]
 clang = "==20.1.8"
 clangxx = "==20.1.8"
@@ -53,7 +69,7 @@ compiler-rt = "==20.1.8"
 [feature.clang.tasks.cfg]
 args = [
     { arg = "mode", choices = ["debug", "release"] },
-    { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc"], default = "clang" },
+    { arg = "toolchain", choices = ["clang", "gcc"], default = "clang" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ toolchain }}"""
 
@@ -93,17 +109,6 @@ depends-on = [
     { task = "cases-test", args = ["{{ mode }}"] },
 ]
 
-# Windows with xclang: the MinGW target (x86_64-w64-mingw32) instead of MSVC.
-[feature.mingw]
-platforms = ["win-64"]
-
-[feature.mingw.tasks.cfg]
-args = [
-    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-]
-cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --plat=mingw --arch=x86_64 \
---toolchain=llvm --sdk=$CONDA_PREFIX/opt/xclang"""
-
 # ============================================================================== #
 #                                    FORMAT                                      #
 # ============================================================================== #
@@ -141,7 +146,6 @@ lint-python = "ruff check ."
 dev = ["dev"]
 format = { features = ["format"], no-default-feature = true }
 clang = { features = ["dev", "clang"] }
-mingw = ["dev", "mingw"]
 
 [tasks]
 npm-install = {
@@ -160,7 +164,7 @@ build = "xmake --verbose --diagnosis"
 [tasks.cfg]
 args = [
     { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-    { arg = "toolchain", choices = ["msvc", "clang", "clang-cl", "gcc", "default"], default = "default" },
+    { arg = "toolchain", choices = ["clang", "gcc", "default"], default = "default" },
 ]
 cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
 {% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""
