@@ -1,79 +1,79 @@
 [test."$ catter script::inspect -- cl /nologo /c /FA a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "a.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "a.asm",
-      "inputs": [
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "a.asm",
-      "reason": "assembly-listing"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/FA",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/FA",
-        "a.cc"
-      ],
-      "output": "${WS}/a.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "a.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "a.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "a.asm",
+            "reason": "assembly-listing"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/FA",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/FA",
+                "a.cc"
+            ],
+            "output": "${WS}/a.asm"
+        }
+    ]
 }
 '''
 exit = 0
@@ -81,79 +81,79 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c /Fa a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "a.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "a.asm",
-      "inputs": [
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "a.asm",
-      "reason": "assembly-listing"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Fa",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Fa",
-        "a.cc"
-      ],
-      "output": "${WS}/a.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "a.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "a.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "a.asm",
+            "reason": "assembly-listing"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Fa",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Fa",
+                "a.cc"
+            ],
+            "output": "${WS}/a.asm"
+        }
+    ]
 }
 '''
 exit = 0
@@ -161,131 +161,131 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c /Faout/ a.cc b.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc",
-    "b.cc"
-  ],
-  "reads": [
-    "a.cc",
-    "b.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "b.obj",
-    "out/a.asm",
-    "out/b.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "b.obj",
-      "inputs": [
-        "b.cc"
-      ]
-    },
-    {
-      "output": "out/a.asm",
-      "inputs": [
-        "a.cc"
-      ]
-    },
-    {
-      "output": "out/b.asm",
-      "inputs": [
-        "b.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "b.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "out/a.asm",
-      "reason": "assembly-listing"
-    },
-    {
-      "path": "out/b.asm",
-      "reason": "assembly-listing"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
+    "sources": [
         "a.cc",
         "b.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "b.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
+    ],
+    "reads": [
         "a.cc",
         "b.cc"
-      ],
-      "output": "${WS}/b.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "a.cc",
-        "b.cc"
-      ],
-      "output": "${WS}/out/a.asm"
-    },
-    {
-      "directory": "${WS}",
-      "file": "b.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "a.cc",
-        "b.cc"
-      ],
-      "output": "${WS}/out/b.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "b.obj",
+        "out/a.asm",
+        "out/b.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "b.obj",
+            "inputs": [
+                "b.cc"
+            ]
+        },
+        {
+            "output": "out/a.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "out/b.asm",
+            "inputs": [
+                "b.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "out/a.asm",
+            "reason": "assembly-listing"
+        },
+        {
+            "path": "out/b.asm",
+            "reason": "assembly-listing"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/b.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/out/a.asm"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/out/b.asm"
+        }
+    ]
 }
 '''
 exit = 0
@@ -294,131 +294,131 @@ exit = 0
 differs = "Windows joins the directory of a listing and its name with a backslash"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc",
-    "b.cc"
-  ],
-  "reads": [
-    "a.cc",
-    "b.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "b.obj",
-    "out\\a.asm",
-    "out\\b.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "b.obj",
-      "inputs": [
-        "b.cc"
-      ]
-    },
-    {
-      "output": "out\\a.asm",
-      "inputs": [
-        "a.cc"
-      ]
-    },
-    {
-      "output": "out\\b.asm",
-      "inputs": [
-        "b.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "b.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "out\\a.asm",
-      "reason": "assembly-listing"
-    },
-    {
-      "path": "out\\b.asm",
-      "reason": "assembly-listing"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
+    "sources": [
         "a.cc",
         "b.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "b.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
+    ],
+    "reads": [
         "a.cc",
         "b.cc"
-      ],
-      "output": "${WS}/b.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "a.cc",
-        "b.cc"
-      ],
-      "output": "${WS}/out/a.asm"
-    },
-    {
-      "directory": "${WS}",
-      "file": "b.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "a.cc",
-        "b.cc"
-      ],
-      "output": "${WS}/out/b.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "b.obj",
+        "out\\a.asm",
+        "out\\b.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "b.obj",
+            "inputs": [
+                "b.cc"
+            ]
+        },
+        {
+            "output": "out\\a.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "out\\b.asm",
+            "inputs": [
+                "b.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "out\\a.asm",
+            "reason": "assembly-listing"
+        },
+        {
+            "path": "out\\b.asm",
+            "reason": "assembly-listing"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/b.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/out/a.asm"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "a.cc",
+                "b.cc"
+            ],
+            "output": "${WS}/out/b.asm"
+        }
+    ]
 }
 '''
 exit = 0
@@ -426,75 +426,75 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c /Fax.asm a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "x.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "x.asm",
-      "inputs": [
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Fax.asm",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Fax.asm",
-        "a.cc"
-      ],
-      "output": "${WS}/x.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "x.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "x.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Fax.asm",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Fax.asm",
+                "a.cc"
+            ],
+            "output": "${WS}/x.asm"
+        }
+    ]
 }
 '''
 exit = 0
@@ -502,81 +502,81 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c /Faout/ /Fa a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj",
-    "a.asm"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
-        "a.cc"
-      ]
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
     },
-    {
-      "output": "a.asm",
-      "inputs": [
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    },
-    {
-      "path": "a.asm",
-      "reason": "assembly-listing"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "/Fa",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    },
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Faout/",
-        "/Fa",
-        "a.cc"
-      ],
-      "output": "${WS}/a.asm"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj",
+        "a.asm"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "a.asm",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "a.asm",
+            "reason": "assembly-listing"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "/Fa",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Faout/",
+                "/Fa",
+                "a.cc"
+            ],
+            "output": "${WS}/a.asm"
+        }
+    ]
 }
 '''
 exit = 0

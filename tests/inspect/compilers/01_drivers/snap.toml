@@ -1,48 +1,48 @@
 [test."$ catter script::inspect -- gcc -c a.c -o a.o"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "linux",
-    "objectFormat": "elf",
-    "artifactModel": "elf",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
-        "a.c",
-        "-o",
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
         "a.o"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -51,48 +51,48 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "darwin",
-    "objectFormat": "macho",
-    "artifactModel": "macho",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
-        "a.c",
-        "-o",
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
         "a.o"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -101,48 +101,48 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "windows",
-    "objectFormat": "coff",
-    "artifactModel": "coff-gnu",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
-        "a.c",
-        "-o",
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
         "a.o"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -150,52 +150,52 @@ exit = 0
 [test."$ catter script::inspect -- clang++ -c a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:clang",
-  "dialect": "clang",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "linux",
-    "objectFormat": "elf",
-    "artifactModel": "elf",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "clang++",
-        "-c",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang++",
+                "-c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -204,52 +204,52 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:clang",
-  "dialect": "clang",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "darwin",
-    "objectFormat": "macho",
-    "artifactModel": "macho",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "clang++",
-        "-c",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang++",
+                "-c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -258,52 +258,52 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:clang",
-  "dialect": "clang",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "windows",
-    "objectFormat": "coff",
-    "artifactModel": "coff-gnu",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "clang++",
-        "-c",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang++",
+                "-c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -311,50 +311,50 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c /Foa.obj a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
-        "/Foa.obj",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Foa.obj",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
 }
 '''
 exit = 0
@@ -362,17 +362,17 @@ exit = 0
 [test."$ catter script::inspect -- nvcc -c a.cu -o a.o"]
 stdout = '''
 {
-  "analyzer": null,
-  "errors": [
-    {
-      "kind": "compiler-unsupported",
-      "message": "compiler dialect is not supported yet: nvcc"
-    },
-    {
-      "kind": "archiver-not-recognized",
-      "message": "not a recognized archiver executable: nvcc"
-    }
-  ]
+    "analyzer": null,
+    "errors": [
+        {
+            "kind": "compiler-unsupported",
+            "message": "compiler dialect is not supported yet: nvcc"
+        },
+        {
+            "kind": "archiver-not-recognized",
+            "message": "not a recognized archiver executable: nvcc"
+        }
+    ]
 }
 '''
 exit = 0

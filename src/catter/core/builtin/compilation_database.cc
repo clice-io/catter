@@ -77,31 +77,12 @@ std::vector<JSON> read(std::string_view path, const fs::path& file) {
     }
     std::string text(std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{});
 
-    // As JavaScript trims it: spaces, line ends and a byte order mark.
-    constexpr std::string_view blanks = " \t\n\v\f\r";
-    constexpr std::string_view bom = "\xEF\xBB\xBF";
     std::string_view content = text;
-    while(true) {
-        const auto before = content.size();
-        content.remove_prefix(std::min(content.find_first_not_of(blanks), content.size()));
-        if(content.starts_with(bom)) {
-            content.remove_prefix(bom.size());
-        }
-        if(content.size() == before) {
-            break;
-        }
+    // A byte order mark, which editors on Windows may begin the file with.
+    if(content.starts_with("\xEF\xBB\xBF")) {
+        content.remove_prefix(3);
     }
-    while(true) {
-        const auto before = content.size();
-        content.remove_suffix(content.size() - (content.find_last_not_of(blanks) + 1));
-        if(content.ends_with(bom)) {
-            content.remove_suffix(bom.size());
-        }
-        if(content.size() == before) {
-            break;
-        }
-    }
-    if(content.empty()) {
+    if(content.find_first_not_of(" \t\n\r") == std::string_view::npos) {
         return {};
     }
 

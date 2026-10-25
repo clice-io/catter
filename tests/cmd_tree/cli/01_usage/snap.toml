@@ -8,7 +8,7 @@ Usage:
 Options:
   -d, --depth <n>     Limit render depth.
   -a, --args <n>      Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]
-  -w, --argWidth <n>  Limit the display width of each argument. [default: 10]
+  -w, --argWidth <n>  Cut each longer argument in its middle to this many characters. [default: 10]
   -h, --help          Print this help message.
 '''
 exit = 0
@@ -25,7 +25,7 @@ Usage:
 Options:
   -d, --depth <n>     Limit render depth.
   -a, --args <n>      Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]
-  -w, --argWidth <n>  Limit the display width of each argument. [default: 10]
+  -w, --argWidth <n>  Cut each longer argument in its middle to this many characters. [default: 10]
   -h, --help          Print this help message.
 '''
 exit = 1

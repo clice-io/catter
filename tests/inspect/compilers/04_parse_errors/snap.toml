@@ -1,17 +1,17 @@
 [test."$ catter script::inspect -- gcc -c a.c -o"]
 stdout = '''
 {
-  "analyzer": null,
-  "errors": [
-    {
-      "kind": "compiler-parse",
-      "message": "fatal error in parsing: failed to parse `-o` (arg #3) : missing argument value"
-    },
-    {
-      "kind": "archiver-not-recognized",
-      "message": "not a recognized archiver executable: gcc"
-    }
-  ]
+    "analyzer": null,
+    "errors": [
+        {
+            "kind": "compiler-parse",
+            "message": "fatal error in parsing: failed to parse `-o` (arg #3) : missing argument value"
+        },
+        {
+            "kind": "archiver-not-recognized",
+            "message": "not a recognized archiver executable: gcc"
+        }
+    ]
 }
 '''
 exit = 0
@@ -19,17 +19,17 @@ exit = 0
 [test."$ catter script::inspect -- clang -x"]
 stdout = '''
 {
-  "analyzer": null,
-  "errors": [
-    {
-      "kind": "compiler-parse",
-      "message": "fatal error in parsing: failed to parse `-x` (arg #1) : missing argument value"
-    },
-    {
-      "kind": "archiver-not-recognized",
-      "message": "not a recognized archiver executable: clang"
-    }
-  ]
+    "analyzer": null,
+    "errors": [
+        {
+            "kind": "compiler-parse",
+            "message": "fatal error in parsing: failed to parse `-x` (arg #1) : missing argument value"
+        },
+        {
+            "kind": "archiver-not-recognized",
+            "message": "not a recognized archiver executable: clang"
+        }
+    ]
 }
 '''
 exit = 0

@@ -1,52 +1,52 @@
 [test."$ catter script::inspect -- gcc -c a.c"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "linux",
-    "objectFormat": "elf",
-    "artifactModel": "elf",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
+    ],
+    "reads": [
         "a.c"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -55,52 +55,52 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "darwin",
-    "objectFormat": "macho",
-    "artifactModel": "macho",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
+    ],
+    "reads": [
         "a.c"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -109,52 +109,52 @@ exit = 0
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "os": "windows",
-    "objectFormat": "coff",
-    "artifactModel": "coff-gnu",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.o",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "gcc",
-        "-c",
+    ],
+    "reads": [
         "a.c"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -163,32 +163,32 @@ exit = 0
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132)"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "link",
-  "artifact": "exe",
-  "target": {
-    "os": "linux",
-    "objectFormat": "elf",
-    "artifactModel": "elf",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [],
-  "edges": [],
-  "diagnostics": [
-    {
-      "code": "implicit-output-unresolved",
-      "message": "cannot infer implicit output for gcc link/exe"
-    }
-  ],
-  "entries": []
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "diagnostics": [
+        {
+            "code": "implicit-output-unresolved",
+            "message": "cannot infer implicit output for gcc link/exe"
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -197,32 +197,32 @@ exit = 0
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "link",
-  "artifact": "exe",
-  "target": {
-    "os": "darwin",
-    "objectFormat": "macho",
-    "artifactModel": "macho",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [],
-  "edges": [],
-  "diagnostics": [
-    {
-      "code": "implicit-output-unresolved",
-      "message": "cannot infer implicit output for gcc link/exe"
-    }
-  ],
-  "entries": []
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "diagnostics": [
+        {
+            "code": "implicit-output-unresolved",
+            "message": "cannot infer implicit output for gcc link/exe"
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -231,32 +231,32 @@ exit = 0
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "link",
-  "artifact": "exe",
-  "target": {
-    "os": "windows",
-    "objectFormat": "coff",
-    "artifactModel": "coff-gnu",
-    "from": "host-fallback"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [],
-  "edges": [],
-  "diagnostics": [
-    {
-      "code": "implicit-output-unresolved",
-      "message": "cannot infer implicit output for gcc link/exe"
-    }
-  ],
-  "entries": []
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [],
+    "edges": [],
+    "diagnostics": [
+        {
+            "code": "implicit-output-unresolved",
+            "message": "cannot infer implicit output for gcc link/exe"
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -264,55 +264,55 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /c a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.obj"
-  ],
-  "edges": [
-    {
-      "output": "a.obj",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.obj",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/c",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.obj"
-    }
-  ]
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
 }
 '''
 exit = 0

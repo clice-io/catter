@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "name": "arguments past ASCII: cut at -w 10 and quoted",
+  "cwd": ".",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 1,
+      "exe": "tool",
+      "argv": [
+        "tool",
+        "😀😀😀😀😀😀😀😀😀😀😀😀",
+        "中文参数中文参数中文参数",
+        "é-é-é-é-é-é",
+        "no break",
+        "wide　space",
+        "tab\there"
+      ]
+    }
+  ],
+  "finish": {
+    "code": 0
+  }
+}

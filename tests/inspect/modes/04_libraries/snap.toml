@@ -1,35 +1,35 @@
 [test."$ catter script::inspect -- x86_64-linux-gnu-gcc -shared a.o -o libx.so"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "link",
-  "artifact": "shared",
-  "target": {
-    "triple": "x86_64-linux-gnu",
-    "os": "linux",
-    "objectFormat": "elf",
-    "env": "gnu",
-    "artifactModel": "elf",
-    "from": "executable-prefix"
-  },
-  "sources": [],
-  "reads": [
-    "a.o"
-  ],
-  "writes": [
-    "libx.so"
-  ],
-  "edges": [
-    {
-      "output": "libx.so",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "link",
+    "artifact": "shared",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "executable-prefix"
+    },
+    "sources": [],
+    "reads": [
         "a.o"
-      ]
-    }
-  ],
-  "entries": []
+    ],
+    "writes": [
+        "libx.so"
+    ],
+    "edges": [
+        {
+            "output": "libx.so",
+            "inputs": [
+                "a.o"
+            ]
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -37,37 +37,37 @@ exit = 0
 [test."$ catter script::inspect -- x86_64-linux-gnu-gcc -r a.o b.o -o c.o"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "relocatable-link",
-  "artifact": "object",
-  "target": {
-    "triple": "x86_64-linux-gnu",
-    "os": "linux",
-    "objectFormat": "elf",
-    "env": "gnu",
-    "artifactModel": "elf",
-    "from": "executable-prefix"
-  },
-  "sources": [],
-  "reads": [
-    "a.o",
-    "b.o"
-  ],
-  "writes": [
-    "c.o"
-  ],
-  "edges": [
-    {
-      "output": "c.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "relocatable-link",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "executable-prefix"
+    },
+    "sources": [],
+    "reads": [
         "a.o",
         "b.o"
-      ]
-    }
-  ],
-  "entries": []
+    ],
+    "writes": [
+        "c.o"
+    ],
+    "edges": [
+        {
+            "output": "c.o",
+            "inputs": [
+                "a.o",
+                "b.o"
+            ]
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -75,35 +75,35 @@ exit = 0
 [test."$ catter script::inspect -- clang --target=x86_64-linux-gnu --emit-static-lib a.o -o libx.a"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:clang",
-  "dialect": "clang",
-  "phase": "archive",
-  "artifact": "static-lib",
-  "target": {
-    "triple": "x86_64-linux-gnu",
-    "os": "linux",
-    "objectFormat": "elf",
-    "env": "gnu",
-    "artifactModel": "elf",
-    "from": "argument"
-  },
-  "sources": [],
-  "reads": [
-    "a.o"
-  ],
-  "writes": [
-    "libx.a"
-  ],
-  "edges": [
-    {
-      "output": "libx.a",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "archive",
+    "artifact": "static-lib",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [],
+    "reads": [
         "a.o"
-      ]
-    }
-  ],
-  "entries": []
+    ],
+    "writes": [
+        "libx.a"
+    ],
+    "edges": [
+        {
+            "output": "libx.a",
+            "inputs": [
+                "a.o"
+            ]
+        }
+    ],
+    "entries": []
 }
 '''
 exit = 0
@@ -111,55 +111,55 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /LD a.cc"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "link",
-  "artifact": "shared",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.dll"
-  ],
-  "edges": [
-    {
-      "output": "a.dll",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "link",
+    "artifact": "shared",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "inferred": [
-    {
-      "path": "a.dll",
-      "reason": "default-output"
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/LD",
+    ],
+    "reads": [
         "a.cc"
-      ],
-      "output": "${WS}/a.dll"
-    }
-  ]
+    ],
+    "writes": [
+        "a.dll"
+    ],
+    "edges": [
+        {
+            "output": "a.dll",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.dll",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/LD",
+                "a.cc"
+            ],
+            "output": "${WS}/a.dll"
+        }
+    ]
 }
 '''
 exit = 0
@@ -167,50 +167,50 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo /LDd a.cc /Fe:x.dll"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "link",
-  "artifact": "shared",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "x.dll"
-  ],
-  "edges": [
-    {
-      "output": "x.dll",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "link",
+    "artifact": "shared",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "/LDd",
-        "a.cc",
-        "/Fe:x.dll"
-      ],
-      "output": "${WS}/x.dll"
-    }
-  ]
+    ],
+    "reads": [
+        "a.cc"
+    ],
+    "writes": [
+        "x.dll"
+    ],
+    "edges": [
+        {
+            "output": "x.dll",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/LDd",
+                "a.cc",
+                "/Fe:x.dll"
+            ],
+            "output": "${WS}/x.dll"
+        }
+    ]
 }
 '''
 exit = 0
@@ -218,54 +218,54 @@ exit = 0
 [test."$ catter script::inspect -- cl /nologo a.cc /link /out:app.exe lib.lib /dll"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:msvc",
-  "dialect": "msvc",
-  "phase": "link",
-  "artifact": "shared",
-  "target": {
-    "triple": "unknown-pc-windows-msvc",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "msvc",
-    "artifactModel": "coff-msvc",
-    "from": "driver-default"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc",
-    "lib.lib"
-  ],
-  "writes": [
-    "app.exe"
-  ],
-  "edges": [
-    {
-      "output": "app.exe",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "link",
+    "artifact": "shared",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cc"
+    ],
+    "reads": [
         "a.cc",
         "lib.lib"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "cl",
-        "/nologo",
-        "a.cc",
-        "/link",
-        "/out:app.exe",
-        "lib.lib",
-        "/dll"
-      ],
-      "output": "${WS}/app.exe"
-    }
-  ]
+    ],
+    "writes": [
+        "app.exe"
+    ],
+    "edges": [
+        {
+            "output": "app.exe",
+            "inputs": [
+                "a.cc",
+                "lib.lib"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "a.cc",
+                "/link",
+                "/out:app.exe",
+                "lib.lib",
+                "/dll"
+            ],
+            "output": "${WS}/app.exe"
+        }
+    ]
 }
 '''
 exit = 0
