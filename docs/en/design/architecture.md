@@ -74,7 +74,7 @@ sequenceDiagram
 "How to handle a command" is expressed at two layers in catter:
 
 1. **Script layer** (what scripts see): `skip` / `drop` / `abort` / `modify` -- semantic and independent of the mechanism.
-2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` -- the concrete execution mechanics.
+2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` / `FAIL` -- the concrete execution mechanics.
 
 The runtime driver maps script-layer actions to protocol-layer actions. The current `inject` runtime mapping:
 
@@ -82,13 +82,14 @@ The runtime driver maps script-layer actions to protocol-layer actions. The curr
 | ------------- | ----------------------------------------- | -------------------------------------------------------------------- |
 | `skip`        | Execute as-is, catter does not intervene  | `INJECT` (run with hooks mounted; descendants can still be captured) |
 | `drop`        | Do not execute; return exit code 0        | `DROP`                                                               |
-| `abort`       | Abort the whole build and report an error | not implemented yet (see below)                                      |
+| `abort`       | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)       |
 | `modify`      | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
 
-Two things are easy to confuse:
+Keep in mind:
 
 - **`skip` is not "ignore the whole subtree"**. `skip` only lets this command run as-is; its descendants are still captured and still trigger callbacks. To skip a subtree, call `ctx.ignoreDescendants()` explicitly.
-- **Not every runtime supports every action**. Scripts should check `config.runtime.supportActions`. For example, `inject` currently supports `[skip, drop, modify]`; `abort` has defined script-layer semantics but is not yet supported by any runtime, and using it will fail.
+- **Not every runtime supports every action**. Scripts should check `config.runtime.supportActions`; `inject` supports all four.
+- **`abort` ends the session**, as an exception thrown from a callback does: the command, and every command the build starts after it, fail without running, and once the build has ended catter prints the reason and exits 1.
 
 ## Components and processes
 

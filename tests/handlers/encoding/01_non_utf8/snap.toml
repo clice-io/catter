@@ -1,0 +1,11 @@
+[modify."$ catter --handler \"python handler.py\" -- python build.py"]
+stdout = "ran with [b'caf\\xe9', b'caf\\xe9-added']"
+stderr = '''
+command 2 has b'caf\xe9'
+error 3 is about './broken caf�'
+'''
+exit = 0
+
+[abort."$ catter --handler \"python abort.py\" -- python build.py"]
+stdout = "Handler `python abort.py` aborted the build at command 2: caf� must not run"
+exit = 1

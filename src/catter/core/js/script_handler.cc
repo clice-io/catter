@@ -1,7 +1,9 @@
 #include "script_handler.h"
 
 #include <expected>
+#include <format>
 #include <utility>
+#include <cpptrace/exceptions.hpp>
 
 #include "js.h"
 
@@ -11,7 +13,7 @@ namespace {
 
 /// The runtime scripts see: inject's, which replay plays a build back as.
 const CatterRuntime runtime{
-    .supportActions = {ActionType::drop, ActionType::skip, ActionType::modify},
+    .supportActions = {ActionType::drop, ActionType::skip, ActionType::abort, ActionType::modify},
     .type = CatterRuntime::Type::inject,
     .supportParentId = true,
 };
@@ -40,11 +42,14 @@ core::StdioMode to_core(CatterOptions::StdioMode mode) {
     std::unreachable();
 }
 
-core::Action to_core(Action action) {
+core::Action to_core(data::ipcid_t id, Action action) {
     switch(action.type()) {
         case ActionType::skip: return {.type = core::Action::Type::Skip};
         case ActionType::drop: return {.type = core::Action::Type::Drop};
-        case ActionType::abort: return {.type = core::Action::Type::Abort};
+        case ActionType::abort: {
+            throw cpptrace::runtime_error(
+                std::format("The script aborted the build at command {}", id));
+        }
         case ActionType::modify: {
             auto& data = action.get<ActionType::modify>().data;
             return {
@@ -101,7 +106,7 @@ kota::task<core::Action> ScriptHandler::on_command(data::ipcid_t id,
                                               .runtime = runtime,
                                               .parent = parent,
                                           });
-    co_return to_core(std::move(action));
+    co_return to_core(id, std::move(action));
 }
 
 kota::task<> ScriptHandler::on_error(data::ipcid_t id,

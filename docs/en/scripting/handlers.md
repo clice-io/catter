@@ -1,0 +1,122 @@
+# Handlers
+
+A handler is a program that catter tells about the commands a build starts. A handler that **decides** answers each command before it runs: run it as it is, run another command in its place, drop it, or abort the build. A handler that does not decide only **observes**: it is told, and the build never waits for it.
+
+catter speaks to a handler over a small protocol (see [Handler protocol](../design/handler-protocol.md)), so a handler can be written in any language. The SDKs for Python and TypeScript do the protocol for you.
+
+## Running a handler
+
+```bash
+catter --handler "python handler.py" -- make
+```
+
+catter starts the handler, speaks to it over the handler's stdin and stdout, and ends it when the build is over. What the handler prints on stderr shows in the terminal. The handler runs outside the build: the programs it starts are not captured.
+
+On Linux and macOS the command is split into words as a POSIX shell splits them, without expanding anything; on Windows it goes to the program as it is, as a Windows command line does.
+
+A handler that already runs, listening on a TCP port, is reached with `--connect`:
+
+```bash
+catter --connect 127.0.0.1:9000 -- make
+```
+
+This suits a handler run under a debugger, or one that serves several builds in turn. The host is an IP address, or `localhost`, for which catter tries `127.0.0.1`, then `::1`. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
+
+### Options
+
+| Option                        | Description                                                                                                         | Default |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- |
+| `--handler <command>`         | A handler for catter to start. May be given more than once.                                                         |         |
+| `--connect <host:port>`       | A handler listening at the address. May be given more than once.                                                    |         |
+| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                 |         |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over. `0` waits as long as it takes. | `60`    |
+
+## The SDKs
+
+The SDKs are not published yet: they are in catter's repository, under `sdk/`, and run from a checkout of it. A Python handler finds the `catter` package once `sdk/python` is on `PYTHONPATH`, and needs Python 3.10 or later. A TypeScript handler imports `@catter/sdk` through a symbolic link to `sdk/typescript` at `node_modules/@catter/sdk`, once `pixi run -e dev npm-install` has installed the SDK's own dependencies, and needs Node.js 22.18 or later, which runs TypeScript as it is.
+
+## Writing a handler in Python
+
+The Python SDK uses the standard library alone. A handler subclasses `catter.Handler` and overrides the callbacks it needs:
+
+```python
+import catter
+
+
+class Handler(catter.Handler):
+    decides = True
+
+    def on_command(self, command):
+        if "-O0" in command.args:
+            return catter.Modify(args=[*command.args, "-g"])
+        if command.args[0].endswith("ranlib"):
+            return catter.Drop()
+        return None  # run it as it is
+
+
+catter.serve(Handler())
+```
+
+| Callback              | When                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `on_start(session)`   | The session starts: its build command and working directory, and how commands are captured. |
+| `on_command(command)` | A command is about to run. A handler that decides returns its action.                       |
+| `on_error(error)`     | catter could not capture a command.                                                         |
+| `on_exit(exit)`       | A command has run: its exit code and how long it took.                                      |
+| `on_finish(finish)`   | The build has ended, with its exit code.                                                    |
+
+A handler is told only of the events whose callback it overrides. `env = True` makes commands carry their environment.
+
+The actions are `catter.Skip()` (the same as returning `None`), `catter.Drop()` (the command does not run, and exits 0), `catter.Abort(reason=...)`, and `catter.Modify(args=..., executable=..., cwd=..., env=...)`, which needs `args`: the other fields left out keep the command's own.
+
+Once `catter` is imported, what the handler prints goes to stderr: its stdout carries the protocol. Once `serve()` runs, the handler and the programs it starts read the null device as stdin, which carries the protocol too. Arguments, paths and environment entries are strings; bytes that are not UTF-8 appear as lone surrogates, as `os.fsdecode` spells them, and reach the command unchanged when handed back.
+
+To serve catter's `--connect`, listen on a port and serve the session of each catter that connects:
+
+```python
+with catter.listen(port=9000) as listener:
+    while True:
+        listener.accept(Handler())
+```
+
+## Writing a handler in TypeScript
+
+The TypeScript SDK, `@catter/sdk`, runs on Node.js:
+
+```ts
+import { serve } from "@catter/sdk";
+
+await serve({
+  decides: true,
+  onCommand(command) {
+    if (command.args.includes("-O0")) {
+      return { action: "modify", args: [...command.args, "-g"] };
+    }
+    return undefined; // run it as it is
+  },
+});
+```
+
+The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as in Python. An argument that is not UTF-8 comes as `{ base64 }`, which a command handed back keeps. For `--connect`, `listen(port)` returns a listener, whose `accept(handler)` serves the session of the next catter that connects.
+
+Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdin and stdout carry the protocol: a handler started by catter must not read `process.stdin` nor write to `process.stdout`, nor let a program it starts inherit either.
+
+## Several handlers
+
+`--handler` and `--connect` may be given more than once, and with a script:
+
+```bash
+catter --handler "python observe.py" --handler "python decide.py" script::cdb -o compile_commands.json -- make
+```
+
+The handlers form a chain, in a fixed order: the script first, then the handlers in the order of the command line. Each command goes to them in turn, each seeing it as the ones before left it, until one drops it; a handler after it never sees a dropped command. Put an observer that should see every command first.
+
+## When a handler fails
+
+A handler that aborts the build, raises in a callback, exits, writes what is not an answer to catter's requests, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
+
+```
+Handler `python handler.py` did not answer command 12 within 60 s
+```
+
+A handler started by catter that does not exit within the timeout once the session is over is ended. The build never waits for an observer, but one that falls behind must catch up within the timeout once the build has ended: that is when it answers `finish`.

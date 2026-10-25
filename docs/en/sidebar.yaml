@@ -19,6 +19,7 @@ scripting:
   label: Scripting
   items:
     - overview
+    - handlers
 
 design:
   label: Design
@@ -29,6 +30,7 @@ design:
       label: "inject implementation: hook mechanism"
     - file: ipc-protocol
       label: "inject implementation: IPC protocol"
+    - handler-protocol
 
 dev:
   label: Development

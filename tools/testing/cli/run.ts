@@ -181,8 +181,12 @@ function asanDllDirectory(env: NodeJS.ProcessEnv): string | undefined {
 let base: NodeJS.ProcessEnv | undefined;
 
 /// The environment every command of a test runs in, but for catter's data
-/// directory: the runner's own, the developer prompt on Windows, and the
-/// directory of the sanitizer runtime a sanitized catter needs there.
+/// directory: the runner's own, the developer prompt on Windows, the
+/// directory of the sanitizer runtime a sanitized catter needs there, and
+/// what a handler under test needs: the catter it may start
+/// (CATTER_EXECUTABLE) and the Python SDK (`import catter`), in a Python
+/// that writes UTF-8, as catter does, and not Windows' ANSI code page, which
+/// cannot spell the copy's root, and no bytecode beside the SDK.
 export function testEnvironment(): NodeJS.ProcessEnv {
     if (base !== undefined) {
         return base;
@@ -203,6 +207,12 @@ export function testEnvironment(): NodeJS.ProcessEnv {
             env["PATH"] = [dll, env["PATH"] ?? ""].join(path.delimiter);
         }
     }
+    env["CATTER_EXECUTABLE"] = catterExecutable();
+    env["PYTHONPATH"] = [path.join(REPO_ROOT, "sdk", "python"), env["PYTHONPATH"]]
+        .filter((entry) => entry !== undefined && entry !== "")
+        .join(path.delimiter);
+    env["PYTHONUTF8"] = "1";
+    env["PYTHONDONTWRITEBYTECODE"] = "1";
     base = env;
     return env;
 }

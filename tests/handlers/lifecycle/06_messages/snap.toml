@@ -1,0 +1,18 @@
+[decides."$ catter -m replay --handler \"python handler.py decides\" -- events.json"]
+stderr = '''
+initialize: request
+command: request 1
+command: request 2
+finish: request
+'''
+exit = 0
+
+[observes."$ catter -m replay --handler \"python handler.py observes\" -- events.json"]
+stderr = '''
+initialize: request
+command: notification 1
+command: notification 2
+exit: notification 2
+finish: request
+'''
+exit = 0

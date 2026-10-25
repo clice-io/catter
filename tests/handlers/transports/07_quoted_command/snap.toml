@@ -1,0 +1,3 @@
+[test."$ catter --handler \"python \\\"中文 handler.py\\\"\" -- node -e 0"]
+stderr = "started for ['node', '-e', '0']"
+exit = 0

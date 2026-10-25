@@ -3,17 +3,23 @@
 ## catter 命令行
 
 ```
-catter [options] <script> [script-args] -- <build-command>
+catter [options] [<script> [script-args]] -- <build-command>
 ```
+
+一次运行可以使用一个脚本、一个或多个 [handler](../scripting/handlers.md)，或两者兼用。
 
 ### 选项
 
-| 选项                  | 说明                                                                                                       | 默认值    |
-| --------------------- | ---------------------------------------------------------------------------------------------------------- | --------- |
-| `-m, --mode <mode>`   | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject`  |
-| `-d, --dir <path>`    | 目标进程的工作目录。                                                                                       | 当前目录  |
-| `--stdio-mode <mode>` | 子进程标准输入输出的处理方式，见下文。                                                                     | `inherit` |
-| `-h, --help`          | 显示帮助信息。                                                                                             |           |
+| 选项                          | 说明                                                                                                       | 默认值    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | --------- |
+| `-m, --mode <mode>`           | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject`  |
+| `-d, --dir <path>`            | 目标进程的工作目录。                                                                                       | 当前目录  |
+| `--stdio-mode <mode>`         | 子进程标准输入输出的处理方式，见下文。                                                                     | `inherit` |
+| `--handler <command>`         | 由 catter 启动的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                             |           |
+| `--connect <host:port>`       | 在该地址监听的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                               |           |
+| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                |           |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                             | `60`      |
+| `-h, --help`                  | 显示帮助信息。                                                                                             |           |
 
 ### 数据目录
 

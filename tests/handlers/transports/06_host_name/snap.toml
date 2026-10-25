@@ -1,0 +1,7 @@
+["host name"."$ catter --connect example.com:9000 -- node -e 0"]
+stdout = "`example.com:9000` names no IP address: give --connect the handler's IP address and port"
+exit = 1
+
+["no host"."$ catter --connect :9000 -- node -e 0"]
+stdout = "`:9000` names no IP address: give --connect the handler's IP address and port"
+exit = 1

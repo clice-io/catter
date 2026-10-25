@@ -129,8 +129,6 @@ end
 add_requires("quickjs-ng", {version = "v0.15.0"})
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 add_requires("kotatsu")
--- The backend of kotatsu's JSON codec, whose headers need nothing else.
-add_requires("simdjson v4.2.4")
 
 
 target("common-option")
@@ -291,7 +289,6 @@ target("catter-core")
     add_local_prefix_includedirs()
     add_includedirs("src/catter/core", {public = true})
     add_packages("quickjs-ng", {public = true})
-    add_packages("simdjson", {public = true})
 
     add_deps("common", "catter-js-runtime", "catter-js-scripts")
 
@@ -307,6 +304,14 @@ target("catter")
         add_ldflags("-municode", {force = true})
     end
 
+
+target("catter-protocol-schema")
+    set_kind("binary")
+    -- Prints the schema the SDKs' protocol types are generated from.
+    add_local_prefix_includedirs()
+    add_includedirs("src/catter/core")
+    add_deps("common-util")
+    add_files("src/catter-protocol-schema/main.cc")
 
 target("catter-hook-win64")
     set_default(is_plat("windows", "mingw"))
@@ -633,6 +638,11 @@ package("kotatsu")
 
     add_deps("libuv v1.52.0")
     add_deps("cpptrace v1.0.4")
+    -- The JSON codec and kota::ipc::JsonPeer, which catter speaks to handlers
+    -- with. A config, not only an install option, so that it is part of the
+    -- package's hash and a cached build without it is not reused.
+    add_configs("codec_simdjson", {description = "Build the JSON codec.", default = true, type = "boolean"})
+    add_deps("simdjson v4.2.4")
 
     on_install(function (package)
         if package:has_tool("cxx", "cl", "clang_cl") then
@@ -651,6 +661,7 @@ package("kotatsu")
         configs.ztest = true
         -- http defaults on upstream and would pull in libcurl and OpenSSL.
         configs.http = false
+        configs.codec_simdjson = package:config("codec_simdjson")
         import("package.tools.xmake").install(package, configs, {target = "kotatsu"})
     end)
 

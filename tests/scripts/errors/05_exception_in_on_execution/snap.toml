@@ -1,0 +1,13 @@
+[test."$ catter script.js -- node build.mjs"]
+stdout = '''
+fails: exit 3
+after it: exit 1
+JavaScript Error: command 2 exited with 3
+JavaScript Stack trace:
+    at <anonymous> (${WS}/script.js:5:15)
+    at <anonymous> (catter/service:1:4421)
+    at <anonymous> (catter/service:1:4449)
+    at execution (catter/service:1:2439)
+    at <anonymous> (catter/service:1:4899)
+'''
+exit = 1

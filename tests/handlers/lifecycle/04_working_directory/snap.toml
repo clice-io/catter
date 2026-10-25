@@ -1,0 +1,7 @@
+[test."$ catter --handler \"python handler.py\" -- node -e 0"]
+stderr = '''
+listed: dir, file.txt
+removed: True
+printed by a program the handler started
+'''
+exit = 0

@@ -1,0 +1,8 @@
+[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+stdout = '''
+first: exit 0
+second: exit 1
+third: exit 1
+Handler `python handler.py` stopped before it answered command 3
+'''
+exit = 1

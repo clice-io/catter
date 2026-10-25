@@ -3,17 +3,23 @@
 ## catter CLI
 
 ```
-catter [options] <script> [script-args] -- <build-command>
+catter [options] [<script> [script-args]] -- <build-command>
 ```
+
+A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
 
 ### Options
 
-| Option                | Description                                                                                                                                                     | Default           |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `-m, --mode <mode>`   | Runtime mode: `inject` runs the build command and intercepts its processes; `replay` plays a recorded build, whose events file stands in for the build command. | `inject`          |
-| `-d, --dir <path>`    | Working directory for the target process.                                                                                                                       | Current directory |
-| `--stdio-mode <mode>` | How to handle child process stdio. See below.                                                                                                                   | `inherit`         |
-| `-h, --help`          | Show help message.                                                                                                                                              |                   |
+| Option                        | Description                                                                                                                                                     | Default           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `-m, --mode <mode>`           | Runtime mode: `inject` runs the build command and intercepts its processes; `replay` plays a recorded build, whose events file stands in for the build command. | `inject`          |
+| `-d, --dir <path>`            | Working directory for the target process.                                                                                                                       | Current directory |
+| `--stdio-mode <mode>`         | How to handle child process stdio. See below.                                                                                                                   | `inherit`         |
+| `--handler <command>`         | A handler for catter to start; may be given more than once. See [Handlers](../scripting/handlers.md).                                                           |                   |
+| `--connect <host:port>`       | A handler listening at the address; may be given more than once. See [Handlers](../scripting/handlers.md).                                                      |                   |
+| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                                                             |                   |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.                                             | `60`              |
+| `-h, --help`                  | Show help message.                                                                                                                                              |                   |
 
 ### Data directory
 

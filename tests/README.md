@@ -32,7 +32,9 @@ tests/<topic>/<subtopic>/NN_name/
   environment, working directory, stdio, exit status, process trees, the
   functions that start programs), `builds` (real build systems: make, CMake
   with Ninja, MSBuild, xmake), `scripts` (user scripts: their actions,
-  errors, modules, lifecycle).
+  errors, modules, lifecycle), `handlers` (handlers over the protocol, on
+  the SDKs: their actions, errors, lifecycle, transports, several at once,
+  arguments that are not UTF-8, the TypeScript SDK).
 - **Builtins**, what a builtin script answers on the commands it saw: `cdb`
   (`script::cdb`), `cmd_tree`, `target_tree`, and `inspect`
   (`script::inspect`, how catter analyzes one command, which it does not
@@ -57,6 +59,11 @@ repository root.
   the copy's root: a database or response file that needs absolute paths.
 - **Generated inputs** (a hundred sources) come from
   `t.disk.write(generate.sources(100))`, never from loops in a test.
+- **The catter and the SDKs under test** reach every command a test runs:
+  `CATTER_EXECUTABLE` names the catter, for a program that starts it
+  itself; `import catter` finds the Python SDK; and a copy whose
+  `package.json` depends on `@catter/sdk` has the TypeScript SDK in its
+  `node_modules`.
 - **A program a build runs** to show what reaches it is an input of the case:
   a `build.mjs` that starts programs the way a build tool does and prints
   what they received, or a C source the test compiles with `t.setup`. It
@@ -148,7 +155,7 @@ exit = 0
   same blocks on every platform it runs on: one whose commands differ is a
   test per platform, each excepted where it has no meaning.
 - **Known wrong.** A block whose current output is wrong carries the reason,
-  `wrong = "abort() fails only its command (catter#122)"`, on the block or on
+  `wrong = "a build argument with spaces is split on Windows (catter#151)"`, on the block or on
   its platform's. Every update keeps the reasons while the block exists.
 - **Banned**: writing catter's output in a test, or matching it partially.
   Either the whole output is in the snapshot, or a test checks a state

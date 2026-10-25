@@ -75,6 +75,14 @@ std::string command_cwd(const fs::path& base, const ReplayEvent& event) {
     return util::to_utf8(cwd.has_filename() ? cwd : cwd.parent_path());
 }
 
+/// A replay file's `parent` of 0, like an absent one, is no parent.
+std::optional<data::ipcid_t> parent_of(std::optional<data::ipcid_t> parent) {
+    if(parent == 0) {
+        return std::nullopt;
+    }
+    return parent;
+}
+
 data::process_result to_process_result(const js::ProcessResult& result) {
     return {
         .code = result.code,
@@ -108,11 +116,13 @@ kota::task<data::process_result> replay_build(const fs::path& path, Handler& han
     }
     for(const auto& event: replay.events) {
         if(event.error.has_value()) {
-            co_await handler.on_error(event.id, event.error->parent, event.error->message);
+            co_await handler.on_error(event.id,
+                                      parent_of(event.error->parent),
+                                      event.error->message);
             continue;
         }
         co_await handler.on_command(event.id,
-                                    event.parent,
+                                    parent_of(event.parent),
                                     data::command{
                                         .cwd = command_cwd(base, event),
                                         .executable = event.exe,

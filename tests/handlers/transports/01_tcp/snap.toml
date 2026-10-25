@@ -1,0 +1,14 @@
+[test."$ python serve.py"]
+stderr = '''
+start: mode inject
+command 1: ['build.mjs']
+command 2: ['child.mjs', 'act-on-me']
+command 3: ['child.mjs', 'leave-me']
+finish: code 0
+catter exited with 0, printing:
+ran with ["act-on-me","added-over-tcp"]
+act-on-me: exit 0
+ran with ["leave-me"]
+leave-me: exit 0
+'''
+exit = 0

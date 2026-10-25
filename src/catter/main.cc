@@ -1,3 +1,4 @@
+#include <csignal>
 #include <iostream>
 #include <print>
 #include <string_view>
@@ -29,6 +30,10 @@ int run(int argc, char* argv[]) {
     // build's: inherited by every program it starts, a server among them would
     // hold them open after catter exits. libuv hands the build its stdio itself.
     uv_disable_stdio_inheritance();
+#else
+    // A write to a handler that has exited fails, and is reported, instead of
+    // killing catter. libuv resets the programs catter starts to the default.
+    std::signal(SIGPIPE, SIG_IGN);
 #endif
 
     auto args = kota::deco::util::argvify(argc, argv, 1);
@@ -46,7 +51,7 @@ int run(int argc, char* argv[]) {
             throw;
         }
         auto cli = kota::deco::cli::command<core::CatterConfig>(
-            "catter [options for catter] script [options for script] -- [build system command]");
+            "catter [options for catter] [script [options for script]] -- [build system command]");
         cli.after<&core::CatterConfig::script_path>([](auto& step) {
                unsigned idx = step.next_cursor();
                std::span<std::string> original_argv = step.original_argv();
@@ -55,6 +60,14 @@ int run(int argc, char* argv[]) {
                }
                return step.seek(idx);
            })
+            .after<&core::CatterConfig::handler>([](auto& step) {
+                step.options().handlers.push_back({.connect = false, .text = step.value()});
+                return step.next();
+            })
+            .after<&core::CatterConfig::connect>([](auto& step) {
+                step.options().handlers.push_back({.connect = true, .text = step.value()});
+                return step.next();
+            })
             .after<&core::CatterConfig::help>([&](auto& step) {
                 step.usage(std::cout);
                 ret = 0;

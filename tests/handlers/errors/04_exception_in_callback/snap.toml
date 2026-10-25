@@ -1,0 +1,9 @@
+[test."$ catter --handler \"python handler.py\" -- node -e \"require('node:child_process').spawnSync('node', ['-e', '0'])\""]
+stdout = "Handler `python handler.py` failed on command 1: RuntimeError: raised from on_command"
+stderr = '''
+Traceback (most recent call last):
+  File "${WS}/handler.py", line 8, in on_command
+    raise RuntimeError("raised from on_command")
+RuntimeError: raised from on_command
+'''
+exit = 1

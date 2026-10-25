@@ -34,9 +34,6 @@ struct Action {
         Skip,
         /// Do not run the command: it exits 0.
         Drop,
-        /// End the session with an error. Under inject it only fails its
-        /// command, and the build goes on (catter#122).
-        Abort,
         /// Run `command` in its place.
         Modify,
     };
@@ -61,9 +58,10 @@ struct Action {
 ///
 /// A replayed build runs nothing: there, the actions do nothing.
 ///
-/// An exception a call throws ends the session: catter prints its message and
-/// exits 1. Under inject, one from `on_command`, `on_error` or `on_exit` does
-/// not: the build goes on (catter#122).
+/// An exception a call throws ends the session, which is how a handler aborts
+/// the build: the commands that start after it fail without running, nothing
+/// else is called, and once the build has ended catter prints the exception's
+/// message and exits 1.
 class Handler {
 public:
     virtual ~Handler() = default;
@@ -71,8 +69,8 @@ public:
     /// The build to run, changed or as it is, or none.
     virtual kota::task<std::optional<Build>> on_start(Build build) = 0;
 
-    /// `parent` is the command that started this one: under inject, 0 for the
-    /// build command; a replayed event may name none.
+    /// `parent` is the command that started this one, none for the build
+    /// command.
     virtual kota::task<Action> on_command(data::ipcid_t id,
                                           std::optional<data::ipcid_t> parent,
                                           data::command command) = 0;
@@ -85,6 +83,31 @@ public:
     virtual kota::task<> on_exit(data::ipcid_t id, data::process_result result) = 0;
 
     virtual kota::task<> on_finish(data::process_result result) = 0;
+};
+
+/// Handlers in a fixed order, acting as one. A command goes to each in turn,
+/// as the ones before left it, until one drops it; the other events go to
+/// every handler. The chain does not own its handlers.
+class HandlerChain final : public Handler {
+public:
+    explicit HandlerChain(std::vector<Handler*> handlers);
+
+    kota::task<std::optional<Build>> on_start(Build build) override;
+
+    kota::task<Action> on_command(data::ipcid_t id,
+                                  std::optional<data::ipcid_t> parent,
+                                  data::command command) override;
+
+    kota::task<> on_error(data::ipcid_t id,
+                          std::optional<data::ipcid_t> parent,
+                          std::string message) override;
+
+    kota::task<> on_exit(data::ipcid_t id, data::process_result result) override;
+
+    kota::task<> on_finish(data::process_result result) override;
+
+private:
+    std::vector<Handler*> handlers;
 };
 
 }  // namespace catter::core

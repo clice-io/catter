@@ -28,7 +28,7 @@ The `config.runtime` object passed to `onStart` describes the current runtime:
 
 - **How it works**: a hook shared library is injected into the build system process. It intercepts process creation calls (the `execve` / `posix_spawn` family on Unix, `CreateProcess` on Windows) and rewrites commands so they run through `catter-proxy`.
 - **Platforms**: Linux, macOS, Windows.
-- **Capabilities**: `supportActions = [skip, drop, modify]`, `supportParentId = true`.
+- **Capabilities**: `supportActions = [skip, drop, abort, modify]`, `supportParentId = true`.
 - **Strengths**: recursive capture -- every descendant process is intercepted; captured commands carry the full environment and a parent command ID.
 - **Limitations**: the implementation relies on platform features (preload / DLL injection). On macOS, `DYLD_INSERT_LIBRARIES` is restricted by the system and requires special development entitlements; on Windows, DLL injection may conflict with strong signing or security software policies.
 - **Implementation details**: [Hook mechanism](hook-mechanism.md), [IPC protocol](ipc-protocol.md).
@@ -49,11 +49,11 @@ The `config.runtime` object passed to `onStart` describes the current runtime:
 
 ## Capability matrix
 
-| Mechanism | Platforms               | Capture method                     | supportActions         | supportParentId | Status                |
-| --------- | ----------------------- | ---------------------------------- | ---------------------- | --------------- | --------------------- |
-| inject    | Linux / macOS / Windows | hook intercepting process creation | `skip` `drop` `modify` | yes             | implemented (default) |
-| env       | cross-platform          | `CC` / `CXX` environment variables | TBD                    | expected no     | planned               |
-| eslogger  | macOS                   | Event Stream API                   | TBD                    | TBD             | planned               |
+| Mechanism | Platforms               | Capture method                     | supportActions                 | supportParentId | Status                |
+| --------- | ----------------------- | ---------------------------------- | ------------------------------ | --------------- | --------------------- |
+| inject    | Linux / macOS / Windows | hook intercepting process creation | `skip` `drop` `abort` `modify` | yes             | implemented (default) |
+| env       | cross-platform          | `CC` / `CXX` environment variables | TBD                            | expected no     | planned               |
+| eslogger  | macOS                   | Event Stream API                   | TBD                            | TBD             | planned               |
 
 ## Selecting and checking
 

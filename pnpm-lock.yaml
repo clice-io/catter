@@ -58,6 +58,19 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  sdk/typescript:
+    dependencies:
+      vscode-jsonrpc:
+        specifier: ^8.2.1
+        version: 8.2.1
+    devDependencies:
+      '@types/node':
+        specifier: ~24.0.0
+        version: 24.0.15
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   tests:
     devDependencies:
       '@catter/tools':
@@ -1759,6 +1772,10 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  vscode-jsonrpc@8.2.1:
+    resolution: {integrity: sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ==}
+    engines: {node: '>=14.0.0'}
 
   which-boxed-primitive@1.1.1:
     resolution: {integrity: sha512-TbX3mj8n0odCBFVlY8AxkqcHASw3L60jIuF8jFP78az3C2YhmGvqbHBpAjTRH2/xqYunrJ9g1jSyjCjpoWzIAA==}
@@ -3492,6 +3509,8 @@ snapshots:
       '@types/node': 24.0.15
     transitivePeerDependencies:
       - msw
+
+  vscode-jsonrpc@8.2.1: {}
 
   which-boxed-primitive@1.1.1:
     dependencies:

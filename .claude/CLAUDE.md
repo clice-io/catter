@@ -30,10 +30,11 @@ Distilled from real correction history — these mistakes keep recurring:
 
 C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targets:
 
-- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the handler that decides each command and observes the session (`handler.h`), the runtime driver, replaying a recorded build, `cmd/`: what a command is (the compiler and its identification, its arguments parsed on the option tables of `src/common/option`, its mode and target, the files it reads and writes; `ar`), `builtin/`: the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), each a handler on `cmd/`, and `js/`: the embedded QuickJS engine, the ES module loader, the native side of the script API (`js/capi/`) and the handler that runs a script (`js/script_handler.h`)
+- `src/catter/` — the `catter` daemon: `main.cc` (the CLI) and `core/` — the session and its IPC server, the handler that decides each command and observes the session (`handler.h`) and the chain of handlers a run has, the handler in another process that catter speaks the handler protocol to (`protocol.h`, its messages; `remote_handler.h`), the runtime driver, replaying a recorded build, `cmd/`: what a command is (the compiler and its identification, its arguments parsed on the option tables of `src/common/option`, its mode and target, the files it reads and writes; `ar`), `builtin/`: the built-in scripts (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), each a handler on `cmd/`, and `js/`: the embedded QuickJS engine, the ES module loader, the native side of the script API (`js/capi/`) and the handler that runs a script (`js/script_handler.h`)
 - `src/catter-proxy/` — `catter-proxy`: launches the build with the hook attached, and stands in for every intercepted command, relaying it to the daemon and running what the daemon decides
 - `src/catter-hook/` — launching a command with the hook (`hook.h`, linked into `catter-proxy`) and the hook libraries themselves: `unix/payload/` is the shared library preloaded into every process (the exec-family hooks, the environment it keeps), `win/` injects `win/payload/`, the DLL that hooks process creation with MinHook
 - `src/common/` — shared static libraries: `option/` (the option tables of clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and of nvcc, read by kotatsu's option parser), `util/` (logging, data paths, processes, pipes), `config/` (names and paths every process agrees on), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`
+- `sdk/` — the handler SDKs: `sdk/python` (the `catter` package, standard library only) and `sdk/typescript` (`@catter/sdk`), whose protocol types `sdk/generate.py` generates from `sdk/protocol.schema.json`, the schema `catter-protocol-schema` (`src/catter-protocol-schema`) prints of `protocol.h`: `pixi run -e dev protocol` regenerates both, and CI fails when they are stale
 - `api/` — the TypeScript script API: `api/src` holds the `catter/*` modules, including compiler identification and argument parsing (`cmd/`) and the database (`cdb/`); `api/native` declares the native functions; `api/dev` builds and bundles it, and xmake embeds the bundle into `catter`
 - `scripts/` — the former TypeScript built-in scripts, still embedded but no longer run (`src/catter/core/builtin` replaced them); `scripts/js-gen/` regenerates the option enums of `api/src/option` (the upgrade-deps skill)
 - `tests/` — the snapshot cases, `tests/<topic>/<subtopic>/NN_name/`: a small project, `test.ts` and `snap.toml`, run against the built `catter` (`tests/README.md` is their contract; the test and write-tests skills)
@@ -41,23 +42,23 @@ C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a few targ
 - `unittests/` — the zest unit tests, mirroring `src/`
 - `docs/` — the `docs/en` and `docs/zh` pages published at docs.clice.io/catter (the docs skill)
 
-`api/dev`, `scripts/`, `tools/` and `tests/` are one pnpm workspace rooted at the repo top level: run `pixi run -e dev npm-install` from the root, never `pnpm install` inside a package.
+`api/dev`, `scripts/`, `tools/`, `tests/` and `sdk/typescript` are one pnpm workspace rooted at the repo top level: run `pixi run -e dev npm-install` from the root, never `pnpm install` inside a package.
 
 ### Where it is going
 
 Decided, not yet done — write code for where it stands today, and don't build on what is about to go:
 
 - **No TypeScript in catter**: the built-ins are C++ (`src/catter/core/cmd`, `builtin`); once the protocol below passes the snapshot suite, QuickJS, the JS bridge (`src/catter/core/js`), `api/`, `scripts/` and the pnpm/rollup build are deleted.
-- **User scripts**: they are to move out of process: catter speaking JSON-RPC to a handler process, with thin SDKs for Python, TypeScript and Rust. The embedded TS API is what users script today.
+- **User scripts**: they move out of process: catter speaks JSON-RPC to handler processes (`--handler`, `--connect`), through the SDKs of `sdk/` (Rust later). The embedded TS API stays until the TS is deleted; the protocol is to carry each command's analysis (`cmd/`) and structured edits next.
 - **Staying for now**: the Windows hook on MinHook (Detours is planned, later), and the xmake build (Bazel, then C++20 modules, later).
 
 ## Build & Test
 
 - **pixi** for environments, **xmake** for building. Environments: `dev` (the default toolchain of the OS: GCC 14 on Linux, xclang's clang on macOS, MSVC on Windows) and `mingw` (Windows, xclang for `x86_64-w64-mingw32`); `clang` (conda-forge clang 20) is a local convenience CI does not use. Modes `debug` (ASan, except MinGW), `release`, `releasedbg`.
-- `pixi run -e <env> ci-build <mode>` is what every CI build job runs: npm-install, configure, build and the unit tests; `cases` jobs then run the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
+- `pixi run -e <env> ci-build <mode>` is what every CI build job runs: npm-install, configure, build, the unit tests and `check-protocol` (the generated SDK types are up to date); `cases` jobs then run the snapshot cases on the programs it built (the test skill). `pixi run -e dev package` packs a release build. The build skill has the steps one by one.
 - **Where builds run:** on a box (the build skill), not on this machine unless truly necessary — it hosts every agent's session, and one build saturates it. macOS and Windows build and test on boxes of that OS, as CI does. A session may hold several, one per platform. Pushing never waits for a box: CI has the capacity to verify in parallel.
 - CI (`test.yml`) builds debug and release on Linux, macOS and Windows, plus Windows MinGW; every one must pass.
-- Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint, the module boundaries of `api/`, and `check-testing`: the types, lint and tests of `tools/` and `tests/`).
+- Format and lint gate, as the lint workflow runs it: `pixi run -e format format` (clang-format, ruff, Prettier, tombi; CI fails on any diff it leaves), `pixi run -e format lint-python` (ruff check) and `pixi run -e dev ci-check` (ESLint, the module boundaries of `api/`, `check-testing`: the types, lint and tests of `tools/` and `tests/`, and `check-sdk-ts`: the types of the TypeScript SDK).
 
 ## Branches and Commits
 

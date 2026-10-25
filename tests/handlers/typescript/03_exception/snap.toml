@@ -1,0 +1,4 @@
+[test."$ catter --handler \"node handler.ts\" -- node -e 0"]
+stdout = "Handler `node handler.ts` failed on command 1: thrown from onCommand"
+stderr = "thrown from onCommand"
+exit = 1

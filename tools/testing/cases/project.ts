@@ -64,3 +64,22 @@ export function materialize(dir: string, root: string): string[] {
     }
     return files;
 }
+
+/// The TypeScript SDK in the copy's node_modules, for a case whose
+/// package.json depends on @catter/sdk: the repository's sdk/typescript, as
+/// an install would put it there.
+export function linkSdk(root: string): void {
+    const manifest = path.join(root, "package.json");
+    if (!fs.existsSync(manifest)) {
+        return;
+    }
+    const pkg = JSON.parse(fs.readFileSync(manifest, "utf8")) as {
+        dependencies?: Record<string, string>;
+    };
+    if (pkg.dependencies?.["@catter/sdk"] === undefined) {
+        return;
+    }
+    const scope = path.join(root, "node_modules", "@catter");
+    fs.mkdirSync(scope, { recursive: true });
+    fs.symlinkSync(path.join(REPO_ROOT, "sdk", "typescript"), path.join(scope, "sdk"), "junction");
+}

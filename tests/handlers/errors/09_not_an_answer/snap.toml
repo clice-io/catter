@@ -1,0 +1,7 @@
+["not JSON"."$ catter --handler \"python not_json.py\" --handler-timeout 0 -- node -e 0"]
+stdout = "Handler `python not_json.py` wrote what is not an answer: invalid JSON at byte 0"
+exit = 1
+
+["a request"."$ catter --handler \"python request.py\" --handler-timeout 0 -- node -e 0"]
+stdout = "Handler `python request.py` wrote what is not an answer: a request `hello`"
+exit = 1
