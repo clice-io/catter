@@ -1,5 +1,5 @@
 // Drops one command, modifies another, and prints what it is told, on
-// stderr: serve() points console.log there.
+// stderr: importing the SDK points console.log there.
 import { serve } from "@catter/sdk";
 
 await serve({

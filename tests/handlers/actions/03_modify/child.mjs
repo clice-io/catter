@@ -1,1 +1,1 @@
-console.log(`ran with ${JSON.stringify(process.argv.slice(2))}`);
+console.log(`ran with ${JSON.stringify(process.argv.slice(2))}, TAG ${process.env.TAG}`);

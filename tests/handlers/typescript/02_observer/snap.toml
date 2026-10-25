@@ -1,4 +1,4 @@
-[test."$ catter --handler \"node handler.ts\" -- node build.mjs"]
+[inject."$ catter --handler \"node handler.ts\" -- node build.mjs"]
 stdout = '''
 ran with ["drop-me"]
 drop-me: exit 0
@@ -8,7 +8,14 @@ ran with ["leave-me"]
 leave-me: exit 0
 '''
 stderr = '''
-finish: code 0, after ["build.mjs"] ["child.mjs","drop-me"] ["child.mjs","modify-me"] ["child.mjs","leave-me"]
+finish: code 0, after start 1, end 1, start 2, end 2, start 3, end 3, start 4, end 4
+served
+'''
+exit = 0
+
+[replay."$ catter -m replay --handler \"node handler.ts\" -- events.json"]
+stderr = '''
+finish: code 0, after start 1, end 1, start 2, end 2, start 3, end 3
 served
 '''
 exit = 0

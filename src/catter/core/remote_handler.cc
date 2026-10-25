@@ -138,7 +138,7 @@ std::vector<std::string> split_words(std::string_view command) {
             }
             if(i == command.size()) {
                 throw cpptrace::runtime_error(
-                    std::format("The handler command `{}` has an unclosed \"", command));
+                    std::format(R"(The handler command `{}` has an unclosed ")", command));
             }
         } else {
             word += c;
@@ -209,23 +209,30 @@ std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Op
         new RemoteHandler(std::move(transport), std::move(spawned->proc), std::move(options)));
 }
 
-kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::string host,
+kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::vector<std::string> hosts,
                                                                   int port,
                                                                   Options options) {
-    auto transport =
-        co_await kota::ipc::StreamTransport::connect_tcp(host, port, kota::event_loop::current());
-    if(!transport) {
-        throw cpptrace::runtime_error(std::format("Failed to connect to handler `{}`: {}",
-                                                  options.name,
-                                                  transport.error().message));
+    std::string error;
+    for(const auto& host: hosts) {
+        auto transport =
+            co_await kota::ipc::StreamTransport::connect_tcp(host,
+                                                             port,
+                                                             kota::event_loop::current());
+        if(transport) {
+            co_return std::unique_ptr<RemoteHandler>(
+                new RemoteHandler(std::move(*transport), kota::process(), std::move(options)));
+        }
+        if(error.empty()) {
+            error = std::move(transport.error().message);
+        }
     }
-    co_return std::unique_ptr<RemoteHandler>(
-        new RemoteHandler(std::move(*transport), kota::process(), std::move(options)));
+    throw cpptrace::runtime_error(
+        std::format("Failed to connect to handler `{}`: {}", options.name, error));
 }
 
 std::string RemoteHandler::stopped_message(std::string_view before) const {
     if(output_end->kind == ReadError::Kind::Malformed) {
-        return std::format("Handler `{}` wrote what is not a protocol message: {}",
+        return std::format("Handler `{}` wrote what is not an answer: {}",
                            options.name,
                            output_end->message);
     }
@@ -334,9 +341,12 @@ kota::task<Action> RemoteHandler::decide(data::ipcid_t id,
     }
 
     auto& modify = std::get<protocol::Modify>(action);
-    auto invalid = [&](const std::string& error) {
+    auto invalid = [&](std::string_view error) {
         return cpptrace::runtime_error(
-            std::format("Handler `{}` answered {} with {}", options.name, what, error));
+            std::format("Handler `{}` answered {} with an action catter cannot take: {}",
+                        options.name,
+                        what,
+                        error));
     };
     auto args = protocol::to_bytes(std::move(modify.args));
     if(!args) {

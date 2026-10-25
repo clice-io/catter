@@ -34,7 +34,7 @@ ZEST_CASE(utf8_is_a_string_and_other_bytes_are_base64) {
 ZEST_CASE(bytes_survive_base64_of_every_length) {
     for(std::string bytes: {"", "\xff", "\xff\xfe", "\xff\xfe\xfd", "\xff\xfe\xfd\xfc"}) {
         auto text = protocol::to_os_string(bytes);
-        auto back = protocol::to_bytes(parse<protocol::OsString>(json(text)));
+        auto back = protocol::to_bytes(parse<protocol::OSString>(json(text)));
         EXPECT(back.has_value());
         EXPECT(*back == bytes);
     }

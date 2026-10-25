@@ -20,7 +20,7 @@ A handler that already runs, listening on a TCP port, is reached with `--connect
 catter --connect 127.0.0.1:9000 -- make
 ```
 
-This suits a handler run under a debugger, or one that serves several builds in turn. The host is an IP address, or `localhost`. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
+This suits a handler run under a debugger, or one that serves several builds in turn. The host is an IP address, or `localhost`, for which catter tries `127.0.0.1`, then `::1`. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
 
 ### Options
 
@@ -69,7 +69,7 @@ A handler is told only of the events whose callback it overrides. `env = True` m
 
 The actions are `catter.Skip()` (the same as returning `None`), `catter.Drop()` (the command does not run, and exits 0), `catter.Abort(reason=...)`, and `catter.Modify(args=..., executable=..., cwd=..., env=...)`, which needs `args`: the other fields left out keep the command's own.
 
-Once `catter` is imported, what the handler prints goes to stderr: its stdout carries the protocol. Arguments, paths and environment entries are strings; bytes that are not UTF-8 appear as lone surrogates, as `os.fsdecode` spells them, and reach the command unchanged when handed back.
+Once `catter` is imported, what the handler prints goes to stderr: its stdout carries the protocol. Once `serve()` runs, the handler and the programs it starts read the null device as stdin, which carries the protocol too. Arguments, paths and environment entries are strings; bytes that are not UTF-8 appear as lone surrogates, as `os.fsdecode` spells them, and reach the command unchanged when handed back.
 
 To serve catter's `--connect`, listen on a port and serve the session of each catter that connects:
 
@@ -99,7 +99,7 @@ await serve({
 
 The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as in Python. An argument that is not UTF-8 comes as `{ base64 }`, which a command handed back keeps. For `--connect`, `listen(port)` returns a listener, whose `accept(handler)` serves the session of the next catter that connects.
 
-Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdout carries the protocol: a handler started by catter must not write to `process.stdout`, nor let a program it starts inherit it.
+Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdin and stdout carry the protocol: a handler started by catter must not read `process.stdin` nor write to `process.stdout`, nor let a program it starts inherit either.
 
 ## Several handlers
 
@@ -113,10 +113,10 @@ The handlers form a chain, in a fixed order: the script first, then the handlers
 
 ## When a handler fails
 
-A handler that aborts the build, raises in a callback, exits, writes what is not a protocol message, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
+A handler that aborts the build, raises in a callback, exits, writes what is not an answer to catter's requests, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s
 ```
 
-A handler started by catter that does not exit within the timeout once the session is over is ended.
+A handler started by catter that does not exit within the timeout once the session is over is ended. The build never waits for an observer, but one that falls behind must catch up within the timeout once the build has ended: that is when it answers `finish`.

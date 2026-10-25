@@ -155,7 +155,7 @@ exit = 0
   same blocks on every platform it runs on: one whose commands differ is a
   test per platform, each excepted where it has no meaning.
 - **Known wrong.** A block whose current output is wrong carries the reason,
-  `wrong = "abort() fails only its command (catter#122)"`, on the block or on
+  `wrong = "a build argument with spaces is split on Windows (catter#151)"`, on the block or on
   its platform's. Every update keeps the reasons while the block exists.
 - **Banned**: writing catter's output in a test, or matching it partially.
   Either the whole output is in the snapshot, or a test checks a state

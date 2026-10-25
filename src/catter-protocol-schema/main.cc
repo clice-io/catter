@@ -36,5 +36,9 @@ int main(int argc, char* argv[]) {
     }
     std::ofstream output(argv[1], std::ios::binary);
     output << *schema << '\n';
-    return output.good() ? 0 : 1;
+    if(!output.good()) {
+        std::println(stderr, "Failed to write the schema to `{}`", argv[1]);
+        return 1;
+    }
+    return 0;
 }

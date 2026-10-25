@@ -73,7 +73,8 @@ kota::task<> run(core::Handler& handler, const core::CatterConfig& config) {
 }
 
 struct Address {
-    std::string host;
+    /// The addresses of the host, in the order to try them.
+    std::vector<std::string> hosts;
 
     int port;
 };
@@ -100,11 +101,15 @@ Address parse_address(std::string_view address, bool allow_remote) {
         host = host.substr(1, host.size() - 2);
     }
     if(host == "localhost") {
-        host = "127.0.0.1";
+        // A handler listening on localhost may have taken either.
+        return {
+            .hosts = {"127.0.0.1", "::1"},
+            .port = port
+        };
     }
     // catter resolves no names: the host is an IPv4 or IPv6 address.
-    if(host.find_first_not_of("0123456789.") != std::string_view::npos &&
-       host.find(':') == std::string_view::npos) {
+    if(host.empty() || (host.find_first_not_of("0123456789.") != std::string_view::npos &&
+                        host.find(':') == std::string_view::npos)) {
         throw cpptrace::runtime_error(std::format(
             "`{}` names no IP address: give --connect the handler's IP address and port",
             address));
@@ -119,7 +124,7 @@ Address parse_address(std::string_view address, bool allow_remote) {
         output::yellowln("Warning: the handler at `{}` on another machine decides on the build",
                          address);
     }
-    return {.host = std::string(host), .port = port};
+    return {.hosts = {std::string(host)}, .port = port};
 }
 
 /// Tells this session from the others a handler over TCP serves.
@@ -160,9 +165,10 @@ kota::task<> async_run(const core::CatterConfig& config) {
                 remotes.push_back(core::RemoteHandler::spawn(text, handler_options(text)));
                 continue;
             }
-            auto [host, port] = parse_address(text, *config.allow_remote);
-            remotes.push_back(
-                co_await core::RemoteHandler::connect(host, port, handler_options(text)));
+            auto [hosts, port] = parse_address(text, *config.allow_remote);
+            remotes.push_back(co_await core::RemoteHandler::connect(std::move(hosts),
+                                                                    port,
+                                                                    handler_options(text)));
         }
 
         std::vector<core::Handler*> chain;

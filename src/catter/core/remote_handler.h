@@ -41,8 +41,9 @@ public:
     /// POSIX shell splits words, without expanding anything.
     static std::unique_ptr<RemoteHandler> spawn(std::string_view command, Options options);
 
-    /// Connects to the handler listening at `host`:`port`.
-    static kota::task<std::unique_ptr<RemoteHandler>> connect(std::string host,
+    /// Connects to the handler listening at `port` of the first of `hosts`
+    /// that takes the connection.
+    static kota::task<std::unique_ptr<RemoteHandler>> connect(std::vector<std::string> hosts,
                                                               int port,
                                                               Options options);
 

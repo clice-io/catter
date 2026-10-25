@@ -27,16 +27,16 @@ struct Base64 {
 
 /// Bytes from the system, such as an argument, a path or an environment
 /// entry: a string when they are valid UTF-8, else their base64.
-using OsString = std::variant<std::string, Base64>;
+using OSString = std::variant<std::string, Base64>;
 
-OsString to_os_string(std::string bytes);
+OSString to_os_string(std::string bytes);
 
-std::vector<OsString> to_os_string(std::vector<std::string> bytes);
+std::vector<OSString> to_os_string(std::vector<std::string> bytes);
 
 /// The bytes, or what is wrong with the base64.
-std::expected<std::string, std::string> to_bytes(OsString text);
+std::expected<std::string, std::string> to_bytes(OSString text);
 
-std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OsString> texts);
+std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OSString> texts);
 
 /// `bytes` as a string of the protocol, which is valid UTF-8: each byte that
 /// is not becomes U+FFFD.
@@ -44,8 +44,8 @@ std::string to_text(std::string bytes);
 
 /// The build a session runs.
 struct Build {
-    std::vector<OsString> command;
-    OsString cwd;
+    std::vector<OSString> command;
+    OSString cwd;
 };
 
 /// Request `initialize`, catter's first message.
@@ -80,10 +80,10 @@ struct Command {
     data::ipcid_t id;
     /// The command that started this one, absent for the build command.
     std::optional<data::ipcid_t> parent;
-    OsString cwd;
-    OsString executable;
-    std::vector<OsString> args;
-    std::optional<std::vector<OsString>> env;
+    OSString cwd;
+    OSString executable;
+    std::vector<OSString> args;
+    std::optional<std::vector<OSString>> env;
 };
 
 struct Skip {};
@@ -97,10 +97,10 @@ struct Abort {
 /// Runs another command in the command's place: absent fields keep the
 /// command's own.
 struct Modify {
-    std::vector<OsString> args;
-    std::optional<OsString> executable;
-    std::optional<OsString> cwd;
-    std::optional<std::vector<OsString>> env;
+    std::vector<OSString> args;
+    std::optional<OSString> executable;
+    std::optional<OSString> cwd;
+    std::optional<std::vector<OSString>> env;
 };
 
 KOTATSU_ANNOTATION(action_annotation,

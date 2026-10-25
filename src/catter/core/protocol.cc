@@ -72,15 +72,15 @@ std::expected<std::string, std::string> decode_base64(std::string_view text) {
 
 }  // namespace
 
-OsString to_os_string(std::string bytes) {
+OSString to_os_string(std::string bytes) {
     if(simdjson::validate_utf8(bytes.data(), bytes.size())) {
         return bytes;
     }
     return Base64{.base64 = encode_base64(bytes)};
 }
 
-std::vector<OsString> to_os_string(std::vector<std::string> bytes) {
-    std::vector<OsString> texts;
+std::vector<OSString> to_os_string(std::vector<std::string> bytes) {
+    std::vector<OSString> texts;
     texts.reserve(bytes.size());
     for(auto& item: bytes) {
         texts.push_back(to_os_string(std::move(item)));
@@ -88,14 +88,14 @@ std::vector<OsString> to_os_string(std::vector<std::string> bytes) {
     return texts;
 }
 
-std::expected<std::string, std::string> to_bytes(OsString text) {
+std::expected<std::string, std::string> to_bytes(OSString text) {
     if(auto* plain = std::get_if<std::string>(&text)) {
         return std::move(*plain);
     }
     return decode_base64(std::get<Base64>(text).base64);
 }
 
-std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OsString> texts) {
+std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OSString> texts) {
     std::vector<std::string> bytes;
     bytes.reserve(texts.size());
     for(auto& text: texts) {

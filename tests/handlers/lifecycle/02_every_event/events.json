@@ -5,6 +5,7 @@
     {
       "type": "command",
       "id": 1,
+      "parent": 0,
       "exe": "make",
       "argv": ["make", "all"]
     },

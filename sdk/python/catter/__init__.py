@@ -75,11 +75,12 @@ _SDK = Path(__file__).resolve().parent
 
 # The protocol goes to catter over this program's stdout: from the import on,
 # what the program prints, and what the programs it starts print, goes to
-# stderr, where catter shows it.
+# stderr, where catter shows it, and as stderr takes it: a character the
+# encoding cannot spell is escaped, not an error.
 sys.stdout.flush()
 _protocol_output = os.fdopen(os.dup(sys.stdout.fileno()), "wb")
 os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
-sys.stdout.reconfigure(line_buffering=True)
+sys.stdout.reconfigure(line_buffering=True, errors="backslashreplace")
 
 
 class Handler:
@@ -147,7 +148,12 @@ def _text(value: Any) -> Any:
     message built from an argument, replaced: the protocol's strings are
     valid Unicode, and the arguments in it already base64."""
     if isinstance(value, str):
-        return value.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+        try:
+            data = value.encode("utf-8", "surrogateescape")
+        except UnicodeEncodeError:
+            # A lone surrogate that stands for no byte.
+            data = value.encode("utf-8", "surrogatepass")
+        return data.decode("utf-8", "replace")
     if isinstance(value, dict):
         return {key: _text(item) for key, item in value.items()}
     if isinstance(value, list):
@@ -213,7 +219,13 @@ def _run(handler: Handler, reader: BinaryIO, writer: BinaryIO) -> None:
 def serve(handler: Handler) -> None:
     """Serves the session of the catter that started this program
     (`--handler`), over stdin and stdout."""
-    _run(handler, sys.stdin.buffer, _protocol_output)
+    # The protocol comes from catter over stdin: the program, and the programs
+    # it starts, read the null device there instead, lest one read catter's
+    # messages.
+    protocol_input = os.fdopen(os.dup(sys.stdin.fileno()), "rb")
+    with open(os.devnull, "rb") as null:
+        os.dup2(null.fileno(), sys.stdin.fileno())
+    _run(handler, protocol_input, _protocol_output)
 
 
 class Listener:

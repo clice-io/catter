@@ -29,7 +29,7 @@ with catter.listen() as listener:
         [
             os.environ["CATTER_EXECUTABLE"],
             "--connect",
-            f"127.0.0.1:{listener.port}",
+            f"localhost:{listener.port}",
             "--",
             "node",
             "build.mjs",

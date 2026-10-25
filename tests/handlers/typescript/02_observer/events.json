@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "a build whose commands come one right after another",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": ["make", "all"]
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 1,
+      "exe": "cc",
+      "argv": ["cc", "-c", "a.c"]
+    },
+    {
+      "type": "command",
+      "id": 3,
+      "parent": 1,
+      "exe": "cc",
+      "argv": ["cc", "-c", "b.c"]
+    }
+  ]
+}

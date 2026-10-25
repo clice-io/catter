@@ -63,11 +63,11 @@ The result of the request is an action, named by its `action` field:
 
 ### `error`, `exit` and `finish`
 
-| Message  | Fields                                                                                              |
-| -------- | --------------------------------------------------------------------------------------------------- |
-| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                     |
-| `exit`   | `id`, `code`: its exit code, `duration`: microseconds from the decision on the command to its exit. |
-| `finish` | `code`: the build's exit code. The result is `null`.                                                |
+| Message  | Fields                                                                                                                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                                                                                                                      |
+| `exit`   | `id`, `code`: its exit code, `duration`: microseconds from the handler's decision on the command (its notification, to an observer) to its exit, in which the handlers after it in the chain decide. |
+| `finish` | `code`: the build's exit code. The result is `null`.                                                                                                                                                 |
 
 ## Strings and numbers
 
