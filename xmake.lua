@@ -6,7 +6,7 @@ set_allowedplats("windows", "mingw", "linux", "macosx")
 
 set_languages("c++23")
 -- Sources and narrow string literals are UTF-8, the encoding catter's strings
--- hold on every platform (src/common/util/encoding.h).
+-- hold on every platform (src/support/encoding.h).
 set_encodings("utf-8")
 
 option("dev", {default = true})
@@ -118,7 +118,8 @@ end
 
 -- The architectures of the processes Windows runs on x64 and ARM64, each
 -- with a hook DLL catter-hook-<arch>.dll that every Windows build makes:
--- catter-proxy injects into a process the one of its machine (win/inject.cc).
+-- catter-proxy injects into a process the one of its machine
+-- (src/capture/inject/windows/inject.cc).
 local windows_hook_archs = is_plat("windows", "mingw") and {"x64", "arm64"} or {}
 
 -- The name xmake gives a hook's architecture on the platform.
@@ -146,72 +147,84 @@ add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_
 add_requires("kotatsu")
 
 
-target("common-option")
+target("support")
     set_kind("static")
-    add_local_prefix_includedirs()
-    add_includedirs("src/common", {public = true})
-    add_files("src/common/option/**.cc")
-    add_packages("kotatsu", {public = true})
-
-target("common-util")
-    set_kind("static")
-    add_includedirs("src/common", {public = true})
-    add_files("src/common/util/**.cc")
+    add_includedirs("src", {public = true})
+    add_files("src/support/*.cc")
     add_packages("spdlog", {public = true})
     add_packages("kotatsu", {public = true})
 
-target("common-config")
-    set_kind("headeronly")
-    add_includedirs("src/common", {public = true})
-    add_packages("kotatsu", {public = true})
-
-target("common-winapi")
+target("support-winapi")
     set_default(is_plat("windows", "mingw"))
     set_kind("static")
-    add_includedirs("src/common", {public = true})
-    add_files("src/common/winapi/**.cc")
+    add_includedirs("src", {public = true})
+    add_files("src/support/winapi/*.cc")
     add_syslinks("user32", "advapi32")
 
-target("common-resolver")
+target("support-resolver")
     set_kind("static")
     add_local_prefix_includedirs()
-    add_includedirs("src/common", {public = true})
+    add_includedirs("src", {public = true})
     if is_plat("windows", "mingw") then
-        add_files("src/common/resolver/win.cc")
+        add_files("src/support/resolver/win.cc")
     else
-        add_files("src/common/resolver/unix.cc")
+        add_files("src/support/resolver/unix.cc")
     end
 
     if is_plat("windows", "mingw") then
-        add_deps("common-winapi", {public = true})
+        add_deps("support-winapi", {public = true})
     end
 
-target("common")
+target("command")
     set_kind("static")
-    add_includedirs("src/common", {public = true})
+    add_local_prefix_includedirs()
+    add_includedirs("src", {public = true})
+    add_files("src/command/**.cc")
+    add_packages("kotatsu", {public = true})
 
+target("session")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_files("src/session/*.cc")
+    add_deps("support", {public = true})
+
+target("capture")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_files("src/capture/*.cc")
+    add_deps("session", {public = true})
+
+-- Launching a command with the hook, which catter-proxy does.
+target("capture-inject")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_deps("support", {public = true})
     if is_plat("windows", "mingw") then
-        add_deps("common-winapi", {public = true})
+        add_deps("support-winapi", {public = true})
+        add_files("src/capture/inject/windows/*.cc")
+        add_packages("detours~" .. (is_arch("arm64", "aarch64") and "arm64" or "x64"), {public = true})
+    elseif is_plat("linux", "macosx") then
+        add_files("src/capture/inject/unix/*.cc")
     end
 
-    add_deps("common-option", "common-util", "common-config", "common-resolver", { public = true })
-
-target("catter-core")
-    -- use object, avoid register invalid
-    set_kind("object")
+target("protocol")
+    set_kind("static")
     add_local_prefix_includedirs()
-    add_includedirs("src/catter/core", {public = true})
+    add_files("src/protocol/*.cc|schema.cc")
+    add_deps("command", "session", {public = true})
 
-    add_deps("common")
-
-    add_files("src/catter/core/**.cc")
+target("feature")
+    set_kind("static")
+    add_local_prefix_includedirs()
+    add_files("src/feature/*.cc")
+    add_deps("command", "session", {public = true})
 
 target("catter")
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_deps("catter-core")
-    add_files("src/catter/main.cc")
-    -- main is wmain on Windows (src/catter/main.cc).
+    add_deps("capture", "protocol", "feature")
+    add_files("src/driver/*.cc")
+    -- main is wmain on Windows (src/driver/main.cc).
     if is_plat("mingw") then
         add_ldflags("-municode", {force = true})
     end
@@ -221,9 +234,8 @@ target("catter-protocol-schema")
     set_kind("binary")
     -- Prints the schema the SDKs' protocol types are generated from.
     add_local_prefix_includedirs()
-    add_includedirs("src/catter/core")
-    add_deps("common-util")
-    add_files("src/catter-protocol-schema/main.cc")
+    add_deps("support")
+    add_files("src/protocol/schema.cc")
 
 for _, arch in ipairs(windows_hook_archs) do
 target("catter-hook-" .. arch)
@@ -235,11 +247,11 @@ target("catter-hook-" .. arch)
     set_prefixname("")
     -- It runs inside every process of the build, and Detours trips ASan (see
     -- its add_requires): no sanitizer, and the resolver compiled in, of the
-    -- DLL's architecture, rather than linked from common-resolver.
+    -- DLL's architecture, rather than linked from support-resolver.
     set_policy("build.sanitizer.address", false)
-    add_includedirs("src/catter-hook/", "src/common")
-    add_files("src/catter-hook/win/payload/*.cc")
-    add_files("src/common/resolver/win.cc", "src/common/winapi/**.cc")
+    add_includedirs("src")
+    add_files("src/hook/windows/*.cc")
+    add_files("src/support/resolver/win.cc", "src/support/winapi/*.cc")
     add_syslinks("user32", "advapi32")
     add_packages("detours~" .. arch)
     local toolchain = get_config("toolchain")
@@ -248,14 +260,14 @@ target("catter-hook-" .. arch)
         -- lack.
         set_runtimes("MT")
         add_cxxflags("/GR-")
-        add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
+        add_shflags("/DEF:src/hook/windows/exports.def")
     elseif is_plat("mingw") then
         add_cxxflags("-fno-rtti")
         -- lld's MinGW driver takes a .def input as the only exports.
-        add_shflags("src/catter-hook/win/payload/exports.def", {force = true})
+        add_shflags("src/hook/windows/exports.def", {force = true})
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
-        add_shflags("-Wl,/DEF:src/catter-hook/win/payload/exports.def")
+        add_shflags("-Wl,/DEF:src/hook/windows/exports.def")
     end
 end
 
@@ -264,25 +276,23 @@ target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
     add_local_prefix_includedirs()
-    add_deps("common-resolver")
+    add_deps("support-resolver")
 
     if is_mode("debug") then
-        add_deps("common")
+        add_deps("support")
     end
 
     add_cxxflags("-fvisibility=hidden")
     add_cxxflags("-fvisibility-inlines-hidden")
     add_cxflags("-ffunction-sections", "-fdata-sections")
 
-    add_includedirs("src/catter-hook/")
-    add_includedirs("src/catter-hook/unix/payload/")
-    add_files("src/catter-hook/unix/payload/**.cc")
+    add_files("src/hook/unix/**.cc")
 
     if is_plat("linux") then
         add_shflags("-static-libstdc++", {force = true})
         add_shflags("-static-libgcc", {force = true})
 
-        add_shflags("-Wl,--version-script=src/catter-hook/unix/payload/inject/exports.map")
+        add_shflags("-Wl,--version-script=src/hook/unix/inject/exports.map")
         add_syslinks("dl")
         add_shflags("-Wl,--gc-sections", {force = true})
     elseif is_plat("macosx") then
@@ -303,91 +313,62 @@ target("catter-hook-unix")
     end
     )
 
-target("catter-hook")
-    set_kind("object")
-    add_local_prefix_includedirs()
-    add_includedirs("src/catter-hook/", {public = true})
-    add_deps("common")
-    if is_plat("windows", "mingw") then
-        add_files("src/catter-hook/win/*.cc")
-        add_packages("detours~" .. (is_arch("arm64", "aarch64") and "arm64" or "x64"), {public = true})
-    elseif is_plat("linux", "macosx") then
-        add_files("src/catter-hook/unix/impl.cc")
-    end
-
 target("catter-proxy")
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_deps("common", "catter-hook")
-    add_includedirs("src/catter-proxy/")
-    add_files("src/catter-proxy/**.cc")
-    -- main is wmain on Windows (src/catter-proxy/main.cc).
+    add_deps("support-resolver", "capture-inject")
+    add_files("src/proxy/*.cc")
+    -- main is wmain on Windows (src/proxy/main.cc).
     if is_plat("mingw") then
         add_ldflags("-municode", {force = true})
     end
 
-rule("ut-base")
+rule("unittests-main")
     on_load(function (target)
-        target:add("includedirs", "unittests/base/")
-        target:add("files", "unittests/base/**.cc")
+        target:add("includedirs", "unittests")
+        target:add("files", "unittests/main.cc")
         target:add("packages", "kotatsu")
     end)
 
-target("ut-common")
+target("unittests")
     set_default(has_config("test"))
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_rules("ut-base")
+    add_rules("unittests-main")
 
-    add_files("unittests/common/**.cc")
-
-    add_deps("common")
-    add_tests("default")
-
-target("ut-catter")
-    set_default(has_config("test"))
-    set_kind("binary")
-    add_local_prefix_includedirs()
-    add_rules("ut-base")
-
-    add_files("unittests/catter/**.cc")
-    add_deps("catter-core", "common")
+    add_files("unittests/**.cc|main.cc|hook/**.cc")
+    add_deps("support-resolver", "capture", "protocol", "feature")
 
     add_tests("default")
 
 
-target("ut-catter-hook-unix")
+target("unittests-hook-unix")
     set_default(has_config("test") and (is_plat("linux", "macosx")))
     set_kind("binary")
-    add_rules("ut-base")
+    add_rules("unittests-main")
 
     if is_plat("linux") then
         add_syslinks("dl")
     end
-    add_includedirs("src/catter-hook/", { public = true })
-    add_includedirs("src/catter-hook/unix/payload/", { public = true })
-    add_files("src/catter-hook/unix/payload/*.cc")
+    add_files("src/hook/unix/*.cc")
 
-    add_files("unittests/catter-hook/unix/**.cc")
-    add_files("unittests/catter-hook/shared/**.cc")
+    add_files("unittests/hook/unix/**.cc")
 
-    add_deps("common")
+    add_deps("support", "support-resolver")
 
     if is_plat("linux", "macosx") then
         add_tests("default")
     end
 
-target("ut-catter-hook-win")
+target("unittests-hook-windows")
     set_default(has_config("test") and is_plat("windows", "mingw"))
     set_kind("binary")
-    add_rules("ut-base")
+    add_rules("unittests-main")
 
-    add_includedirs("src/catter-hook/")
-    add_files("src/catter-hook/win/payload/util.cc")
-    add_files("unittests/catter-hook/win/**.cc")
-    add_files("unittests/catter-hook/shared/**.cc")
+    add_files("src/hook/windows/util.cc")
+    add_files("unittests/hook/windows/**.cc")
 
-    add_deps("common")
+    add_deps("support", "support-resolver")
 
     if is_plat("windows", "mingw") then
         add_tests("default")

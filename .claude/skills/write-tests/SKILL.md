@@ -82,14 +82,18 @@ rules and the pitfalls. The framework is `tools/testing/`
   capture cases still cover macOS.
 - A debug (ASan) catter on Linux puts the sanitizer runtime first in the
   preload of every program the hook enters, with leak detection off for
-  them (`src/catter-hook/unix/impl.cc`): a case needs nothing for it.
+  them (`src/capture/inject/unix/impl.cc`): a case needs nothing for it.
 - A native stack trace never reaches stdout (only the log): one in a block
   is a regression.
 
 ## C++ unit tests (zest)
 
-- `unittests/` mirrors `src/`; what belongs in a unit test rather than a
-  case is in `tests/README.md`, "Unit tests".
+- `unittests/` mirrors `src/`, as clice's does: the tests of
+  `src/<dir>/<name>.h` are `unittests/<dir>/<name>_tests.cc`, the shared
+  helpers live in `unittests/utils/`, and they build into `unittests`, but
+  the hook payloads' into `unittests-hook-unix` and `unittests-hook-windows`.
+  What belongs in a unit test rather than a case is in `tests/README.md`,
+  "Unit tests".
 - zest runs each test in a worker process with a 60 second limit; a suite
   that uses a fixed file or directory name runs alone:
   `ZEST_SUITE_ATTRS(serial = true);`. Debug a test in-process with

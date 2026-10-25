@@ -27,7 +27,7 @@ PowerShell sets a variable for the commands after it, not on the command line: `
 
 Filtering specific tests:
 
-- Unit: `build/<plat>/<arch>/<mode>/ut-catter --test-filter=<suite>.<test>` (`ut-common`, `ut-catter-hook-unix`, `ut-catter-hook-win` likewise)
+- Unit: `build/<plat>/<arch>/<mode>/unittests --test-filter=<suite>.<test>` (`unittests-hook-unix`, `unittests-hook-windows` likewise)
 - Cases: `CATTER_CASES=<path prefix> pixi run -e dev cases-test [mode]`, e.g. `CATTER_CASES=capture/` or `CATTER_CASES=builds/make/02_parallel`; the "Running" section of `tests/README.md` lists the rest.
 
 This skill runs and reports — nothing else. Never fix code or tests from here, never set `UPDATE_SNAPSHOTS`. Fixing happens in the main conversation with full context.

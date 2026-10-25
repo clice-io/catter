@@ -1,0 +1,76 @@
+
+#include <string>
+#include <windows.h>
+#include <kota/zest/zest.h>
+
+#include "hook/windows/util.h"
+
+namespace ct = catter;
+
+namespace {
+
+struct ScopedEnvVar {
+    std::wstring name;
+    std::wstring original;
+    bool had_original = false;
+
+    ScopedEnvVar(std::wstring name_value, const std::wstring& value) : name(std::move(name_value)) {
+        wchar_t buffer[32768];
+        auto len = GetEnvironmentVariableW(name.c_str(), buffer, 32768);
+        if(len > 0 && len < 32768) {
+            had_original = true;
+            original.assign(buffer, len);
+        }
+        SetEnvironmentVariableW(name.c_str(), value.c_str());
+    }
+
+    ~ScopedEnvVar() {
+        if(had_original) {
+            SetEnvironmentVariableW(name.c_str(), original.c_str());
+        } else {
+            SetEnvironmentVariableW(name.c_str(), nullptr);
+        }
+    }
+};
+
+ZEST_SUITE(win_payload_util) {
+ZEST_CASE(get_proxy_path_reads_environment_variable) {
+    ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
+    EXPECT(ct::win::payload::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
+    EXPECT(ct::win::payload::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
+};
+
+ZEST_CASE(get_ipc_id_reads_environment_variable) {
+    ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
+    EXPECT(ct::win::payload::get_ipc_id<char>() == "12345");
+    EXPECT(ct::win::payload::get_ipc_id<wchar_t>() == L"12345");
+};
+
+ZEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
+    auto command =
+        ct::win::payload::build_proxy_command<char>(R"(C:\Program Files\Catter\catter-proxy.exe)",
+                                                    "12345",
+                                                    R"(\\.\pipe\catter-ipc-1)",
+                                                    R"(C:\Program Files\LLVM\bin\clang-cl.exe)",
+                                                    R"("clang-cl.exe" /c main.cc)");
+
+    EXPECT(
+        command ==
+        R"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc "\\.\pipe\catter-ipc-1" -- "clang-cl.exe" /c main.cc)");
+};
+
+ZEST_CASE(build_proxy_command_supports_wide_strings) {
+    auto command = ct::win::payload::build_proxy_command<wchar_t>(
+        LR"(C:\Program Files\Catter\catter-proxy.exe)",
+        L"12345",
+        LR"(\\.\pipe\catter-ipc-1)",
+        LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
+        LR"("clang-cl.exe" /c main.cc)");
+
+    EXPECT(
+        command ==
+        LR"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc "\\.\pipe\catter-ipc-1" -- "clang-cl.exe" /c main.cc)");
+};
+};  // ZEST_SUITE(win_payload_util)
+
+}  // namespace
