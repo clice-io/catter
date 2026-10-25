@@ -19,7 +19,6 @@
 #include "util/data.h"
 #include "util/kotatsu.h"
 #include "util/log.h"
-#include "util/pipe_proxy.h"
 
 #if defined(__SANITIZE_ADDRESS__)
 #define CATTER_ASAN 1
@@ -119,16 +118,12 @@ kota::task<data::process_result>
              command.executable,
              cmd_for_print);
 
-    kota::process::options opts{
-        .file = command.executable,
-        .args = command.args,
-        .env = command.env,
-        .cwd = command.cwd,
-        .streams = {kota::process::stdio::inherit(),
-                    kota::process::stdio::pipe(false, true),
-                    kota::process::stdio::pipe(false, true)}
-    };
-    return catter::capture_process_result(make_process_event(opts));
+    return catter::run_process({
+        .file = std::move(command.executable),
+        .args = std::move(command.args),
+        .env = std::move(command.env),
+        .cwd = std::move(command.cwd),
+    });
 };
 
 };  // namespace catter::proxy::hook

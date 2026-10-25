@@ -1,4 +1,5 @@
 #include <csignal>
+#include <cstdio>
 #include <iostream>
 #include <print>
 #include <string_view>
@@ -26,15 +27,18 @@ int run(int argc, char* argv[]) {
 
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
-    // catter's standard handles, pipes of whoever runs catter, are not the
-    // build's: inherited by every program it starts, a server among them would
-    // hold them open after catter exits. libuv hands the build its stdio itself.
+    // libuv hands the build catter's stdio as duplicates of its own. The
+    // standard handles themselves, inherited as well by every program catter
+    // starts, would be held open by a server among them after catter exits.
     uv_disable_stdio_inheritance();
 #else
     // A write to a handler that has exited fails, and is reported, instead of
     // killing catter. libuv resets the programs catter starts to the default.
     std::signal(SIGPIPE, SIG_IGN);
 #endif
+    // The build writes to catter's stdout directly: what catter prints during
+    // the build keeps its place among the build's output.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
 
     auto args = kota::deco::util::argvify(argc, argv, 1);
     kota::deco::cli::text::set_default_renderer(kota::deco::cli::text::ModernRenderer());

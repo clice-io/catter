@@ -62,7 +62,7 @@ starts. A command under catter sees what it would see without catter: its
 arguments byte for byte, its environment and working directory, the
 descriptors and signal dispositions it inherits, its terminal; and the
 build sees the command's real exit status and output. Open issues such as
-#119, #125, #128, #145 and #153 are what breaking this costs.
+#119, #128, #145 and #153 are what breaking this costs.
 
 The hook payloads (`src/catter-hook/*/payload`) run inside every process
 of the build, next to that program's own runtime. They:
@@ -163,8 +163,8 @@ of the build, next to that program's own runtime. They:
 - **A file-local type is named by its role in the file**, without the
   words of the file's own subject: in an anonymous namespace, the type
   building the file's answer is `Builder`, not `<Subject>Builder`. A type
-  that is the file's subject itself keeps its name (`PipeProxy` in
-  `pipe_proxy.cc`).
+  that is the file's subject itself keeps its name (`RemoteHandler` in
+  `remote_handler.cc`).
 - **Nothing is a `Collector`**: the type producing the file's answer is a
   `Builder`; a visitor gathering nodes is a `<What>Finder`, or is named by
   what it gathers; a callback that only records what it is told is a

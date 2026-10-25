@@ -22,14 +22,10 @@ dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an in
 exit = 0
 
 [test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -j 1".win32]
-wrong = "command output gets its line endings rewritten, which leaves blank lines in Ninja's output (catter#139)"
+differs = "CMake builds with MSVC: Ninja names objects and executables the Windows way"
 stdout = '''
 [1/3] Building CXX object CMakeFiles\hello.dir\src\main.cc.obj
-
-
 [2/3] Building CXX object CMakeFiles\hello.dir\src\util.cc.obj
-
-
 [3/3] Linking CXX executable hello.exe
 '''
 exit = 0

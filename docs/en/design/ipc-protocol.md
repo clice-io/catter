@@ -89,7 +89,7 @@ The core request. The proxy sends a captured command and the daemon decides what
 
 - **`DROP` (0)** -- Do not execute the command. The proxy returns exit code 0 immediately. Used when a handler determines a command is irrelevant (e.g., a compiler invocation the user wants to skip).
 - **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD` (or performs DLL injection on Windows) so that child processes of this command are also intercepted. This is the default for build commands whose children should be monitored.
-- **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command and captures its stdout/stderr, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
+- **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
 - **`FAIL` (3)** -- Do not execute the command: the proxy returns exit code 1 immediately. The session has ended with an error (a handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
 
 The daemon may modify the command in the returned action. For example, a handler could change compiler flags, redirect output paths, or substitute a different executable.
@@ -117,11 +117,9 @@ Reports that a command has completed execution.
 
 **Params** -- `process_result`:
 
-| Field     | Type      | Description              |
-| --------- | --------- | ------------------------ |
-| `code`    | `int64_t` | Process exit code        |
-| `std_out` | `string`  | Captured standard output |
-| `std_err` | `string`  | Captured standard error  |
+| Field  | Type      | Description       |
+| ------ | --------- | ----------------- |
+| `code` | `int64_t` | Process exit code |
 
 **Result**: `null` (no response payload)
 
@@ -212,8 +210,6 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
-    std::string std_out;               // Captured stdout
-    std::string std_err;               // Captured stderr
 };
 
 // Decision returned by the daemon

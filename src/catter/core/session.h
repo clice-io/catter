@@ -74,8 +74,7 @@ public:
 
     /// Run the session with the given run plan.
     /// @param run_plan The run plan containing the launch plan and service factory.
-    /// @return The result of the process execution, including exit status and captured
-    /// stdout/stderr.
+    /// @return The result of the process execution: its exit status.
     kota::task<data::process_result> run(RunPlan run_plan);
 
 private:

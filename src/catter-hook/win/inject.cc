@@ -11,8 +11,6 @@
 #include "util/log.h"
 #include "winapi/win32.h"
 
-using namespace std::literals;
-
 namespace catter::proxy::hook {
 
 template <typename F>
@@ -140,7 +138,7 @@ bool try_inject(HANDLE hProcess, const std::filesystem::path& dll_path) {
     for(auto method: kota::meta::reflection<InjectMethod>::member_values) {
         try {
             auto thread = inject(hProcess, Space.get(), method);
-            if(auto error = win::wait_for_object(thread.get(), 3s); error) {
+            if(auto error = win::wait_for_object(thread.get())) {
                 throw catter::system_error(error.value(),
                                            std::system_category(),
                                            "Failed to wait for remote thread");
