@@ -19,7 +19,7 @@ Currently, there is no cross-platform tool that completely solves all these issu
 
 ## Core Features
 
-`catter`'s underlying principle is similar to [Bear](https://github.com/rizsotto/Bear) or [scan-build](https://github.com/rizsotto/scan-build). It works by using hooks to intercept any child process creation (including compilation tasks) initiated by the target process. Every captured command goes to handlers: built-in scripts, or programs of your own in any language, which process these events—for example, to log or modify compilation arguments, analyze build times, and so on.
+`catter`'s underlying principle is similar to [Bear](https://github.com/rizsotto/Bear) or [scan-build](https://github.com/rizsotto/scan-build). It works by using hooks to intercept any child process creation (including compilation tasks) initiated by the target process. Every captured command goes to handlers: catter's built-ins, or programs of your own in any language, which process these events—for example, to log or modify compilation arguments, analyze build times, and so on.
 
 Although its initial motivation was to record compilation commands to generate a CDB, we quickly realized it could be used for much more:
 
@@ -41,22 +41,22 @@ Generate a compilation database by running your normal build command through
 `catter`:
 
 ```bash
-catter script::cdb -o compile_commands.json -- make
+catter cdb -o compile_commands.json -- make
 ```
 
 For CMake projects, wrap the build step in the same way:
 
 ```bash
-catter script::cdb -o compile_commands.json -- cmake --build build
+catter cdb -o compile_commands.json -- cmake --build build
 ```
 
 The general command format is:
 
 ```bash
-catter [options] <script> [script-args] -- <build-command>
+catter [options] <built-in> [built-in options] -- <build-command>
 ```
 
-Here, `script::cdb` selects the built-in compilation database script, `-o`
+Here, `cdb` selects the built-in that writes a compilation database, `-o`
 sets the output path, and everything after `--` is the build command to
 intercept.
 

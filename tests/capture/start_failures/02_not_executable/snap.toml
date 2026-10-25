@@ -2,7 +2,7 @@
 stdout = "failed to start: EACCES"
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 failed to start: EACCES
 node build.mjs

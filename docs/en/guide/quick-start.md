@@ -25,7 +25,7 @@ Catter is under active development; always use the latest package from the Relea
 Run your build command through catter to capture all compiler invocations:
 
 ```bash
-catter script::cdb -o compile_commands.json -- make
+catter cdb -o compile_commands.json -- make
 ```
 
 This produces a `compile_commands.json` file in the current directory, ready for use with any language server or static analysis tool.
@@ -33,17 +33,17 @@ This produces a `compile_commands.json` file in the current directory, ready for
 ## Command Format
 
 ```
-catter [options] <script> [script-args] -- <build-command>
+catter [options] <built-in> [built-in options] -- <build-command>
 ```
 
 Breaking down the CDB example:
 
-| Part                       | Meaning                                                                             |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `script::cdb`              | Use the built-in CDB generation script (`script::` prefix selects built-in scripts) |
-| `-o compile_commands.json` | Script-specific option: output file path                                            |
-| `--`                       | Separator between catter/script arguments and the build command                     |
-| `make`                     | The actual build command to intercept                                               |
+| Part                       | Meaning                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `cdb`                      | Use the built-in that generates a CDB                                             |
+| `-o compile_commands.json` | An option of the built-in: the output file path                                   |
+| `--`                       | Separator between the arguments of catter and the built-in, and the build command |
+| `make`                     | The actual build command to intercept                                             |
 
 ## More Examples
 
@@ -52,13 +52,13 @@ Breaking down the CDB example:
 View the captured build command DAG as an ASCII tree:
 
 ```bash
-catter script::cmd-tree -- make
+catter cmd-tree -- make
 ```
 
 ### Using with CMake
 
 ```bash
-catter script::cdb -o compile_commands.json -- cmake --build build
+catter cdb -o compile_commands.json -- cmake --build build
 ```
 
 ### Your own handler

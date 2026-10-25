@@ -13,6 +13,6 @@ test(
     async (t) => {
         await t.setup("cl /nologo handle.c");
         await t.run("handle.exe");
-        await t.cli("script::cmd-tree -a 0 -- handle.exe");
+        await t.cli("cmd-tree -a 0 -- handle.exe");
     },
 );

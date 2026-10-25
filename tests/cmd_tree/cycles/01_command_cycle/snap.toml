@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::cmd-tree -- events.json"]
+[test."$ catter -m replay cmd-tree -- events.json"]
 stdout = '''
 make
 

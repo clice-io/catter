@@ -1,4 +1,4 @@
-[test."$ catter script::cmd-tree -- node build.mjs A"]
+[test."$ catter cmd-tree -- node build.mjs A"]
 stdout = '''
 build A done
 node build.mjs A
@@ -15,7 +15,7 @@ node build.mjs A
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -- node build.mjs B"]
+[test."$ catter cmd-tree -- node build.mjs B"]
 stdout = '''
 build B done
 node build.mjs B

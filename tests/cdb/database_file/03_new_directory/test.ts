@@ -3,7 +3,7 @@ import { test } from "@catter/tools/testing";
 // -o into a directory that does not exist yet creates it.
 test("posix", { except: { win32: "the POSIX compiler driver" } }, async (t) => {
     await t.cli(
-        "script::cdb -o new/dir/compile_commands.json -- c++ -c -DCATTER_TEST=1 -Iinclude src/main.cc -o main.o",
+        "cdb -o new/dir/compile_commands.json -- c++ -c -DCATTER_TEST=1 -Iinclude src/main.cc -o main.o",
     );
     t.show("new/dir/compile_commands.json", t.disk.cdb("new/dir/compile_commands.json"));
 });
@@ -18,7 +18,7 @@ test(
     },
     async (t) => {
         await t.cli(
-            "script::cdb -o new/dir/compile_commands.json -- cl /nologo /c /DCATTER_TEST=1 /Iinclude src/main.cc",
+            "cdb -o new/dir/compile_commands.json -- cl /nologo /c /DCATTER_TEST=1 /Iinclude src/main.cc",
         );
         t.show("new/dir/compile_commands.json", t.disk.cdb("new/dir/compile_commands.json"));
     },

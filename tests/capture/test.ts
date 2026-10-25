@@ -5,5 +5,5 @@ import { test } from "@catter/tools/testing";
 // captured.
 test(async (t) => {
     await t.run("node build.mjs");
-    await t.cli("script::cmd-tree -w 1000 -- node build.mjs");
+    await t.cli("cmd-tree -w 1000 -- node build.mjs");
 });

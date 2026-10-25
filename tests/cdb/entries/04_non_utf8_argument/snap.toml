@@ -1,8 +1,8 @@
-[test."$ catter script::cdb -o compile_commands.json -- python build.py"]
+[test."$ catter cdb -o compile_commands.json -- python build.py"]
 stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
 exit = 0
 
-[test."$ catter script::cdb -o compile_commands.json -- python build.py".darwin]
+[test."$ catter cdb -o compile_commands.json -- python build.py".darwin]
 wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
 stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
 stderr = '''

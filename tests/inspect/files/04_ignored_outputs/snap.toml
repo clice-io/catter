@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- cl /nologo /c /Fea.exe a.cc"]
+[test."$ catter inspect -- cl /nologo /c /Fea.exe a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -68,7 +68,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang-cl /c a.cc /link/out:a.exe"]
+[test."$ catter inspect -- clang-cl /c a.cc /link/out:a.exe"]
 stdout = '''
 {
     "analyzer": "compiler",

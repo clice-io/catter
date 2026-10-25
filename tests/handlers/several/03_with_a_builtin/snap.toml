@@ -1,4 +1,4 @@
-[test."$ catter --handler \"python decider.py\" script::cmd-tree -- node build.mjs"]
+[test."$ catter --handler \"python decider.py\" cmd-tree -- node build.mjs"]
 stdout = '''
 drop-me: exit 0
 ran with ["modify-me","added-by-decider"]

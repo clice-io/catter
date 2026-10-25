@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o"]
+[test."$ catter inspect -- gcc -c a.c @args.rsp -o a.o"]
 wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123)"
 stdout = '''
 {
@@ -60,7 +60,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".darwin]
+[test."$ catter inspect -- gcc -c a.c @args.rsp -o a.o".darwin]
 wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -122,7 +122,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c a.c @args.rsp -o a.o".win32]
+[test."$ catter inspect -- gcc -c a.c @args.rsp -o a.o".win32]
 wrong = "gcc reads the response file args.rsp, which is not expanded (catter#123); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -184,7 +184,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -x assembler -c a.s"]
+[test."$ catter inspect -- gcc -x assembler -c a.s"]
 wrong = "a source with an explicit language gets no reads or writes (catter#131)"
 stdout = '''
 {
@@ -223,7 +223,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -x assembler -c a.s".darwin]
+[test."$ catter inspect -- gcc -x assembler -c a.s".darwin]
 wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -262,7 +262,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -x assembler -c a.s".win32]
+[test."$ catter inspect -- gcc -x assembler -c a.s".win32]
 wrong = "a source with an explicit language gets no reads or writes (catter#131); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -301,7 +301,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c -"]
+[test."$ catter inspect -- gcc -c -"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -339,7 +339,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c -".darwin]
+[test."$ catter inspect -- gcc -c -".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -378,7 +378,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c -".win32]
+[test."$ catter inspect -- gcc -c -".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -417,7 +417,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c a.cc /link /out:a.exe"]
+[test."$ catter inspect -- cl /nologo /c a.cc /link /out:a.exe"]
 stdout = '''
 {
     "analyzer": "compiler",

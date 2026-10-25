@@ -5,5 +5,5 @@ import { test } from "@catter/tools/testing";
 test(async (t) => {
     const command = ["node", "child.mjs", "with space", 'quote"inside', "", "中文-é"];
     await t.run(command);
-    await t.cli(["script::cmd-tree", "-w", "1000", "--", ...command]);
+    await t.cli(["cmd-tree", "-w", "1000", "--", ...command]);
 });

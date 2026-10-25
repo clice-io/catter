@@ -17,7 +17,7 @@ Today `inject` (based on hooks) is the only capture mechanism; `env` and `eslogg
 
 ## Handlers
 
-A session's handlers decide on its commands and are told of its events. They are the built-in script the command line names, if any (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in script first, then the others in the order of the command line.
+A session's handlers decide on its commands and are told of its events. They are the built-in the command line names, if any (`cdb`, `cmd-tree`, `target-tree`, `inspect`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in first, then the others in the order of the command line.
 
 ## Session lifecycle
 

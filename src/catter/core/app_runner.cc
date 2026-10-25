@@ -103,9 +103,9 @@ std::string session_id() {
 }  // namespace
 
 kota::task<> async_run(const core::CatterConfig& config) {
-    if(!config.script.has_value() && config.handlers.empty()) {
+    if(!config.builtin.has_value() && config.handlers.empty()) {
         throw cpptrace::runtime_error(
-            "catter needs a script, or a handler to give the build's commands to (--handler, --connect)");
+            "catter needs a built-in, or a handler to give the build's commands to (--handler, --connect)");
     }
 
     const auto handler_options = [&, session = session_id()](std::string_view name) {
@@ -117,12 +117,13 @@ kota::task<> async_run(const core::CatterConfig& config) {
         };
     };
 
-    std::unique_ptr<core::Handler> script;
-    if(config.script.has_value()) {
-        script = builtin::make(*config.script, config.script_args);
-        if(!script) {
-            throw cpptrace::runtime_error(
-                std::format("Unknown builtin script `{}`", *config.script));
+    std::unique_ptr<core::Handler> builtin_handler;
+    if(config.builtin.has_value()) {
+        builtin_handler = builtin::make(*config.builtin, config.builtin_args);
+        if(!builtin_handler) {
+            throw cpptrace::runtime_error(std::format(
+                "Unknown built-in `{}`: the built-ins are cdb, cmd-tree, target-tree and inspect",
+                *config.builtin));
         }
     }
 
@@ -141,8 +142,8 @@ kota::task<> async_run(const core::CatterConfig& config) {
         }
 
         std::vector<core::Handler*> chain;
-        if(script) {
-            chain.push_back(script.get());
+        if(builtin_handler) {
+            chain.push_back(builtin_handler.get());
         }
         for(const auto& remote: remotes) {
             chain.push_back(remote.get());

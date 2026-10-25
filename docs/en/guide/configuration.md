@@ -3,10 +3,10 @@
 ## catter CLI
 
 ```
-catter [options] [<script> [script-args]] -- <build-command>
+catter [options] [<built-in> [built-in options]] -- <build-command>
 ```
 
-A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
+A run takes a built-in, one or more [handlers](../scripting/handlers.md), or both.
 
 ### Options
 
@@ -24,22 +24,22 @@ A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
 
 catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.
 
-### Built-in scripts
+### Built-ins
 
-A built-in script is named with the `script::` prefix:
+A built-in is named by itself, before its options:
 
 ```bash
-catter script::<name> [script-args] -- <build-command>
+catter <name> [built-in options] -- <build-command>
 ```
 
-Available built-in scripts:
+The built-ins:
 
-| Name                  | Description                                            |
-| --------------------- | ------------------------------------------------------ |
-| `script::cdb`         | Generate `compile_commands.json`                       |
-| `script::cmd-tree`    | Display the build command tree                         |
-| `script::target-tree` | Display the build target tree                          |
-| `script::inspect`     | Show how catter analyzes a command, without running it |
+| Name          | Description                                            |
+| ------------- | ------------------------------------------------------ |
+| `cdb`         | Generate `compile_commands.json`                       |
+| `cmd-tree`    | Display the build command tree                         |
+| `target-tree` | Display the build target tree                          |
+| `inspect`     | Show how catter analyzes a command, without running it |
 
 ## catter-proxy CLI
 

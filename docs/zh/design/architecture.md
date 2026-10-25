@@ -17,7 +17,7 @@ runtime 通过 `-m/--mode` 选择，默认 `inject`。handler 从会话的 `init
 
 ## Handler
 
-会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令行指定的内置脚本（如果有的话；`script::cdb`、`script::cmd-tree`、`script::target-tree`、`script::inspect`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置脚本在前，其余按命令行中的顺序排列。
+会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令行指定的内置功能（如果有的话；`cdb`、`cmd-tree`、`target-tree`、`inspect`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置功能在前，其余按命令行中的顺序排列。
 
 ## 会话生命周期
 

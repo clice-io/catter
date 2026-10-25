@@ -4,6 +4,6 @@ import { test } from "@catter/tools/testing";
 // order.
 test(async (t) => {
     await t.setup("cmake -S . -B build -G Ninja");
-    await t.cli("script::cdb -o compile_commands.json -- cmake --build build -j 1");
+    await t.cli("cdb -o compile_commands.json -- cmake --build build -j 1");
     t.show("compile_commands.json", t.disk.cdb());
 });

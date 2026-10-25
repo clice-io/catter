@@ -2,7 +2,7 @@
 stdout = '"a b" c'
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+[test."$ catter cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
 stdout = '''
 "a b" c
 spawn.exe CreateProcessW command.txt

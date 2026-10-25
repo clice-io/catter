@@ -12,7 +12,7 @@ test(
     async (t) => {
         await t.setup("cl /nologo spawn.c");
         for (const name of ["CreateProcessA", "CreateProcessW"]) {
-            await t.cli(["script::cmd-tree", "-w", "1000", "--", "spawn.exe", name, "command.txt"]);
+            await t.cli(["cmd-tree", "-w", "1000", "--", "spawn.exe", name, "command.txt"]);
         }
     },
 );

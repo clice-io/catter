@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::target-tree -- events.json"]
+[test."$ catter -m replay target-tree -- events.json"]
 stdout = '''
 app
 └── main.o

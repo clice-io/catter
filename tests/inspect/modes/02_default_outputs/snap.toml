@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- gcc -c a.c"]
+[test."$ catter inspect -- gcc -c a.c"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -51,7 +51,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c a.c".darwin]
+[test."$ catter inspect -- gcc -c a.c".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -105,7 +105,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -c a.c".win32]
+[test."$ catter inspect -- gcc -c a.c".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -159,7 +159,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c"]
+[test."$ catter inspect -- gcc a.c"]
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132)"
 stdout = '''
 {
@@ -193,7 +193,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c".darwin]
+[test."$ catter inspect -- gcc a.c".darwin]
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -227,7 +227,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c".win32]
+[test."$ catter inspect -- gcc a.c".win32]
 wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -261,7 +261,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c a.cc"]
+[test."$ catter inspect -- cl /nologo /c a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",

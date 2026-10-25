@@ -4,7 +4,7 @@ import { test } from "@catter/tools/testing";
 // still says how the source compiles.
 test("posix", { except: { win32: "the POSIX compiler driver" } }, async (t) => {
     await t.cli(
-        "script::cdb -o compile_commands.json -- c++ -fsyntax-only -DCATTER_TEST=1 -Iinclude src/main.cc",
+        "cdb -o compile_commands.json -- c++ -fsyntax-only -DCATTER_TEST=1 -Iinclude src/main.cc",
     );
     t.show("compile_commands.json", t.disk.cdb());
 });
@@ -19,7 +19,7 @@ test(
     },
     async (t) => {
         await t.cli(
-            "script::cdb -o compile_commands.json -- cl /nologo /Zs /DCATTER_TEST=1 /Iinclude src/main.cc",
+            "cdb -o compile_commands.json -- cl /nologo /Zs /DCATTER_TEST=1 /Iinclude src/main.cc",
         );
         t.show("compile_commands.json", t.disk.cdb());
     },

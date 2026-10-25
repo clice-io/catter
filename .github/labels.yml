@@ -48,7 +48,7 @@
   description: "Handlers, the handler protocol and the SDKs"
 - name: "area:cdb"
   color: "1d76db"
-  description: "Compilation database generation (script::cdb)"
+  description: "Compilation database generation (cdb)"
 - name: "area:compiler-args"
   color: "1d76db"
   description: "Compiler identification and argument parsing"

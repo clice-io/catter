@@ -1,4 +1,4 @@
-[test."$ catter script::target-tree --help -- node -e 0"]
+[test."$ catter target-tree --help -- node -e 0"]
 stdout = '''
 Render captured build targets as a flat target forest.
 
@@ -11,7 +11,7 @@ Options:
 '''
 exit = 0
 
-[test."$ catter script::target-tree -d -1 -- node -e 0"]
+[test."$ catter target-tree -d -1 -- node -e 0"]
 stdout = '''
 target-tree: expected --depth >= 0, got -1
 

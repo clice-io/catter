@@ -3,10 +3,10 @@
 ## catter 命令行
 
 ```
-catter [options] [<script> [script-args]] -- <build-command>
+catter [options] [<built-in> [built-in options]] -- <build-command>
 ```
 
-一次运行可以使用一个脚本、一个或多个 [handler](../scripting/handlers.md)，或两者兼用。
+一次运行可以使用一个内置功能、一个或多个 [handler](../scripting/handlers.md)，或两者兼用。
 
 ### 选项
 
@@ -24,22 +24,22 @@ catter [options] [<script> [script-args]] -- <build-command>
 
 catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。
 
-### 内置脚本
+### 内置功能
 
-内置脚本用 `script::` 前缀指定：
+内置功能直接用名字指定，写在它的选项之前：
 
 ```bash
-catter script::<name> [script-args] -- <build-command>
+catter <name> [built-in options] -- <build-command>
 ```
 
-可用的内置脚本：
+内置功能有：
 
-| 名称                  | 说明                                     |
-| --------------------- | ---------------------------------------- |
-| `script::cdb`         | 生成 `compile_commands.json`             |
-| `script::cmd-tree`    | 展示构建命令树                           |
-| `script::target-tree` | 展示构建目标树                           |
-| `script::inspect`     | 展示 catter 如何分析一条命令（不运行它） |
+| 名称          | 说明                                     |
+| ------------- | ---------------------------------------- |
+| `cdb`         | 生成 `compile_commands.json`             |
+| `cmd-tree`    | 展示构建命令树                           |
+| `target-tree` | 展示构建目标树                           |
+| `inspect`     | 展示 catter 如何分析一条命令（不运行它） |
 
 ## catter-proxy 命令行
 

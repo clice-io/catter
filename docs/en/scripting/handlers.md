@@ -137,13 +137,13 @@ catter.serve(Handler())
 
 ## Several handlers
 
-`--handler` and `--connect` may be given more than once, and with a script:
+`--handler` and `--connect` may be given more than once, and with a built-in:
 
 ```bash
-catter --handler "python observe.py" --handler "python decide.py" script::cdb -o compile_commands.json -- make
+catter --handler "python observe.py" --handler "python decide.py" cdb -o compile_commands.json -- make
 ```
 
-The handlers form a chain, in a fixed order: the script first, then the handlers in the order of the command line. Each command goes to them in turn, each seeing it as the ones before left it, until one drops it; a handler after it never sees a dropped command. Put an observer that should see every command first.
+The handlers form a chain, in a fixed order: the built-in first, then the handlers in the order of the command line. Each command goes to them in turn, each seeing it as the ones before left it, until one drops it; a handler after it never sees a dropped command. Put an observer that should see every command first.
 
 ## When a handler fails
 

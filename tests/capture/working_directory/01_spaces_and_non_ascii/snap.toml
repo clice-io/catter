@@ -2,7 +2,7 @@
 stdout = "with space 中文"
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 with space 中文
 node build.mjs
@@ -10,7 +10,7 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs".win32]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs".win32]
 differs = "cmd-tree quotes a Windows path, which holds a space"
 stdout = '''
 with space 中文

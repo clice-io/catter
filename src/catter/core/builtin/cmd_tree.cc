@@ -42,7 +42,7 @@ struct Options {
 
     DecoKVStyled(
         kota::deco::decl::KVStyle::JoinedOrSeparate,
-        names = {"-w", "--argWidth", "--argWidth="},
+        names = {"-w", "--arg-width", "--arg-width="},
         meta_var = "<n>",
         help = "Cut each longer argument in its middle to this many characters. [default: 10]")
     <std::int64_t> arg_width = 10;
@@ -94,7 +94,7 @@ public:
         }
         check_at_least<Options>(help, "--depth", parsed->depth.as_optional(), 0);
         check_at_least<Options>(help, "--args", *parsed->args, -1);
-        check_at_least<Options>(help, "--argWidth", *parsed->arg_width, 4);
+        check_at_least<Options>(help, "--arg-width", *parsed->arg_width, 4);
         options = std::move(*parsed);
         co_return build;
     }

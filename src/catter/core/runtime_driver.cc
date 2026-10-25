@@ -186,7 +186,7 @@ public:
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
         if(build.command.size() != 1) {
             throw cpptrace::runtime_error(
-                "the replay mode takes a replay file for the build command: " "catter -m replay <script> -- <file>");
+                "the replay mode takes a replay file for the build command: " "catter -m replay [--handler ...] [built-in] -- <file>");
         }
         auto file = util::from_utf8(build.cwd) / util::from_utf8(build.command.front());
         co_return co_await replay_build(file.lexically_normal(), handler);

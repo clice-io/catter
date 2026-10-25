@@ -2,15 +2,15 @@
 
 编译数据库 (CDB) 是 catter 的核心功能。它在构建过程中拦截编译器调用，生成标准的 `compile_commands.json` 文件，兼容 clang 工具链、语言服务器和各类 IDE。
 
-内置脚本：`script::cdb`
+内置功能：`cdb`
 
 ## 用法
 
 ```bash
-catter script::cdb [options] -- <build-command>
+catter cdb [options] -- <build-command>
 ```
 
-## 脚本选项
+## 选项
 
 | 选项                         | 说明                                                                       |
 | ---------------------------- | -------------------------------------------------------------------------- |
@@ -54,14 +54,14 @@ catter script::cdb [options] -- <build-command>
 
 ```bash
 # Basic usage with make
-catter script::cdb -- make -j8
+catter cdb -- make -j8
 
 # Specify output path
-catter script::cdb -o build/compile_commands.json -- ninja
+catter cdb -o build/compile_commands.json -- ninja
 
 # With CMake
-catter script::cdb -- cmake --build build
+catter cdb -- cmake --build build
 
 # With any build system
-catter script::cdb -- ./build.sh
+catter cdb -- ./build.sh
 ```

@@ -1,4 +1,4 @@
-[test."$ catter script::cdb -q -o compile_commands.json -- xmake build -P . -j 1"]
+[test."$ catter cdb -q -o compile_commands.json -- xmake build -P . -j 1"]
 stdout = '''
 [ 19%]: <hello> compiling.release src/main.cc
 [ 38%]: <hello> compiling.release src/util.cc

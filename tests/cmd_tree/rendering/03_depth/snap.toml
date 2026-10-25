@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::cmd-tree -d 1 -- events.json"]
+[test."$ catter -m replay cmd-tree -d 1 -- events.json"]
 stdout = '''
 make
 ├── sh -c "gcc....n.c"
@@ -6,6 +6,6 @@ make
 '''
 exit = 0
 
-[test."$ catter -m replay script::cmd-tree --depth=0 -- events.json"]
+[test."$ catter -m replay cmd-tree --depth=0 -- events.json"]
 stdout = "make"
 exit = 0

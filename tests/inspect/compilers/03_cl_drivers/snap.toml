@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- clang-cl /c a.cc"]
+[test."$ catter inspect -- clang-cl /c a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -53,7 +53,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang --driver-mode=cl /c a.cc"]
+[test."$ catter inspect -- clang --driver-mode=cl /c a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -109,7 +109,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang++ --driver-mode=cl a.cc /Fea.exe"]
+[test."$ catter inspect -- clang++ --driver-mode=cl a.cc /Fea.exe"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -159,7 +159,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang-cl --target=x86_64-pc-windows-gnu /c a.cc"]
+[test."$ catter inspect -- clang-cl --target=x86_64-pc-windows-gnu /c a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",

@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::cdb -o compile_commands.json -- events.json"]
+[test."$ catter -m replay cdb -o compile_commands.json -- events.json"]
 wrong = "catter exits with 0 when the build fails (catter#116)"
 stdout = "Build failed with exit code 1. CDB will not be saved."
 exit = 0

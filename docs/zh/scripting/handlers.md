@@ -137,13 +137,13 @@ catter.serve(Handler())
 
 ## 多个 handler
 
-`--handler` 和 `--connect` 都可以多次指定，也可以与脚本一起使用：
+`--handler` 和 `--connect` 都可以多次指定，也可以与内置功能一起使用：
 
 ```bash
-catter --handler "python observe.py" --handler "python decide.py" script::cdb -o compile_commands.json -- make
+catter --handler "python observe.py" --handler "python decide.py" cdb -o compile_commands.json -- make
 ```
 
-handler 按固定顺序组成一条链：脚本在最前，其后是按命令行顺序排列的 handler。每条命令依次交给它们，每个 handler 看到的都是经前面的 handler 处理后的命令，直到有一个丢弃它为止；排在后面的 handler 永远看不到被丢弃的命令。只观察的 handler 若要看到每条命令，应放在最前面。
+handler 按固定顺序组成一条链：内置功能在最前，其后是按命令行顺序排列的 handler。每条命令依次交给它们，每个 handler 看到的都是经前面的 handler 处理后的命令，直到有一个丢弃它为止；排在后面的 handler 永远看不到被丢弃的命令。只观察的 handler 若要看到每条命令，应放在最前面。
 
 ## handler 失败时
 

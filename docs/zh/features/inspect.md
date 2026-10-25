@@ -2,12 +2,12 @@
 
 命令分析打印 catter 如何分析一条命令，而不运行它：识别出的编译器或归档工具、编译器的模式和目标平台，以及命令读写的文件。用它可以查明一条命令为什么会（或不会）在编译数据库里生成条目。
 
-内置脚本：`script::inspect`
+内置功能：`inspect`
 
 ## 用法
 
 ```bash
-catter script::inspect -- <command>
+catter inspect -- <command>
 ```
 
 ## 输出
@@ -15,7 +15,7 @@ catter script::inspect -- <command>
 一个 JSON 对象。对编译器：
 
 ```bash
-catter script::inspect -- gcc -c a.c
+catter inspect -- gcc -c a.c
 ```
 
 ```json
@@ -57,4 +57,4 @@ catter script::inspect -- gcc -c a.c
 | `reads`、`writes`、`edges` | 命令读写的文件，以及哪个输出由哪些输入生成（即目标树的边）。                                                     |
 | `inferred`                 | 命令没有写出、按编译器默认规则推断出的输出。                                                                     |
 | `diagnostics`              | 分析无法确定的地方，例如推断不出的输出。                                                                         |
-| `entries`                  | `script::cdb` 为这条命令写入的编译数据库条目。                                                                   |
+| `entries`                  | `cdb` 为这条命令写入的编译数据库条目。                                                                           |

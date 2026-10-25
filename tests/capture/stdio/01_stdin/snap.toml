@@ -2,7 +2,7 @@
 stdout = "208890 bytes, sha256 7662477756dfd4331017c993f07276f7c1b756f6fcb9a85553ccf4bbd5e8c60a"
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 208890 bytes, sha256 7662477756dfd4331017c993f07276f7c1b756f6fcb9a85553ccf4bbd5e8c60a
 node build.mjs

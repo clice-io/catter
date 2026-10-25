@@ -9,7 +9,7 @@ test(
         },
     },
     async (t) => {
-        await t.cli("script::cdb -o compile_commands.json -- python build.py");
+        await t.cli("cdb -o compile_commands.json -- python build.py");
         t.show("compile_commands.json", t.disk.cdb());
     },
 );

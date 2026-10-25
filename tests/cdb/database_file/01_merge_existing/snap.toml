@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::cdb -o compile_commands.json -- events.json"]
+[test."$ catter -m replay cdb -o compile_commands.json -- events.json"]
 stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
 exit = 0
 

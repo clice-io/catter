@@ -1,6 +1,6 @@
 import { test } from "@catter/tools/testing";
 
-// script::inspect without a command to analyze, its help, and an option it does not take.
+// inspect without a command to analyze, its help, and an option it does not take.
 test(
     {
         errors: [
@@ -9,8 +9,8 @@ test(
         ],
     },
     async (t) => {
-        await t.cli("script::inspect --");
-        await t.cli("script::inspect --help -- gcc -c a.c");
-        await t.cli("script::inspect --bogus -- gcc -c a.c");
+        await t.cli("inspect --");
+        await t.cli("inspect --help -- gcc -c a.c");
+        await t.cli("inspect --bogus -- gcc -c a.c");
     },
 );

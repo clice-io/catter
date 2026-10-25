@@ -12,7 +12,7 @@ test(
     },
     async (t) => {
         await t.setup("xmake config -P . --ccache=n --yes");
-        await t.cli("script::cdb -q -o compile_commands.json -- xmake build -P . -j 1");
+        await t.cli("cdb -q -o compile_commands.json -- xmake build -P . -j 1");
         t.show("compile_commands.json", t.disk.cdb());
     },
 );

@@ -4,7 +4,7 @@ import { test } from "@catter/tools/testing";
 // scripts do: each source gets an entry.
 test("posix", { except: { win32: "the POSIX compiler driver" } }, async (t) => {
     await t.cli(
-        "script::cdb -o compile_commands.json -- c++ -DCATTER_TEST=1 -Iinclude src/main.cc src/util.cc -o hello",
+        "cdb -o compile_commands.json -- c++ -DCATTER_TEST=1 -Iinclude src/main.cc src/util.cc -o hello",
     );
     t.show("compile_commands.json", t.disk.cdb());
 });
@@ -19,7 +19,7 @@ test(
     },
     async (t) => {
         await t.cli(
-            "script::cdb -o compile_commands.json -- cl /nologo /EHsc /DCATTER_TEST=1 /Iinclude src/main.cc src/util.cc /Fehello.exe",
+            "cdb -o compile_commands.json -- cl /nologo /EHsc /DCATTER_TEST=1 /Iinclude src/main.cc src/util.cc /Fehello.exe",
         );
         t.show("compile_commands.json", t.disk.cdb());
     },

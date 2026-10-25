@@ -205,7 +205,7 @@ Domain words with one meaning each — use them only in that meaning:
 - **command**: one process the build starts, as catter captured it (cwd,
   executable, arguments, environment) — not a shell command line.
 - **handler**: what decides on a session's commands and is told of its
-  events (`core::Handler`): a built-in script (`builtin::make`), or a
+  events (`core::Handler`): a built-in (`builtin::make`), or a
   program catter speaks the handler protocol to (`core::RemoteHandler`).
 - **action**: what a handler decides for a command (`skip`, `drop`,
   `abort`, `modify`, and over the protocol `edit`: `protocol::Action`; in

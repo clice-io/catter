@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- x86_64-linux-gnu-gcc -shared a.o -o libx.so"]
+[test."$ catter inspect -- x86_64-linux-gnu-gcc -shared a.o -o libx.so"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -34,7 +34,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- x86_64-linux-gnu-gcc -r a.o b.o -o c.o"]
+[test."$ catter inspect -- x86_64-linux-gnu-gcc -r a.o b.o -o c.o"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -72,7 +72,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang --target=x86_64-linux-gnu --emit-static-lib a.o -o libx.a"]
+[test."$ catter inspect -- clang --target=x86_64-linux-gnu --emit-static-lib a.o -o libx.a"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -108,7 +108,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /LD a.cc"]
+[test."$ catter inspect -- cl /nologo /LD a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -164,7 +164,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /LDd a.cc /Fe:x.dll"]
+[test."$ catter inspect -- cl /nologo /LDd a.cc /Fe:x.dll"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -215,7 +215,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo a.cc /link /out:app.exe lib.lib /dll"]
+[test."$ catter inspect -- cl /nologo a.cc /link /out:app.exe lib.lib /dll"]
 stdout = '''
 {
     "analyzer": "compiler",

@@ -1,7 +1,7 @@
 [test."$ spawn.exe CreateProcessW command.txt"]
 exit = 7
 
-[test."$ catter script::cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+[test."$ catter cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
 wrong = "a 32-bit program fails to start (catter#124)"
 stdout = '''
 Build failed with exit code 4294967295. Printing partial command tree.

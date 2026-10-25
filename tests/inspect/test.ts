@@ -1,11 +1,11 @@
 import { test } from "@catter/tools/testing";
 
-// Each line of the case's commands.txt goes to script::inspect, which
+// Each line of the case's commands.txt goes to inspect, which
 // analyzes the command without running it: no case holds the files its
 // commands name.
 test(async (t) => {
     const lines = t.disk.read("commands.txt").split("\n");
     for (const line of lines.filter((line) => line.trim() !== "")) {
-        await t.cli(`script::inspect -- ${line}`);
+        await t.cli(`inspect -- ${line}`);
     }
 });

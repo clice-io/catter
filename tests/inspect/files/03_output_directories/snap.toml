@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- cl /nologo /c /Fo:out/ a.cc b.cc"]
+[test."$ catter inspect -- cl /nologo /c /Fo:out/ a.cc b.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -72,7 +72,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Fo:out/ a.cc b.cc".win32]
+[test."$ catter inspect -- cl /nologo /c /Fo:out/ a.cc b.cc".win32]
 differs = "Windows joins an output directory and the name of a file in it with a backslash"
 stdout = '''
 {
@@ -147,7 +147,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo a.cc /Fe:bin/"]
+[test."$ catter inspect -- cl /nologo a.cc /Fe:bin/"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -197,7 +197,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo a.cc /Fe:bin/".win32]
+[test."$ catter inspect -- cl /nologo a.cc /Fe:bin/".win32]
 differs = "Windows joins an output directory and the name of a file in it with a backslash"
 stdout = '''
 {

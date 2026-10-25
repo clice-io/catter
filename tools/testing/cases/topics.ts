@@ -2,7 +2,7 @@
 /// other directory there is an error.
 
 /// Each topic's family: what catter does to a build as it runs, how a
-/// builtin script answers on the commands it captured, or catter's own
+/// built-in answers on the commands it captured, or catter's own
 /// command line.
 export const TOPICS: Readonly<Record<string, "engine" | "builtin" | "command">> = {
     capture: "engine",
