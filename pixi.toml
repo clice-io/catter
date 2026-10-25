@@ -121,7 +121,7 @@ format-python = "ruff format ."
 # cannot start.
 format-web = "prettier --write '**/*.{js,mjs,ts,css}'"
 format-markdown = "prettier --write '**/*.md'"
-format-json = "prettier --write '**/*.{json,jsonc}'"
+format-json = "prettier --write '**/*.json'"
 format-toml = "fd -H -e toml -X tombi format --offline"
 format-yaml = "prettier --write '**/*.{yaml,yml}' && prettier --write --parser yaml .clang-format"
 format = {
@@ -151,6 +151,8 @@ npm-install = {
         "pnpm-workspace.yaml",
         "package.json",
         "sdk/typescript/package.json",
+        "tests/package.json",
+        "tools/package.json",
     ]
 }
 build = "xmake --verbose --diagnosis"
@@ -189,19 +191,15 @@ cmd = "xmake run catter-protocol-schema $PIXI_PROJECT_ROOT/sdk/protocol.schema.j
 cmd = "git diff --exit-code -- sdk/protocol.schema.json sdk/python/catter/protocol.py sdk/typescript/src/protocol.ts"
 depends-on = ["protocol"]
 
-[tasks.lint-ts]
-cmd = "pnpm exec eslint --cache ."
-depends-on = ["npm-install"]
-
 [tasks.ci-check]
 depends-on = [
-    { task = "lint-ts" },
     { task = "check-testing" },
     { task = "check-sdk-ts" },
 ]
 
+# The TypeScript SDK (sdk/typescript): types and lint.
 [tasks.check-sdk-ts]
-cmd = "pnpm --dir sdk/typescript run typecheck"
+cmd = "pnpm --dir sdk/typescript run check"
 depends-on = ["npm-install"]
 
 # The test runner (tools/) and the cases' scripts (tests/): types, lint, and

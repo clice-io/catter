@@ -6,17 +6,7 @@ settings:
 
 importers:
 
-  .:
-    devDependencies:
-      eslint:
-        specifier: ^9.39.1
-        version: 9.39.1
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.46.4
-        version: 8.46.4(eslint@9.39.1)(typescript@5.9.3)
+  .: {}
 
   sdk/typescript:
     dependencies:
@@ -27,9 +17,15 @@ importers:
       '@types/node':
         specifier: ~24.0.0
         version: 24.0.15
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.46.4
+        version: 8.46.4(eslint@9.39.1)(typescript@5.9.3)
 
   tests:
     devDependencies:

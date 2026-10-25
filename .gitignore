@@ -1,6 +1,5 @@
 #nodejs
 node_modules
-.eslintcache
 
 # Prerequisites
 *.d
@@ -36,9 +35,6 @@ node_modules
 *.a
 *.lib
 
-# auto genarated when compile
-*.inc
-
 # Executables
 *.exe
 *.out
@@ -51,6 +47,7 @@ node_modules
 .xmake
 .venv
 .vscode
+.clangd
 /build*/
 vsxmake*/
 

@@ -108,7 +108,7 @@ jobs:
 
       - uses: ./.github/actions/setup-pixi
 
-      - name: ESLint, and the types of tools/, tests/ and the TypeScript SDK
+      - name: Types and ESLint of tools/, tests/ and the TypeScript SDK, and the runner's tests
         run: pixi run -e dev ci-check
 
   # An exact release: tools/docs/translations.ts runs this one locally.

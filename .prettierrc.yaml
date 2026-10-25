@@ -18,11 +18,6 @@ overrides:
       proseWrap: "preserve"
       tabWidth: 2
 
-  - files: ["*.json", "*.yaml", "*.yml", ".clang-format", ".clang-tidy"]
+  - files: ["*.json", "*.yaml", "*.yml", ".clang-format"]
     options:
       tabWidth: 2
-
-  - files: "*.jsonc"
-    options:
-      tabWidth: 2
-      trailingComma: "none"
