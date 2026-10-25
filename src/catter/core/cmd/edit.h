@@ -15,13 +15,13 @@ namespace catter::cmd {
 /// the command's program takes them.
 struct CommandEdit {
     enum class Kind : std::uint8_t {
-        /// Takes out the arguments the flags name, by option and values: `-DX` the definition
-        /// of X, `-D*` or `-D` last every definition, `-W*` every option of `-W`'s group whose
-        /// spelling starts with `-W`. An option the table does not know is named as written,
-        /// `-fx=*` for any value.
+        /// Takes out the arguments the flags name, by option and values: `-DX` those of `-D`
+        /// with the value `X`, `-D*` or `-D` last every one of `-D`, `-W*` every option in
+        /// `-W`'s group whose name starts with `-W`. An option the table does not know is named
+        /// as written, `-fx=*` for any value.
         Remove,
-        /// Adds the flags before the first input, where they take effect for every input:
-        /// before `--` and `/link`, which end the options.
+        /// Adds the flags after the command's own arguments, where they take effect over them
+        /// and libraries go: before `--` and `/link`, which end the options.
         Append,
         /// Adds the flags right after the program.
         Prepend,

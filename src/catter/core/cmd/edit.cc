@@ -27,10 +27,11 @@ struct Piece {
 };
 
 /// What a flag of a remove names.
-struct Pattern {
+struct RemovePattern {
     Argument option;
 
-    /// `-W*`: every option of the option's group spelled with the option's spelling first.
+    /// `-W*`: every option in the option's group whose name starts with the option's
+    /// spelling.
     bool prefix = false;
 };
 
@@ -54,8 +55,8 @@ std::expected<std::vector<Piece>, std::string> read_flags(Syntax syntax,
     return pieces;
 }
 
-std::expected<std::vector<Pattern>, std::string> read_patterns(Syntax syntax,
-                                                               std::span<const std::string> flags) {
+std::expected<std::vector<RemovePattern>, std::string>
+    read_patterns(Syntax syntax, std::span<const std::string> flags) {
     auto pieces = read_flags(syntax, flags);
     if(!pieces.has_value() && !flags.empty()) {
         // An option written last without its value, `-include`, names it with any value.
@@ -69,7 +70,7 @@ std::expected<std::vector<Pattern>, std::string> read_patterns(Syntax syntax,
     if(!pieces.has_value()) {
         return std::unexpected(std::format("the flags to remove do not parse: {}", pieces.error()));
     }
-    std::vector<Pattern> patterns;
+    std::vector<RemovePattern> patterns;
     for(auto& piece: *pieces) {
         auto& option = *piece.argument;
         if(option.id == syntax.table->input_option_id) {
@@ -84,20 +85,24 @@ std::expected<std::vector<Pattern>, std::string> read_patterns(Syntax syntax,
     return patterns;
 }
 
-std::optional<std::uint32_t> group_of(Syntax syntax, std::uint32_t id) {
-    auto group = syntax.table->option(id)->group();
-    return group.has_value() ? std::optional(group->id()) : std::nullopt;
-}
-
-bool removes(const Pattern& pattern, const Piece& piece, Syntax syntax) {
+bool removes(const RemovePattern& pattern, const Piece& piece, Syntax syntax) {
     if(!piece.argument.has_value()) {
         return false;
     }
     const auto& argument = *piece.argument;
     const auto& wanted = pattern.option;
-    if(pattern.prefix && group_of(syntax, argument.id) == group_of(syntax, wanted.id) &&
-       piece.elements.front().starts_with(wanted.spelling)) {
-        return true;
+    if(pattern.prefix) {
+        // By the argument's name, which an alias of its option does not change, with the
+        // value it joins: `-Wall` of `/W3`.
+        auto group = syntax.table->option(wanted.id)->group();
+        auto name = std::string(option_name(syntax, argument.id));
+        if(!argument.values.empty()) {
+            name += argument.values.front();
+        }
+        if(group.has_value() && syntax.table->option(argument.id)->matches(group->id()) &&
+           name.starts_with(wanted.spelling)) {
+            return true;
+        }
     }
     if(argument.id != wanted.id) {
         return false;
@@ -139,17 +144,16 @@ std::vector<Piece> pieces_of(std::span<const std::string> argv,
     return pieces;
 }
 
-/// Where appended flags go: before the first input, or what ends the options, `--` or
-/// `/link`; else at the end.
-std::size_t input_slot(std::span<const Piece> pieces, Syntax syntax) {
-    auto slot = std::ranges::find_if(pieces, [&](const Piece& piece) {
+/// Where appended flags go among `pieces`: before what ends the options, `--` or `/link`, or
+/// at the end.
+std::size_t end_of_options(std::span<const Piece> pieces, Syntax syntax) {
+    auto end = std::ranges::find_if(pieces, [&](const Piece& piece) {
         if(!piece.argument.has_value()) {
             return piece.elements.front() == "--";
         }
-        return piece.argument->id == syntax.table->input_option_id ||
-               lowercase(option_name(syntax, piece.argument->id)) == "/link";
+        return lowercase(option_name(syntax, piece.argument->id)) == "/link";
     });
-    return static_cast<std::size_t>(slot - pieces.begin());
+    return static_cast<std::size_t>(end - pieces.begin());
 }
 
 }  // namespace
@@ -173,7 +177,7 @@ std::expected<std::vector<std::string>, std::string>
                 return std::unexpected(std::move(patterns.error()));
             }
             auto named = [&](const Piece& piece) {
-                return std::ranges::any_of(*patterns, [&](const Pattern& pattern) {
+                return std::ranges::any_of(*patterns, [&](const RemovePattern& pattern) {
                     return removes(pattern, piece, syntax);
                 });
             };
@@ -198,7 +202,7 @@ std::expected<std::vector<std::string>, std::string>
         edited.insert(edited.end(), piece.elements.begin(), piece.elements.end());
     };
     std::ranges::for_each(prepended, add);
-    const auto slot = input_slot(base, syntax);
+    const auto slot = end_of_options(base, syntax);
     for(std::size_t i = 0; i < base.size(); i += 1) {
         if(i == slot) {
             std::ranges::for_each(appended, add);

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <optional>
 #include <ranges>
@@ -14,7 +15,6 @@
 #include <vector>
 
 #include "cmd/lowercase.h"
-#include "util/encoding.h"
 
 namespace catter::cmd {
 
@@ -190,17 +190,37 @@ bool is_directory_like(std::string_view path) {
     return path.ends_with('/') || path.ends_with('\\');
 }
 
+/// The path UTF-8 `text` names, which a std::string would be read as in the code page of on
+/// Windows.
+std::filesystem::path path_of(std::string_view text) {
+    return std::filesystem::path(std::u8string(text.begin(), text.end()));
+}
+
+std::string text_of(const std::filesystem::path& path) {
+    auto text = path.u8string();
+    return std::string(text.begin(), text.end());
+}
+
 std::string stem_of(std::string_view path) {
-    return util::to_utf8(util::from_utf8(path).stem());
+    return text_of(path_of(path).stem());
 }
 
 std::string join(std::string_view directory, std::string_view name) {
-    return util::to_utf8((util::from_utf8(directory) / util::from_utf8(name)).lexically_normal());
+    return text_of((path_of(directory) / path_of(name)).lexically_normal());
 }
 
-/// The role of the file a positional argument names, or why it names none.
-std::expected<InputRole, std::string_view> role_of(const Candidate& candidate,
-                                                   const Convention& convention) {
+/// What a positional argument names: a file read in a role, a source in its language.
+struct Input {
+    InputRole role;
+
+    std::optional<std::string> language;
+};
+
+/// The file `candidate` names, or why it names none. `.C` is a C++ source but to cl, and so is
+/// every C source to a C++ driver.
+std::expected<Input, std::string_view> input_of(const Candidate& candidate,
+                                                const Convention& convention,
+                                                const ParsedCommand& parsed) {
     if(is_stream(candidate.path)) {
         return std::unexpected("stream input is not a filesystem dependency");
     }
@@ -208,41 +228,31 @@ std::expected<InputRole, std::string_view> role_of(const Candidate& candidate,
     const auto ends_with = [&](std::string_view suffix) {
         return path.ends_with(suffix);
     };
+    const bool c = std::ranges::any_of(c_suffixes, ends_with);
+    const bool cxx = std::ranges::any_of(cxx_suffixes, ends_with);
     const auto language = lowercase(candidate.language.value_or("none"));
     if(language == "c") {
-        if(std::ranges::any_of(c_suffixes, ends_with)) {
-            return InputRole::Source;
+        if(c) {
+            return Input{.role = InputRole::Source, .language = "c"};
         }
     } else if(language == "c++") {
-        if(std::ranges::any_of(cxx_suffixes, ends_with)) {
-            return InputRole::Source;
+        if(cxx) {
+            return Input{.role = InputRole::Source, .language = "c++"};
         }
     } else if(language == "none") {
-        if(std::ranges::any_of(c_suffixes, ends_with) ||
-           std::ranges::any_of(cxx_suffixes, ends_with)) {
-            return InputRole::Source;
+        if(c || cxx) {
+            const bool upper_c = parsed.dialect != Dialect::MSVC && candidate.path.ends_with(".C");
+            return Input{.role = InputRole::Source,
+                         .language = c && !upper_c && !parsed.cxx ? "c" : "c++"};
         }
         if(ends_with(convention.object) || ends_with(convention.shared_library) ||
            ends_with(convention.static_library)) {
-            return InputRole::Link;
+            return Input{.role = InputRole::Link};
         }
     } else {
         return std::unexpected("input candidate has unsupported explicit language");
     }
     return std::unexpected("input candidate did not match suffix rules");
-}
-
-/// The language of the source `candidate` names: the one it is given, else its suffix's.
-std::optional<std::string> source_language(const Candidate& candidate) {
-    auto language = lowercase(candidate.language.value_or("none"));
-    if(language != "none") {
-        return language;
-    }
-    const auto path = lowercase(candidate.path);
-    const auto ends_with = [&](std::string_view suffix) {
-        return path.ends_with(suffix);
-    };
-    return std::ranges::any_of(c_suffixes, ends_with) ? "c" : "c++";
 }
 
 /// Builds the analysis from a parsed command: its reads first, then the writes made from them.
@@ -281,10 +291,10 @@ struct Builder {
             reads.push_back(input);
         }
         for(const auto& candidate: parsed.candidates) {
-            auto role = role_of(candidate, convention);
-            if(!role.has_value()) {
+            auto input = input_of(candidate, convention, parsed);
+            if(!input.has_value()) {
                 diagnose(Diagnostic::Code::InputCandidateRejected,
-                         std::string(role.error()),
+                         std::string(input.error()),
                          candidate.path,
                          candidate.location);
                 continue;
@@ -292,8 +302,8 @@ struct Builder {
             reads.push_back(Read{
                 .path = candidate.path,
                 .location = candidate.location,
-                .role = *role,
-                .language = *role == InputRole::Source ? source_language(candidate) : std::nullopt,
+                .role = input->role,
+                .language = std::move(input->language),
             });
         }
         std::ranges::stable_sort(reads, {}, [](const Read& read) { return read.location.index; });
@@ -487,7 +497,7 @@ CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     builder.resolve_listing();
     return CompilerAnalysis{
         .identity = std::move(identity),
-        .syntax = parsed.dialect,
+        .dialect = parsed.dialect,
         .arguments = std::move(parsed.arguments),
         .phase = parsed.phase,
         .artifact = parsed.artifact,

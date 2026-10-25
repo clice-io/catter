@@ -25,14 +25,21 @@ struct Rule {
 
     Dialect dialect;
 
+    bool cxx;
+
     std::regex executable;
 };
 
 /// The rule of `compiler`, whose executable is `name`, followed by what `suffix` matches.
-Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, std::string_view suffix) {
+Rule rule_of(Compiler compiler,
+             Dialect dialect,
+             bool cxx,
+             std::string_view name,
+             std::string_view suffix) {
     return {
         .compiler = compiler,
         .dialect = dialect,
+        .cxx = cxx,
         .executable = executable_pattern(name, suffix),
     };
 }
@@ -40,15 +47,23 @@ Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, std::str
 /// In match order. A rule whose name has a group captures the target prefix.
 const auto& rules() {
     const static std::array rules = {
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:cc|c\+\+))", ""),
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:gcc|g\+\+))", version_suffix),
+        rule_of(Compiler::GCC, Dialect::GCC, false, R"((?:([^\\/]+)-)?cc)", ""),
+        rule_of(Compiler::GCC, Dialect::GCC, true, R"((?:([^\\/]+)-)?c\+\+)", ""),
+        rule_of(Compiler::GCC, Dialect::GCC, false, R"((?:([^\\/]+)-)?gcc)", version_suffix),
+        rule_of(Compiler::GCC, Dialect::GCC, true, R"((?:([^\\/]+)-)?g\+\+)", version_suffix),
+        rule_of(Compiler::Clang, Dialect::Clang, false, R"((?:([^\\/]+)-)?clang)", version_suffix),
         rule_of(Compiler::Clang,
                 Dialect::Clang,
-                R"((?:([^\\/]+)-)?clang(?:\+\+)?)",
+                true,
+                R"((?:([^\\/]+)-)?clang\+\+)",
                 version_suffix),
-        rule_of(Compiler::ClangCL, Dialect::MSVC, R"((?:([^\\/]+)-)?clang-cl)", version_suffix),
-        rule_of(Compiler::MSVC, Dialect::MSVC, "cl", ""),
-        rule_of(Compiler::NVCC, Dialect::NVCC, R"((?:[^\\/]+-)?nvcc)", version_suffix),
+        rule_of(Compiler::ClangCL,
+                Dialect::MSVC,
+                false,
+                R"((?:([^\\/]+)-)?clang-cl)",
+                version_suffix),
+        rule_of(Compiler::MSVC, Dialect::MSVC, false, "cl", ""),
+        rule_of(Compiler::NVCC, Dialect::NVCC, false, R"((?:[^\\/]+-)?nvcc)", version_suffix),
     };
     return rules;
 }
@@ -62,6 +77,7 @@ std::optional<Identity> identify(std::string_view executable) {
             return Identity{
                 .compiler = rule.compiler,
                 .dialect = rule.dialect,
+                .cxx = rule.cxx,
                 .prefix = match.size() > 1 ? match[1].str() : std::string(),
             };
         }

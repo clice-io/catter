@@ -10,3 +10,7 @@ test("phases and tools", async (t) => {
 test("one compiler", async (t) => {
     await t.cli(["-m", "replay", "--handler", "python compilers.py", "--", "events.json"]);
 });
+
+test("an archiver and a tool by name", async (t) => {
+    await t.cli(["-m", "replay", "--handler", "python archivers.py", "--", "events.json"]);
+});

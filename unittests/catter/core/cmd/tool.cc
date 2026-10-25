@@ -34,6 +34,14 @@ ZEST_CASE(tools_are_identified_by_name) {
     EXPECT(tool_of("llvm-lib /out:a.lib a.obj") == "llvm-lib");
     EXPECT(tool_of("llvm-dlltool -d a.def -l a.lib") == "llvm-dlltool");
     EXPECT(tool_of("gcc -c a.c") == "none");
+    // A plain `ld` is the system's linker.
+#if defined(CATTER_WINDOWS)
+    EXPECT(tool_of("ld -o app.exe a.o") == "lld-mingw");
+#elif defined(CATTER_MAC)
+    EXPECT(tool_of("ld -o app a.o") == "lld-macho");
+#else
+    EXPECT(tool_of("ld -o app a.o") == "lld-elf");
+#endif
 };
 
 ZEST_CASE(a_tool_s_arguments_are_read_by_its_table) {

@@ -9,7 +9,7 @@ Messages are [JSON-RPC 2.0](https://www.jsonrpc.org/specification), each framed 
 - A handler catter starts (`--handler`) reads catter's messages on its stdin and writes its own on its stdout. Its stderr is the terminal's.
 - A handler that listens (`--connect`) does the same over each TCP connection: one connection is one session.
 
-catter sends requests and notifications; a handler answers the requests, may ask its own `analyze` requests, and sends nothing else. Beside the messages below, catter may send `$/cancelRequest`, as the Language Server Protocol does, for a request it no longer waits for: a handler may ignore it.
+catter sends requests and notifications; a handler answers the requests and may send requests of its own, `analyze`, which catter answers (another method with an error), but no notifications. Beside the messages below, catter may send `$/cancelRequest`, as the Language Server Protocol does, for a request it no longer waits for: a handler may ignore it.
 
 ## A session
 
@@ -77,7 +77,7 @@ The result of the request is an action, named by its `action` field:
 
 ### Analysis
 
-What catter makes of a command, named by its `kind`:
+What catter makes of a command, named by its `kind`. catter knows a program by its executable's name: `cc` and `c++` are `gcc`, even where they run clang.
 
 - `compiler`: a command of gcc, clang, clang-cl or MSVC's cl. `compiler`; `dialect`, the syntax its arguments are read in (`gcc`, `clang`, or `msvc`, clang's in cl mode too); `phase` and `artifact`, what it makes; `target` (`triple`, `os`, `objectFormat`, `env`, `artifactModel`, `source`: what tells the target); `arguments`; `reads`, each with `path`, `argument` and `index` (where the command names it), `role` (`source` or `link`) and a source's `language`; `writes`, each with `path`, `reads` (the reads it is made from) and `origin`; and `diagnostics`, how catter inferred the files where the arguments leave them open.
 - `archiver`: a command of `ar`. `operation`, `modifiers`, `thin`, `archive`, `members`, `reads` and `writes`.
@@ -86,19 +86,19 @@ What catter makes of a command, named by its `kind`:
 
 Each argument has `option`, the option it is after aliases, by its name with its prefix (`-I` for `/I` too; `<input>` for an input, `<unknown>` for an option the option table does not know); `spelling`, as the command writes it (`-msmall-data-limit=` of what is `-G`); `index` and `count`, the command's arguments it takes; and `values`.
 
-A source's language is the one the last `-x` before it sets (`-x none` resets it), the one `/TC` or `/TP` sets for every input, else its suffix's: `c` or `c++`.
+A source's language is `c` or `c++`: the one `/Tc` or `/Tp` names it with, the one the last `-x` before it sets (`-x none` resets it), the one `/TC` or `/TP` sets for every input, else its suffix's, `.C` being C++ but to cl, and `.c` and `.i` C++ to a C++ driver (`g++`, `c++`, `clang++`, `--driver-mode=g++`). For now catter reads a source of a set language only when its suffix names that language too.
 
 ### Edits
 
 The edits of `edit` are made in turn. Each has `kind` and `flags`: arguments written as the command's program takes them.
 
-| `kind`    | What it does                                                                                                                                                                                                                                                                                   |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `remove`  | Takes out the arguments the flags name, and those an edit before it added: `-DX` the definition of `X`, `-D*` (or `-D` last) every definition, `-W*` every option of `-W`'s group written with `-W` first. An option the table does not know is named as written, `=*` after it for any value. |
-| `append`  | Adds the flags before the first input, where they take effect for every input: before `--` and `/link`, which end the options.                                                                                                                                                                 |
-| `prepend` | Adds the flags right after the program.                                                                                                                                                                                                                                                        |
+| `kind`    | What it does                                                                                                                                                                                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `remove`  | Takes out the arguments the flags name, and those an edit before it added: `-DX` the arguments `-DX` (`-DX=1` has another value), `-D*` (or `-D` last) every definition, `-W*` every option of `-W`'s group written with `-W` first. An option the table does not know is named as written, `=*` after it for any value. |
+| `append`  | Adds the flags after the command's own arguments, where they take effect over them and libraries go: before `--` and `/link`, which end the options.                                                                                                                                                                     |
+| `prepend` | Adds the flags right after the program.                                                                                                                                                                                                                                                                                  |
 
-The arguments no edit takes out keep the command's own spelling, and the added flags go as they are: catter writes no argument anew. Only the commands of a compiler or a tool can be edited.
+The arguments no edit takes out keep the command's own spelling, and the added flags go as they are: catter writes no argument anew. Only a command whose arguments catter reads can be edited: a compiler's or a tool's, not `unparsed`.
 
 ### `analyze`
 

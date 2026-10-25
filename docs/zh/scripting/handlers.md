@@ -132,7 +132,7 @@ catter.serve(Handler())
 
 - **分析**：编译器命令的分析包含它的阶段、目标、每个参数（它是哪个选项，以及命令里的原始写法）、它读取的文件（每个源文件都带语言）以及它写出的文件。
 - **过滤**：filter 是一组 pattern，每个 pattern 指定一种程序（`compiler`、`archiver`、`tool`），以及其中的某些名字、某些阶段。handler 只会收到某个 pattern 所指的命令；对其余命令，构建不会等它。
-- **编辑**：按选项和值删除 flags（`-DX`、`-D*`、`-W*`），把 flags 加在第一个输入之前，或加在程序名之后。没有删掉的参数保留命令原有的写法，添加的 flags 按 handler 写的原样放入：要按命令所用编译器接受的写法来写。只有编译器或工具的命令可以编辑；`modify` 可以整条替换任何命令。
+- **编辑**：按选项和值删除 flags（`-DX`、`-D*`、`-W*`），把 flags 加在命令自己的参数之后，或加在程序名之后。没有删掉的参数保留命令原有的写法，添加的 flags 按 handler 写的原样放入：要按命令所用编译器接受的写法来写。只有 catter 读得懂参数的命令可以编辑；`modify` 可以整条替换任何命令。
 - **`self.analyze(catter.Program(executable, args), ...)`** 询问 catter 对 handler 自己给出的命令的分析。在 TypeScript 中，通过每个回调的第二个参数调用 `catter.analyze(...)`。
 
 ## 多个 handler

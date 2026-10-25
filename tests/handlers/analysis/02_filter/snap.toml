@@ -10,3 +10,10 @@ exit = 0
 ["one compiler"."$ catter -m replay --handler \"python compilers.py\" -- events.json"]
 stderr = "command 7: ['clang', '-c', 'b.c', '-o']"
 exit = 0
+
+["an archiver and a tool by name"."$ catter -m replay --handler \"python archivers.py\" -- events.json"]
+stderr = '''
+command 6: ['ar', 'rcs', 'liba.a', 'a.o']
+command 8: ['lld-link', '/out:x.exe', 'a.obj']
+'''
+exit = 0

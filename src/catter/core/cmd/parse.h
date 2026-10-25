@@ -45,6 +45,9 @@ struct Output {
 struct ParsedCommand {
     Dialect dialect;
 
+    /// Whether it reads C sources as C++: its identity's, unless `--driver-mode` says otherwise.
+    bool cxx = false;
+
     std::vector<Argument> arguments;
 
     /// The last triple `--target=` or `-target` gives.

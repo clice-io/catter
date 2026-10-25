@@ -1,7 +1,6 @@
 #include "analysis.h"
 
 #include <algorithm>
-#include <array>
 #include <expected>
 #include <format>
 #include <optional>
@@ -11,6 +10,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <kota/meta/enum.h>
 
 #include "cmd/edit.h"
 #include "cmd/syntax.h"
@@ -19,36 +19,11 @@ namespace catter::core {
 
 namespace {
 
-constexpr auto compilers = std::to_array({
-    cmd::Compiler::GCC,
-    cmd::Compiler::Clang,
-    cmd::Compiler::ClangCL,
-    cmd::Compiler::MSVC,
-    cmd::Compiler::NVCC,
-});
-
-constexpr auto tools = std::to_array({
-    cmd::Tool::LLDELF,
-    cmd::Tool::LLDCOFF,
-    cmd::Tool::LLDMachO,
-    cmd::Tool::LLDMinGW,
-    cmd::Tool::LLDWasm,
-    cmd::Tool::LLVMLib,
-    cmd::Tool::LLVMDlltool,
-});
-
-constexpr auto phases = std::to_array({
-    cmd::Phase::Preprocess,
-    cmd::Phase::SyntaxOnly,
-    cmd::Phase::Compile,
-    cmd::Phase::Link,
-    cmd::Phase::Archive,
-    cmd::Phase::RelocatableLink,
-});
-
-/// Whether `value` is the name of one of `values`.
-bool names_one(std::string_view value, const auto& values) {
-    return std::ranges::any_of(values, [&](auto each) { return cmd::name(each) == value; });
+/// Whether `value` is the name of a value of `E`.
+template <typename E>
+bool names_one(std::string_view value) {
+    return std::ranges::any_of(kota::meta::reflection<E>::member_values,
+                               [&](E each) { return cmd::name(each) == value; });
 }
 
 bool lists(const std::optional<std::vector<std::string>>& names, std::string_view name) {
@@ -78,7 +53,7 @@ protocol::CompilerAnalysis message_of(const cmd::CompilerAnalysis& analysis) {
     };
     protocol::CompilerAnalysis message{
         .compiler = std::string(cmd::name(analysis.identity.compiler)),
-        .dialect = std::string(cmd::name(analysis.syntax)),
+        .dialect = std::string(cmd::name(analysis.dialect)),
         .phase = std::string(cmd::name(analysis.phase)),
         .artifact = std::string(cmd::name(analysis.artifact)),
         .target =
@@ -90,7 +65,7 @@ protocol::CompilerAnalysis message_of(const cmd::CompilerAnalysis& analysis) {
                      .artifact_model = std::string(cmd::name(target.model)),
                      .source = std::string(cmd::name(target.source)),
                      },
-        .arguments = arguments_of(analysis.arguments, cmd::syntax_of(analysis.syntax)),
+        .arguments = arguments_of(analysis.arguments, cmd::syntax_of(analysis.dialect)),
     };
     for(const auto& read: analysis.reads) {
         message.reads.push_back({
@@ -223,7 +198,7 @@ std::expected<std::vector<std::string>, std::string>
     std::optional<cmd::Syntax> syntax;
     std::span<const cmd::Argument> arguments;
     if(auto* compiler = std::get_if<cmd::CompilerAnalysis>(&result)) {
-        syntax = cmd::syntax_of(compiler->syntax);
+        syntax = cmd::syntax_of(compiler->dialect);
         arguments = compiler->arguments;
     } else if(auto* tool = std::get_if<cmd::ToolAnalysis>(&result)) {
         syntax = cmd::syntax_of(tool->tool);
@@ -261,18 +236,18 @@ std::optional<std::string> check_filter(std::span<const protocol::Pattern> filte
         const auto names = pattern.names.value_or(std::vector<std::string>{});
         if(pattern.kind == "compiler") {
             for(const auto& name: names) {
-                if(!names_one(name, compilers)) {
+                if(!names_one<cmd::Compiler>(name)) {
                     return std::format("`{}` is no compiler catter knows", name);
                 }
             }
             for(const auto& phase: pattern.phases.value_or(std::vector<std::string>{})) {
-                if(!names_one(phase, phases)) {
+                if(!names_one<cmd::Phase>(phase)) {
                     return std::format("`{}` is no phase of a compiler", phase);
                 }
             }
         } else if(pattern.kind == "tool") {
             for(const auto& name: names) {
-                if(!names_one(name, tools)) {
+                if(!names_one<cmd::Tool>(name)) {
                     return std::format("`{}` is no tool catter knows", name);
                 }
             }

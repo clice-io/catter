@@ -149,6 +149,7 @@ struct Builder {
             case ID_target:
             case ID_target_legacy_spelling: command.triple = argument.values[0]; break;
             case ID_x: language = argument.values[0]; break;
+            case ID_driver_mode: command.cxx = argument.values[0] == "g++"; break;
             case ID_INPUT: candidate(position); break;
             default:
                 if(selects_mode(argument)) {
@@ -280,9 +281,11 @@ struct Builder {
     }
 };
 
-ParsedCommand parse_gnu(Dialect dialect, std::vector<Argument> arguments) {
+ParsedCommand parse_gnu(const Identity& identity, std::vector<Argument> arguments) {
     Builder builder{
-        .command = {.dialect = dialect, .arguments = std::move(arguments)}
+        .command = {.dialect = identity.dialect,
+                    .cxx = identity.cxx,
+                    .arguments = std::move(arguments)}
     };
     for(std::uint32_t position = 0; position < builder.command.arguments.size(); position += 1) {
         builder.apply_gnu(position);
@@ -328,7 +331,7 @@ std::expected<ParsedCommand, Error> parse(const Identity& identity,
     if(identity.dialect == Dialect::Clang && in_cl_mode(*arguments)) {
         return parse_cl(argv);
     }
-    return parse_gnu(identity.dialect, std::move(*arguments));
+    return parse_gnu(identity, std::move(*arguments));
 }
 
 std::string_view name(OutputKind kind) {

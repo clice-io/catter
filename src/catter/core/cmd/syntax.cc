@@ -13,7 +13,6 @@
 #include <kota/deco/option.h>
 
 #include "option/clang.h"
-#include "option/nvcc.h"
 
 namespace catter::cmd {
 
@@ -23,7 +22,8 @@ Syntax syntax_of(Dialect dialect) {
         case Dialect::Clang:
         case Dialect::GCC: return {.table = &table(), .visibility = DefaultVis};
         case Dialect::MSVC: return {.table = &table(), .visibility = DefaultVis | CLOption};
-        case Dialect::NVCC: return {.table = &opt::nvcc::table(), .visibility = ~0U};
+        // nvcc's arguments are not read yet.
+        case Dialect::NVCC: break;
     }
     std::unreachable();
 }

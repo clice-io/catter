@@ -2,31 +2,156 @@
   "version": 1,
   "name": "commands of every kind of program catter analyzes",
   "events": [
-    { "type": "command", "id": 1, "exe": "make", "argv": ["make"] },
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": [
+        "make"
+      ]
+    },
     {
       "type": "command",
       "id": 2,
       "parent": 1,
       "exe": "gcc",
-      "argv": ["gcc", "-c", "-I", "include", "-DX=1", "a.c", "-o", "a.o"]
+      "argv": [
+        "gcc",
+        "-c",
+        "-I",
+        "include",
+        "-DX=1",
+        "a.c",
+        "-o",
+        "a.o"
+      ]
     },
     {
       "type": "command",
       "id": 3,
       "parent": 1,
       "exe": "clang++",
-      "argv": ["clang++", "--target=riscv64-linux-gnu", "-msmall-data-limit=8", "-c", "-x", "c++", "b.cc", "-x", "none", "c.c"]
+      "argv": [
+        "clang++",
+        "--target=riscv64-linux-gnu",
+        "-msmall-data-limit=8",
+        "-c",
+        "-x",
+        "c++",
+        "b.cc",
+        "-x",
+        "none",
+        "c.c"
+      ]
     },
     {
       "type": "command",
       "id": 4,
       "parent": 1,
       "exe": "cl",
-      "argv": ["cl", "/nologo", "/c", "/W3", "/Tpd.cxx", "e.c"]
+      "argv": [
+        "cl",
+        "/nologo",
+        "/c",
+        "/W3",
+        "/Tpd.cxx",
+        "e.c"
+      ]
     },
-    { "type": "command", "id": 5, "parent": 1, "exe": "ar", "argv": ["ar", "rcs", "libx.a", "a.o", "b.o"] },
-    { "type": "command", "id": 6, "parent": 1, "exe": "ld.lld", "argv": ["ld.lld", "--gc-sections", "-o", "app", "a.o", "-lm"] },
-    { "type": "command", "id": 7, "parent": 1, "exe": "gcc", "argv": ["gcc", "-c", "a.c", "-o"] },
-    { "type": "command", "id": 8, "parent": 1, "exe": "nvcc", "argv": ["nvcc", "-c", "k.cu"] }
+    {
+      "type": "command",
+      "id": 5,
+      "parent": 1,
+      "exe": "ar",
+      "argv": [
+        "ar",
+        "rcs",
+        "libx.a",
+        "a.o",
+        "b.o"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 6,
+      "parent": 1,
+      "exe": "ld.lld",
+      "argv": [
+        "ld.lld",
+        "--gc-sections",
+        "-o",
+        "app",
+        "a.o",
+        "-lm"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 7,
+      "parent": 1,
+      "exe": "gcc",
+      "argv": [
+        "gcc",
+        "-c",
+        "a.c",
+        "-o"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 8,
+      "parent": 1,
+      "exe": "nvcc",
+      "argv": [
+        "nvcc",
+        "-c",
+        "k.cu"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 9,
+      "parent": 1,
+      "exe": "clang",
+      "argv": [
+        "clang",
+        "--driver-mode=cl",
+        "/c",
+        "/DX",
+        "f.c"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 10,
+      "parent": 1,
+      "exe": "gcc",
+      "argv": [
+        "gcc",
+        "-c",
+        "g.c",
+        "notes.txt"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 11,
+      "parent": 1,
+      "exe": "ar",
+      "argv": [
+        "ar",
+        "-M"
+      ]
+    },
+    {
+      "type": "command",
+      "id": 12,
+      "parent": 1,
+      "exe": "ld.lld",
+      "argv": [
+        "ld.lld",
+        "-o"
+      ]
+    }
   ]
 }

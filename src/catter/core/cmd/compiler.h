@@ -119,6 +119,9 @@ struct Identity {
     /// The syntax its arguments are parsed in.
     Dialect dialect;
 
+    /// Whether it is a C++ driver, `g++` or `clang++`, which reads C sources as C++.
+    bool cxx = false;
+
     /// The target its name begins with, `aarch64-linux-gnu` of `aarch64-linux-gnu-gcc`; empty
     /// when it names none.
     std::string prefix;
@@ -225,8 +228,8 @@ struct Diagnostic {
 struct CompilerAnalysis {
     Identity identity;
 
-    /// The syntax its arguments are read in: the identity's, or MSVC's for clang in cl mode.
-    Dialect syntax;
+    /// The dialect its arguments are read in: the identity's, or MSVC's for clang in cl mode.
+    Dialect dialect;
 
     /// Every argument after argv[0].
     std::vector<Argument> arguments;

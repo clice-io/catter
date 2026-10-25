@@ -1,7 +1,28 @@
-[test."$ catter --handler \"python handler.py\" -- node -e 0"]
+["at the start"."$ catter --handler \"python handler.py\" -- node -e 0"]
 stderr = '''
 gcc: compile, writes ['a.o']
 UnparsedAnalysis: compiler-parse
 NoneType: None
+'''
+exit = 0
+
+["while commands come"."$ catter -m replay --handler \"python observer.py\" -- events.json"]
+stderr = '''
+command 1: link
+command 2: compile
+command 3: compile
+command 4: link
+command 5: link
+command 6: link
+command 7: UnparsedAnalysis
+command 8: link
+finish: code 0
+'''
+exit = 0
+
+["requests catter cannot answer"."$ catter --handler \"python raw.py\" -- node -e 0"]
+stderr = '''
+bad: -32602 `not base64!` is not base64: its length is not a multiple of 4
+unknown: -32601 method not found: hello
 '''
 exit = 0

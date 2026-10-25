@@ -113,8 +113,18 @@ ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     EXPECT(languages("gcc -c a.c -x c++ b.cc -x none c.c d.cpp") ==
            std::vector<std::string>{"a.c:c", "b.cc:c++", "c.c:c", "d.cpp:c++"});
     EXPECT(languages("cl /c a.c /TC b.c") == std::vector<std::string>{"a.c:c", "b.c:c"});
+    // `/TP` is for every input, before it too: catter reads no `.c` as C++ yet (catter#131).
+    EXPECT(languages("cl /c a.c /TP b.cc") == std::vector<std::string>{"b.cc:c++"});
     EXPECT(languages("cl /c /Tc a.cc /Tp b.c") == std::vector<std::string>{"a.cc:c", "b.c:c++"});
     EXPECT(languages("gcc a.o -o app") == std::vector<std::string>{"a.o:none"});
+    EXPECT(languages("g++ -c a.C") == std::vector<std::string>{"a.C:c++"});
+    EXPECT(languages("g++ -c a.c b.i -x c c.c") ==
+           std::vector<std::string>{"a.c:c++", "b.i:c++", "c.c:c"});
+    EXPECT(languages("clang++-18 -c a.c") == std::vector<std::string>{"a.c:c++"});
+    EXPECT(languages("clang --driver-mode=g++ -c a.c") == std::vector<std::string>{"a.c:c++"});
+    EXPECT(languages("clang++ --driver-mode=gcc -c a.c") == std::vector<std::string>{"a.c:c"});
+    EXPECT(languages("x86_64-linux-gnu-c++ -c a.c") == std::vector<std::string>{"a.c:c++"});
+    EXPECT(languages("cc -c a.c") == std::vector<std::string>{"a.c:c"});
 };
 
 };  // ZEST_SUITE(cmd_compiler_tests)
