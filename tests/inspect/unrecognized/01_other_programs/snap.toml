@@ -1,17 +1,17 @@
 [test."$ catter script::inspect -- make -j4"]
 stdout = '''
 {
-  "analyzer": null,
-  "errors": [
-    {
-      "kind": "compiler-unsupported",
-      "message": "unsupported compiler dialect: unknown"
-    },
-    {
-      "kind": "archiver-not-recognized",
-      "message": "not a recognized archiver executable: make"
-    }
-  ]
+    "analyzer": null,
+    "errors": [
+        {
+            "kind": "compiler-unsupported",
+            "message": "unsupported compiler dialect: unknown"
+        },
+        {
+            "kind": "archiver-not-recognized",
+            "message": "not a recognized archiver executable: make"
+        }
+    ]
 }
 '''
 exit = 0
@@ -19,17 +19,17 @@ exit = 0
 [test."$ catter script::inspect -- node build.mjs"]
 stdout = '''
 {
-  "analyzer": null,
-  "errors": [
-    {
-      "kind": "compiler-unsupported",
-      "message": "unsupported compiler dialect: unknown"
-    },
-    {
-      "kind": "archiver-not-recognized",
-      "message": "not a recognized archiver executable: node"
-    }
-  ]
+    "analyzer": null,
+    "errors": [
+        {
+            "kind": "compiler-unsupported",
+            "message": "unsupported compiler dialect: unknown"
+        },
+        {
+            "kind": "archiver-not-recognized",
+            "message": "not a recognized archiver executable: node"
+        }
+    ]
 }
 '''
 exit = 0

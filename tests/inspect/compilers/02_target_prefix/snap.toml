@@ -1,50 +1,50 @@
 [test."$ catter script::inspect -- aarch64-linux-gnu-gcc -c a.c -o a.o"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "aarch64-linux-gnu",
-    "os": "linux",
-    "objectFormat": "elf",
-    "env": "gnu",
-    "artifactModel": "elf",
-    "from": "executable-prefix"
-  },
-  "sources": [
-    "a.c"
-  ],
-  "reads": [
-    "a.c"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "aarch64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "executable-prefix"
+    },
+    "sources": [
         "a.c"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.c",
-      "arguments": [
-        "aarch64-linux-gnu-gcc",
-        "-c",
-        "a.c",
-        "-o",
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
         "a.o"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "aarch64-linux-gnu-gcc",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0
@@ -52,50 +52,50 @@ exit = 0
 [test."$ catter script::inspect -- x86_64-w64-mingw32-g++ -c a.cc -o a.o"]
 stdout = '''
 {
-  "analyzer": "compiler",
-  "compiler": "builtin:gcc",
-  "dialect": "gcc",
-  "phase": "compile",
-  "artifact": "object",
-  "target": {
-    "triple": "x86_64-w64-mingw32",
-    "os": "windows",
-    "objectFormat": "coff",
-    "env": "mingw",
-    "artifactModel": "coff-gnu",
-    "from": "executable-prefix"
-  },
-  "sources": [
-    "a.cc"
-  ],
-  "reads": [
-    "a.cc"
-  ],
-  "writes": [
-    "a.o"
-  ],
-  "edges": [
-    {
-      "output": "a.o",
-      "inputs": [
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-w64-mingw32",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "mingw",
+        "artifactModel": "coff-gnu",
+        "from": "executable-prefix"
+    },
+    "sources": [
         "a.cc"
-      ]
-    }
-  ],
-  "entries": [
-    {
-      "directory": "${WS}",
-      "file": "a.cc",
-      "arguments": [
-        "x86_64-w64-mingw32-g++",
-        "-c",
-        "a.cc",
-        "-o",
+    ],
+    "reads": [
+        "a.cc"
+    ],
+    "writes": [
         "a.o"
-      ],
-      "output": "${WS}/a.o"
-    }
-  ]
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "x86_64-w64-mingw32-g++",
+                "-c",
+                "a.cc",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
 }
 '''
 exit = 0

@@ -100,7 +100,7 @@ std::string quote_argument(std::string_view argument) {
         return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
                std::string_view(R"(_@%+=:,./\-)").contains(c);
     });
-    return plain ? std::string(argument) : quote(to_utf16(argument));
+    return plain ? std::string(argument) : quote(argument);
 }
 
 std::string command_line(const data::command& command) {

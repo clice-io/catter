@@ -40,10 +40,11 @@ struct Options {
         help = "Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]")
     <std::int64_t> args = -1;
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
-                 names = {"-w", "--argWidth", "--argWidth="},
-                 meta_var = "<n>",
-                 help = "Limit the display width of each argument. [default: 10]")
+    DecoKVStyled(
+        kota::deco::decl::KVStyle::JoinedOrSeparate,
+        names = {"-w", "--argWidth", "--argWidth="},
+        meta_var = "<n>",
+        help = "Cut each longer argument in its middle to this many characters. [default: 10]")
     <std::int64_t> arg_width = 10;
 
     DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
@@ -57,45 +58,28 @@ const Help help{
     .description = "Render captured commands as a command tree.",
 };
 
-/// Whether `text` holds what JavaScript's `\s` matches, a quote or a backslash.
-bool needs_quotes(std::u16string_view text) {
-    return std::ranges::any_of(text, [](char16_t unit) {
-        switch(unit) {
-            case u'\t':
-            case u'\n':
-            case u'\v':
-            case u'\f':
-            case u'\r':
-            case u' ':
-            case 0x00A0:
-            case 0x1680:
-            case 0x2028:
-            case 0x2029:
-            case 0x202F:
-            case 0x205F:
-            case 0x3000:
-            case 0xFEFF:
-            case u'"':
-            case u'\'':
-            case u'\\': return true;
-            default: return unit >= 0x2000 && unit <= 0x200A;
-        }
-    });
-}
-
-/// `argument` cut in its middle to `width` code units, `....` standing for what is cut, and
-/// quoted when it holds a space, a quote or a backslash.
+/// `argument` cut in its middle to `width` code points, `....` standing for what is cut, and
+/// quoted when it holds a blank, a quote or a backslash.
 std::string format_argument(std::string_view argument, std::int64_t width) {
-    auto text = to_utf16(argument);
-    if(text.empty()) {
+    if(argument.empty()) {
         return R"("")";
     }
-    const bool quoted = needs_quotes(text);
-    if(std::cmp_greater(text.size(), width)) {
-        const auto kept = static_cast<std::size_t>(width - 4);
-        text = text.substr(0, (kept + 1) / 2) + u"...." + text.substr(text.size() - kept / 2);
+    auto text = printable(argument);
+    const bool quoted = text.find_first_of(" \t\n\v\f\r\"'\\") != std::string::npos;
+    std::vector<std::size_t> starts;
+    for(std::size_t i = 0; i < text.size(); i += 1) {
+        if((static_cast<std::uint8_t>(text[i]) & 0xC0) != 0x80) {
+            starts.push_back(i);
+        }
     }
-    return quoted ? quote(text) : to_utf8(text);
+    starts.push_back(text.size());
+    const auto length = starts.size() - 1;
+    if(std::cmp_greater(length, width)) {
+        const auto kept = static_cast<std::size_t>(width - 4);
+        text = text.substr(0, starts[(kept + 1) / 2]) + "...." +
+               text.substr(starts[length - kept / 2]);
+    }
+    return quoted ? quote(text) : text;
 }
 
 /// Renders the commands of a build as the tree of the commands that started them.

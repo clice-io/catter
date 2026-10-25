@@ -268,7 +268,7 @@ public:
         if(build.command.empty()) {
             throw cpptrace::runtime_error("inspect: give the command to analyze after --");
         }
-        std::println("{}", to_json(describe(build.cwd, build.command)));
+        std::print("{}", to_json(describe(build.cwd, build.command)));
         co_return std::nullopt;
     }
 
