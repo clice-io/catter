@@ -1,6 +1,6 @@
 import { test } from "@catter/tools/testing";
 
-// Each line of the case's commands.txt goes to inspect, which
+// Each line of the case's commands.txt goes to explain, which
 // analyzes the command without running it: no case holds the files its
 // commands name.
 test(async (t) => {

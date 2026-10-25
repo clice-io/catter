@@ -11,7 +11,7 @@ node build.mjs
 exit = 0
 
 [test."$ catter tree -w 1000 -- node build.mjs".win32]
-differs = "cmd-tree quotes a Windows path, which holds a space"
+differs = "tree quotes a Windows path, which holds a space"
 stdout = '''
 with space 中文
 node build.mjs

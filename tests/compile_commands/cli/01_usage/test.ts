@@ -2,7 +2,7 @@ import { test } from "@catter/tools/testing";
 
 // The help of compile-commands, and an argument it does not take: neither runs the build nor
 // writes a database.
-test({ errors: ["compile-commands: "] }, async (t) => {
+test({ errors: ["compile-commands: unexpected input argument a.json"] }, async (t) => {
     await t.cli("compile-commands --help -- node -e 0");
     await t.cli("compile-commands a.json -- node -e 0");
     t.show("compile_commands.json", t.disk.cdb("build/compile_commands.json"));
