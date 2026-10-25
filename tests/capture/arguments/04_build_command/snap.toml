@@ -7,7 +7,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node child.mjs \"with space\" \"quote\\\"inside\" \"\" 中文-é"]
+[test."$ catter cmd-tree -w 1000 -- node child.mjs \"with space\" \"quote\\\"inside\" \"\" 中文-é"]
 stdout = '''
 "with space"
 "quote\"inside"
@@ -17,7 +17,7 @@ node child.mjs "with space" "quote\"inside" "" 中文-é
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node child.mjs \"with space\" \"quote\\\"inside\" \"\" 中文-é".win32]
+[test."$ catter cmd-tree -w 1000 -- node child.mjs \"with space\" \"quote\\\"inside\" \"\" 中文-é".win32]
 wrong = "the build command's arguments are split at spaces and lose their quotes (catter#151)"
 stdout = '''
 "with"

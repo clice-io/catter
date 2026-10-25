@@ -7,7 +7,7 @@ CATTER_PROBE_REMOVED=null
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 CATTER_PROBE_SPACES="a b  c"
 CATTER_PROBE_UNICODE="中文-é"

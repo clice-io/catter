@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- clang --target=aarch64-linux-gnu -c a.c -o a.o"]
+[test."$ catter inspect -- clang --target=aarch64-linux-gnu -c a.c -o a.o"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -50,7 +50,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang -target x86_64-pc-windows-msvc -c a.c -o a.obj"]
+[test."$ catter inspect -- clang -target x86_64-pc-windows-msvc -c a.c -o a.obj"]
 stdout = '''
 {
     "analyzer": "compiler",

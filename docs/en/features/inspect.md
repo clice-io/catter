@@ -2,12 +2,12 @@
 
 Inspect prints how catter analyzes one command, without running it: which compiler or archiver it recognizes, the compiler's mode and target, and the files the command reads and writes. It answers why a command gets, or does not get, an entry in the compilation database.
 
-Built-in script: `script::inspect`
+Built-in: `inspect`
 
 ## Usage
 
 ```bash
-catter script::inspect -- <command>
+catter inspect -- <command>
 ```
 
 ## Output
@@ -15,7 +15,7 @@ catter script::inspect -- <command>
 A JSON object. For a compiler:
 
 ```bash
-catter script::inspect -- gcc -c a.c
+catter inspect -- gcc -c a.c
 ```
 
 ```json
@@ -57,4 +57,4 @@ catter script::inspect -- gcc -c a.c
 | `reads`, `writes`, `edges` | The files the command reads and writes, and which output is made from which inputs (the target tree's edges).                      |
 | `inferred`                 | Outputs the command does not name, inferred from the compiler's defaults.                                                          |
 | `diagnostics`              | What the analysis could not settle, such as an output it cannot infer.                                                             |
-| `entries`                  | The compilation database entries `script::cdb` writes for this command.                                                            |
+| `entries`                  | The compilation database entries `cdb` writes for this command.                                                                    |

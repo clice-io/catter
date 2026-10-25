@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- aarch64-linux-gnu-gcc -c a.c -o a.o"]
+[test."$ catter inspect -- aarch64-linux-gnu-gcc -c a.c -o a.o"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -49,7 +49,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- x86_64-w64-mingw32-g++ -c a.cc -o a.o"]
+[test."$ catter inspect -- x86_64-w64-mingw32-g++ -c a.cc -o a.o"]
 stdout = '''
 {
     "analyzer": "compiler",

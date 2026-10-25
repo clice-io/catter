@@ -1,3 +1,3 @@
-[test."$ catter script::no-such-script -- node -e 0"]
-stdout = "Unknown builtin script `script::no-such-script`"
+[test."$ catter no-such-builtin -- node -e 0"]
+stdout = "Unknown built-in `no-such-builtin`: the built-ins are cdb, cmd-tree, target-tree and inspect"
 exit = 1

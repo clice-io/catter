@@ -2,7 +2,7 @@
 stdout = "3 -> 2 -> 1 -> leaf"
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 3 -> 2 -> 1 -> leaf
 node build.mjs

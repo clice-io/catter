@@ -1,0 +1,17 @@
+[test."$ catter --help"]
+stdout = '''
+Usage catter [options for catter] [built-in [options for it]] -- [build system command]
+
+Options
+  ◆ <OPTIONS> (options of catter), exclusive with other groups
+  <Built-in>                      a built-in: cdb, cmd-tree, target-tree or inspect
+  --handler <Command>             a handler for catter to start, which decides or observes the build's commands over its stdin and stdout; may be given more than once
+  --connect <Host:Port>           a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once
+  --allow-remote                  let --connect reach a handler on another machine
+  --handler-timeout <Seconds>     how long catter waits for a handler to answer, and to exit once the session is over; 0 waits as long as it takes; default to 60
+  -m|--mode <Mode>                mode of operation: 'inject' (the default) runs the build; 'replay' plays a recorded one, whose replay file is the build command
+  -d|--dir <Working Directory>    working directory for the target program, default to current directory
+  -- <Args>...                    the command you want catter to use, must be after a '--'
+  -h|--help                       show this help message
+'''
+exit = 0

@@ -1,6 +1,6 @@
 # What is Catter?
 
-Catter is a build process interception tool. It hooks into child process creation during a build, captures compilation and linker commands, and lets you process them with its built-in scripts or with handlers: programs of your own, written in any language.
+Catter is a build process interception tool. It hooks into child process creation during a build, captures compilation and linker commands, and lets you process them with its built-ins or with handlers: programs of your own, written in any language.
 
 ## Motivation
 

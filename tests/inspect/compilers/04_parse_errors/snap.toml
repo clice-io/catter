@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- gcc -c a.c -o"]
+[test."$ catter inspect -- gcc -c a.c -o"]
 stdout = '''
 {
     "analyzer": null,
@@ -16,7 +16,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang -x"]
+[test."$ catter inspect -- clang -x"]
 stdout = '''
 {
     "analyzer": null,

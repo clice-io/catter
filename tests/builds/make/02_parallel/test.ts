@@ -5,6 +5,6 @@ import { generate, test } from "@catter/tools/testing";
 // pinned.
 test({ except: { win32: "the Makefile's recipes need a POSIX shell" } }, async (t) => {
     t.disk.write(generate.sources(100));
-    await t.cli("script::cdb -o compile_commands.json -- make -j8 -s");
+    await t.cli("cdb -o compile_commands.json -- make -j8 -s");
     t.show("compile_commands.json", t.disk.cdb());
 });

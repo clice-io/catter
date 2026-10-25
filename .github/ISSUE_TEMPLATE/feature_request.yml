@@ -15,7 +15,7 @@ body:
         - IPC
         - Command-line interface
         - Handlers and SDKs
-        - Compilation database (script::cdb)
+        - Compilation database (cdb)
         - Compiler argument parsing
         - Replay
         - Performance

@@ -1,11 +1,11 @@
-[test."$ catter -m replay script::cmd-tree -- version.json"]
+[test."$ catter -m replay cmd-tree -- version.json"]
 stdout = "Unsupported replay file version: 2"
 exit = 1
 
-[test."$ catter -m replay script::cmd-tree -- missing_field.json"]
+[test."$ catter -m replay cmd-tree -- missing_field.json"]
 stdout = "Replay file is not valid: ${WS}/missing_field.json: missing required field 'exe'"
 exit = 1
 
-[test."$ catter -m replay script::cmd-tree -- not_json.json"]
+[test."$ catter -m replay cmd-tree -- not_json.json"]
 stdout = "Replay file is not valid: ${WS}/not_json.json: TAPE_ERROR: The JSON document has an improper structure: missing or superfluous commas, braces, missing keys, etc.  This is a fatal and unrecoverable error."
 exit = 1

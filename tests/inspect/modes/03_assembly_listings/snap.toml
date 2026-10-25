@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- cl /nologo /c /FA a.cc"]
+[test."$ catter inspect -- cl /nologo /c /FA a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -78,7 +78,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Fa a.cc"]
+[test."$ catter inspect -- cl /nologo /c /Fa a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -158,7 +158,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Faout/ a.cc b.cc"]
+[test."$ catter inspect -- cl /nologo /c /Faout/ a.cc b.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -290,7 +290,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Faout/ a.cc b.cc".win32]
+[test."$ catter inspect -- cl /nologo /c /Faout/ a.cc b.cc".win32]
 differs = "Windows joins the directory of a listing and its name with a backslash"
 stdout = '''
 {
@@ -423,7 +423,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Fax.asm a.cc"]
+[test."$ catter inspect -- cl /nologo /c /Fax.asm a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -499,7 +499,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /Faout/ /Fa a.cc"]
+[test."$ catter inspect -- cl /nologo /c /Faout/ /Fa a.cc"]
 stdout = '''
 {
     "analyzer": "compiler",

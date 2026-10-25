@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- make -j4"]
+[test."$ catter inspect -- make -j4"]
 stdout = '''
 {
     "analyzer": null,
@@ -16,7 +16,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- node build.mjs"]
+[test."$ catter inspect -- node build.mjs"]
 stdout = '''
 {
     "analyzer": null,

@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- cl /nologo /c /Tc a.txt /Tp b.txt"]
+[test."$ catter inspect -- cl /nologo /c /Tc a.txt /Tp b.txt"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -84,7 +84,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo /c /TP a.c"]
+[test."$ catter inspect -- cl /nologo /c /TP a.c"]
 wrong = "a source with an explicit language gets no reads or writes (catter#131)"
 stdout = '''
 {
@@ -125,7 +125,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- cl /nologo a.obj b.obj /link /OUT:x.exe"]
+[test."$ catter inspect -- cl /nologo a.obj b.obj /link /OUT:x.exe"]
 stdout = '''
 {
     "analyzer": "compiler",

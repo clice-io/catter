@@ -55,12 +55,12 @@ int run(int argc, char* argv[]) {
             throw;
         }
         auto cli = kota::deco::cli::command<core::CatterConfig>(
-            "catter [options for catter] [script [options for script]] -- [build system command]");
-        cli.after<&core::CatterConfig::script>([](auto& step) {
+            "catter [options for catter] [built-in [options for it]] -- [build system command]");
+        cli.after<&core::CatterConfig::builtin>([](auto& step) {
                unsigned idx = step.next_cursor();
                std::span<std::string> original_argv = step.original_argv();
                while(idx < original_argv.size() && original_argv[idx] != "--") {
-                   step.options().script_args.push_back(original_argv[idx++]);
+                   step.options().builtin_args.push_back(original_argv[idx++]);
                }
                return step.seek(idx);
            })

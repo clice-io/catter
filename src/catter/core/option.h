@@ -69,12 +69,10 @@ struct CatterConfig {
 
     DECO_CFG_START(category = catter_category)
 
-    DecoInput(
-        meta_var = "<Script>",
-        help =
-            "a builtin script: script::cdb, script::cmd-tree, script::target-tree or script::inspect",
-        required = false)
-    <std::string> script;
+    DecoInput(meta_var = "<Built-in>",
+              help = "a built-in: cdb, cmd-tree, target-tree or inspect",
+              required = false)
+    <std::string> builtin;
 
     DecoKV(
         names = {"--handler"},
@@ -124,7 +122,7 @@ struct CatterConfig {
              required = false)
     <std::vector<std::string>> command = std::vector<std::string>{};
 
-    std::vector<std::string> script_args;
+    std::vector<std::string> builtin_args;
 
     DecoFlag(names = {"-h", "--help"}, help = "show this help message", required = false)
     help = false;

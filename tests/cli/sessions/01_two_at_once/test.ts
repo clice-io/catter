@@ -4,7 +4,7 @@ import { test } from "@catter/tools/testing";
 // on one machine do: each sees exactly its own commands.
 test(async (t) => {
     await Promise.all([
-        t.cli("script::cmd-tree -- node build.mjs A"),
-        t.cli("script::cmd-tree -- node build.mjs B"),
+        t.cli("cmd-tree -- node build.mjs A"),
+        t.cli("cmd-tree -- node build.mjs B"),
     ]);
 });

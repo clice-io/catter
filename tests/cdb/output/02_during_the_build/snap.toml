@@ -1,4 +1,4 @@
-[test."$ catter script::cdb --verbose -o compile_commands.json -- node build.mjs"]
+[test."$ catter cdb --verbose -o compile_commands.json -- node build.mjs"]
 stdout = '''
 CDB verbose logging enabled.
   Output file: compile_commands.json

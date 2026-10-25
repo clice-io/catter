@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- gcc -E a.c -o a.i"]
+[test."$ catter inspect -- gcc -E a.c -o a.i"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -47,7 +47,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -E a.c -o a.i".darwin]
+[test."$ catter inspect -- gcc -E a.c -o a.i".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -97,7 +97,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -E a.c -o a.i".win32]
+[test."$ catter inspect -- gcc -E a.c -o a.i".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -147,7 +147,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -fsyntax-only a.c"]
+[test."$ catter inspect -- gcc -fsyntax-only a.c"]
 wrong = "a compile that writes no object gets no entry (catter#132)"
 stdout = '''
 {
@@ -175,7 +175,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -fsyntax-only a.c".darwin]
+[test."$ catter inspect -- gcc -fsyntax-only a.c".darwin]
 wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -203,7 +203,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -fsyntax-only a.c".win32]
+[test."$ catter inspect -- gcc -fsyntax-only a.c".win32]
 wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
 stdout = '''
 {
@@ -231,7 +231,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -S a.c"]
+[test."$ catter inspect -- gcc -S a.c"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -284,7 +284,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -S a.c".darwin]
+[test."$ catter inspect -- gcc -S a.c".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -338,7 +338,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -S a.c".win32]
+[test."$ catter inspect -- gcc -S a.c".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -392,7 +392,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang -c -emit-llvm a.c -o a.bc"]
+[test."$ catter inspect -- clang -c -emit-llvm a.c -o a.bc"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -442,7 +442,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang -c -emit-llvm a.c -o a.bc".darwin]
+[test."$ catter inspect -- clang -c -emit-llvm a.c -o a.bc".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -493,7 +493,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang -c -emit-llvm a.c -o a.bc".win32]
+[test."$ catter inspect -- clang -c -emit-llvm a.c -o a.bc".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -544,7 +544,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c b.c -o app"]
+[test."$ catter inspect -- gcc a.c b.c -o app"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -608,7 +608,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c b.c -o app".darwin]
+[test."$ catter inspect -- gcc a.c b.c -o app".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -673,7 +673,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.c b.c -o app".win32]
+[test."$ catter inspect -- gcc a.c b.c -o app".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -738,7 +738,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.o b.o -o app"]
+[test."$ catter inspect -- gcc a.o b.o -o app"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -774,7 +774,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.o b.o -o app".darwin]
+[test."$ catter inspect -- gcc a.o b.o -o app".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -811,7 +811,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc a.o b.o -o app".win32]
+[test."$ catter inspect -- gcc a.o b.o -o app".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -848,7 +848,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -E a.c -o -"]
+[test."$ catter inspect -- gcc -E a.c -o -"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -884,7 +884,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -E a.c -o -".darwin]
+[test."$ catter inspect -- gcc -E a.c -o -".darwin]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {
@@ -921,7 +921,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- gcc -E a.c -o -".win32]
+[test."$ catter inspect -- gcc -E a.c -o -".win32]
 differs = "a command that names no target compiles for the host"
 stdout = '''
 {

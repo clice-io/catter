@@ -2,12 +2,12 @@
 
 目标树将构建产物渲染为依赖森林，展示"什么由什么构建而来"。
 
-内置脚本：`script::target-tree`
+内置功能：`target-tree`
 
 ## 用法
 
 ```bash
-catter script::target-tree [options] -- <build-command>
+catter target-tree [options] -- <build-command>
 ```
 
 ## 选项

@@ -1,7 +1,7 @@
-[test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -- --quiet"]
+[test."$ catter cdb -q -o compile_commands.json -- cmake --build build -- --quiet"]
 exit = 0
 
-[test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -- --quiet".darwin]
+[test."$ catter cdb -q -o compile_commands.json -- cmake --build build -- --quiet".darwin]
 wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
 stdout = '''
 dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))

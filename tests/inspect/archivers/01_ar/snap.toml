@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- ar rcs libx.a a.o b.o"]
+[test."$ catter inspect -- ar rcs libx.a a.o b.o"]
 stdout = '''
 {
     "analyzer": "archiver",
@@ -33,7 +33,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- ar t libx.a"]
+[test."$ catter inspect -- ar t libx.a"]
 stdout = '''
 {
     "analyzer": "archiver",

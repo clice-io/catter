@@ -35,10 +35,10 @@ tests/<topic>/<subtopic>/NN_name/
   the SDKs: their actions, errors, lifecycle, transports, several at once,
   arguments that are not UTF-8, the analysis of commands, the TypeScript
   SDK).
-- **Builtins**, what a builtin script answers on the commands it saw: `cdb`
-  (`script::cdb`), `cmd_tree`, `target_tree`, and `inspect`
-  (`script::inspect`, how catter analyzes one command, which it does not
-  run: the compiler, its mode and target, the files it reads and writes).
+- **Builtins**, what a built-in answers on the commands it saw: `cdb`,
+  `cmd_tree`, `target_tree`, and `inspect` (how catter analyzes one
+  command, which it does not run: the compiler, its mode and target, the
+  files it reads and writes).
 - **Command**, catter's own command line: `cli` (arguments, replay files,
   the data directory, sessions).
 
@@ -77,7 +77,7 @@ import { test } from "@catter/tools/testing";
 
 test(async (t) => {
   await t.setup("cmake -S . -B build -G Ninja");
-  await t.cli("script::cdb -o compile_commands.json -- cmake --build build -j 1");
+  await t.cli("cdb -o compile_commands.json -- cmake --build build -j 1");
   t.show("compile_commands.json", t.disk.cdb());
 });
 ```
@@ -118,14 +118,14 @@ table `[<test>.<label>]`. A test is named by its script, an unnamed one
 `test`.
 
 ```toml
-[test."$ catter script::cdb -o compile_commands.json -- make"]
+[test."$ catter cdb -o compile_commands.json -- make"]
 stdout = '''
 g++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
 CDB saved to ${WS}/compile_commands.json with 1 entries.
 '''
 exit = 0
 
-[test."$ catter script::cdb -o compile_commands.json -- make".darwin]
+[test."$ catter cdb -o compile_commands.json -- make".darwin]
 wrong = "dyld kills Apple's arm64e tools when the hook is inserted (catter#115)"
 stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
 stderr = '''

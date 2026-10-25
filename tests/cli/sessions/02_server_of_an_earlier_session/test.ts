@@ -4,6 +4,6 @@ import { test } from "@catter/tools/testing";
 // was started in is gone, so what it runs runs as it would without catter,
 // uncaptured.
 test(async (t) => {
-    await t.cli("script::cmd-tree -w 1000 -- node start.mjs");
-    await t.cli("script::cmd-tree -w 1000 -- node client.mjs");
+    await t.cli("cmd-tree -w 1000 -- node start.mjs");
+    await t.cli("cmd-tree -w 1000 -- node client.mjs");
 });

@@ -1,4 +1,4 @@
-[test."$ catter script::cdb --help -- node -e 0"]
+[test."$ catter cdb --help -- node -e 0"]
 stdout = '''
 Generate a compile_commands.json file from captured compiler commands.
 
@@ -26,11 +26,11 @@ Examples:
 '''
 exit = 0
 
-[test."$ catter script::cdb --append --replace -- node -e 0"]
+[test."$ catter cdb --append --replace -- node -e 0"]
 stdout = "cdb: --append and --replace cannot be used together"
 exit = 1
 
-[test."$ catter script::cdb a.json b.json -- node -e 0"]
+[test."$ catter cdb a.json b.json -- node -e 0"]
 stdout = '''
 cdb: unexpected input argument b.json
 

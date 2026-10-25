@@ -1,4 +1,4 @@
-[test."$ catter -m replay script::cmd-tree -- events.json"]
+[test."$ catter -m replay cmd-tree -- events.json"]
 stdout = '''
 make
 └── tool 😀😀😀....😀😀😀 中文参....文参数 é-é....é-é no break wide　space "tab\there"

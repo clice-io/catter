@@ -2,12 +2,12 @@
 
 The target tree renders build artifacts as a dependency forest, showing what was built from what.
 
-Built-in script: `script::target-tree`
+Built-in: `target-tree`
 
 ## Usage
 
 ```bash
-catter script::target-tree [options] -- <build-command>
+catter target-tree [options] -- <build-command>
 ```
 
 ## Options

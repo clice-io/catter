@@ -2,15 +2,15 @@
 
 The compilation database (CDB) is catter's primary feature. It intercepts compiler invocations during a build and generates a standard `compile_commands.json` file, compatible with clang tooling, language servers, and IDEs.
 
-Built-in script: `script::cdb`
+Built-in: `cdb`
 
 ## Usage
 
 ```bash
-catter script::cdb [options] -- <build-command>
+catter cdb [options] -- <build-command>
 ```
 
-## Script Options
+## Options
 
 | Option                       | Description                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
@@ -54,14 +54,14 @@ Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and h
 
 ```bash
 # Basic usage with make
-catter script::cdb -- make -j8
+catter cdb -- make -j8
 
 # Specify output path
-catter script::cdb -o build/compile_commands.json -- ninja
+catter cdb -o build/compile_commands.json -- ninja
 
 # With CMake
-catter script::cdb -- cmake --build build
+catter cdb -- cmake --build build
 
 # With any build system
-catter script::cdb -- ./build.sh
+catter cdb -- ./build.sh
 ```

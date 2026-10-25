@@ -221,7 +221,7 @@ Object describe(const cmd::Error& error) {
 }
 
 /// What catter makes of the command `argv`, run in `cwd`: the analysis that recognizes it and
-/// what it found, with the outputs it inferred, the notes on how, and the entries `script::cdb`
+/// what it found, with the outputs it inferred, the notes on how, and the entries `cdb`
 /// writes for it; or, when none does, why.
 JSON describe(std::string_view cwd, std::span<const std::string> argv) {
     auto compiler = cmd::analyze_compiler(argv[0], argv);

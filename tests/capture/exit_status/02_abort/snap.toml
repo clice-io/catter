@@ -7,7 +7,7 @@ differs = "Windows has no signals: an aborted program exits with a code"
 stdout = "status 134, signal null"
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 wrong = "a command killed by a signal is reported as exiting with 0 (catter#119)"
 stdout = '''
 status 0, signal null
@@ -16,7 +16,7 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs".win32]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs".win32]
 differs = "Windows has no signals: an aborted program exits with a code"
 stdout = '''
 status 134, signal null

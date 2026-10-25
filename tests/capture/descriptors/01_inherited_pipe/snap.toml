@@ -2,7 +2,7 @@
 stdout = 'through fd 3: "through fd"'
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
 stdout = '''
 through fd 3: "through fd"
 node build.mjs
@@ -10,7 +10,7 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter script::cmd-tree -w 1000 -- node build.mjs".darwin]
+[test."$ catter cmd-tree -w 1000 -- node build.mjs".darwin]
 wrong = "a descriptor a parent passes to its child is closed (catter#153)"
 stdout = '''
 through fd 3: ""

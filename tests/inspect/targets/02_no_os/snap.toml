@@ -1,4 +1,4 @@
-[test."$ catter script::inspect -- clang --target=wasm32 -c a.c"]
+[test."$ catter inspect -- clang --target=wasm32 -c a.c"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -51,7 +51,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- arm-none-eabi-gcc -c a.c -o a.o"]
+[test."$ catter inspect -- arm-none-eabi-gcc -c a.c -o a.o"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -100,7 +100,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang --target=x86_64-pc-windows -c a.c"]
+[test."$ catter inspect -- clang --target=x86_64-pc-windows -c a.c"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -155,7 +155,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter script::inspect -- clang --target=x86_64-pc-cygwin -c a.c"]
+[test."$ catter inspect -- clang --target=x86_64-pc-cygwin -c a.c"]
 stdout = '''
 {
     "analyzer": "compiler",

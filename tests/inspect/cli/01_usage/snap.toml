@@ -1,8 +1,8 @@
-[test."$ catter script::inspect --"]
+[test."$ catter inspect --"]
 stdout = "inspect: give the command to analyze after --"
 exit = 1
 
-[test."$ catter script::inspect --help -- gcc -c a.c"]
+[test."$ catter inspect --help -- gcc -c a.c"]
 stdout = '''
 Print how catter analyzes the command after --, without running it.
 
@@ -18,7 +18,7 @@ Examples:
 '''
 exit = 0
 
-[test."$ catter script::inspect --bogus -- gcc -c a.c"]
+[test."$ catter inspect --bogus -- gcc -c a.c"]
 stdout = '''
 inspect: unknown option '--bogus'
 
