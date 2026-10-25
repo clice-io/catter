@@ -23,7 +23,7 @@ rules and the pitfalls. The framework is `tools/testing/`
 2. Write the inputs: a project a real build tool builds, or a `build.mjs`
    that starts programs the way a build tool does and prints what they
    received. A `test.ts` only when the inherited one does not fit; what a
-   compiler or argument parser makes of one command is an `inspect` case,
+   compiler or argument parser makes of one command is an `explain` case,
    a line of its `commands.txt`.
 3. Run it alone on the box the build ran on (the test skill):
    `CATTER_CASES=<topic>/<subtopic>/NN_name UPDATE_SNAPSHOTS=1 pixi run -e dev cases-test <mode>`,

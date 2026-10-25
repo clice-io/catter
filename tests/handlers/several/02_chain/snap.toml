@@ -1,4 +1,4 @@
-[test."$ catter --handler \"python decider.py\" --handler \"python second.py\" -- node build.mjs"]
+[test."$ catter run --handler \"python decider.py\" --handler \"python second.py\" -- node build.mjs"]
 stdout = '''
 drop-me: exit 0
 ran with ["modify-me","added-by-decider"]

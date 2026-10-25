@@ -2,7 +2,7 @@
 stdout = "30000 characters, all v: true"
 exit = 0
 
-[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 30000 characters, all v: true
 node build.mjs

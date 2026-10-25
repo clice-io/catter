@@ -4,13 +4,12 @@ import { test } from "@catter/tools/testing";
 // filter names, edits them, and asks what catter makes of one of its own.
 test(async (t) => {
     await t.cli([
-        "-m",
-        "replay",
+        "run",
         "--handler",
         "node handler.ts",
         "--handler",
         "python observer.py",
-        "--",
+        "--from",
         "events.json",
     ]);
 });

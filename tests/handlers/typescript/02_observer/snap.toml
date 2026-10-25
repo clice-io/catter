@@ -1,4 +1,4 @@
-[inject."$ catter --handler \"node handler.ts\" -- node build.mjs"]
+[inject."$ catter run --handler \"node handler.ts\" -- node build.mjs"]
 stdout = '''
 ran with ["drop-me"]
 drop-me: exit 0
@@ -13,7 +13,7 @@ served
 '''
 exit = 0
 
-[replay."$ catter -m replay --handler \"node handler.ts\" -- events.json"]
+[replay."$ catter run --handler \"node handler.ts\" --from events.json"]
 stderr = '''
 finish: code 0, after start 1, end 1, start 2, end 2, start 3, end 3
 served

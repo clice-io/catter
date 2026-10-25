@@ -47,6 +47,6 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 
 ## 选择与检查
 
-- 默认使用 `inject`，无需配置；其他捕获机制上线后通过 `-m/--mode` 选择，就像现在的 `replay`：它回放一次录制的构建，而不捕获构建。
+- catter 用 `inject` 捕获构建，无需配置；`--from` 回放一次录制的构建，而不捕获构建。
 - handler 不应假设机制：`initialize` 会告知当前机制（`mode`）。
 - 在命令不带父命令 ID 的 runtime 下，命令的 `parent` 不会出现，依赖父子关系的功能（命令树、目标树）需要降级处理。

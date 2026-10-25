@@ -1,4 +1,4 @@
-[test."$ catter -m replay --handler \"node handler.ts\" --handler \"python observer.py\" -- events.json"]
+[test."$ catter run --handler \"node handler.ts\" --handler \"python observer.py\" --from events.json"]
 stderr = '''
 analyzed: compiler
 command 2: compile, reads a.c

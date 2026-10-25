@@ -1,0 +1,10 @@
+[test."$ catter tree --from events.json"]
+stdout = '''
+make
+
+Detected command cycles:
+[cycle] sh self.sh -> sh self.sh
+[cycle] cc1 a.c -> gcc -c a.c -> cc1 a.c
+[cycle] cmake --r....ate -> ninja -> cmake --r....ate
+'''
+exit = 0

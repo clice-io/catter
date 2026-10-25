@@ -2,12 +2,12 @@
 
 The command tree visualizes the build command DAG as an ASCII tree, showing parent-child process relationships and their commands.
 
-Built-in: `cmd-tree`
+Command: `tree`
 
 ## Usage
 
 ```bash
-catter cmd-tree [options] -- <build-command>
+catter tree [options] -- <build-command>
 ```
 
 ## Options
@@ -15,8 +15,10 @@ catter cmd-tree [options] -- <build-command>
 | Option                | Description                                                                                        |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
 | `-d, --depth <n>`     | Limit render depth.                                                                                |
-| `-a, --args <n>`      | Number of arguments to show per command. Default: all.                                             |
+| `-a, --args <n>`      | Show the first n arguments after `argv[0]`. Use `-1` to keep all. Default: `-1`.                   |
 | `-w, --arg-width <n>` | Cut each longer argument in its middle to this many characters (Unicode code points). Default: 10. |
+
+`tree` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Output
 

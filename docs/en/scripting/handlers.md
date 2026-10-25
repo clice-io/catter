@@ -7,7 +7,7 @@ catter speaks to a handler over a small protocol (see [Handler protocol](../desi
 ## Running a handler
 
 ```bash
-catter --handler "python handler.py" -- make
+catter run --handler "python handler.py" -- make
 ```
 
 catter starts the handler, speaks to it over the handler's stdin and stdout, and ends it when the build is over. What the handler prints on stderr shows in the terminal. The handler runs outside the build: the programs it starts are not captured.
@@ -17,19 +17,21 @@ On Linux and macOS the command is split into words as a POSIX shell splits them,
 A handler that already runs, listening on a TCP port, is reached with `--connect`:
 
 ```bash
-catter --connect 127.0.0.1:9000 -- make
+catter run --connect 127.0.0.1:9000 -- make
 ```
 
 This suits a handler run under a debugger, or one that serves several builds in turn. The host is an IP address, or `localhost`, for which catter tries `127.0.0.1`, then `::1`. catter connects only to the machine it runs on, unless `--allow-remote` is given: a handler can change and drop the build's commands.
 
 ### Options
 
-| Option                        | Description                                                                                                         | Default |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------- |
-| `--handler <command>`         | A handler for catter to start. May be given more than once.                                                         |         |
-| `--connect <host:port>`       | A handler listening at the address. May be given more than once.                                                    |         |
-| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                 |         |
-| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over. `0` waits as long as it takes. | `60`    |
+| Option                        | Description                                                                                                                   | Default |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `--handler <command>`         | Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.       |         |
+| `--connect <host:port>`       | Connect to a handler listening at the address, on this machine unless `--allow-remote` is given; may be given more than once. |         |
+| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                           |         |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.           | `60`    |
+
+`run` runs the build with handlers alone. `compile-commands`, `tree` and `targets` take these options too, and run the handlers after their built-in.
 
 ## The SDKs
 
@@ -137,10 +139,10 @@ catter.serve(Handler())
 
 ## Several handlers
 
-`--handler` and `--connect` may be given more than once, and with a built-in:
+`--handler` and `--connect` may be given more than once, and to a command that runs a built-in:
 
 ```bash
-catter --handler "python observe.py" --handler "python decide.py" cdb -o compile_commands.json -- make
+catter compile-commands -o compile_commands.json --handler "python observe.py" --handler "python decide.py" -- make
 ```
 
 The handlers form a chain, in a fixed order: the built-in first, then the handlers in the order of the command line. Each command goes to them in turn, each seeing it as the ones before left it, until one drops it; a handler after it never sees a dropped command. Put an observer that should see every command first.

@@ -1,4 +1,4 @@
-[test."$ catter cdb -q -o compile_commands.json -- cmake --build build -j 1"]
+[test."$ catter compile-commands -q -o compile_commands.json -- cmake --build build -j 1"]
 stdout = '''
 [1/6] Scanning '${WS}/main.cc' for CXX dependencies
 [2/6] Scanning '${WS}/greet.cppm' for CXX dependencies
@@ -9,7 +9,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter cdb -q -o compile_commands.json -- cmake --build build -j 1".win32]
+[test."$ catter compile-commands -q -o compile_commands.json -- cmake --build build -j 1".win32]
 differs = "CMake builds with MSVC: cl.exe prints the module it compiles, and Ninja names files the Windows way"
 stdout = '''
 [1/6] Scanning ${WS}/main.cc for CXX dependencies

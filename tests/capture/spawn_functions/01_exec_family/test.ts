@@ -16,7 +16,7 @@ const functions: [string, string][] = [
 test("posix", { except: { win32: "the POSIX functions" } }, async (t) => {
     await t.setup("cc -o spawn spawn.c");
     for (const [name, program] of functions) {
-        await t.cli(["cmd-tree", "-w", "1000", "--", "./spawn", name, program, "child.mjs"]);
+        await t.cli(["tree", "-w", "1000", "--", "./spawn", name, program, "child.mjs"]);
     }
 });
 
@@ -25,6 +25,6 @@ test(
     { except: { darwin: "a GNU extension", win32: "the POSIX functions" } },
     async (t) => {
         await t.setup("cc -o spawn spawn.c");
-        await t.cli("cmd-tree -w 1000 -- ./spawn execvpe node child.mjs");
+        await t.cli("tree -w 1000 -- ./spawn execvpe node child.mjs");
     },
 );

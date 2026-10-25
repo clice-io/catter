@@ -12,6 +12,6 @@ test(
     async (t) => {
         await t.setup("cl /nologo spawn.c");
         await t.run("spawn.exe CreateProcessW command.txt");
-        await t.cli("cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt");
+        await t.cli("tree -w 1000 -- spawn.exe CreateProcessW command.txt");
     },
 );

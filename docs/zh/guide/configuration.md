@@ -3,43 +3,43 @@
 ## catter 命令行
 
 ```
-catter [options] [<built-in> [built-in options]] -- <build-command>
+catter <command> [options] -- <build-command>
 ```
 
-一次运行可以使用一个内置功能、一个或多个 [handler](../scripting/handlers.md)，或两者兼用。
+每次运行都要指定一个命令，选项写在命令之后。`catter --help` 列出所有命令，`catter <command> --help` 显示某个命令的选项。不指定命令时，catter 列出所有命令并报错退出。
+
+### 命令
+
+| 命令               | 说明                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `compile-commands` | 根据捕获的编译器命令生成 `compile_commands.json` 文件。见[编译数据库](../features/compilation-database.md)。 |
+| `tree`             | 把捕获的命令渲染为命令树。见[命令树](../features/command-tree.md)。                                          |
+| `targets`          | 把捕获的构建目标渲染为扁平的目标森林。见[目标树](../features/target-tree.md)。                               |
+| `explain`          | 打印 catter 如何分析 `--` 之后的命令，而不运行它。见[命令分析](../features/explain.md)。                     |
+| `run`              | 只用 handler 运行构建，由它们对构建的命令做决定或观察它们。见 [Handler](../scripting/handlers.md)。          |
+
+`compile-commands`、`tree` 和 `targets` 各自在构建上运行一个内置功能，命令行指定的 [handler](../scripting/handlers.md)（如果有的话）与它一起运行。`run` 只运行 handler，至少要指定一个。
 
 ### 选项
 
-| 选项                          | 说明                                                                                                       | 默认值   |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------- | -------- |
-| `-m, --mode <mode>`           | runtime 模式：`inject` 运行构建命令并拦截它的进程；`replay` 回放一次录制的构建，以其事件文件代替构建命令。 | `inject` |
-| `-d, --dir <path>`            | 目标进程的工作目录。                                                                                       | 当前目录 |
-| `--handler <command>`         | 由 catter 启动的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                             |          |
-| `--connect <host:port>`       | 在该地址监听的 handler；可多次指定。见 [Handler](../scripting/handlers.md)。                               |          |
-| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                |          |
-| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                             | `60`     |
-| `-h, --help`                  | 显示帮助信息。                                                                                             |          |
+`compile-commands`、`tree`、`targets` 和 `run` 除了各自的选项，还接受以下选项：
+
+| 选项                          | 说明                                                                                    | 默认值   |
+| ----------------------------- | --------------------------------------------------------------------------------------- | -------- |
+| `-C, --directory <path>`      | 命令运行所在的目录。                                                                    | 当前目录 |
+| `--from <file>`               | 回放该文件中录制的构建，而不运行构建。                                                  |          |
+| `--handler <command>`         | 启动一个 handler，它经自己的 stdin 和 stdout 对构建的命令做决定或观察它们；可多次指定。 |          |
+| `--connect <host:port>`       | 连接在该地址监听的 handler，未指定 `--allow-remote` 时只限本机；可多次指定。            |          |
+| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                             |          |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。          | `60`     |
+
+`--from` 代替 `--` 之后的构建命令：一次运行只能给出两者之一。相对路径从 `-C` 指定的目录算起。
+
+`explain` 也接受 `-C`，要分析的命令写在 `--` 之后。
 
 ### 数据目录
 
 catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。
-
-### 内置功能
-
-内置功能直接用名字指定，写在它的选项之前：
-
-```bash
-catter <name> [built-in options] -- <build-command>
-```
-
-内置功能有：
-
-| 名称          | 说明                                     |
-| ------------- | ---------------------------------------- |
-| `cdb`         | 生成 `compile_commands.json`             |
-| `cmd-tree`    | 展示构建命令树                           |
-| `target-tree` | 展示构建目标树                           |
-| `inspect`     | 展示 catter 如何分析一条命令（不运行它） |
 
 ## catter-proxy 命令行
 

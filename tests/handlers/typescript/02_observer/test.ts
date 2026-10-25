@@ -4,9 +4,9 @@ import { test } from "@catter/tools/testing";
 // end before the next message's, even when the messages come one right after
 // another, as a replayed build sends them.
 test("inject", async (t) => {
-    await t.cli(["--handler", "node handler.ts", "--", "node", "build.mjs"]);
+    await t.cli(["run", "--handler", "node handler.ts", "--", "node", "build.mjs"]);
 });
 
 test("replay", async (t) => {
-    await t.cli(["-m", "replay", "--handler", "node handler.ts", "--", "events.json"]);
+    await t.cli(["run", "--handler", "node handler.ts", "--from", "events.json"]);
 });

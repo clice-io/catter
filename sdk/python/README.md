@@ -19,7 +19,7 @@ catter.serve(Handler())
 ```
 
 ```sh
-catter --handler "python handler.py" -- make
+catter run --handler "python handler.py" -- make
 ```
 
 The SDK and the protocol are described in [catter's documentation](https://docs.clice.io/catter/scripting/handlers).

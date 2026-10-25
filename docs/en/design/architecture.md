@@ -11,13 +11,13 @@ Handler authors only need to understand two things:
 
 "Intercepting process creation" differs greatly in feasibility across platforms: hooks are the most general, but are restricted on some platforms (for example, macOS requires special development entitlements). Catter therefore abstracts capture mechanisms as runtimes. One runtime is one capture implementation; the handlers see the commands it captures, whichever it is.
 
-The runtime is selected with `-m/--mode` and defaults to `inject`. A handler learns it from the session's `initialize` message, whose `mode` is `inject`, or `replay` for a recorded build that catter plays instead of running one.
+catter captures a build with `inject`; given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is `inject`, or `replay` for a recorded build.
 
 Today `inject` (based on hooks) is the only capture mechanism; `env` and `eslogger` are planned. The principles, platform limitations, and capability differences of each mechanism are covered in [Runtime](runtime.md).
 
 ## Handlers
 
-A session's handlers decide on its commands and are told of its events. They are the built-in the command line names, if any (`cdb`, `cmd-tree`, `target-tree`, `inspect`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in first, then the others in the order of the command line.
+A session's handlers decide on its commands and are told of its events. They are the built-in the command runs, if any (`compile-commands`, `tree`, `targets`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in first, then the others in the order of the command line.
 
 ## Session lifecycle
 

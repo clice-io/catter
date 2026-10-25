@@ -1,4 +1,4 @@
-[test."$ catter cdb -q -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
+[test."$ catter compile-commands -q -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
 stdout = '''
 
   1>Checking Build System

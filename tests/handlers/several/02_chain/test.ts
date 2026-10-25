@@ -5,6 +5,7 @@ import { test } from "@catter/tools/testing";
 // keeps what the first modified.
 test(async (t) => {
     await t.cli([
+        "run",
         "--handler",
         "python decider.py",
         "--handler",

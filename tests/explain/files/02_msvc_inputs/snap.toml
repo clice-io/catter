@@ -1,0 +1,164 @@
+[test."$ catter explain -- cl /nologo /c /Tc a.txt /Tp b.txt"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.txt",
+        "b.txt"
+    ],
+    "reads": [
+        "a.txt",
+        "b.txt"
+    ],
+    "writes": [
+        "a.obj",
+        "b.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.txt"
+            ]
+        },
+        {
+            "output": "b.obj",
+            "inputs": [
+                "b.txt"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.txt",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Tc",
+                "a.txt",
+                "/Tp",
+                "b.txt"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.txt",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Tc",
+                "a.txt",
+                "/Tp",
+                "b.txt"
+            ],
+            "output": "${WS}/b.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo /c /TP a.c"]
+wrong = "a source with an explicit language gets no reads or writes (catter#131)"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [],
+    "reads": [],
+    "writes": [],
+    "edges": [],
+    "diagnostics": [
+        {
+            "code": "input-candidate-rejected",
+            "message": "input candidate did not match suffix rules",
+            "path": "a.c",
+            "index": 4,
+            "source": {
+                "kind": "argument"
+            }
+        },
+        {
+            "code": "default-output-missing-input",
+            "message": "compile output has no source input to name"
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo a.obj b.obj /link /OUT:x.exe"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [],
+    "reads": [
+        "a.obj",
+        "b.obj"
+    ],
+    "writes": [
+        "x.exe"
+    ],
+    "edges": [
+        {
+            "output": "x.exe",
+            "inputs": [
+                "a.obj",
+                "b.obj"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0

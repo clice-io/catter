@@ -41,24 +41,25 @@ Generate a compilation database by running your normal build command through
 `catter`:
 
 ```bash
-catter cdb -o compile_commands.json -- make
+catter compile-commands -o compile_commands.json -- make
 ```
 
 For CMake projects, wrap the build step in the same way:
 
 ```bash
-catter cdb -o compile_commands.json -- cmake --build build
+catter compile-commands -o compile_commands.json -- cmake --build build
 ```
 
 The general command format is:
 
 ```bash
-catter [options] <built-in> [built-in options] -- <build-command>
+catter <command> [options] -- <build-command>
 ```
 
-Here, `cdb` selects the built-in that writes a compilation database, `-o`
-sets the output path, and everything after `--` is the build command to
-intercept.
+Here, `compile-commands` is the command that writes a compilation database,
+`-o` sets the output path, and everything after `--` is the build command to
+intercept. `catter --help` lists the commands, and `catter <command> --help`
+the options of one.
 
 ## Building
 

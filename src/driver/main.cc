@@ -1,14 +1,16 @@
+#include <algorithm>
 #include <csignal>
 #include <cstdio>
-#include <iostream>
 #include <print>
+#include <span>
+#include <string>
 #include <string_view>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/io/loop.h>
 #include <kota/deco/deco.h>
 
-#include "driver/app_runner.h"
-#include "driver/option.h"
+#include "driver/cli.h"
+#include "driver/driver.h"
 #include "support/config/catter.h"
 #include "support/crossplat.h"
 #include "support/encoding.h"
@@ -41,10 +43,6 @@ int run(int argc, char* argv[]) {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
 
     auto args = kota::deco::util::argvify(argc, argv, 1);
-    kota::deco::cli::text::set_default_renderer(kota::deco::cli::text::ModernRenderer());
-
-    // -1 is continue, else return
-    int ret = -1;
 
     try {
         try {
@@ -54,38 +52,22 @@ int run(int argc, char* argv[]) {
             log::mute_logger();
             throw;
         }
-        auto cli = kota::deco::cli::command<driver::CatterConfig>(
-            "catter [options for catter] [built-in [options for it]] -- [build system command]");
-        cli.after<&driver::CatterConfig::builtin>([](auto& step) {
-               unsigned idx = step.next_cursor();
-               std::span<std::string> original_argv = step.original_argv();
-               while(idx < original_argv.size() && original_argv[idx] != "--") {
-                   step.options().builtin_args.push_back(original_argv[idx++]);
-               }
-               return step.seek(idx);
-           })
-            .after<&driver::CatterConfig::handler>([](auto& step) {
-                step.options().handlers.push_back({.connect = false, .text = step.value()});
-                return step.next();
-            })
-            .after<&driver::CatterConfig::connect>([](auto& step) {
-                step.options().handlers.push_back({.connect = true, .text = step.value()});
-                return step.next();
-            })
-            .after<&driver::CatterConfig::help>([&](auto& step) {
-                step.usage(std::cout);
-                ret = 0;
-                return step.stop();
-            });
-        auto res = cli.invoke(args);
-        if(ret != -1) {
-            return ret;
+        if(!args.empty() && (args.front() == "-h" || args.front() == "--help")) {
+            std::println("{}", driver::usage_of_catter());
+            return 0;
         }
-        if(!res) {
-            std::println("{}\nUse -h or --help for usage", res.error().message);
+        if(args.empty() || args.front().starts_with('-')) {
+            std::println("catter: give a command\n\n{}", driver::usage_of_catter());
             return 1;
         }
-        kota::run(driver::async_run(res->options));
+        auto entry = std::ranges::find(driver::subcommand_entries(),
+                                       args.front(),
+                                       &driver::SubcommandEntry::name);
+        if(entry == driver::subcommand_entries().end()) {
+            std::println("catter: no command `{}`\n\n{}", args.front(), driver::usage_of_catter());
+            return 1;
+        }
+        return entry->run(std::span(args).subspan(1));
     } catch(const cpptrace::exception& ex) {
         std::println("{}", ex.message());
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
@@ -97,7 +79,6 @@ int run(int argc, char* argv[]) {
         std::println("Unknown fatal error.");
         return 1;
     }
-    return 0;
 }
 
 }  // namespace

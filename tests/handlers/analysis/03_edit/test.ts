@@ -7,13 +7,12 @@ import { test } from "@catter/tools/testing";
 // were written, the added flags as decider.py wrote them.
 test(async (t) => {
     await t.cli([
-        "-m",
-        "replay",
+        "run",
         "--handler",
         "python decider.py",
         "--handler",
         "python observer.py",
-        "--",
+        "--from",
         "events.json",
     ]);
 });

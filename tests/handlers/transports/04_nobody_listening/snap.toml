@@ -1,3 +1,3 @@
-[test."$ catter --connect 127.0.0.1:1 -- node -e 0"]
+[test."$ catter run --connect 127.0.0.1:1 -- node -e 0"]
 stdout = "Failed to connect to handler `127.0.0.1:1`: connection refused"
 exit = 1

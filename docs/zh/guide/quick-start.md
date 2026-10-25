@@ -25,7 +25,7 @@ Catter 目前仍在积极开发中，请以 Releases 页面为准获取最新版
 通过 catter 运行你的构建命令，即可捕获所有编译器调用：
 
 ```bash
-catter cdb -o compile_commands.json -- make
+catter compile-commands -o compile_commands.json -- make
 ```
 
 这会在当前目录生成 `compile_commands.json` 文件，可直接用于任何语言服务器或静态分析工具。
@@ -33,17 +33,19 @@ catter cdb -o compile_commands.json -- make
 ## 命令格式
 
 ```
-catter [options] <built-in> [built-in options] -- <build-command>
+catter <command> [options] -- <build-command>
 ```
 
 以上面的 CDB 示例为例：
 
-| 部分                       | 含义                                          |
-| -------------------------- | --------------------------------------------- |
-| `cdb`                      | 使用生成 CDB 的内置功能                       |
-| `-o compile_commands.json` | 内置功能的选项：输出文件路径                  |
-| `--`                       | catter 和内置功能的参数与构建命令之间的分隔符 |
-| `make`                     | 实际要拦截的构建命令                          |
+| 部分                       | 含义                             |
+| -------------------------- | -------------------------------- |
+| `compile-commands`         | 命令：生成 CDB                   |
+| `-o compile_commands.json` | 命令的选项：输出文件路径         |
+| `--`                       | 命令的参数与构建命令之间的分隔符 |
+| `make`                     | 实际要拦截的构建命令             |
+
+`catter --help` 列出所有命令，`catter <command> --help` 显示某个命令的选项。
 
 ## 更多示例
 
@@ -52,13 +54,13 @@ catter [options] <built-in> [built-in options] -- <build-command>
 将捕获的构建命令 DAG 以 ASCII 树形式展示：
 
 ```bash
-catter cmd-tree -- make
+catter tree -- make
 ```
 
 ### 配合 CMake 使用
 
 ```bash
-catter cdb -o compile_commands.json -- cmake --build build
+catter compile-commands -o compile_commands.json -- cmake --build build
 ```
 
 ### 你自己的 handler
@@ -66,5 +68,5 @@ catter cdb -o compile_commands.json -- cmake --build build
 把命令交给你自己编写的程序，即 [handler](../scripting/handlers.md)：
 
 ```bash
-catter --handler "python my_handler.py" -- cmake --build build
+catter run --handler "python my_handler.py" -- cmake --build build
 ```

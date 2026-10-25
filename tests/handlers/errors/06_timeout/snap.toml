@@ -1,4 +1,4 @@
-[test."$ catter --handler \"python handler.py\" --handler-timeout 5 -- node build.mjs"]
+[test."$ catter run --handler \"python handler.py\" --handler-timeout 5 -- node build.mjs"]
 stdout = '''
 first: exit 1
 second: exit 1

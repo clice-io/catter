@@ -1,7 +1,7 @@
-["an input"."$ catter -m replay --handler \"python handler.py input\" -- events.json"]
+["an input"."$ catter run --handler \"python handler.py input\" --from events.json"]
 stdout = "Handler `python handler.py input` answered command 2 with an action catter cannot take: `a.c` names no option to remove"
 exit = 1
 
-["a program catter reads no arguments of"."$ catter -m replay --handler \"python handler.py program\" -- events.json"]
+["a program catter reads no arguments of"."$ catter run --handler \"python handler.py program\" --from events.json"]
 stdout = "Handler `python handler.py program` answered command 1 with an action catter cannot take: catter reads no arguments of the command to edit: give it whole with `modify`"
 exit = 1

@@ -1,0 +1,7 @@
+[test."$ catter compile-commands -o compile_commands.json --from events.json"]
+wrong = "catter exits with 0 when the build fails (catter#116)"
+stdout = "Build failed with exit code 1. CDB will not be saved."
+exit = 0
+
+[test."compile_commands.json"]
+absent = true

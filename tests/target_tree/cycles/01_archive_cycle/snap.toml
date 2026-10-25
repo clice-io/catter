@@ -1,7 +1,0 @@
-[test."$ catter -m replay target-tree -- events.json"]
-stdout = '''
-
-Detected target cycles:
-[cycle] b.o -> a.o -> b.o
-'''
-exit = 0

@@ -4,5 +4,5 @@ import { test } from "@catter/tools/testing";
 // on files there once the build is done, and what a program it starts
 // prints shows on stderr.
 test(async (t) => {
-    await t.cli(["--handler", "python handler.py", "--", "node", "-e", "0"]);
+    await t.cli(["run", "--handler", "python handler.py", "--", "node", "-e", "0"]);
 });

@@ -17,7 +17,11 @@ public:
                                                      Handler& handler) const = 0;
 };
 
-const RuntimeDriver* find_runtime_driver(std::string_view name) noexcept;
-const RuntimeDriver* default_runtime_driver() noexcept;
+/// Runs the build, its commands captured by the hook.
+const RuntimeDriver& inject_runtime_driver() noexcept;
+
+/// Plays a recorded build (see replay.h) instead of running one: the build command is the
+/// replay file.
+const RuntimeDriver& replay_runtime_driver() noexcept;
 
 }  // namespace catter

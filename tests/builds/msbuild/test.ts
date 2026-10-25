@@ -13,7 +13,7 @@ test(
     async (t) => {
         await t.setup("cmake -S . -B build");
         await t.cli(
-            "cdb -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo",
+            "compile-commands -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo",
         );
         t.show("compile_commands.json", t.disk.cdb());
     },

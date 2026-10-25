@@ -1,0 +1,7 @@
+[test."$ catter targets --from events.json"]
+stdout = '''
+
+Detected target cycles:
+[cycle] b.o -> a.o -> b.o
+'''
+exit = 0

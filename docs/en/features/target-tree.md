@@ -2,12 +2,12 @@
 
 The target tree renders build artifacts as a dependency forest, showing what was built from what.
 
-Built-in: `target-tree`
+Command: `targets`
 
 ## Usage
 
 ```bash
-catter target-tree [options] -- <build-command>
+catter targets [options] -- <build-command>
 ```
 
 ## Options
@@ -15,6 +15,8 @@ catter target-tree [options] -- <build-command>
 | Option            | Description         |
 | ----------------- | ------------------- |
 | `-d, --depth <n>` | Limit render depth. |
+
+`targets` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Output
 

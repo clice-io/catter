@@ -1,0 +1,39 @@
+[test."$ catter no-such-subcommand -- node -e 0"]
+stdout = '''
+catter: no command `no-such-subcommand`
+
+catter runs a build, captures every command it starts, and analyzes them.
+
+Usage:
+  catter <command> [options] -- <build command>...
+
+Commands:
+  compile-commands  Generate a compile_commands.json file from captured compiler commands.
+  tree              Render captured commands as a command tree.
+  targets           Render captured build targets as a flat target forest.
+  explain           Print how catter analyzes the command after --, without running it.
+  run               Run the build with handlers alone, which decide on and observe its commands.
+
+Run `catter <command> --help` for the options of a command.
+'''
+exit = 1
+
+[test."$ catter -- node -e 0"]
+stdout = '''
+catter: give a command
+
+catter runs a build, captures every command it starts, and analyzes them.
+
+Usage:
+  catter <command> [options] -- <build command>...
+
+Commands:
+  compile-commands  Generate a compile_commands.json file from captured compiler commands.
+  tree              Render captured commands as a command tree.
+  targets           Render captured build targets as a flat target forest.
+  explain           Print how catter analyzes the command after --, without running it.
+  run               Run the build with handlers alone, which decide on and observe its commands.
+
+Run `catter <command> --help` for the options of a command.
+'''
+exit = 1

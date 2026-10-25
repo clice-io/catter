@@ -15,7 +15,7 @@ decides, answers each with what catter does with it::
 
     catter.serve(Handler())
 
-and `catter --handler "python handler.py" -- make` runs the build with it.
+and `catter run --handler "python handler.py" -- make` runs the build with it.
 `listen()` serves catter's `--connect` instead.
 
 A handler may ask for what catter makes of each command (`analysis = True`),

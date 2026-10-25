@@ -1,0 +1,7 @@
+[test."$ catter tree"]
+stdout = "give the build command after --, or a recorded build with --from"
+exit = 1
+
+[test."$ catter tree --from events.json -- node -e 0"]
+stdout = "--from replays a recorded build in place of the build command after --: give one of them"
+exit = 1

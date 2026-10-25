@@ -1,4 +1,4 @@
-[test."$ bin/catter.exe cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+[test."$ bin/catter.exe tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
 stdout = '''
 Build failed with exit code 7. Printing partial command tree.
 spawn.exe CreateProcessW command.txt

@@ -1,7 +1,7 @@
-["not JSON"."$ catter --handler \"python not_json.py\" --handler-timeout 0 -- node -e 0"]
+["not JSON"."$ catter run --handler \"python not_json.py\" --handler-timeout 0 -- node -e 0"]
 stdout = "Handler `python not_json.py` wrote what the protocol does not allow: invalid JSON at byte 0"
 exit = 1
 
-["a notification"."$ catter --handler \"python notification.py\" --handler-timeout 0 -- node -e 0"]
+["a notification"."$ catter run --handler \"python notification.py\" --handler-timeout 0 -- node -e 0"]
 stdout = "Handler `python notification.py` wrote what the protocol does not allow: a notification `hello`"
 exit = 1

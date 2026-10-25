@@ -1,7 +1,0 @@
-[test."$ catter -m replay cmd-tree -- events.json"]
-stdout = '''
-make
-├── clang++ main.cc -c
-└── ld main.o -o app
-'''
-exit = 0

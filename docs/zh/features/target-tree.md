@@ -2,12 +2,12 @@
 
 目标树将构建产物渲染为依赖森林，展示"什么由什么构建而来"。
 
-内置功能：`target-tree`
+命令：`targets`
 
 ## 用法
 
 ```bash
-catter target-tree [options] -- <build-command>
+catter targets [options] -- <build-command>
 ```
 
 ## 选项
@@ -15,6 +15,8 @@ catter target-tree [options] -- <build-command>
 | 选项              | 说明           |
 | ----------------- | -------------- |
 | `-d, --depth <n>` | 限制渲染深度。 |
+
+`targets` 也接受所有运行构建的命令共有的选项：`-C`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
 
 ## 输出
 

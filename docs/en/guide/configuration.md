@@ -3,43 +3,43 @@
 ## catter CLI
 
 ```
-catter [options] [<built-in> [built-in options]] -- <build-command>
+catter <command> [options] -- <build-command>
 ```
 
-A run takes a built-in, one or more [handlers](../scripting/handlers.md), or both.
+Every run names a command, and its options come after it. `catter --help` lists the commands, and `catter <command> --help` shows the options of one. Without a command, catter lists the commands and exits with an error.
+
+### Commands
+
+| Command            | Description                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `compile-commands` | Generate a `compile_commands.json` file from captured compiler commands. See [Compilation Database](../features/compilation-database.md). |
+| `tree`             | Render captured commands as a command tree. See [Command Tree](../features/command-tree.md).                                              |
+| `targets`          | Render captured build targets as a flat target forest. See [Target Tree](../features/target-tree.md).                                     |
+| `explain`          | Print how catter analyzes the command after `--`, without running it. See [Explain](../features/explain.md).                              |
+| `run`              | Run the build with handlers alone, which decide on and observe its commands. See [Handlers](../scripting/handlers.md).                    |
+
+`compile-commands`, `tree` and `targets` each run a built-in on the build, together with the [handlers](../scripting/handlers.md) the command line names, if any. `run` runs the handlers alone, and needs at least one.
 
 ### Options
 
-| Option                        | Description                                                                                                                                                     | Default           |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `-m, --mode <mode>`           | Runtime mode: `inject` runs the build command and intercepts its processes; `replay` plays a recorded build, whose events file stands in for the build command. | `inject`          |
-| `-d, --dir <path>`            | Working directory for the target process.                                                                                                                       | Current directory |
-| `--handler <command>`         | A handler for catter to start; may be given more than once. See [Handlers](../scripting/handlers.md).                                                           |                   |
-| `--connect <host:port>`       | A handler listening at the address; may be given more than once. See [Handlers](../scripting/handlers.md).                                                      |                   |
-| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                                                             |                   |
-| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.                                             | `60`              |
-| `-h, --help`                  | Show help message.                                                                                                                                              |                   |
+`compile-commands`, `tree`, `targets` and `run` take these options besides their own:
+
+| Option                        | Description                                                                                                                   | Default           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `-C, --directory <path>`      | The directory the command runs in.                                                                                            | Current directory |
+| `--from <file>`               | Replay the build recorded in this file instead of running one.                                                                |                   |
+| `--handler <command>`         | Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.       |                   |
+| `--connect <host:port>`       | Connect to a handler listening at the address, on this machine unless `--allow-remote` is given; may be given more than once. |                   |
+| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                           |                   |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.           | `60`              |
+
+`--from` takes the place of the build command after `--`: a run gives one or the other. A relative path is from the `-C` directory.
+
+`explain` takes `-C` too, and the command to analyze after `--`.
 
 ### Data directory
 
 catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.
-
-### Built-ins
-
-A built-in is named by itself, before its options:
-
-```bash
-catter <name> [built-in options] -- <build-command>
-```
-
-The built-ins:
-
-| Name          | Description                                            |
-| ------------- | ------------------------------------------------------ |
-| `cdb`         | Generate `compile_commands.json`                       |
-| `cmd-tree`    | Display the build command tree                         |
-| `target-tree` | Display the build target tree                          |
-| `inspect`     | Show how catter analyzes a command, without running it |
 
 ## catter-proxy CLI
 

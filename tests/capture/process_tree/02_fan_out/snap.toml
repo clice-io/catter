@@ -35,7 +35,7 @@ n31 exit 0
 '''
 exit = 0
 
-[test."$ catter --handler \"python handler.py\" -- node build.mjs"]
+[test."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 n0 exit 0
 n1 exit 0

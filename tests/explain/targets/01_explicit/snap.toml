@@ -1,0 +1,104 @@
+[test."$ catter explain -- clang --target=aarch64-linux-gnu -c a.c -o a.o"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "aarch64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "--target=aarch64-linux-gnu",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang -target x86_64-pc-windows-msvc -c a.c -o a.obj"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "argument"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "-target",
+                "x86_64-pc-windows-msvc",
+                "-c",
+                "a.c",
+                "-o",
+                "a.obj"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
+}
+'''
+exit = 0

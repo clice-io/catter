@@ -2,12 +2,12 @@
 
 命令树将构建命令的有向无环图以 ASCII 树的形式可视化，展示进程之间的父子关系及其执行的命令。
 
-内置功能：`cmd-tree`
+命令：`tree`
 
 ## 用法
 
 ```bash
-catter cmd-tree [options] -- <build-command>
+catter tree [options] -- <build-command>
 ```
 
 ## 选项
@@ -15,8 +15,10 @@ catter cmd-tree [options] -- <build-command>
 | 选项                  | 说明                                                                           |
 | --------------------- | ------------------------------------------------------------------------------ |
 | `-d, --depth <n>`     | 限制渲染深度。                                                                 |
-| `-a, --args <n>`      | 每条命令显示的参数数量。默认：全部。                                           |
+| `-a, --args <n>`      | 显示 `argv[0]` 之后的前 n 个参数。用 `-1` 保留全部。默认：`-1`。               |
 | `-w, --arg-width <n>` | 将超过该长度的参数从中间截断到该长度，长度按字符（Unicode 码位）计。默认：10。 |
+
+`tree` 也接受所有运行构建的命令共有的选项：`-C`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
 
 ## 输出
 

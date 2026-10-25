@@ -1,0 +1,11 @@
+[test."$ catter tree -d 1 --from events.json"]
+stdout = '''
+make
+├── sh -c "gcc....n.c"
+└── ld main.o -o app
+'''
+exit = 0
+
+[test."$ catter tree --depth=0 --from events.json"]
+stdout = "make"
+exit = 0

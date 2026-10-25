@@ -18,7 +18,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter cmd-tree -w 1000 -- node build.mjs"]
+[test."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 "plain"
 "with space"
@@ -40,7 +40,7 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter cmd-tree -w 1000 -- node build.mjs".win32]
+[test."$ catter tree -w 1000 -- node build.mjs".win32]
 wrong = "an empty argument is dropped (catter#128)"
 stdout = '''
 "plain"

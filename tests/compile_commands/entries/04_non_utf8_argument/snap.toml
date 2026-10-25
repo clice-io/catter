@@ -1,0 +1,22 @@
+[test."$ catter compile-commands -o compile_commands.json -- python build.py"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+exit = 0
+
+[test."$ catter compile-commands -o compile_commands.json -- python build.py".darwin]
+wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+stderr = '''
+dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+'''
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "main.cc",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["c++", "-c", "main.cc", "-o", "main.o", "-DNAME=caf�"],
+    },
+]

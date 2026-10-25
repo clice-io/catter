@@ -1,4 +1,4 @@
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execv ${ENV}/bin/node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execv ${ENV}/bin/node child.mjs"]
 stdout = '''
 started with []
 ./spawn execv ${ENV}/bin/node child.mjs
@@ -6,7 +6,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execve ${ENV}/bin/node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execve ${ENV}/bin/node child.mjs"]
 stdout = '''
 started with []
 ./spawn execve ${ENV}/bin/node child.mjs
@@ -14,7 +14,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execvp node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execvp node child.mjs"]
 stdout = '''
 started with []
 ./spawn execvp node child.mjs
@@ -22,7 +22,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execl ${ENV}/bin/node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execl ${ENV}/bin/node child.mjs"]
 stdout = '''
 started with []
 ./spawn execl ${ENV}/bin/node child.mjs
@@ -30,7 +30,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execle ${ENV}/bin/node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execle ${ENV}/bin/node child.mjs"]
 stdout = '''
 started with []
 ./spawn execle ${ENV}/bin/node child.mjs
@@ -38,7 +38,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn execlp node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn execlp node child.mjs"]
 stdout = '''
 started with []
 ./spawn execlp node child.mjs
@@ -46,7 +46,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn posix_spawn ${ENV}/bin/node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn posix_spawn ${ENV}/bin/node child.mjs"]
 stdout = '''
 started with []
 ./spawn posix_spawn ${ENV}/bin/node child.mjs
@@ -54,7 +54,7 @@ started with []
 '''
 exit = 0
 
-[posix."$ catter cmd-tree -w 1000 -- ./spawn posix_spawnp node child.mjs"]
+[posix."$ catter tree -w 1000 -- ./spawn posix_spawnp node child.mjs"]
 stdout = '''
 started with []
 ./spawn posix_spawnp node child.mjs
@@ -62,7 +62,7 @@ started with []
 '''
 exit = 0
 
-[execvpe."$ catter cmd-tree -w 1000 -- ./spawn execvpe node child.mjs"]
+[execvpe."$ catter tree -w 1000 -- ./spawn execvpe node child.mjs"]
 stdout = '''
 started with []
 ./spawn execvpe node child.mjs

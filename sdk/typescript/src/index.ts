@@ -15,7 +15,7 @@
 /// });
 /// ```
 ///
-/// and `catter --handler "node handler.ts" -- make` runs the build with it.
+/// and `catter run --handler "node handler.ts" -- make` runs the build with it.
 /// `listen()` serves catter's `--connect` instead.
 ///
 /// A handler may ask for what catter makes of each command (`analysis`), be
