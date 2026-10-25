@@ -13,8 +13,6 @@ test(
     async (t) => {
         await t.setup("cl /nologo spawn.c");
         await t.setup("node install.mjs");
-        await t.run(
-            "bin/catter.exe cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt",
-        );
+        await t.run("bin/catter.exe cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt");
     },
 );

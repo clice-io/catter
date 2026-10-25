@@ -30,11 +30,11 @@ on:
       build_cache:
         type: boolean
         default: true
-      # The shard numbers 1..n of the cases split over n runners, as a JSON
-      # array.
+      # The shards the cases split into, each "i/n", as a JSON array: every
+      # runner of cases_runners runs each of them.
       cases_shards:
         type: string
-        default: "[1]"
+        default: '["1/1"]'
       # The runners the cases run on, as a JSON array; the build's own when
       # empty.
       cases_runners:
@@ -139,7 +139,7 @@ jobs:
   # The cases under tests/ (tests/README.md).
   cases:
     needs: build
-    name: cases ${{ matrix.runner }} ${{ matrix.shard }}/${{ strategy.job-total }}
+    name: cases ${{ matrix.runner }} ${{ matrix.shard }}
     strategy:
       fail-fast: false
       matrix:
@@ -171,7 +171,7 @@ jobs:
         timeout-minutes: 20
         env:
           CATTER_EXECUTABLE: ${{ github.workspace }}/programs/catter
-          CATTER_CASES_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+          CATTER_CASES_SHARD: ${{ matrix.shard }}
         run: |
           pixi run -e dev npm-install
           pixi run -e dev pnpm --dir tests run cases
