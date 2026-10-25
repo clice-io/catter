@@ -258,7 +258,9 @@ target("catter-js-scripts")
     set_kind("object")
     set_default(false)
     -- Builds the builtin service scripts (scripts/) and embeds them as one
-    add_deps("catter-js-runtime")
+    -- Their compile reads the API's declarations, which catter-js-types
+    -- writes anew: built beside it, it would find them gone.
+    add_deps("catter-js-runtime", "catter-js-types")
     add_rules("build.js", {
         js_dir = "scripts",
         js_script = "build",

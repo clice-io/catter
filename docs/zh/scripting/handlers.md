@@ -101,6 +101,40 @@ await serve({
 
 导入 `@catter/sdk` 之后，handler 用 `console` 打印的内容会输出到 stderr。它的 stdin 和 stdout 用于传输协议：由 catter 启动的 handler 不能读 `process.stdin`、不能写 `process.stdout`，也不能让它启动的程序继承这两者。
 
+## catter 对命令的分析
+
+catter 能读懂编译器（gcc、clang、clang-cl、MSVC 的 cl）和 `ar` 的命令，也能读取链接器和库管理工具（lld 及它所替代的链接器、`llvm-lib`、`llvm-dlltool`）的参数，具体见[协议](../design/handler-protocol.md)。handler 可以收到 catter 对每条命令的分析、只接收部分命令，也可以修改命令的参数，而不必自己解析命令行：
+
+```python
+import catter
+
+
+class Handler(catter.Handler):
+    decides = True
+    analysis = True  # commands carry command.analysis
+    filter = [catter.Pattern(kind="compiler", phases=["compile"])]
+
+    def on_command(self, command):
+        sources = [
+            read.path for read in command.analysis.reads if read.role == "source"
+        ]
+        print(f"compiles {sources}")
+        return catter.Edit(
+            edits=[
+                catter.CommandEdit("remove", ["-Werror"]),
+                catter.CommandEdit("append", ["-DTRACED=1"]),
+            ]
+        )
+
+
+catter.serve(Handler())
+```
+
+- **分析**：编译器命令的分析包含它的阶段、目标、每个参数（它是哪个选项，以及命令里的原始写法）、它读取的文件（每个源文件都带语言）以及它写出的文件。
+- **过滤**：filter 是一组 pattern，每个 pattern 指定一种程序（`compiler`、`archiver`、`tool`），以及其中的某些名字、某些阶段。handler 只会收到某个 pattern 所指的命令；对其余命令，构建不会等它。
+- **编辑**：按选项和值删除 flags（`-DX`、`-D*`、`-W*`），把 flags 加在命令自己的参数之后，或加在程序名之后。没有删掉的参数保留命令原有的写法，添加的 flags 按 handler 写的原样放入：要按命令所用编译器接受的写法来写。只有 catter 读得懂参数的命令可以编辑；`modify` 可以整条替换任何命令。
+- **`self.analyze(catter.Program(executable, args), ...)`** 询问 catter 对 handler 自己给出的命令的分析。在 TypeScript 中，通过每个回调的第二个参数调用 `catter.analyze(...)`。
+
 ## 多个 handler
 
 `--handler` 和 `--connect` 都可以多次指定，也可以与脚本一起使用：
@@ -113,7 +147,7 @@ handler 按固定顺序组成一条链：脚本在最前，其后是按命令行
 
 ## handler 失败时
 
-handler 中止构建、在回调中抛出异常、退出、写出的内容不是对 catter 请求的应答，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。构建结束后，catter 不发送 `finish`（`on_finish` 不会运行）就结束各个 handler 的输入，打印发生了什么，并以退出码 1 退出：
+handler 中止构建、在回调中抛出异常、退出、写出协议不允许的内容，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。构建结束后，catter 不发送 `finish`（`on_finish` 不会运行）就结束各个 handler 的输入，打印发生了什么，并以退出码 1 退出：
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s

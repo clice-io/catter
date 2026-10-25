@@ -208,8 +208,9 @@ Domain words with one meaning each — use them only in that meaning:
   events (`core::Handler`): a script (`js::ScriptHandler`), or a program
   catter speaks the handler protocol to (`core::RemoteHandler`).
 - **action**: what a handler decides for a command (`skip`, `drop`,
-  `abort`, `modify`: `protocol::Action`, `js::ActionType`; in
-  `core::Action` an abort is the exception the handler throws). What the
+  `abort`, `modify`, and over the protocol `edit`: `protocol::Action`,
+  `js::ActionType`; in `core::Action` an abort is the exception the handler
+  throws, and an edit the modified command). What the
   daemon then tells the proxy to do is the IPC protocol's `data::action`
   (`DROP`, `INJECT`, `WRAP`, `FAIL`); keep the two apart.
 - **runtime**: a capture mechanism (`inject` today); not the JS runtime,

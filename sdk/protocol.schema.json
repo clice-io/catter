@@ -131,6 +131,212 @@
                         "args",
                         "action"
                     ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "edits": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/CommandEdit"
+                            }
+                        },
+                        "action": {
+                            "const": "edit"
+                        }
+                    },
+                    "required": [
+                        "edits",
+                        "action"
+                    ]
+                }
+            ]
+        },
+        "analysis": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "compiler": {
+                            "type": "string"
+                        },
+                        "dialect": {
+                            "type": "string"
+                        },
+                        "phase": {
+                            "type": "string"
+                        },
+                        "artifact": {
+                            "type": "string"
+                        },
+                        "target": {
+                            "$ref": "#/$defs/Target"
+                        },
+                        "arguments": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Argument"
+                            }
+                        },
+                        "reads": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Read"
+                            }
+                        },
+                        "writes": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Write"
+                            }
+                        },
+                        "diagnostics": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Diagnostic"
+                            }
+                        },
+                        "kind": {
+                            "const": "compiler"
+                        }
+                    },
+                    "required": [
+                        "compiler",
+                        "dialect",
+                        "phase",
+                        "artifact",
+                        "target",
+                        "arguments",
+                        "reads",
+                        "writes",
+                        "diagnostics",
+                        "kind"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string"
+                        },
+                        "modifiers": {
+                            "type": "string"
+                        },
+                        "thin": {
+                            "type": "boolean"
+                        },
+                        "archive": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/Base64"
+                                }
+                            ]
+                        },
+                        "members": {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/Base64"
+                                    }
+                                ]
+                            }
+                        },
+                        "reads": {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/Base64"
+                                    }
+                                ]
+                            }
+                        },
+                        "writes": {
+                            "type": "array",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/Base64"
+                                    }
+                                ]
+                            }
+                        },
+                        "kind": {
+                            "const": "archiver"
+                        }
+                    },
+                    "required": [
+                        "operation",
+                        "modifiers",
+                        "thin",
+                        "archive",
+                        "members",
+                        "reads",
+                        "writes",
+                        "kind"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "tool": {
+                            "type": "string"
+                        },
+                        "arguments": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Argument"
+                            }
+                        },
+                        "kind": {
+                            "const": "tool"
+                        }
+                    },
+                    "required": [
+                        "tool",
+                        "arguments",
+                        "kind"
+                    ]
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "of": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "error": {
+                            "type": "string"
+                        },
+                        "message": {
+                            "type": "string"
+                        },
+                        "kind": {
+                            "const": "unparsed"
+                        }
+                    },
+                    "required": [
+                        "of",
+                        "name",
+                        "error",
+                        "message",
+                        "kind"
+                    ]
                 }
             ]
         },
@@ -142,6 +348,12 @@
         },
         "finish": {
             "$ref": "#/$defs/Finish"
+        },
+        "analyzeParams": {
+            "$ref": "#/$defs/AnalyzeParams"
+        },
+        "analyzeResult": {
+            "$ref": "#/$defs/AnalyzeResult"
         }
     },
     "required": [
@@ -149,9 +361,12 @@
         "initializeResult",
         "command",
         "action",
+        "analysis",
         "captureError",
         "exit",
-        "finish"
+        "finish",
+        "analyzeParams",
+        "analyzeResult"
     ],
     "$defs": {
         "Base64": {
@@ -241,6 +456,45 @@
                 "exit"
             ]
         },
+        "Pattern": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "names": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "phases": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                }
+            },
+            "required": [
+                "kind"
+            ]
+        },
         "InitializeResult": {
             "type": "object",
             "properties": {
@@ -252,12 +506,272 @@
                 },
                 "env": {
                     "type": "boolean"
+                },
+                "analysis": {
+                    "type": "boolean"
+                },
+                "filter": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/Pattern"
+                            }
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
                 }
             },
             "required": [
                 "decides",
                 "events",
-                "env"
+                "env",
+                "analysis"
+            ]
+        },
+        "Target": {
+            "type": "object",
+            "properties": {
+                "triple": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "os": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "objectFormat": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "env": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "artifactModel": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "artifactModel",
+                "source"
+            ]
+        },
+        "Argument": {
+            "type": "object",
+            "properties": {
+                "option": {
+                    "type": "string"
+                },
+                "spelling": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "option",
+                "spelling",
+                "index",
+                "count",
+                "values"
+            ]
+        },
+        "Read": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "argument": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "role": {
+                    "type": "string"
+                },
+                "language": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                }
+            },
+            "required": [
+                "path",
+                "argument",
+                "index",
+                "role"
+            ]
+        },
+        "Write": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "reads": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    }
+                },
+                "origin": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "path",
+                "reads",
+                "origin"
+            ]
+        },
+        "Diagnostic": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "path": {
+                    "anyOf": [
+                        {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/Base64"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "argument": {
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                },
+                "index": {
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4294967295
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
+                }
+            },
+            "required": [
+                "code",
+                "message"
             ]
         },
         "Command": {
@@ -334,6 +848,202 @@
                         }
                     ],
                     "default": null
+                },
+                "analysis": {
+                    "anyOf": [
+                        {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "compiler": {
+                                            "type": "string"
+                                        },
+                                        "dialect": {
+                                            "type": "string"
+                                        },
+                                        "phase": {
+                                            "type": "string"
+                                        },
+                                        "artifact": {
+                                            "type": "string"
+                                        },
+                                        "target": {
+                                            "$ref": "#/$defs/Target"
+                                        },
+                                        "arguments": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/Argument"
+                                            }
+                                        },
+                                        "reads": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/Read"
+                                            }
+                                        },
+                                        "writes": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/Write"
+                                            }
+                                        },
+                                        "diagnostics": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/Diagnostic"
+                                            }
+                                        },
+                                        "kind": {
+                                            "const": "compiler"
+                                        }
+                                    },
+                                    "required": [
+                                        "compiler",
+                                        "dialect",
+                                        "phase",
+                                        "artifact",
+                                        "target",
+                                        "arguments",
+                                        "reads",
+                                        "writes",
+                                        "diagnostics",
+                                        "kind"
+                                    ]
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "operation": {
+                                            "type": "string"
+                                        },
+                                        "modifiers": {
+                                            "type": "string"
+                                        },
+                                        "thin": {
+                                            "type": "boolean"
+                                        },
+                                        "archive": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "$ref": "#/$defs/Base64"
+                                                }
+                                            ]
+                                        },
+                                        "members": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "$ref": "#/$defs/Base64"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "reads": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "$ref": "#/$defs/Base64"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "writes": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "$ref": "#/$defs/Base64"
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        "kind": {
+                                            "const": "archiver"
+                                        }
+                                    },
+                                    "required": [
+                                        "operation",
+                                        "modifiers",
+                                        "thin",
+                                        "archive",
+                                        "members",
+                                        "reads",
+                                        "writes",
+                                        "kind"
+                                    ]
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "tool": {
+                                            "type": "string"
+                                        },
+                                        "arguments": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/Argument"
+                                            }
+                                        },
+                                        "kind": {
+                                            "const": "tool"
+                                        }
+                                    },
+                                    "required": [
+                                        "tool",
+                                        "arguments",
+                                        "kind"
+                                    ]
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "of": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "kind": {
+                                            "const": "unparsed"
+                                        }
+                                    },
+                                    "required": [
+                                        "of",
+                                        "name",
+                                        "error",
+                                        "message",
+                                        "kind"
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
                 }
             },
             "required": [
@@ -341,6 +1051,31 @@
                 "cwd",
                 "executable",
                 "args"
+            ]
+        },
+        "CommandEdit": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "flags": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "kind",
+                "flags"
             ]
         },
         "CaptureError": {
@@ -409,6 +1144,258 @@
             },
             "required": [
                 "code"
+            ]
+        },
+        "Program": {
+            "type": "object",
+            "properties": {
+                "executable": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "$ref": "#/$defs/Base64"
+                        }
+                    ]
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "executable",
+                "args"
+            ]
+        },
+        "AnalyzeParams": {
+            "type": "object",
+            "properties": {
+                "programs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/Program"
+                    }
+                }
+            },
+            "required": [
+                "programs"
+            ]
+        },
+        "AnalyzeResult": {
+            "type": "object",
+            "properties": {
+                "analyses": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "oneOf": [
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "compiler": {
+                                                "type": "string"
+                                            },
+                                            "dialect": {
+                                                "type": "string"
+                                            },
+                                            "phase": {
+                                                "type": "string"
+                                            },
+                                            "artifact": {
+                                                "type": "string"
+                                            },
+                                            "target": {
+                                                "$ref": "#/$defs/Target"
+                                            },
+                                            "arguments": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/Argument"
+                                                }
+                                            },
+                                            "reads": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/Read"
+                                                }
+                                            },
+                                            "writes": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/Write"
+                                                }
+                                            },
+                                            "diagnostics": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/Diagnostic"
+                                                }
+                                            },
+                                            "kind": {
+                                                "const": "compiler"
+                                            }
+                                        },
+                                        "required": [
+                                            "compiler",
+                                            "dialect",
+                                            "phase",
+                                            "artifact",
+                                            "target",
+                                            "arguments",
+                                            "reads",
+                                            "writes",
+                                            "diagnostics",
+                                            "kind"
+                                        ]
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "operation": {
+                                                "type": "string"
+                                            },
+                                            "modifiers": {
+                                                "type": "string"
+                                            },
+                                            "thin": {
+                                                "type": "boolean"
+                                            },
+                                            "archive": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "string"
+                                                    },
+                                                    {
+                                                        "$ref": "#/$defs/Base64"
+                                                    }
+                                                ]
+                                            },
+                                            "members": {
+                                                "type": "array",
+                                                "items": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "$ref": "#/$defs/Base64"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "reads": {
+                                                "type": "array",
+                                                "items": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "$ref": "#/$defs/Base64"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "writes": {
+                                                "type": "array",
+                                                "items": {
+                                                    "anyOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "$ref": "#/$defs/Base64"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "kind": {
+                                                "const": "archiver"
+                                            }
+                                        },
+                                        "required": [
+                                            "operation",
+                                            "modifiers",
+                                            "thin",
+                                            "archive",
+                                            "members",
+                                            "reads",
+                                            "writes",
+                                            "kind"
+                                        ]
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "tool": {
+                                                "type": "string"
+                                            },
+                                            "arguments": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/Argument"
+                                                }
+                                            },
+                                            "kind": {
+                                                "const": "tool"
+                                            }
+                                        },
+                                        "required": [
+                                            "tool",
+                                            "arguments",
+                                            "kind"
+                                        ]
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "of": {
+                                                "type": "string"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "error": {
+                                                "type": "string"
+                                            },
+                                            "message": {
+                                                "type": "string"
+                                            },
+                                            "kind": {
+                                                "const": "unparsed"
+                                            }
+                                        },
+                                        "required": [
+                                            "of",
+                                            "name",
+                                            "error",
+                                            "message",
+                                            "kind"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "analyses"
             ]
         }
     }

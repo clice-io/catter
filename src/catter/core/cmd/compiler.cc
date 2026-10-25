@@ -10,6 +10,7 @@
 #include <string_view>
 #include <utility>
 
+#include "cmd/executable.h"
 #include "cmd/parse.h"
 #include "cmd/resolve.h"
 
@@ -24,38 +25,51 @@ struct Rule {
 
     Dialect dialect;
 
+    bool cxx;
+
     std::regex executable;
 };
 
-/// What follows a compiler's name for its version: `-12`, `_13.2.0`, `18`.
-constexpr std::string_view version = R"((?:[-_]?\d+(?:[._-][0-9a-zA-Z]+)*)?)";
-
 /// The rule of `compiler`, whose executable is `name`, followed by what `suffix` matches.
-Rule rule_of(Compiler compiler, Dialect dialect, std::string_view name, std::string_view suffix) {
-    const auto pattern = std::format(R"(^(?:.*[\\/])?{}{}(?:\.exe)?$)", name, suffix);
-#ifdef CATTER_WINDOWS
-    constexpr auto flags = std::regex::ECMAScript | std::regex::icase;
-#else
-    constexpr auto flags = std::regex::ECMAScript;
-#endif
-    return {.compiler = compiler, .dialect = dialect, .executable = std::regex(pattern, flags)};
+Rule rule_of(Compiler compiler,
+             Dialect dialect,
+             bool cxx,
+             std::string_view name,
+             std::string_view suffix) {
+    return {
+        .compiler = compiler,
+        .dialect = dialect,
+        .cxx = cxx,
+        .executable = executable_pattern(name, suffix),
+    };
 }
 
 /// In match order. A rule whose name has a group captures the target prefix.
 const auto& rules() {
     const static std::array rules = {
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:cc|c\+\+))", ""),
-        rule_of(Compiler::GCC, Dialect::GCC, R"((?:([^\\/]+)-)?(?:gcc|g\+\+))", version),
-        rule_of(Compiler::Clang, Dialect::Clang, R"((?:([^\\/]+)-)?clang(?:\+\+)?)", version),
-        rule_of(Compiler::ClangCL, Dialect::MSVC, R"((?:([^\\/]+)-)?clang-cl)", version),
-        rule_of(Compiler::MSVC, Dialect::MSVC, "cl", ""),
-        rule_of(Compiler::NVCC, Dialect::NVCC, R"((?:[^\\/]+-)?nvcc)", version),
+        rule_of(Compiler::GCC, Dialect::GCC, false, R"((?:([^\\/]+)-)?cc)", ""),
+        rule_of(Compiler::GCC, Dialect::GCC, true, R"((?:([^\\/]+)-)?c\+\+)", ""),
+        rule_of(Compiler::GCC, Dialect::GCC, false, R"((?:([^\\/]+)-)?gcc)", version_suffix),
+        rule_of(Compiler::GCC, Dialect::GCC, true, R"((?:([^\\/]+)-)?g\+\+)", version_suffix),
+        rule_of(Compiler::Clang, Dialect::Clang, false, R"((?:([^\\/]+)-)?clang)", version_suffix),
+        rule_of(Compiler::Clang,
+                Dialect::Clang,
+                true,
+                R"((?:([^\\/]+)-)?clang\+\+)",
+                version_suffix),
+        rule_of(Compiler::ClangCL,
+                Dialect::MSVC,
+                false,
+                R"((?:([^\\/]+)-)?clang-cl)",
+                version_suffix),
+        rule_of(Compiler::MSVC, Dialect::MSVC, false, "cl", ""),
+        rule_of(Compiler::NVCC, Dialect::NVCC, false, R"((?:[^\\/]+-)?nvcc)", version_suffix),
     };
     return rules;
 }
 
-/// The compiler `executable` is, by its name; none for a program that is no compiler catter
-/// knows.
+}  // namespace
+
 std::optional<Identity> identify(std::string_view executable) {
     for(const auto& rule: rules()) {
         std::match_results<std::string_view::const_iterator> match;
@@ -63,14 +77,13 @@ std::optional<Identity> identify(std::string_view executable) {
             return Identity{
                 .compiler = rule.compiler,
                 .dialect = rule.dialect,
+                .cxx = rule.cxx,
                 .prefix = match.size() > 1 ? match[1].str() : std::string(),
             };
         }
     }
     return std::nullopt;
 }
-
-}  // namespace
 
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
                                                         std::span<const std::string> argv) {
@@ -205,6 +218,23 @@ std::string_view name(Diagnostic::Code code) {
             return "directory-output-unsupported-artifact";
         case Diagnostic::Code::AssemblyListingAmbiguousOutput:
             return "assembly-listing-ambiguous-output";
+    }
+    std::unreachable();
+}
+
+std::string_view name(InputRole role) {
+    switch(role) {
+        case InputRole::Source: return "source";
+        case InputRole::Link: return "link";
+    }
+    std::unreachable();
+}
+
+std::string_view name(WriteOrigin origin) {
+    switch(origin) {
+        case WriteOrigin::Explicit: return "explicit";
+        case WriteOrigin::DefaultOutput: return "default-output";
+        case WriteOrigin::AssemblyListing: return "assembly-listing";
     }
     std::unreachable();
 }

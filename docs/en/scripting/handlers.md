@@ -101,6 +101,40 @@ The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as
 
 Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdin and stdout carry the protocol: a handler started by catter must not read `process.stdin` nor write to `process.stdout`, nor let a program it starts inherit either.
 
+## What catter makes of a command
+
+catter reads the commands of compilers (gcc, clang, clang-cl, MSVC's cl), of `ar`, and the arguments of linkers and librarians (lld and the linkers it stands in for, `llvm-lib`, `llvm-dlltool`), as the [protocol](../design/handler-protocol.md) lists. A handler can be told what catter makes of each command, be told of only some commands, and edit a command's arguments, without parsing a command line itself:
+
+```python
+import catter
+
+
+class Handler(catter.Handler):
+    decides = True
+    analysis = True  # commands carry command.analysis
+    filter = [catter.Pattern(kind="compiler", phases=["compile"])]
+
+    def on_command(self, command):
+        sources = [
+            read.path for read in command.analysis.reads if read.role == "source"
+        ]
+        print(f"compiles {sources}")
+        return catter.Edit(
+            edits=[
+                catter.CommandEdit("remove", ["-Werror"]),
+                catter.CommandEdit("append", ["-DTRACED=1"]),
+            ]
+        )
+
+
+catter.serve(Handler())
+```
+
+- **The analysis** of a compiler's command has its phase, its target, every argument (the option it is, and as the command writes it), the files it reads, each source in its language, and the files it writes.
+- **A filter** lists patterns: of a kind of program (`compiler`, `archiver`, `tool`), of some names, of some phases. The handler is told only of the commands a pattern names; the build does not wait for it on the others.
+- **An edit** removes flags, by option and value (`-DX`, `-D*`, `-W*`), appends flags after the command's own, or prepends them after the program. The arguments it does not remove stay as the command wrote them, and the flags it adds go as the handler wrote them: write them as the command's compiler takes them. Only a command whose arguments catter reads can be edited; `modify` replaces any command whole.
+- **`self.analyze(catter.Program(executable, args), ...)`** asks what catter makes of commands the handler names itself. In TypeScript, `catter.analyze(...)` through every callback's second argument.
+
 ## Several handlers
 
 `--handler` and `--connect` may be given more than once, and with a script:
@@ -113,7 +147,7 @@ The handlers form a chain, in a fixed order: the script first, then the handlers
 
 ## When a handler fails
 
-A handler that aborts the build, raises in a callback, exits, writes what is not an answer to catter's requests, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
+A handler that aborts the build, raises in a callback, exits, writes what the protocol does not allow, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s

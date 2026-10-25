@@ -15,6 +15,7 @@
 #include <kota/deco/option.h>
 
 #include "cmd/lowercase.h"
+#include "cmd/syntax.h"
 #include "option/clang.h"
 
 namespace catter::cmd {
@@ -24,35 +25,15 @@ namespace {
 using namespace opt::clang;
 
 std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::string> argv,
-                                                           std::uint32_t visibility) {
-    // A replayed command may have no argv at all.
-    auto args = argv.subspan(std::min<std::size_t>(argv.size(), 1));
-    std::vector<Argument> arguments;
-    for(const auto& result: table().parse(args,
-                                          {
-                                              .dash_dash_parsing = true,
-                                              .visibility = visibility,
-                                          })) {
-        if(!result.has_value()) {
-            const auto index = result.error().index + 1;
-            return std::unexpected(Error{
-                .kind = Error::Kind::CompilerParse,
-                .message =
-                    std::format("fatal error in parsing: failed to parse `{}` (arg #{}) : {}",
-                                argv[index],
-                                index,
-                                result.error().message),
-            });
-        }
-        arguments.push_back(Argument{
-            .id = result->id,
-            .index = result->index + 1,
-            .count = result->next_index - result->index,
-            .spelling = result->spelling,
-            .values = result->values | std::ranges::to<std::vector<std::string>>(),
+                                                           Dialect dialect) {
+    auto arguments = cmd::read_arguments(syntax_of(dialect), argv);
+    if(!arguments.has_value()) {
+        return std::unexpected(Error{
+            .kind = Error::Kind::CompilerParse,
+            .message = std::move(arguments.error()),
         });
     }
-    return arguments;
+    return std::move(*arguments);
 }
 
 /// Whether `argument` is one of clang's Action_Group options, which select the mode.
@@ -85,7 +66,11 @@ struct Builder {
 
     LinkPlan plan = LinkPlan::Executable;
 
+    /// The language `-x` sets for the inputs after it.
     std::optional<std::string> language;
+
+    /// The language `/TC` or `/TP` sets for every input.
+    std::optional<std::string> every_language;
 
     void compile_object() {
         if(!compiled.has_value() || compiled == Artifact::Unknown) {
@@ -164,6 +149,7 @@ struct Builder {
             case ID_target:
             case ID_target_legacy_spelling: command.triple = argument.values[0]; break;
             case ID_x: language = argument.values[0]; break;
+            case ID_driver_mode: command.cxx = argument.values[0] == "g++"; break;
             case ID_INPUT: candidate(position); break;
             default:
                 if(selects_mode(argument)) {
@@ -197,14 +183,15 @@ struct Builder {
                 command.listing_path =
                     argument.values[0].empty() ? std::nullopt : std::optional(argument.values[0]);
                 break;
-            case ID__SLASH_TC: language = "c"; break;
-            case ID__SLASH_TP: language = "c++"; break;
+            case ID__SLASH_TC: every_language = "c"; break;
+            case ID__SLASH_TP: every_language = "c++"; break;
             case ID__SLASH_Tc:
             case ID__SLASH_Tp:
                 command.inputs.push_back(Read{
                     .path = argument.values[0],
                     .location = value_location(position),
                     .role = InputRole::Source,
+                    .language = argument.id == ID__SLASH_Tc ? "c" : "c++",
                 });
                 break;
             case ID__SLASH_link: apply_linker_arguments(position); break;
@@ -257,6 +244,11 @@ struct Builder {
     }
 
     void finish() {
+        if(every_language.has_value()) {
+            for(auto& candidate: command.candidates) {
+                candidate.language = every_language;
+            }
+        }
         if(preprocess) {
             command.phase = Phase::Preprocess;
             command.artifact = Artifact::PreprocessedSource;
@@ -289,9 +281,11 @@ struct Builder {
     }
 };
 
-ParsedCommand parse_gnu(Dialect dialect, std::vector<Argument> arguments) {
+ParsedCommand parse_gnu(const Identity& identity, std::vector<Argument> arguments) {
     Builder builder{
-        .command = {.dialect = dialect, .arguments = std::move(arguments)}
+        .command = {.dialect = identity.dialect,
+                    .cxx = identity.cxx,
+                    .arguments = std::move(arguments)}
     };
     for(std::uint32_t position = 0; position < builder.command.arguments.size(); position += 1) {
         builder.apply_gnu(position);
@@ -301,7 +295,7 @@ ParsedCommand parse_gnu(Dialect dialect, std::vector<Argument> arguments) {
 }
 
 std::expected<ParsedCommand, Error> parse_cl(std::span<const std::string> argv) {
-    auto arguments = read_arguments(argv, DefaultVis | CLOption);
+    auto arguments = read_arguments(argv, Dialect::MSVC);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
@@ -330,14 +324,14 @@ std::expected<ParsedCommand, Error> parse(const Identity& identity,
     if(identity.dialect == Dialect::MSVC) {
         return parse_cl(argv);
     }
-    auto arguments = read_arguments(argv, DefaultVis);
+    auto arguments = read_arguments(argv, identity.dialect);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
     if(identity.dialect == Dialect::Clang && in_cl_mode(*arguments)) {
         return parse_cl(argv);
     }
-    return parse_gnu(identity.dialect, std::move(*arguments));
+    return parse_gnu(identity, std::move(*arguments));
 }
 
 std::string_view name(OutputKind kind) {

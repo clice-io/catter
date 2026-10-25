@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "name": "a build that compiles, links, archives and runs other programs",
+  "events": [
+    {
+      "type": "command",
+      "id": 1,
+      "exe": "make",
+      "argv": [
+        "make"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 2,
+      "parent": 1,
+      "exe": "sh",
+      "argv": [
+        "sh",
+        "-c",
+        "gcc -c a.c"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 3,
+      "parent": 2,
+      "exe": "gcc",
+      "argv": [
+        "gcc",
+        "-c",
+        "a.c"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 4,
+      "parent": 1,
+      "exe": "gcc",
+      "argv": [
+        "gcc",
+        "a.o",
+        "-o",
+        "app"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 5,
+      "parent": 4,
+      "exe": "ld.lld",
+      "argv": [
+        "ld.lld",
+        "-o",
+        "app",
+        "a.o"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 6,
+      "parent": 1,
+      "exe": "ar",
+      "argv": [
+        "ar",
+        "rcs",
+        "liba.a",
+        "a.o"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 7,
+      "parent": 1,
+      "exe": "clang",
+      "argv": [
+        "clang",
+        "-c",
+        "b.c",
+        "-o"
+      ],
+      "execution": {
+        "code": 1,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "type": "command",
+      "id": 8,
+      "parent": 1,
+      "exe": "lld-link",
+      "argv": [
+        "lld-link",
+        "/out:x.exe",
+        "a.obj"
+      ],
+      "execution": {
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  ],
+  "finish": {
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}
