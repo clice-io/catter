@@ -48,8 +48,9 @@ defending against ghosts.
   `"hook/unix/session.h"`; a directory includes only the layers below it
   (CLAUDE.md, `pixi run -e dev check-layers`).
 - Code lives in `namespace catter`, flat as clice's: a namespace of its
-  own only for the top layers (`catter::feature`, `catter::driver`,
-  `catter::proxy`, `catter::hook`), for a vocabulary whose names would
+  own only for the built-ins (`catter::feature`), the programs and the
+  payloads (`catter::driver`, `catter::proxy`, `catter::hook`), for a
+  vocabulary whose names would
   clash in `catter` (the handler protocol's `catter::protocol`, the IPC
   with `catter-proxy`'s `catter::ipc` and `catter::data`, each option
   table's `catter::option::clang`), and for `catter::log`,
