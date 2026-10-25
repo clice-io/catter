@@ -4,9 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <exception>
-#include <filesystem>
 #include <format>
-#include <fstream>
 #include <memory>
 #include <random>
 #include <string>
@@ -21,8 +19,6 @@
 #include "remote_handler.h"
 #include "runtime_driver.h"
 #include "builtin/builtin.h"
-#include "js/js.h"
-#include "js/script_handler.h"
 #include "util/encoding.h"
 #include "util/output.h"
 
@@ -30,41 +26,11 @@ namespace catter::app {
 
 namespace {
 
-std::string load_script_content(const std::string& script_path) {
-    std::ifstream ifs{util::from_utf8(script_path)};
-    if(!ifs.good()) {
-        throw cpptrace::runtime_error(std::format("Failed to open script file `{}`", script_path));
-    }
-
-    return std::string((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-}
-
-/// The handler that runs the script `config` names: a built-in, or a file of JavaScript, which
-/// `runtime` runs.
-kota::task<std::unique_ptr<core::Handler>> load_script(js::RuntimeScope& runtime,
-                                                       const core::CatterConfig& config) {
-    const auto& script_path = *config.script_path;
-    if(script_path.starts_with("script::")) {
-        auto handler = builtin::make(script_path, config.script_args);
-        if(!handler) {
-            throw cpptrace::runtime_error(std::format("Unknown builtin script `{}`", script_path));
-        }
-        co_return handler;
-    }
-
-    runtime.start({.pwd = config.working_dir->path});
-    auto script_absolute_path =
-        util::to_utf8(std::filesystem::absolute(util::from_utf8(script_path)).lexically_normal());
-    co_await js::run_script(load_script_content(script_absolute_path), script_absolute_path);
-    co_return std::make_unique<js::ScriptHandler>(script_path, config.script_args, config.log);
-}
-
 /// Runs the session of `handler`: the build it starts, if any, and then its end.
 kota::task<> run(core::Handler& handler, const core::CatterConfig& config) {
     auto build = co_await handler.on_start({
         .command = config.command.value(),
         .cwd = util::to_utf8(config.working_dir->path),
-        .stdio_mode = config.stdio_mode.value(),
     });
     if(build) {
         auto result = co_await config.mode->driver->execute(*build, handler);
@@ -137,8 +103,7 @@ std::string session_id() {
 }  // namespace
 
 kota::task<> async_run(const core::CatterConfig& config) {
-    const auto& script_path = config.script_path;
-    if(!script_path.has_value() && config.handlers.empty()) {
+    if(!config.script.has_value() && config.handlers.empty()) {
         throw cpptrace::runtime_error(
             "catter needs a script, or a handler to give the build's commands to (--handler, --connect)");
     }
@@ -152,14 +117,18 @@ kota::task<> async_run(const core::CatterConfig& config) {
         };
     };
 
-    js::RuntimeScope runtime;
     std::unique_ptr<core::Handler> script;
+    if(config.script.has_value()) {
+        script = builtin::make(*config.script, config.script_args);
+        if(!script) {
+            throw cpptrace::runtime_error(
+                std::format("Unknown builtin script `{}`", *config.script));
+        }
+    }
+
     std::vector<std::unique_ptr<core::RemoteHandler>> remotes;
     std::exception_ptr error;
     try {
-        if(script_path.has_value()) {
-            script = co_await load_script(runtime, config);
-        }
         for(const auto& [connect, text]: config.handlers) {
             if(!connect) {
                 remotes.push_back(core::RemoteHandler::spawn(text, handler_options(text)));
@@ -187,7 +156,6 @@ kota::task<> async_run(const core::CatterConfig& config) {
     for(const auto& remote: remotes) {
         co_await remote->close();
     }
-    co_await runtime.stop();
 
     if(error) {
         std::rethrow_exception(error);

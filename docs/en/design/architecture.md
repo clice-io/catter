@@ -1,108 +1,92 @@
 # System Architecture
 
-Catter is a build-process interception and analysis tool organized around **runtimes**. A runtime is the mechanism that actually captures process creation: every command invocation made by the build system becomes an event catter can handle, and is executed according to the script's decision -- run as-is, modified, skipped, or aborted.
+Catter is a build-process interception and analysis tool organized around **runtimes**. A runtime is the mechanism that actually captures process creation: every command invocation made by the build system becomes an event catter can handle, and is executed according to the decision of the session's handlers -- run as-is, modified, dropped, or aborted.
 
-Script authors only need to understand two things:
+Handler authors only need to understand two things:
 
-1. **What a runtime is, which one the current session uses, and what it supports** -- covered here and in [Runtime](runtime.md).
-2. **The lifecycle of four callbacks** -- two at the build level (`onStart` / `onFinish`) and two at the command level (`onCommand` / `onExecution`).
+1. **What a runtime is, and which one the current session uses** -- covered here and in [Runtime](runtime.md).
+2. **The lifecycle of a session** -- its start and end at the build level, and each command before and after it runs.
 
 ## The runtime abstraction
 
-"Intercepting process creation" differs greatly in feasibility across platforms: hooks are the most general, but are restricted on some platforms (for example, macOS requires special development entitlements). Catter therefore abstracts capture mechanisms as runtimes. One runtime is one capture implementation, exposed to scripts through a fixed capability description (`CatterRuntime`):
+"Intercepting process creation" differs greatly in feasibility across platforms: hooks are the most general, but are restricted on some platforms (for example, macOS requires special development entitlements). Catter therefore abstracts capture mechanisms as runtimes. One runtime is one capture implementation; the handlers see the commands it captures, whichever it is.
 
-| Field             | Meaning                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| `type`            | Runtime type: `inject` / `eslogger` / `env`                                                  |
-| `supportActions`  | Script actions supported by the current runtime (see Actions below)                          |
-| `supportParentId` | Whether captured commands can report a parent command ID (command trees, target trees, etc.) |
+The runtime is selected with `-m/--mode` and defaults to `inject`. A handler learns it from the session's `initialize` message, whose `mode` is `inject`, or `replay` for a recorded build that catter plays instead of running one.
 
-The runtime is selected with `-m/--mode` and defaults to `inject`. Scripts can inspect the current runtime's capabilities in the config passed to `onStart`, so they can be written compatibly across runtimes.
+Today `inject` (based on hooks) is the only capture mechanism; `env` and `eslogger` are planned. The principles, platform limitations, and capability differences of each mechanism are covered in [Runtime](runtime.md).
 
-Today only `inject` (based on hooks) is implemented; `env` and `eslogger` are planned. The principles, platform limitations, and capability differences of each mechanism are covered in [Runtime](runtime.md).
+## Handlers
 
-## Script lifecycle
+A session's handlers decide on its commands and are told of its events. They are the built-in script the command line names, if any (`script::cdb`, `script::cmd-tree`, `script::target-tree`, `script::inspect`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in script first, then the others in the order of the command line.
 
-Scripts interact with catter through four callbacks, forming one complete build session:
+## Session lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant Script as User script
+    participant Handler
     participant Catter as catter daemon
     participant Runtime as Runtime (capture mechanism)
     participant Build as Build system
 
-    Catter->>Catter: Load script
-    Catter->>Script: onStart(config)
-    Script-->>Catter: Return (possibly modified) config
-    Catter->>Runtime: Start build (if config.execute)
+    Catter->>Handler: initialize (the build, the mode)
+    Handler-->>Catter: What it wants to be told
+    Catter->>Runtime: Start the build
     loop For each captured command
         Runtime->>Catter: Command event
-        Catter->>Script: onCommand(ctx)
-        Script-->>Catter: Action (skip / drop / abort / modify)
+        Catter->>Handler: command
+        Handler-->>Catter: Action (skip / drop / abort / modify / edit)
         Catter->>Runtime: Execute according to action
         Runtime->>Catter: Execution result
-        Catter->>Script: onExecution(ctx)
+        Catter->>Handler: exit
     end
     Runtime-->>Catter: Build process finished
-    Catter->>Script: onFinish(result)
+    Catter->>Handler: finish
 ```
 
-### Build level: onStart / onFinish
+### Build level: initialize / finish
 
-**`onStart(config)`** is called once before the build starts.
+**`initialize`** starts the session, before the build: it carries the build command, its working directory and the runtime. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
 
-- The `CatterConfig` payload includes: the script path and arguments, the build system command and its working directory, the current runtime capabilities, and catter options (`log`, `stdioMode`).
-- The script may return a modified config (for example, after parsing its own CLI arguments); returning `void` means no change.
-- Setting `config.execute = false` prevents catter from launching the build.
+**`finish`** comes once the build has ended, with the build's exit code. A handler writes its final output here.
 
-**`onFinish(result)`** is called once after the build process ends. `result` is the process result of the build command itself: exit code and captured stdout/stderr. A script writes its final output here.
+### Command level: command / error / exit
 
-### Command level: onCommand / onExecution
+**`command`** comes for each captured command before it runs: its working directory, executable, full argument vector, the parent command that started it, and, if the handler asked, its environment and what catter makes of it: the compiler, archiver or tool it runs, and what its arguments say. A handler that decides answers with an action; one that does not is only told, and the build never waits for it.
 
-**`onCommand(ctx)`** is called for each captured command before it executes.
+**`error`** comes instead when catter could not capture a command: the message says why.
 
-- `ctx.capture` is the captured command: working directory, executable, full argument vector, environment, the runtime that captured it, and the parent command ID (if supported).
-- Capture can fail (for example, when the runtime cannot resolve the command); `ctx.capture` is then an `Err`, and the script decides how to handle it.
-- The script chooses an action via `ctx.skip()` / `ctx.drop()` / `ctx.abort()` / `ctx.modify(data)` / `ctx.setAction(action)`; if none is chosen, the default is `skip` (execute as-is).
-- `ctx.ignoreDescendants()` prevents all descendant commands of this command from triggering `onCommand` / `onExecution`. Combine it with `skip` to "capture this command but ignore its subtree".
+**`exit`** comes after each command finishes, with its exit code and how long it took. Handlers can aggregate statistics or failures here.
 
-**`onExecution(ctx)`** is called after each command finishes. `ctx.result` is the command's exit code and output. Scripts can aggregate statistics or failures here.
-
-## Actions: separating script semantics from execution mechanics
+## Actions: separating handler semantics from execution mechanics
 
 "How to handle a command" is expressed at two layers in catter:
 
-1. **Script layer** (what scripts see): `skip` / `drop` / `abort` / `modify` -- semantic and independent of the mechanism.
+1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` / `edit` -- semantic and independent of the mechanism.
 2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` / `FAIL` -- the concrete execution mechanics.
 
-The runtime driver maps script-layer actions to protocol-layer actions. The current `inject` runtime mapping:
+The runtime driver maps handler-layer actions to protocol-layer actions. The current `inject` runtime mapping:
 
-| Script action | Semantics                                 | Protocol mapping                                                     |
-| ------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| `skip`        | Execute as-is, catter does not intervene  | `INJECT` (run with hooks mounted; descendants can still be captured) |
-| `drop`        | Do not execute; return exit code 0        | `DROP`                                                               |
-| `abort`       | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)       |
-| `modify`      | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
+| Handler action | Semantics                                 | Protocol mapping                                                     |
+| -------------- | ----------------------------------------- | -------------------------------------------------------------------- |
+| `skip`         | Execute as-is, catter does not intervene  | `INJECT` (run with hooks mounted; descendants can still be captured) |
+| `drop`         | Do not execute; return exit code 0        | `DROP`                                                               |
+| `abort`        | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)       |
+| `modify`       | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
+| `edit`         | Execute the command with edited arguments | `INJECT` (carrying the edited command)                               |
 
 Keep in mind:
 
-- **`skip` is not "ignore the whole subtree"**. `skip` only lets this command run as-is; its descendants are still captured and still trigger callbacks. To skip a subtree, call `ctx.ignoreDescendants()` explicitly.
-- **Not every runtime supports every action**. Scripts should check `config.runtime.supportActions`; `inject` supports all four.
-- **`abort` ends the session**, as an exception thrown from a callback does: the command, and every command the build starts after it, fail without running, and once the build has ended catter prints the reason and exits 1.
+- **`skip` is not "ignore the whole subtree"**. `skip` only lets this command run as-is; its descendants are still captured and still reach the handlers.
+- **`abort` ends the session**, as a handler that fails does: the command, and every command the build starts after it, fail without running, and once the build has ended catter prints the reason and exits 1.
 
 ## Components and processes
 
-A single `catter <script> -- <build command>` run involves several processes and components. They are all part of the runtime implementation, and script authors usually do not need to know about them:
+A single catter run involves several processes and components. They are all part of the runtime implementation, and handler authors usually do not need to know about them:
 
 | Component           | Role                                                                                                                                   |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `catter` (daemon)   | Loads and runs the script, owns the JS runtime, receives commands over IPC and returns decisions                                       |
+| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                          |
 | `catter-proxy`      | Executes commands and relays IPC; has an injector mode (launching the build) and a wrapper mode (standing in for intercepted commands) |
 | hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation                                 |
 
-> Earlier documentation described these three components as catter's "three-part architecture". The current view is one level higher: they are **implementation details of the inject runtime**, and the runtime abstraction itself is the center of the architecture. See [Runtime](runtime.md) and [Hook mechanism](hook-mechanism.md).
-
-## JS runtime model
-
-The JS runtime is single-threaded: script callbacks never run in parallel. The daemon's I/O (IPC connections, command traffic) is asynchronous and concurrent, but script execution is always serial; scripts holding global state should keep in mind that async callbacks may interleave at `await` points.
+They are **implementation details of the inject runtime**; the runtime abstraction itself is the center of the architecture. See [Runtime](runtime.md) and [Hook mechanism](hook-mechanism.md).

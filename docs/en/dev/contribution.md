@@ -20,7 +20,7 @@ pixi run -e dev cases-test release
 Unit tests use the Kotatsu testing framework (`kota::zest`). Located in `unittests/`, the structure mirrors `src/`:
 
 - `unittests/common/` -- Tests for shared utilities and option parsing
-- `unittests/catter/` -- Tests for core logic (compiler identification, JS runtime)
+- `unittests/catter/` -- Tests for core logic (compiler identification, argument parsing, the built-in scripts, the handler protocol)
 - `unittests/catter-hook/unix/` -- Tests for Unix hook payload
 
 To enable test targets in the build:

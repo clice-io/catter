@@ -1,6 +1,0 @@
-{
-  "script::cdb": "src/cdb.ts",
-  "script::cmd-tree": "src/cmd-tree.ts",
-  "script::inspect": "src/inspect.ts",
-  "script::target-tree": "src/target-tree.ts"
-}

@@ -10,21 +10,12 @@
 
 namespace catter::core {
 
-/// How the build's stdout and stderr show: printed as it writes them, or only
-/// kept for its result.
-enum class StdioMode : std::uint8_t {
-    inherit,
-    capture,
-};
-
 /// The build a session runs.
 struct Build {
     /// The build command, its program first.
     std::vector<std::string> command;
 
     std::string cwd;
-
-    StdioMode stdio_mode;
 };
 
 /// What a handler decides for a command.

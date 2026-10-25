@@ -1,8 +1,0 @@
-[test."$ catter script.js -- node build.mjs"]
-stdout = '''
-ran with ["act-on-me"]
-act-on-me: exit 0
-ran with ["leave-me"]
-leave-me: exit 0
-'''
-exit = 0

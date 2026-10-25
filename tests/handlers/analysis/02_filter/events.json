@@ -10,9 +10,7 @@
         "make"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -26,9 +24,7 @@
         "gcc -c a.c"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -42,9 +38,7 @@
         "a.c"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -59,9 +53,7 @@
         "app"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -76,9 +68,7 @@
         "a.o"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -93,9 +83,7 @@
         "a.o"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     },
     {
@@ -110,9 +98,7 @@
         "-o"
       ],
       "execution": {
-        "code": 1,
-        "stdout": "",
-        "stderr": ""
+        "code": 1
       }
     },
     {
@@ -126,15 +112,11 @@
         "a.obj"
       ],
       "execution": {
-        "code": 0,
-        "stdout": "",
-        "stderr": ""
+        "code": 0
       }
     }
   ],
   "finish": {
-    "code": 0,
-    "stdout": "",
-    "stderr": ""
+    "code": 0
   }
 }

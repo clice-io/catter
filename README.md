@@ -19,7 +19,7 @@ Currently, there is no cross-platform tool that completely solves all these issu
 
 ## Core Features
 
-`catter`'s underlying principle is similar to [Bear](https://github.com/rizsotto/Bear) or [scan-build](https://github.com/rizsotto/scan-build). It works by using hooks to intercept any child process creation (including compilation tasks) initiated by the target process. It also integrates QuickJS, allowing you to write JavaScript scripts to process these events—for example, to log or modify compilation arguments, analyze build times, and so on.
+`catter`'s underlying principle is similar to [Bear](https://github.com/rizsotto/Bear) or [scan-build](https://github.com/rizsotto/scan-build). It works by using hooks to intercept any child process creation (including compilation tasks) initiated by the target process. Every captured command goes to handlers: built-in scripts, or programs of your own in any language, which process these events—for example, to log or modify compilation arguments, analyze build times, and so on.
 
 Although its initial motivation was to record compilation commands to generate a CDB, we quickly realized it could be used for much more:
 
@@ -29,7 +29,7 @@ Although its initial motivation was to record compilation commands to generate a
 
 - **Profile the Build Process**: Due to issues in the build system's design or poorly written build scripts, the actual degree of build parallelism can be very low. We can capture process information (start times, durations, parent-child relationships) and render it visually, allowing users to inspect the build's parallelism and performance bottlenecks in real-time in a browser.
 
-- **Patch the Build Process with Custom Scripts**: Thanks to the embedded QuickJS engine, users can write their own scripts to patch any command during the build process. This gives you the power to dynamically modify arguments, redirect commands, or inject custom logic into your build without altering the original build files.
+- **Patch the Build Process with Custom Handlers**: Users can write their own handlers, in Python, TypeScript or any language that speaks catter's protocol, to patch any command during the build process. This gives you the power to dynamically modify arguments, redirect commands, or inject custom logic into your build without altering the original build files.
 
 ## Quick Start
 
@@ -69,7 +69,6 @@ pixi provides the development environment and task entrypoints.
 ```bash
 git clone https://github.com/clice-io/catter.git
 cd catter
-pixi run -e dev npm-install    # Install Node.js dependencies
 pixi run -e dev cfg debug      # Configure debug build
 pixi run -e dev build          # Build the project
 ```

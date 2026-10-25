@@ -20,15 +20,15 @@ features:
   - icon:
       src: /icons/catter-cdb.webp
     title: 通用编译数据库生成
-    details: 从任何构建系统生成 compile_commands.json — Make、Ninja、CMake 或自定义脚本
+    details: 从任何构建系统生成 compile_commands.json — Make、Ninja、CMake 或自定义构建脚本
   - icon:
       src: /icons/catter-process-tree.webp
     title: 深度进程拦截
     details: 在操作系统层面拦截进程创建（Unix 上使用 LD_PRELOAD，Windows 上使用 DLL 注入）
   - icon:
       src: /icons/catter-fake-compilation.webp
-    title: JavaScript 脚本
-    details: 使用内嵌的 QuickJS 引擎编写自定义脚本来分析、过滤或修改构建命令
+    title: 用任意语言编写 handler
+    details: 在你自己的程序中分析、过滤或修改构建命令，可借助 Python 和 TypeScript SDK，也可用任何能实现该协议的语言
   - icon:
       src: /icons/catter-profiling.webp
     title: 构建图分析

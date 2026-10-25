@@ -61,41 +61,10 @@ catter script::cmd-tree -- make
 catter script::cdb -o compile_commands.json -- cmake --build build
 ```
 
-### 自定义脚本
+### 你自己的 handler
 
-使用自己编写的 JavaScript 脚本替代内置脚本：
-
-```bash
-catter ./my-script.js -- cmake --build build
-```
-
-## 脚本开发的 IDE 支持
-
-`api/` 构建后会生成一个完整的 npm 包，包含 `api/package.json`、`api/dist/`（运行时 JS 模块）和 `api/types/`（TypeScript 类型声明）。先在仓库根目录构建它：
+把命令交给你自己编写的程序，即 [handler](../scripting/handlers.md)：
 
 ```bash
-pixi run -e dev npm-install
-pixi run -e dev build-js
+catter --handler "python my_handler.py" -- cmake --build build
 ```
-
-然后将 `api/` 作为本地依赖直接添加到你的脚本项目中（npm / pnpm / yarn 均可）：
-
-```bash
-npm install --save-dev /path/to/catter/api
-```
-
-或在 `package.json` 中声明：
-
-```json
-{
-  "devDependencies": {
-    "catter": "file:../path/to/catter/api"
-  }
-}
-```
-
-这样脚本项目即可通过 `catter/*` 导入模块，并获得完整的 IDE 自动补全和类型检查。
-
-::: info
-`catter` 尚未发布到 npm registry，在此之前请使用上面的本地依赖方式；发布后可直接 `npm install --save-dev catter`。
-:::

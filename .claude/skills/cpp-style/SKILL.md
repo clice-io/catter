@@ -158,8 +158,8 @@ of the build, next to that program's own runtime. They:
 
 - **Variables, member fields, function names**: `snake_case`. Class member fields do NOT use any special suffix/prefix (no trailing `_`, no `m_` prefix).
 - **Class names, template parameter names, enum names**: `PascalCase`. Exception: some types use `snake_case`, among them the plain data shared over IPC (`data::command`, `data::process_result`) — follow the existing style in the file.
-- **Enum values**: `PascalCase`. Existing enums in another style (`ActionType::skip`, `RequestType::CHECK_MODE`) keep it.
-- **Acronyms stay uppercase in type names**: `JSException`, `JSContextDeleter` — never `JsException`.
+- **Enum values**: `PascalCase`. Existing enums in another style (`RequestType::CHECK_MODE`) keep it.
+- **Acronyms stay uppercase in type names**: `OSString`, `JSON` — never `OsString`, `Json`.
 - **A file-local type is named by its role in the file**, without the
   words of the file's own subject: in an anonymous namespace, the type
   building the file's answer is `Builder`, not `<Subject>Builder`. A type
@@ -205,16 +205,15 @@ Domain words with one meaning each — use them only in that meaning:
 - **command**: one process the build starts, as catter captured it (cwd,
   executable, arguments, environment) — not a shell command line.
 - **handler**: what decides on a session's commands and is told of its
-  events (`core::Handler`): a script (`js::ScriptHandler`), or a program
-  catter speaks the handler protocol to (`core::RemoteHandler`).
+  events (`core::Handler`): a built-in script (`builtin::make`), or a
+  program catter speaks the handler protocol to (`core::RemoteHandler`).
 - **action**: what a handler decides for a command (`skip`, `drop`,
-  `abort`, `modify`, and over the protocol `edit`: `protocol::Action`,
-  `js::ActionType`; in `core::Action` an abort is the exception the handler
-  throws, and an edit the modified command). What the
+  `abort`, `modify`, and over the protocol `edit`: `protocol::Action`; in
+  `core::Action` an abort is the exception the handler throws, and an edit
+  the modified command). What the
   daemon then tells the proxy to do is the IPC protocol's `data::action`
   (`DROP`, `INJECT`, `WRAP`, `FAIL`); keep the two apart.
-- **runtime**: a capture mechanism (`inject` today); not the JS runtime,
-  which is "the JS runtime" or "the script engine".
+- **runtime**: a capture mechanism (`inject` today).
 - **payload**: the hook library loaded into the build's processes.
 
 ## Templates, Type Traits & Concepts

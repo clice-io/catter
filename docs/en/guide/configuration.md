@@ -14,7 +14,6 @@ A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | `-m, --mode <mode>`           | Runtime mode: `inject` runs the build command and intercepts its processes; `replay` plays a recorded build, whose events file stands in for the build command. | `inject`          |
 | `-d, --dir <path>`            | Working directory for the target process.                                                                                                                       | Current directory |
-| `--stdio-mode <mode>`         | How to handle child process stdio. See below.                                                                                                                   | `inherit`         |
 | `--handler <command>`         | A handler for catter to start; may be given more than once. See [Handlers](../scripting/handlers.md).                                                           |                   |
 | `--connect <host:port>`       | A handler listening at the address; may be given more than once. See [Handlers](../scripting/handlers.md).                                                      |                   |
 | `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                                                             |                   |
@@ -25,16 +24,9 @@ A run takes a script, one or more [handlers](../scripting/handlers.md), or both.
 
 catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.
 
-### `--stdio-mode`
+### Built-in scripts
 
-Controls what happens with the intercepted process's standard output and error streams:
-
-- **`inherit`** -- Real-time passthrough. Build output appears in your terminal as it normally would.
-- **`capture`** -- Buffer stdout and stderr. The captured output is made available to the script's `onFinish` callback instead of being printed immediately.
-
-### Script Specification
-
-**Built-in scripts** use the `script::` prefix:
+A built-in script is named with the `script::` prefix:
 
 ```bash
 catter script::<name> [script-args] -- <build-command>
@@ -48,12 +40,6 @@ Available built-in scripts:
 | `script::cmd-tree`    | Display the build command tree                         |
 | `script::target-tree` | Display the build target tree                          |
 | `script::inspect`     | Show how catter analyzes a command, without running it |
-
-**Custom scripts** use a file path:
-
-```bash
-catter ./path/to/script.js [script-args] -- <build-command>
-```
 
 ## catter-proxy CLI
 

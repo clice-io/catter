@@ -45,14 +45,12 @@ inline process_event make_process_event(kota::process::options& opts) {
     };
 }
 
-inline kota::task<data::process_result> capture_process_result(process_event proc_event,
-                                                               FILE* stdout_sink = stdout,
-                                                               FILE* stderr_sink = stderr) {
+inline kota::task<data::process_result> capture_process_result(process_event proc_event) {
     auto& current_loop = kota::event_loop::current();
 
     auto [wait_task, stdout_pipe, stderr_pipe] = proc_event(current_loop);
-    util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout_sink, "stdout");
-    util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr_sink, "stderr");
+    util::PipeProxy stdout_proxy(std::move(stdout_pipe), stdout, "stdout");
+    util::PipeProxy stderr_proxy(std::move(stderr_pipe), stderr, "stderr");
 
     auto ret = co_await kota::when_all{std::move(wait_task),
                                        stdout_proxy.monitor(),

@@ -11,8 +11,6 @@
     }
   ],
   "finish": {
-    "code": 0,
-    "stdout": "",
-    "stderr": ""
+    "code": 0
   }
 }

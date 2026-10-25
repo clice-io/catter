@@ -1,53 +1,66 @@
 #include "replay.h"
 
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
+#include <vector>
 #include <cpptrace/exceptions.hpp>
+#include <kota/codec/json/json.h>
 
-#include "js/capi/bridge.h"
-#include "js/qjs.h"
 #include "util/encoding.h"
-
-// The generic `Bridge<std::vector<T>>` only supports primitive elements, so
-// vector<ReplayEvent> needs an explicit specialization. JS arrays expose
-// indexed elements as string properties, which `qjs::Object::operator[]`
-// can read directly.
-namespace catter::js {
-
-template <>
-struct Bridge<std::vector<catter::core::ReplayEvent>> {
-    static std::vector<catter::core::ReplayEvent> from_js(const qjs::Value& value) {
-        auto array = value.as<qjs::Object>();
-        auto length = array["length"].as<uint32_t>();
-        std::vector<catter::core::ReplayEvent> events;
-        events.reserve(length);
-        for(uint32_t index = 0; index < length; ++index) {
-            auto element = array[std::to_string(index)];
-            events.push_back(
-                make_reflected_object<catter::core::ReplayEvent>(element.as<qjs::Object>()));
-        }
-        return events;
-    }
-};
-
-}  // namespace catter::js
 
 namespace catter::core {
 namespace fs = std::filesystem;
 
 namespace {
 
+/// How a command or the build ended.
+struct ReplayResult {
+    std::int64_t code;
+};
+
+/// Why catter could not capture a replayed command.
+struct ReplayError {
+    std::string message;
+    std::optional<data::ipcid_t> parent;
+};
+
+/// One command event of a replayed build.
+///
+/// When `error` is set the command is delivered as a capture failure;
+/// otherwise `execution`, when set, is delivered to on_exit after the
+/// command is processed. `parent` of 0 means no parent command.
+struct ReplayEvent {
+    std::optional<std::string> type;  // "command"
+    data::ipcid_t id;
+    std::optional<data::ipcid_t> parent;
+    std::optional<std::string> cwd;
+    std::string exe;
+    std::vector<std::string> argv;
+    std::optional<std::vector<std::string>> env;
+    std::optional<ReplayResult> execution;
+    std::optional<ReplayError> error;
+};
+
+/// Top-level replay document (schema version 1).
+///
+/// `cwd`, relative to the replay file's directory, is where the commands with a
+/// relative `cwd` of their own ran; `finish` is how the build ended.
+struct ReplayFile {
+    std::int64_t version;
+    std::optional<std::string> cwd;
+    std::vector<ReplayEvent> events;
+    std::optional<ReplayResult> finish;
+};
+
 void validate_replay_file(const ReplayFile& replay) {
-    if(!replay.version.has_value()) {
-        throw cpptrace::runtime_error("Replay file is missing required field 'version'");
-    }
-    if(*replay.version != 1) {
+    if(replay.version != 1) {
         throw cpptrace::runtime_error(
-            std::format("Unsupported replay file version: {}", *replay.version));
+            std::format("Unsupported replay file version: {}", replay.version));
     }
 
     for(const auto& event: replay.events) {
@@ -83,15 +96,9 @@ std::optional<data::ipcid_t> parent_of(std::optional<data::ipcid_t> parent) {
     return parent;
 }
 
-data::process_result to_process_result(const js::ProcessResult& result) {
-    return {
-        .code = result.code,
-        .std_out = result.stdOut,
-        .std_err = result.stdErr,
-    };
+data::process_result to_process_result(const ReplayResult& result) {
+    return {.code = result.code};
 }
-
-}  // namespace
 
 ReplayFile parse_replay_file(const fs::path& path) {
     std::ifstream input(path, std::ios::binary);
@@ -100,13 +107,17 @@ ReplayFile parse_replay_file(const fs::path& path) {
     }
     std::string content(std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{});
 
-    auto runtime = qjs::Runtime::create();
-    auto ctx = runtime.context();
-    auto value = qjs::json::parse(content, ctx);
-    auto replay = js::make_reflected_object<ReplayFile>(value.as<qjs::Object>());
-    validate_replay_file(replay);
-    return replay;
+    auto replay = kota::codec::json::from_string<ReplayFile>(content);
+    if(!replay.has_value()) {
+        throw cpptrace::runtime_error(std::format("Replay file is not valid: {}: {}",
+                                                  util::to_utf8(path),
+                                                  replay.error().message));
+    }
+    validate_replay_file(*replay);
+    return std::move(*replay);
 }
+
+}  // namespace
 
 kota::task<data::process_result> replay_build(const fs::path& path, Handler& handler) {
     const auto replay = parse_replay_file(path);
@@ -134,7 +145,7 @@ kota::task<data::process_result> replay_build(const fs::path& path, Handler& han
         }
     }
 
-    co_return to_process_result(replay.finish.value_or(js::ProcessResult{.code = 0}));
+    co_return to_process_result(replay.finish.value_or(ReplayResult{.code = 0}));
 }
 
 }  // namespace catter::core

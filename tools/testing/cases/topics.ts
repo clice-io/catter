@@ -7,7 +7,6 @@
 export const TOPICS: Readonly<Record<string, "engine" | "builtin" | "command">> = {
     capture: "engine",
     builds: "engine",
-    scripts: "engine",
     handlers: "engine",
     cdb: "builtin",
     cmd_tree: "builtin",

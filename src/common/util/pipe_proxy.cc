@@ -74,11 +74,9 @@ kota::task<void> PipeProxy::monitor() {
                                          std::string_view(chunk->data(), chunk->size()),
                                          output_truncated);
 
-        if(sink != nullptr) {
-            std::span<const char> bytes(chunk->data(), chunk->size());
-            (void)std::fwrite(bytes.data(), 1, bytes.size(), sink);
-            std::fflush(sink);
-        }
+        std::span<const char> bytes(chunk->data(), chunk->size());
+        (void)std::fwrite(bytes.data(), 1, bytes.size(), sink);
+        std::fflush(sink);
 
         pipe.consume(chunk->size());
     }

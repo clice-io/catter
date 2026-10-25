@@ -18,7 +18,6 @@ features:
 scripting:
   label: Scripting
   items:
-    - overview
     - handlers
 
 design:

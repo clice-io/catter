@@ -26,11 +26,8 @@ They always move together:
 1. The release exists: `gh release view <VERSION> -R clice-io/xclang`.
 2. `pixi.toml`: both pins `==<VERSION>`; then `pixi lock`.
 3. A new LLVM version, not only a new revision, changes the option tables.
-   The TypeScript option enums (`api/src/option/*.ts`) mirror the C++
-   tables' ID order and are regenerated from the new package:
-   `pixi run -e dev node scripts/js-gen/generate_llvm_option.mjs`. An
-   option catter names that was renamed or removed upstream shows up as a
-   C++ build error or a tsc error; the unit tests under
+   An option catter names that was renamed or removed upstream shows up as
+   a C++ build error; the unit tests under
    `unittests/common/opt` and the `tests/inspect` cases pin the parsing.
 4. Build and run the unit tests and the cases on everything CI builds (the
    build and test skills): Linux,
