@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <format>
 #include <memory>
 #include <print>
@@ -19,7 +18,6 @@
 #include <kota/async/async.h>
 #include <kota/meta/enum.h>
 
-#include "util/crossplat.h"
 #include "util/data.h"
 #include "util/encoding.h"
 #include "util/exception.h"
@@ -260,10 +258,7 @@ RunningProcess start_process(data::command cmd,
 
     RunningProcess process = {pi};
 
-    if(!try_inject(process.process_handle(),
-                   catter::util::get_catter_root_path() / win::DLL_NAME)) {
-        throw cpptrace::runtime_error("Failed to inject DLL into target process");
-    }
+    inject(process.process_handle(), cmd.executable);
 
     if(ResumeThread(process.thread_handle()) == static_cast<DWORD>(-1)) {
         throw catter::system_error(GetLastError(),

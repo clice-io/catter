@@ -119,11 +119,20 @@ make
 Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `LD_PRELOAD` 的等价机制。catter 结合使用了：
 
 1. **DLL 注入** -- 将钩子库加载到目标进程中
-2. **基于 MinHook 的 API 钩子** -- 在这些进程内拦截 `CreateProcess` 调用
+2. **基于 [Microsoft Detours](https://github.com/microsoft/Detours) 的 API 钩子** -- 在这些进程内拦截 `CreateProcess` 调用
 
 ### 钩子 DLL
 
-钩子编译为 `catter-hook-win64.dll`。它使用 MinHook -- 一个轻量级的 x86/x64 API 钩子库，通过覆写目标函数的前几个字节为跳转指令（trampoline hooking）来实现函数替换。
+进程只会加载与自身架构相同的 DLL，因此每种架构各有一个钩子 DLL，都安装在 `catter-proxy.exe` 所在的目录：
+
+| DLL                     | 加载到                                                 |
+| ----------------------- | ------------------------------------------------------ |
+| `catter-hook-x64.dll`   | x64 进程、在 ARM64 上模拟运行的 x64 进程、ARM64EC 程序 |
+| `catter-hook-arm64.dll` | 原生 ARM64 进程                                        |
+
+catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM 上，一次构建中既有原生 ARM64 工具，也有模拟运行的 x64 工具。32 位（x86）进程目前还没有对应的钩子 DLL：它不加载钩子直接运行，与没有 catter 时一样，它启动的命令也不会被捕获。catter-proxy 会记录一条警告，写明是哪个程序。
+
+两个 DLL 构建时都不启用 AddressSanitizer，并静态链接 C 运行时：它们运行在构建的每个进程中，这些进程未必带有运行时 DLL；而且 Detours 在地址空间中搜索时会读到 ASan 的影子内存（shadow memory）。
 
 ### 环境变量
 
@@ -141,31 +150,22 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 
 2. **设置环境变量**。`CATTER_IPC_ID`、`CATTER_IPC_PIPE` 和 `CATTER_PROXY_PATH` 在创建进程前通过环境块传入目标进程。
 
-3. **在目标进程中分配内存**。代理调用 `VirtualAllocEx()` 在目标进程的地址空间中分配一块内存区域。
+3. **确定进程的架构**。`GetProcessInformation(ProcessMachineTypeInfo)` 给出进程所运行代码的机器类型：在 ARM64 上模拟运行的 x64 进程和 ARM64EC 进程得到的都是 x64，而 `IsWow64Process2` 无法把它们与原生 ARM64 进程区分开。Windows 10 没有 `ProcessMachineTypeInfo`，也不支持模拟 x64，在那里由 `IsWow64Process2` 给出架构。
 
-4. **写入 DLL 路径**。代理调用 `WriteProcessMemory()` 将 `catter-hook-win64.dll` 的完整路径写入分配的内存。
+4. **把钩子 DLL 加入进程的导入表**。`DetourUpdateProcessWithDll()` 把对应架构的 DLL 加入挂起的可执行文件的导入表，这样加载器会在程序自身的任何代码运行之前映射它。加载器按进程自己的 ANSI 代码页读取导入表里的 DLL 路径，而程序可以把这个代码页设为 UTF-8，所以路径必须是纯 ASCII：含非 ASCII 字符的路径改用它的 8.3 短文件名；在不保留短文件名的卷上，则改用复制到 catter 数据目录中的那份 DLL。
 
-5. **创建远程线程加载 DLL**。代理按顺序尝试三种方法：
-   - `CreateRemoteThread()` -- 已公开的 Win32 API。首先尝试，因为它是最广泛支持的方法。
-   - `NtCreateThreadEx()` -- 未公开的 NT API。备选方案，在现代 Windows（Vista+）上可靠运行。
-   - `RtlCreateUserThread()` -- 另一个未公开的 NT API。最后的备选方案。
-
-   远程线程的入口点是 `LoadLibraryA`，其参数是步骤 4 中写入的 DLL 路径字符串的指针。当线程运行时，它将 `catter-hook-win64.dll` 加载到目标进程中。
-
-6. **等待注入完成**。代理等待远程线程执行完毕。
-
-7. **恢复主线程**。代理调用 `ResumeThread()` 让目标进程开始执行。此时钩子 DLL 已加载，钩子函数已激活。
+5. **恢复主线程**。代理调用 `ResumeThread()` 让目标进程开始执行。加载器把钩子 DLL 与程序的其他导入项一同映射，钩子在程序入口点运行之前就已激活。
 
 ### 被钩住的 Windows API
 
-钩子 DLL 在 `DLL_PROCESS_ATTACH` 期间使用 MinHook 的 trampoline 机制安装钩子：
+钩子 DLL 在 `DLL_PROCESS_ATTACH` 期间用 Detours 为以下函数安装钩子，全部在同一个事务中完成：
 
 - **`CreateProcessA()`** -- ANSI 版本的进程创建函数
 - **`CreateProcessW()`** -- 宽字符版本的进程创建函数
-- **`CreateProcessAsUserA()`** -- 透传（当前未重写命令行）
-- **`CreateProcessAsUserW()`** -- 透传（当前未重写命令行）
 
-MinHook 的工作原理：
+程序以其他账户的令牌（token）启动的进程（`CreateProcessAsUser`、`CreateProcessWithTokenW`、`CreateProcessWithLogonW`）不带钩子运行，也不会被捕获：要捕获它，`catter-proxy` 也得以该令牌运行，而那个账户可能无法启动它，也可能访问不到会话的管道。
+
+Detours 的工作原理：
 
 1. 保存目标函数的前几条指令
 2. 将其覆写为跳转到替代函数的指令
@@ -187,7 +187,7 @@ MinHook 的工作原理：
 
    `lpApplicationName` 被设为 `nullptr`，使 `CreateProcess` 正常解析命令行。
 
-4. **通过 MinHook trampoline 调用原始 `CreateProcess`**，传入修改后的命令行。
+4. **通过 Detours trampoline 调用原始 `CreateProcess`**，传入修改后的命令行。
 
 ### 与 Unix 的关键区别
 
@@ -199,30 +199,27 @@ MinHook 的工作原理：
 2. 将命令重写为通过 `catter-proxy` 中转
 3. 当代理决定以 `INJECT` 动作执行时，它对新进程执行 DLL 注入（创建挂起、注入、恢复）
 
-这意味着代理负责在每一代子进程中重新注入钩子，维持递归拦截链。
+这意味着代理负责在每一代子进程中重新注入钩子，维持递归拦截链。链上可以交替出现不同架构的进程：每个进程都会得到与自身架构对应的钩子 DLL。
 
 ### DLL 生命周期
 
 ```
 DLL_PROCESS_ATTACH:
-  MH_Initialize()       -- Initialize MinHook
-  MH_CreateHook(...)    -- Install hooks on CreateProcess variants
-  MH_EnableHook(...)    -- Activate all hooks
-
-DLL_PROCESS_DETACH:
-  MH_DisableHook(...)   -- Deactivate all hooks
-  MH_Uninitialize()     -- Clean up MinHook
+  DetourRestoreAfterWith()   -- Restore the import table catter-proxy changed
+  DetourTransactionBegin()
+  DetourAttach(...)          -- Hook CreateProcessA and CreateProcessW
+  DetourTransactionCommit()  -- Activate all hooks at once
 ```
 
-在 attach 阶段调用 `DisableThreadLibraryCalls()` 以抑制 `DLL_THREAD_ATTACH` 和 `DLL_THREAD_DETACH` 通知，减少运行开销。
+在 attach 阶段调用 `DisableThreadLibraryCalls()` 以抑制 `DLL_THREAD_ATTACH` 和 `DLL_THREAD_DETACH` 通知，减少运行开销。该 DLL 是可执行文件的导入项，只随进程一起卸载，因此 `DLL_PROCESS_DETACH` 时没有需要撤销的操作。它导出序号为 1 的符号，凡是由 Detours 注入的 DLL 都必须如此。
 
 ## 平台对比
 
 | 方面         | Linux                                                      | macOS                            | Windows                              |
 | ------------ | ---------------------------------------------------------- | -------------------------------- | ------------------------------------ |
-| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-win64.dll`              |
-| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `VirtualAllocEx` + `LoadLibraryA`    |
-| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | MinHook trampoline 钩子              |
+| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-{x64,arm64}.dll`        |
+| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `DetourUpdateProcessWithDll`         |
+| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | Detours trampoline 钩子              |
 | 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                       | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW`   |
 | 递归钩子     | 自动（环境变量继承）                                       | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）         |
 | 会话环境变量 | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同                    | `CATTER_PROXY_PATH`、`CATTER_IPC_ID` |

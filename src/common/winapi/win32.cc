@@ -4,13 +4,6 @@
 #include <limits>
 
 namespace catter::win {
-std::error_code wait_for_object(HANDLE handle) noexcept {
-    if(WaitForSingleObject(handle, INFINITE) == WAIT_FAILED) {
-        return std::error_code(GetLastError(), std::system_category());
-    }
-    return {};
-}
-
 std::string quote_win32_arg(std::string_view arg) noexcept {
     // No quoting needed if it's empty or has no special characters.
     if(arg.empty() || arg.find_first_of(" \t\n\v\"") == std::string_view::npos) {

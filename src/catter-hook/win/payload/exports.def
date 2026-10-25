@@ -1,2 +1,4 @@
-LIBRARY catter-hook-win64
+; catter-proxy adds the DLL to a process's import table as an import of
+; ordinal 1, the ordinal Detours' DLLs export.
 EXPORTS
+    DetourFinishHelperProcess @1 NONAME

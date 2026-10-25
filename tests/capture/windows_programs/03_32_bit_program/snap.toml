@@ -2,11 +2,10 @@
 exit = 7
 
 [test."$ catter cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
-wrong = "a 32-bit program fails to start (catter#124)"
+wrong = "the commands a 32-bit program starts are not captured (catter#124)"
 stdout = '''
-Build failed with exit code 4294967295. Printing partial command tree.
+Build failed with exit code 7. Printing partial command tree.
 spawn.exe CreateProcessW command.txt
-└── [capture error] Run `${CATTER}/catter-proxy.exe -p 1 --exec C:\Windows\SysWOW64\cmd.exe --ipc \\.\pipe\catter-ipc-# -- C:\Windows\SysWOW64\cmd.exe /d /c exit 7` failed:
-Failed to inject DLL into target process
+└── "C:\\Windows\\SysWOW64\\cmd.exe" /d /c spawn.exe CreateProcessW inner.txt
 '''
 exit = 0

@@ -114,7 +114,23 @@ elseif is_plat("macosx") then
 elseif is_plat("windows", "mingw") then
     add_defines("CATTER_WINDOWS")
     add_defines("WIN32_LEAN_AND_MEAN", "NOMINMAX")
-    add_requires("minhook", {version = "v1.3.4"})
+end
+
+-- The architectures of the processes Windows runs on x64 and ARM64, each
+-- with a hook DLL catter-hook-<arch>.dll that every Windows build makes:
+-- catter-proxy injects into a process the one of its machine (win/inject.cc).
+local windows_hook_archs = is_plat("windows", "mingw") and {"x64", "arm64"} or {}
+
+-- The name xmake gives a hook's architecture on the platform.
+local function xmake_arch(arch)
+    return (arch == "x64" and is_plat("mingw")) and "x86_64" or arch
+end
+
+-- Detours searches the address space for the data it leaves in a process,
+-- ASan's shadow memory included, and an instrumented read of it aborts: never
+-- instrument it.
+for _, arch in ipairs(windows_hook_archs) do
+    add_requires("detours~" .. arch, {arch = xmake_arch(arch), configs = {asan = false}})
 end
 
 -- do
@@ -209,28 +225,39 @@ target("catter-protocol-schema")
     add_deps("common-util")
     add_files("src/catter-protocol-schema/main.cc")
 
-target("catter-hook-win64")
-    set_default(is_plat("windows", "mingw"))
+for _, arch in ipairs(windows_hook_archs) do
+target("catter-hook-" .. arch)
     set_kind("shared")
-    -- catter loads it as catter-hook-win64.dll; MinGW would name it lib*.dll.
+    set_arch(xmake_arch(arch))
+    -- Beside catter-proxy, which injects it, whatever its architecture.
+    set_targetdir("$(builddir)/$(plat)/$(arch)/$(mode)")
+    -- MinGW would name it lib*.dll.
     set_prefixname("")
-    add_local_prefix_includedirs()
-    add_includedirs("src/catter-hook/")
+    -- It runs inside every process of the build, and Detours trips ASan (see
+    -- its add_requires): no sanitizer, and the resolver compiled in, of the
+    -- DLL's architecture, rather than linked from common-resolver.
+    set_policy("build.sanitizer.address", false)
+    add_includedirs("src/catter-hook/", "src/common")
     add_files("src/catter-hook/win/payload/*.cc")
-    add_packages("minhook")
-    add_deps("common-resolver")
+    add_files("src/common/resolver/win.cc", "src/common/winapi/**.cc")
+    add_syslinks("user32", "advapi32")
+    add_packages("detours~" .. arch)
     local toolchain = get_config("toolchain")
     if toolchain == "msvc" or toolchain == "clang-cl" then
+        -- Nor the VC runtime DLLs, which a process of the architecture may
+        -- lack.
+        set_runtimes("MT")
         add_cxxflags("/GR-")
         add_shflags("/DEF:src/catter-hook/win/payload/exports.def")
     elseif is_plat("mingw") then
         add_cxxflags("-fno-rtti")
-        -- exports.def exports nothing; MinGW links would export everything.
-        add_shflags("-Wl,--exclude-all-symbols")
+        -- lld's MinGW driver takes a .def input as the only exports.
+        add_shflags("src/catter-hook/win/payload/exports.def", {force = true})
     else
         add_cxxflags("-fno-exceptions", "-fno-rtti")
         add_shflags("-Wl,/DEF:src/catter-hook/win/payload/exports.def")
     end
+end
 
 
 target("catter-hook-unix")
@@ -283,6 +310,7 @@ target("catter-hook")
     add_deps("common")
     if is_plat("windows", "mingw") then
         add_files("src/catter-hook/win/*.cc")
+        add_packages("detours~" .. (is_arch("arm64", "aarch64") and "arm64" or "x64"), {public = true})
     elseif is_plat("linux", "macosx") then
         add_files("src/catter-hook/unix/impl.cc")
     end
@@ -349,7 +377,7 @@ target("ut-catter-hook-unix")
         add_tests("default")
     end
 
-target("ut-catter-hook-win64")
+target("ut-catter-hook-win")
     set_default(has_config("test") and is_plat("windows", "mingw"))
     set_kind("binary")
     add_rules("ut-base")
@@ -364,6 +392,46 @@ target("ut-catter-hook-win64")
     if is_plat("windows", "mingw") then
         add_tests("default")
     end
+
+package("detours")
+    set_homepage("https://github.com/microsoft/Detours")
+    set_license("MIT")
+
+    set_urls("https://github.com/microsoft/Detours.git")
+    -- main of 2026-09-29, with #388 (hooking ARM64EC functions).
+    add_versions("2026.09.29", "1dbd4ea281d73d478aa8d09a8b83fbd265f715f7")
+
+    on_install("windows", "mingw", function (package)
+        -- The module walks start from (PBYTE)NULL + 64K: arithmetic on a null
+        -- pointer, undefined, from which clang -O2 concludes the code
+        -- unreachable once it inlines the first call, and deletes
+        -- DetourUpdateProcessWithDll and DetourFindPayloadEx. MSVC does not.
+        for _, file in ipairs({"src/creatwth.cpp", "src/modules.cpp"}) do
+            io.replace(file,
+                       "PBYTE pbLast = (PBYTE)hModuleLast + MM_ALLOCATION_GRANULARITY;",
+                       "PBYTE pbLast = (PBYTE)((ULONG_PTR)hModuleLast + MM_ALLOCATION_GRANULARITY);",
+                       {plain = true})
+        end
+        io.writefile("xmake.lua", [[
+            add_rules("mode.release", "mode.debug")
+            target("detours")
+                set_kind("static")
+                -- creatwth.cpp includes uimports.cpp once per architecture.
+                add_files("src/*.cpp|uimports.cpp")
+                add_headerfiles("src/detours.h", "src/detver.h")
+                add_defines("WIN32_LEAN_AND_MEAN")
+                if is_plat("windows") then
+                    -- No default C runtime, as Detours' own build: the hook
+                    -- links the static one, catter-proxy the DLL.
+                    add_cxflags("/Zl")
+                else
+                    -- The 0ui64 literals of the ARM64 code. detours.h turns
+                    -- __try/__except into nothing for __GNUC__ compilers.
+                    add_cxxflags("-fms-extensions")
+                end
+        ]])
+        import("package.tools.xmake").install(package)
+    end)
 
 package("kotatsu")
     set_homepage("https://clice.io")
@@ -414,9 +482,10 @@ xpack("catter")
     -- set_iconfile()
     set_formats("nsis", "zip", "targz")
     add_targets("catter", "catter-proxy")
-    if is_plat("windows", "mingw") then
-        add_targets("catter-hook-win64")
-    elseif is_plat("linux", "macosx") then
+    for _, arch in ipairs(windows_hook_archs) do
+        add_targets("catter-hook-" .. arch)
+    end
+    if is_plat("linux", "macosx") then
         add_targets("catter-hook-unix")
     end
 
