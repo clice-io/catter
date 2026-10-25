@@ -8,17 +8,14 @@
 
 ## 支持的平台
 
-| 平台                               | 工具链                 |
-| ---------------------------------- | ---------------------- |
-| Windows (win-64)                   | MSVC (VS2022)          |
-| Linux (linux-64)                   | GCC 14.2               |
-| macOS (osx-arm64)                  | xclang 23.1.2          |
-| Windows (win-64)，`mingw` 环境     | xclang 23.1.2（MinGW） |
-| Windows on ARM（win-64，模拟运行） | MSVC，构建 ARM64       |
+| 平台                               | 工具链                             |
+| ---------------------------------- | ---------------------------------- |
+| Linux (linux-64)                   | GCC 14.2                           |
+| macOS (osx-arm64)                  | xclang 23.1.3                      |
+| Windows (win-64)                   | xclang 23.1.3，构建 MinGW          |
+| Windows on ARM（win-64，模拟运行） | xclang 23.1.3，构建 ARM64 的 MinGW |
 
-`mingw` 环境在 Windows 上用 [xclang](https://github.com/clice-io/xclang) 代替 MSVC 构建：先 `pixi run -e mingw cfg debug`，再 `pixi run -e mingw build`。
-
-每次 Windows 构建都会同时构建另一种架构的钩子 DLL，x64 和 ARM64 两个都有：使用 MSVC 时，要在 Visual Studio Installer 里，在默认组件之外再装上 ARM64 的 C++ 生成工具（在 Windows on ARM 上则是 x64 的）。
+Windows 上用 [xclang](https://github.com/clice-io/xclang) 构建 MinGW 版本（`x86_64-w64-mingw32`）；`pixi run cfg debug arm64` 则配置为构建 ARM64 版本（`aarch64-w64-mingw32`），可以在 Windows on ARM 上进行，也可以在 x64 Windows 上进行，只是 x64 Windows 运行不了构建出的程序。每次 Windows 构建都会同时构建另一种架构的钩子 DLL，x64 和 ARM64 两个都有。
 
 ## 构建命令
 

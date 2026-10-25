@@ -12,7 +12,7 @@ Prebuilt packages are currently available for:
 
 | Platform | Architecture |
 | -------- | ------------ |
-| Windows  | x64          |
+| Windows  | x64, arm64   |
 | Linux    | x64          |
 | macOS    | arm64        |
 

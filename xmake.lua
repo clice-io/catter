@@ -2,7 +2,7 @@ set_version("0.1.0")
 set_project("catter")
 
 add_rules("mode.debug", "mode.release", "mode.releasedbg")
-set_allowedplats("windows", "mingw", "linux", "macosx")
+set_allowedplats("mingw", "linux", "macosx")
 
 set_languages("c++23")
 -- Sources and narrow string literals are UTF-8, the encoding catter's strings
@@ -54,30 +54,9 @@ if has_config("dev") then
     set_policy("build.ccache", true)
     add_rules("plugin.compile_commands.autoupdate", {outputdir = "build", lsp = "clangd"})
 
-    local toolchain = get_config("toolchain")
-
-    if is_mode("debug") then
-        if is_plat("windows") then
-            if toolchain == "msvc" then
-                set_policy("build.sanitizer.address", true)
-            end
-        elseif not is_plat("mingw") then
-            -- xclang has no ASan runtime for MinGW.
-            set_policy("build.sanitizer.address", true)
-        end
-
-    end
-
-
-    if is_plat("windows") then
-        set_runtimes("MD")
-        if toolchain == "clang" then
-            add_ldflags("-fuse-ld=lld-link")
-            add_shflags("-fuse-ld=lld-link")
-        elseif toolchain == "clang-cl" then
-            set_toolset("ld", "lld-link")
-            set_toolset("sh", "lld-link")
-        end
+    -- compiler-rt has no ASan for arm64 Windows.
+    if is_mode("debug") and not (is_plat("mingw") and is_arch("arm64")) then
+        set_policy("build.sanitizer.address", true)
     end
 end
 
@@ -111,7 +90,7 @@ if is_plat("linux") then
     add_defines("CATTER_LINUX")
 elseif is_plat("macosx") then
     add_defines("CATTER_MAC")
-elseif is_plat("windows", "mingw") then
+elseif is_plat("mingw") then
     add_defines("CATTER_WINDOWS")
     add_defines("WIN32_LEAN_AND_MEAN", "NOMINMAX")
 end
@@ -120,11 +99,11 @@ end
 -- with a hook DLL catter-hook-<arch>.dll that every Windows build makes:
 -- catter-proxy injects into a process the one of its machine
 -- (src/capture/inject/windows/inject.cc).
-local windows_hook_archs = is_plat("windows", "mingw") and {"x64", "arm64"} or {}
+local windows_hook_archs = is_plat("mingw") and {"x64", "arm64"} or {}
 
--- The name xmake gives a hook's architecture on the platform.
+-- The name xmake gives a hook's architecture.
 local function xmake_arch(arch)
-    return (arch == "x64" and is_plat("mingw")) and "x86_64" or arch
+    return arch == "x64" and "x86_64" or arch
 end
 
 -- Detours searches the address space for the data it leaves in a process,
@@ -133,15 +112,6 @@ end
 for _, arch in ipairs(windows_hook_archs) do
     add_requires("detours~" .. arch, {arch = xmake_arch(arch), configs = {asan = false}})
 end
-
--- do
---     local toolchain = get_config("toolchain")
---     if toolchain == "msvc" or toolchain == "clang-cl" then
---         add_cxxflags("/W3", "/WX", {force = true})
---     else
---         add_cxxflags("-Wall", "-Werror", {force = true})
---     end
--- end
 
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
 add_requires("kotatsu")
@@ -155,7 +125,7 @@ target("support")
     add_packages("kotatsu", {public = true})
 
 target("support-winapi")
-    set_default(is_plat("windows", "mingw"))
+    set_default(is_plat("mingw"))
     set_kind("static")
     add_includedirs("src", {public = true})
     add_files("src/support/winapi/*.cc")
@@ -165,13 +135,13 @@ target("support-resolver")
     set_kind("static")
     add_local_prefix_includedirs()
     add_includedirs("src", {public = true})
-    if is_plat("windows", "mingw") then
+    if is_plat("mingw") then
         add_files("src/support/resolver/win.cc")
     else
         add_files("src/support/resolver/unix.cc")
     end
 
-    if is_plat("windows", "mingw") then
+    if is_plat("mingw") then
         add_deps("support-winapi", {public = true})
     end
 
@@ -199,7 +169,7 @@ target("capture-inject")
     set_kind("static")
     add_local_prefix_includedirs()
     add_deps("support", {public = true})
-    if is_plat("windows", "mingw") then
+    if is_plat("mingw") then
         add_deps("support-winapi", {public = true})
         add_files("src/capture/inject/windows/*.cc")
         add_packages("detours~" .. (is_arch("arm64", "aarch64") and "arm64" or "x64"), {public = true})
@@ -254,21 +224,9 @@ target("catter-hook-" .. arch)
     add_files("src/support/resolver/win.cc", "src/support/winapi/*.cc")
     add_syslinks("user32", "advapi32")
     add_packages("detours~" .. arch)
-    local toolchain = get_config("toolchain")
-    if toolchain == "msvc" or toolchain == "clang-cl" then
-        -- Nor the VC runtime DLLs, which a process of the architecture may
-        -- lack.
-        set_runtimes("MT")
-        add_cxxflags("/GR-")
-        add_shflags("/DEF:src/hook/windows/exports.def")
-    elseif is_plat("mingw") then
-        add_cxxflags("-fno-rtti")
-        -- lld's MinGW driver takes a .def input as the only exports.
-        add_shflags("src/hook/windows/exports.def", {force = true})
-    else
-        add_cxxflags("-fno-exceptions", "-fno-rtti")
-        add_shflags("-Wl,/DEF:src/hook/windows/exports.def")
-    end
+    add_cxxflags("-fno-rtti")
+    -- lld's MinGW driver takes a .def input as the only exports.
+    add_shflags("src/hook/windows/exports.def", {force = true})
 end
 
 
@@ -361,7 +319,7 @@ target("unittests-hook-unix")
     end
 
 target("unittests-hook-windows")
-    set_default(has_config("test") and is_plat("windows", "mingw"))
+    set_default(has_config("test") and is_plat("mingw"))
     set_kind("binary")
     add_rules("unittests-main")
 
@@ -370,7 +328,7 @@ target("unittests-hook-windows")
 
     add_deps("support", "support-resolver")
 
-    if is_plat("windows", "mingw") then
+    if is_plat("mingw") then
         add_tests("default")
     end
 
@@ -382,7 +340,7 @@ package("detours")
     -- main of 2026-09-29, with #388 (hooking ARM64EC functions).
     add_versions("2026.09.29", "1dbd4ea281d73d478aa8d09a8b83fbd265f715f7")
 
-    on_install("windows", "mingw", function (package)
+    on_install("mingw", function (package)
         -- The module walks start from (PBYTE)NULL + 64K: arithmetic on a null
         -- pointer, undefined, from which clang -O2 concludes the code
         -- unreachable once it inlines the first call, and deletes
@@ -401,15 +359,9 @@ package("detours")
                 add_files("src/*.cpp|uimports.cpp")
                 add_headerfiles("src/detours.h", "src/detver.h")
                 add_defines("WIN32_LEAN_AND_MEAN")
-                if is_plat("windows") then
-                    -- No default C runtime, as Detours' own build: the hook
-                    -- links the static one, catter-proxy the DLL.
-                    add_cxflags("/Zl")
-                else
-                    -- The 0ui64 literals of the ARM64 code. detours.h turns
-                    -- __try/__except into nothing for __GNUC__ compilers.
-                    add_cxxflags("-fms-extensions")
-                end
+                -- The 0ui64 literals of the ARM64 code. detours.h turns
+                -- __try/__except into nothing for __GNUC__ compilers.
+                add_cxxflags("-fms-extensions")
         ]])
         import("package.tools.xmake").install(package)
     end)
@@ -431,10 +383,6 @@ package("kotatsu")
     add_deps("simdjson v4.2.4")
 
     on_install(function (package)
-        if package:has_tool("cxx", "cl", "clang_cl") then
-            package:add("cxxflags", "/Zc:__cplusplus", "/Zc:preprocessor")
-        end
-
         local configs = {}
         -- Build the dependency with a plain consumer config so we do not pull
         -- in kotatsu's repo-local dev toolchain tweaks during package install.
@@ -471,3 +419,9 @@ xpack("catter")
     end
 
     set_libdir("bin") -- put hook dlls in bin for easier loading
+    -- xmake's NSIS script installs into the 64-bit Program Files and
+    -- registry view only for the architecture it calls x64; MinGW's are
+    -- x86_64 and arm64, both 64-bit.
+    if is_plat("mingw") then
+        set_specvar("PACKAGE_ARCH", "x64")
+    end

@@ -132,7 +132,7 @@ A process loads only DLLs of its own architecture, so there is one hook DLL per 
 
 Every Windows build of catter carries both: on Windows on ARM, a build mixes native ARM64 tools with emulated x64 ones. A 32-bit (x86) process has no hook DLL yet: it runs without one, as it would without catter, and the commands it starts are not captured. catter-proxy logs a warning naming the program.
 
-Each DLL is built without AddressSanitizer and with the static C runtime: it runs inside every process of the build, which may lack the runtime DLLs, and Detours' search of the address space reads ASan's shadow memory.
+Each DLL is built without AddressSanitizer and with the C++ runtime linked in, importing only Windows' own DLLs, UCRT among them: it runs inside every process of the build, which may lack other runtime DLLs, and Detours' search of the address space reads ASan's shadow memory.
 
 ### Environment Variables
 

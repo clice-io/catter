@@ -81,8 +81,7 @@ const DROPPED = [
 /// builds that call cl.exe themselves (CMake with Ninja) need: the
 /// compiler, the SDK tools (rc.exe, mt.exe) and their paths, which only
 /// vcvars sets up together. vcvars refuses to run in a prompt that is set
-/// up already, as pixi's activation of the MSVC toolchain leaves this one:
-/// it runs in a minimal environment, and what it adds is kept.
+/// up already: it runs in a minimal environment, and what it adds is kept.
 function msvcEnvironment(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     const programFiles = base["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
     const vswhere = path.join(programFiles, "Microsoft Visual Studio", "Installer", "vswhere.exe");
@@ -167,23 +166,11 @@ function msvcEnvironment(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
     };
 }
 
-/// The directory of the runtime a sanitized hook library needs, put first
-/// on PATH so that every process the hook enters finds it: MSVC's ASan DLL.
-function asanDllDirectory(env: NodeJS.ProcessEnv): string | undefined {
-    const tools = env["VCToolsInstallDir"];
-    if (tools === undefined) {
-        return undefined;
-    }
-    const dir = path.join(tools, "bin", "Hostx64", "x64");
-    return fs.existsSync(path.join(dir, "clang_rt.asan_dynamic-x86_64.dll")) ? dir : undefined;
-}
-
 let base: NodeJS.ProcessEnv | undefined;
 
 /// The environment every command of a test runs in, but for catter's data
-/// directory: the runner's own, the developer prompt on Windows, the
-/// directory of the sanitizer runtime a sanitized catter needs there, and
-/// what a handler under test needs: the catter it may start
+/// directory: the runner's own, the developer prompt on Windows, and what a
+/// handler under test needs: the catter it may start
 /// (CATTER_EXECUTABLE) and the Python SDK (`import catter`), in a Python
 /// that writes UTF-8, as catter does, and not Windows' ANSI code page, which
 /// cannot spell the copy's root, and no bytecode beside the SDK.
@@ -202,10 +189,6 @@ export function testEnvironment(): NodeJS.ProcessEnv {
     );
     if (process.platform === "win32") {
         env = { ...env, ...msvcEnvironment(env) };
-        const dll = asanDllDirectory(env);
-        if (dll !== undefined) {
-            env["PATH"] = [dll, env["PATH"] ?? ""].join(path.delimiter);
-        }
     }
     env["CATTER_EXECUTABLE"] = catterExecutable();
     env["PYTHONPATH"] = [path.join(REPO_ROOT, "sdk", "python"), env["PYTHONPATH"]]

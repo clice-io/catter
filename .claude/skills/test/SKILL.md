@@ -10,13 +10,13 @@ Run the requested suites (default: all) against the requested build mode (defaul
 
 On the box that built catter (the build skill; the caller passes its id), not on this machine unless truly necessary; the framework's own tests need no build and run here. A box this skill leases because the caller passed none is reported with its id, like the build skill's, and never downed. The cases run the programs of a built tree: build first (`pixi run -e dev build` after `cfg <mode>`), then run.
 
-Every platform tests on a box of its own OS, as it builds there (the build skill): `--os macos` for macOS, `--os windows` for Windows and `--os windows-arm` for Windows on ARM, where every pixi command goes through PowerShell:
+Every platform tests on a box of its own OS (the build skill): `--os macos` for macOS, `--os windows` for Windows and `--os windows-arm` for Windows on ARM, on the programs the Windows box cross-built and `box cp` brought; on Windows every pixi command goes through PowerShell:
 
 ```bash
 box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev cases-test debug"'
 ```
 
-PowerShell sets a variable for the commands after it, not on the command line: `$env:CATTER_CASES = 'capture/'; pixi run -e dev cases-test debug`. When both MSVC and MinGW are built on one box, `cases-test` finds two catters: point the cases at one by its absolute path (the runner starts in `tests/`), `$env:CATTER_EXECUTABLE = "$PWD/build/mingw/x86_64/debug/catter.exe"; pixi run -e dev pnpm --dir tests run cases`, as CI's MinGW cases jobs do. On Windows on ARM a `debug` catter cannot start under the cases (0xC0000135): they run in vcvars64's environment, whose `PATH` has the x64 ASan runtime, not the arm64 `clang_rt.asan_dynamic-aarch64.dll` (from MSVC's `bin\Hostarm64\arm64`), which goes beside `catter.exe` first.
+PowerShell sets a variable for the commands after it, not on the command line: `$env:CATTER_CASES = 'capture/'; pixi run -e dev cases-test debug`. When both x64 and ARM64 are built in one tree, `cases-test` finds two catters: point the cases at one by its absolute path (the runner starts in `tests/`), `$env:CATTER_EXECUTABLE = "$PWD/build/mingw/x86_64/debug/catter.exe"; pixi run -e dev pnpm --dir tests run cases`, as CI's cases jobs do. A cross build has no `xmake test` where it runs: on Windows on ARM the unit tests are its programs, `build/mingw/arm64/<mode>/unittests.exe` and `unittests-hook-windows.exe`, run from Git Bash with no arguments, as CI's `unit` job does.
 
 ## Commands
 
