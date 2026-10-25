@@ -46,6 +46,14 @@ ZEST_CASE(invalid_base64_is_an_error) {
     }
 }
 
+ZEST_CASE(text_replaces_each_byte_that_is_not_utf8) {
+    EXPECT(protocol::to_text("caf\xc3\xa9 \xe4\xb8\xad \xf0\x9f\x98\x80") ==
+           "caf\xc3\xa9 \xe4\xb8\xad \xf0\x9f\x98\x80");
+    EXPECT(protocol::to_text("caf\xe9") == "caf\xef\xbf\xbd");
+    EXPECT(protocol::to_text("\xff\xe4\xb8\xad\xe4\xb8") ==
+           "\xef\xbf\xbd\xe4\xb8\xad\xef\xbf\xbd\xef\xbf\xbd");
+}
+
 ZEST_CASE(an_action_is_tagged_by_its_name) {
     auto modify = parse<protocol::Action>(R"({"action":"modify","args":["cc",{"base64":"6Q=="}]})");
     auto* fields = std::get_if<protocol::Modify>(&modify);

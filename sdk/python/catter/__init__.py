@@ -220,7 +220,8 @@ class Listener:
     """A TCP port catter connects to (`--connect host:port`)."""
 
     def __init__(self, host: str, port: int) -> None:
-        self._socket = socket.create_server((host, port))
+        family = socket.AF_INET6 if ":" in host else socket.AF_INET
+        self._socket = socket.create_server((host, port), family=family)
         #: The port listened on: the one asked for, or the one the system
         #: chose for 0.
         self.port: int = self._socket.getsockname()[1]

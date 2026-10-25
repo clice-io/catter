@@ -1,5 +1,6 @@
 #include "protocol.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <string>
@@ -10,6 +11,9 @@
 namespace catter::protocol {
 
 namespace {
+
+/// U+FFFD in UTF-8.
+constexpr std::string_view replacement_character = "\xEF\xBF\xBD";
 
 constexpr std::string_view alphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -102,6 +106,32 @@ std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OsStri
         bytes.push_back(std::move(*item));
     }
     return bytes;
+}
+
+std::string to_text(std::string bytes) {
+    if(simdjson::validate_utf8(bytes.data(), bytes.size())) {
+        return bytes;
+    }
+    std::string text;
+    std::size_t i = 0;
+    while(i < bytes.size()) {
+        // Bytes are valid UTF-8 alone only when they hold whole characters:
+        // the shortest valid run from `i` is one character, and a byte that
+        // starts none has no valid run.
+        const auto longest = std::min<std::size_t>(4, bytes.size() - i);
+        std::size_t length = 1;
+        while(length <= longest && !simdjson::validate_utf8(bytes.data() + i, length)) {
+            length += 1;
+        }
+        if(length > longest) {
+            text += replacement_character;
+            i += 1;
+        } else {
+            text.append(bytes, i, length);
+            i += length;
+        }
+    }
+    return text;
 }
 
 }  // namespace catter::protocol

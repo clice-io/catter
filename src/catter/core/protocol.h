@@ -38,6 +38,10 @@ std::expected<std::string, std::string> to_bytes(OsString text);
 
 std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OsString> texts);
 
+/// `bytes` as a string of the protocol, which is valid UTF-8: each byte that
+/// is not becomes U+FFFD.
+std::string to_text(std::string bytes);
+
 /// The build a session runs.
 struct Build {
     std::vector<OsString> command;

@@ -5,6 +5,7 @@
 #include <csignal>
 #include <format>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <cpptrace/exceptions.hpp>
@@ -17,7 +18,33 @@ namespace {
 
 using kota::ipc::ReadError;
 
-/// The handler's transport, which keeps how the handler's output ended.
+/// What is wrong with `message` from a handler, which answers catter's
+/// requests and writes nothing else; none for an answer.
+std::optional<std::string> not_an_answer(std::string_view message) {
+    return std::visit(
+        [](const auto& incoming) -> std::optional<std::string> {
+            using T = std::remove_cvref_t<decltype(incoming)>;
+            if constexpr(std::is_same_v<T, kota::ipc::IncomingResponse>) {
+                return std::nullopt;
+            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingErrorResponse>) {
+                if(incoming.id) {
+                    return std::nullopt;
+                }
+                return std::format("an error that answers no request: {}", incoming.error.message);
+            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingRequest>) {
+                return std::format("a request `{}`", incoming.method);
+            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingNotification>) {
+                return std::format("a notification `{}`", incoming.method);
+            } else {
+                return incoming.error.message;
+            }
+        },
+        kota::ipc::JsonCodec().parse_message(message));
+}
+
+/// The handler's transport, which keeps how the handler's output ended, and
+/// ends it at what is not an answer: the peer would answer that with an error,
+/// and go on waiting for the answers it asked for.
 class Transport final : public kota::ipc::Transport {
 public:
     Transport(std::unique_ptr<kota::ipc::Transport> inner, std::optional<ReadError>& end) :
@@ -30,6 +57,10 @@ public:
                 end = message.error();
             }
             co_return kota::outcome_error(std::move(message.error()));
+        }
+        if(auto wrong = not_an_answer(*message)) {
+            end = ReadError{.kind = ReadError::Kind::Malformed, .message = std::move(*wrong)};
+            co_return kota::outcome_error(*end);
         }
         co_return std::move(*message);
     }
@@ -341,7 +372,11 @@ kota::task<> RemoteHandler::on_error(data::ipcid_t id,
                                      std::string message) {
     if(subscription.events.error) {
         notify("error",
-               protocol::CaptureError{.id = id, .parent = parent, .message = std::move(message)});
+               protocol::CaptureError{
+                   .id = id,
+                   .parent = parent,
+                   .message = protocol::to_text(std::move(message)),
+               });
     }
     co_return;
 }

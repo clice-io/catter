@@ -1,0 +1,3 @@
+[test."$ catter --handler \"python handler.py\" --handler-timeout 0 -- node -e 0"]
+stdout = "Handler `python handler.py` wrote what is not a protocol message: invalid JSON at byte 0"
+exit = 1

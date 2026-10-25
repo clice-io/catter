@@ -9,13 +9,13 @@
 - 由 catter 启动的 handler（`--handler`）从 stdin 读取 catter 的消息，把自己的消息写到 stdout。它的 stderr 就是终端的 stderr。
 - 监听端口的 handler（`--connect`）在每个 TCP 连接上做同样的事：一个连接就是一个会话。
 
-catter 发送请求和通知；handler 只应答请求，不发送其他任何消息。
+catter 发送请求和通知；handler 只应答请求，不发送其他任何消息。除下文的消息外，catter 还可能像 Language Server Protocol 那样，为它不再等待的请求发送 `$/cancelRequest`：handler 可以忽略它。
 
 ## 一次会话
 
 1. `initialize`（请求）：会话开始。handler 在应答中声明它想收到哪些消息。
 2. 构建运行期间，针对每条命令：`command`，对做决定的 handler 是请求，对不做决定的 handler 是通知；catter 未能捕获某条命令时发送 `error`；命令运行完毕后发送 `exit`。只有 handler 要求过的通知才会发来。
-3. `finish`（请求）：构建已结束。handler 应答后，catter 结束它的输入：由 catter 启动的 handler 随即退出；通过 TCP 连接时，catter 关闭连接。
+3. `finish`（请求）：构建已结束。handler 应答后，catter 结束它的输入：由 catter 启动的 handler 随即退出；通过 TCP 连接时，catter 关闭自己一侧的连接，由 handler 关闭连接。
 
 并行构建中的命令会相互重叠：多个 `command` 请求可以同时等待应答，handler 按请求的 id 应答，顺序不限。
 
@@ -78,6 +78,6 @@ catter 发送请求和通知；handler 只应答请求，不发送其他任何�
 
 ## 错误
 
-handler 无法应答某个请求时，以 JSON-RPC 错误应答；catter 报告的就是其中的 `message`。handler 以错误或 `abort` 应答、停止运行（输出结束）、写出不是协议消息的内容，或没有在 `--handler-timeout` 内应答时，catter 结束会话：正在做决定的命令，以及构建在其后启动的每条命令，都不运行、直接失败；构建结束后，catter 打印原因并以退出码 1 退出。
+handler 无法应答某个请求时，以 JSON-RPC 错误应答；catter 报告的就是其中的 `message`。handler 以错误或 `abort` 应答、停止运行（输出结束）、写出的内容不是对 catter 某个请求的应答，或没有在 `--handler-timeout` 内应答时，catter 结束会话：正在做决定的命令，以及构建在其后启动的每条命令，都不运行、直接失败；构建结束后，catter 不发送 `finish` 就结束各个 handler 的输入，打印原因并以退出码 1 退出。
 
 只观察的 handler 无法应答通知：它出错时就退出，catter 在下一次向它写入时报告这一情况。

@@ -31,6 +31,10 @@ catter --connect 127.0.0.1:9000 -- make
 | `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                    |        |
 | `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长。`0` 表示一直等下去。 | `60`   |
 
+## SDK
+
+SDK 尚未发布：它们在 catter 仓库的 `sdk/` 下，需要从仓库的检出目录中使用。把 `sdk/python` 加入 `PYTHONPATH` 后，Python handler 就能找到 `catter` 包，需要 Python 3.10 或更高版本。TypeScript handler 通过 `node_modules/@catter/sdk` 处指向 `sdk/typescript` 的符号链接导入 `@catter/sdk`，前提是 `pixi run -e dev npm-install` 已安装好 SDK 自身的依赖；它需要能直接运行 TypeScript 的 Node.js 22.18 或更高版本。
+
 ## 用 Python 编写 handler
 
 Python SDK 只依赖标准库。handler 继承 `catter.Handler`，重写它需要的回调：
@@ -63,7 +67,7 @@ catter.serve(Handler())
 
 handler 只会收到它重写了回调的那些事件。设置 `env = True` 后，命令会携带它的环境变量。
 
-动作有 `catter.Skip()`（等同于返回 `None`）、`catter.Drop()`（命令不运行，以 0 退出）、`catter.Abort(reason=...)` 和 `catter.Modify(args=..., executable=..., cwd=..., env=...)`，后者省略的字段沿用命令自己的值。
+动作有 `catter.Skip()`（等同于返回 `None`）、`catter.Drop()`（命令不运行，以 0 退出）、`catter.Abort(reason=...)` 和 `catter.Modify(args=..., executable=..., cwd=..., env=...)`，后者必须给出 `args`，省略的其他字段沿用命令自己的值。
 
 导入 `catter` 之后，handler 打印的内容都会进入 stderr，因为它的 stdout 用来传输协议。参数、路径和环境变量条目都是字符串；不是 UTF-8 的字节以孤立代理项（lone surrogate）出现，与 `os.fsdecode` 的表示方式相同，交回后原样传给命令。
 
@@ -93,7 +97,7 @@ await serve({
 });
 ```
 
-回调有 `onStart`、`onCommand`、`onError`、`onExit` 和 `onFinish`，与 Python 中的相同。不是 UTF-8 的参数以 `{ base64 }` 的形式出现，交回的命令会保留它。`listen(port)` 用于配合 `--connect`。
+回调有 `onStart`、`onCommand`、`onError`、`onExit` 和 `onFinish`，与 Python 中的相同。不是 UTF-8 的参数以 `{ base64 }` 的形式出现，交回的命令会保留它。配合 `--connect` 时，`listen(port)` 返回一个监听器，它的 `accept(handler)` 为下一个连接上来的 catter 服务一次会话。
 
 导入 `@catter/sdk` 之后，handler 用 `console` 打印的内容会输出到 stderr。它的 stdout 用于传输协议：由 catter 启动的 handler 不能写 `process.stdout`，也不能让它启动的程序继承 stdout。
 
@@ -109,7 +113,7 @@ handler 按固定顺序组成一条链：脚本在最前，其后是按命令行
 
 ## handler 失败时
 
-handler 中止构建、在回调中抛出异常、退出、写出不是协议消息的内容，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。构建结束后，catter 打印发生了什么，并以退出码 1 退出：
+handler 中止构建、在回调中抛出异常、退出、写出不是协议消息的内容，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。构建结束后，catter 不发送 `finish`（`on_finish` 不会运行）就结束各个 handler 的输入，打印发生了什么，并以退出码 1 退出：
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s

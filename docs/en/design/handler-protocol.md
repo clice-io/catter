@@ -9,13 +9,13 @@ Messages are [JSON-RPC 2.0](https://www.jsonrpc.org/specification), each framed 
 - A handler catter starts (`--handler`) reads catter's messages on its stdin and writes its own on its stdout. Its stderr is the terminal's.
 - A handler that listens (`--connect`) does the same over each TCP connection: one connection is one session.
 
-catter sends requests and notifications; a handler answers the requests and sends nothing else.
+catter sends requests and notifications; a handler answers the requests and sends nothing else. Beside the messages below, catter may send `$/cancelRequest`, as the Language Server Protocol does, for a request it no longer waits for: a handler may ignore it.
 
 ## A session
 
 1. `initialize` (request): the session starts. The handler answers with what it wants to be told.
 2. While the build runs, for each command: `command`, a request to a handler that decides and a notification to one that does not; `error` when catter could not capture a command; `exit` once a command has run. Notifications arrive only if the handler asked for them.
-3. `finish` (request): the build has ended. Once the handler has answered, catter ends its input: a handler it started then exits; over TCP, catter closes the connection.
+3. `finish` (request): the build has ended. Once the handler has answered, catter ends its input: a handler it started then exits; over TCP, catter shuts down its side of the connection, and the handler closes it.
 
 Commands of a parallel build overlap: `command` requests can be in flight together, and are answered by their ids, in any order.
 
@@ -78,6 +78,6 @@ The result of the request is an action, named by its `action` field:
 
 ## Errors
 
-A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error or with `abort`, stops (its output ends), writes what is not a protocol message, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running; once the build has ended, catter prints the reason and exits 1.
+A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error or with `abort`, stops (its output ends), writes what is not an answer to one of its requests, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running; once the build has ended, catter ends the handlers' input without a `finish`, prints the reason and exits 1.
 
 An observer cannot answer a notification: one that fails exits, which catter reports when it next writes to it.

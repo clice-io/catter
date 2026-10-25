@@ -31,6 +31,10 @@ This suits a handler run under a debugger, or one that serves several builds in 
 | `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                 |         |
 | `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over. `0` waits as long as it takes. | `60`    |
 
+## The SDKs
+
+The SDKs are not published yet: they are in catter's repository, under `sdk/`, and run from a checkout of it. A Python handler finds the `catter` package once `sdk/python` is on `PYTHONPATH`, and needs Python 3.10 or later. A TypeScript handler imports `@catter/sdk` through a symbolic link to `sdk/typescript` at `node_modules/@catter/sdk`, once `pixi run -e dev npm-install` has installed the SDK's own dependencies, and needs Node.js 22.18 or later, which runs TypeScript as it is.
+
 ## Writing a handler in Python
 
 The Python SDK uses the standard library alone. A handler subclasses `catter.Handler` and overrides the callbacks it needs:
@@ -63,7 +67,7 @@ catter.serve(Handler())
 
 A handler is told only of the events whose callback it overrides. `env = True` makes commands carry their environment.
 
-The actions are `catter.Skip()` (the same as returning `None`), `catter.Drop()` (the command does not run, and exits 0), `catter.Abort(reason=...)`, and `catter.Modify(args=..., executable=..., cwd=..., env=...)`, whose fields left out keep the command's own.
+The actions are `catter.Skip()` (the same as returning `None`), `catter.Drop()` (the command does not run, and exits 0), `catter.Abort(reason=...)`, and `catter.Modify(args=..., executable=..., cwd=..., env=...)`, which needs `args`: the other fields left out keep the command's own.
 
 Once `catter` is imported, what the handler prints goes to stderr: its stdout carries the protocol. Arguments, paths and environment entries are strings; bytes that are not UTF-8 appear as lone surrogates, as `os.fsdecode` spells them, and reach the command unchanged when handed back.
 
@@ -93,7 +97,7 @@ await serve({
 });
 ```
 
-The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as in Python. An argument that is not UTF-8 comes as `{ base64 }`, which a command handed back keeps. `listen(port)` serves `--connect`.
+The callbacks are `onStart`, `onCommand`, `onError`, `onExit` and `onFinish`, as in Python. An argument that is not UTF-8 comes as `{ base64 }`, which a command handed back keeps. For `--connect`, `listen(port)` returns a listener, whose `accept(handler)` serves the session of the next catter that connects.
 
 Once `@catter/sdk` is imported, what the handler prints with `console` goes to stderr. Its stdout carries the protocol: a handler started by catter must not write to `process.stdout`, nor let a program it starts inherit it.
 
@@ -109,7 +113,7 @@ The handlers form a chain, in a fixed order: the script first, then the handlers
 
 ## When a handler fails
 
-A handler that aborts the build, raises in a callback, exits, writes what is not a protocol message, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter prints what happened and exits 1:
+A handler that aborts the build, raises in a callback, exits, writes what is not a protocol message, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s
