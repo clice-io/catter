@@ -28,7 +28,7 @@ Distilled from real correction history — these mistakes keep recurring:
 
 ## Source Layout
 
-C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a target per directory of `src/`. The directories are layers that include only downward — `support` ← `command` ← `session` ← {`capture`, `protocol`, `feature`} ← `driver`; `proxy` builds on `support`, `session` and `capture`, the hook payloads on `support` alone — and every include names its header by its path under `src/` (`"support/log.h"`). `pixi run -e dev check-layers` checks it, as CI does.
+C++23 in headers and `.cc` sources, built by xmake (`xmake.lua`) into a target per directory of `src/`. The directories are layers that include only downward — {`support`, `command`} ← `session` ← {`capture`, `protocol`, `feature`} ← `driver`; `command` builds on nothing of `src/`, `proxy` on `support`, `session` and `capture`, the hook payloads on `support` alone — and every include names its header by its path under `src/` (`"support/log.h"`). `pixi run -e dev check-layers` checks it, as CI does.
 
 - `src/support/` — logging, data paths, UTF-8 and the system's strings, what catter prints; `config/` (names and paths every process agrees on, the hook's environment among them), `resolver/` (finding a program as `exec`/`CreateProcess` would), `winapi/`
 - `src/command/` — what a command is: the compiler and its identification, its arguments parsed on the option tables of `option/` (clang, lld, llvm-lib and llvm-dlltool, from LLVM's TableGen output, and nvcc, read by kotatsu's option parser), its mode and target, the files it reads and writes; `ar`; the arguments of linkers and librarians; edits of a command's arguments

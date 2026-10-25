@@ -336,11 +336,8 @@ target("unittests")
     add_local_prefix_includedirs()
     add_rules("unittests-main")
 
-    add_files("unittests/support/**.cc")
-    add_files("unittests/command/**.cc")
-    add_files("unittests/protocol/**.cc")
-    add_files("unittests/feature/**.cc")
-    add_deps("support-resolver", "protocol", "feature")
+    add_files("unittests/**.cc|main.cc|hook/**.cc")
+    add_deps("support-resolver", "capture", "protocol", "feature")
 
     add_tests("default")
 
