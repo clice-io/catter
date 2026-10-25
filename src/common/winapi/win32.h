@@ -1,8 +1,8 @@
 #pragma once
 #ifdef CATTER_WINDOWS
-#include <chrono>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 
 // clang-format off
@@ -179,9 +179,8 @@ private:
     LPVOID space = nullptr;
 };
 
-std::error_code wait_for_object(HANDLE handle,
-                                std::chrono::milliseconds ms = std::chrono::milliseconds{
-                                    INFINITE}) noexcept;
+/// Waits until `handle` is signaled; the error of a wait that failed.
+std::error_code wait_for_object(HANDLE handle) noexcept;
 
 std::string quote_win32_arg(std::string_view arg) noexcept;
 }  // namespace catter::win

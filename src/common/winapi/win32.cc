@@ -4,15 +4,11 @@
 #include <limits>
 
 namespace catter::win {
-std::error_code wait_for_object(HANDLE handle, std::chrono::milliseconds ms) noexcept {
-
-    switch(WaitForSingleObject(handle, static_cast<DWORD>(ms.count()))) {
-        case WAIT_OBJECT_0: return {};
-
-        case WAIT_TIMEOUT: return std::make_error_code(std::errc::timed_out);
-        case WAIT_FAILED:
-        default: return std::error_code(GetLastError(), std::system_category());
+std::error_code wait_for_object(HANDLE handle) noexcept {
+    if(WaitForSingleObject(handle, INFINITE) == WAIT_FAILED) {
+        return std::error_code(GetLastError(), std::system_category());
     }
+    return {};
 }
 
 std::string quote_win32_arg(std::string_view arg) noexcept {

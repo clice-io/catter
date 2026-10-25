@@ -1,11 +1,8 @@
 [test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
-wrong = "the output gets blank lines (catter#139)"
 stdout = '''
 
   1>Checking Build System
-
   Building Custom Rule ${WS}/CMakeLists.txt
-
   main.cc
   util.cc
   Generating Code...

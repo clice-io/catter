@@ -152,7 +152,7 @@ When `catter-proxy` (in injector mode) needs to start a build command with the h
 
    The remote thread's entry point is `LoadLibraryA`, and its argument is the pointer to the DLL path string written in step 4. When the thread runs, it loads `catter-hook-win64.dll` into the target process.
 
-6. **Wait for injection to complete**. The proxy waits for the remote thread to finish (with a 3-second timeout).
+6. **Wait for injection to complete**. The proxy waits for the remote thread to finish.
 
 7. **Resume the main thread**. The proxy calls `ResumeThread()` to let the target process start executing. By this point, the hook DLL is loaded and its hooks are active.
 

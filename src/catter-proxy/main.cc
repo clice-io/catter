@@ -60,9 +60,6 @@ kota::process::options process_options(const data::command& cmd, bool verbatim_a
         .env = cmd.env,
         .cwd = cmd.cwd,
         .creation = {.windows_hide = true, .windows_verbatim_arguments = verbatim_arguments},
-        .streams = {kota::process::stdio::inherit(),
-                     kota::process::stdio::pipe(false, true),
-                     kota::process::stdio::pipe(false, true)}
     };
 }
 
@@ -72,7 +69,7 @@ kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::st
     switch(act.type) {
         case action::WRAP: {
             auto opts = process_options(act.cmd, true);
-            co_return co_await capture_process_result(make_process_event(opts));
+            co_return co_await run_process(opts);
         }
         case action::INJECT: {
             co_return co_await proxy::hook::run(act.cmd, id, std::move(pipe_name));
@@ -194,7 +191,7 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
             // The arguments are the ones the hook took apart: quoted back,
             // not joined as they are.
             auto opts = process_options(command_of(opt), false);
-            auto result = co_await capture_process_result(make_process_event(opts));
+            auto result = co_await run_process(opts);
             co_return static_cast<int>(result.code);
         } catch(const std::exception& ex) {
             LOG_ERROR("Run `{}` failed: {}", format_args(argc, argv), ex.what());

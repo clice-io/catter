@@ -111,16 +111,12 @@ kota::task<data::process_result> Session::spawn(std::string executable,
              args_str);
 
     kota::process::options opts{
-        .file = executable,
-        .args = args,
-        .cwd = cwd,
+        .file = std::move(executable),
+        .args = std::move(args),
+        .cwd = std::move(cwd),
         .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
-        .streams = {kota::process::stdio::inherit(),
-                     kota::process::stdio::pipe(false, true),
-                     kota::process::stdio::pipe(false, true)}
     };
-
-    co_return co_await capture_process_result(make_process_event(opts));
+    co_return co_await run_process(opts);
 }
 
 }  // namespace catter

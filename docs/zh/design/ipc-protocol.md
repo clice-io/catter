@@ -89,7 +89,7 @@ enum class RequestType : uint8_t {
 
 - **`DROP`（0）** -- 不执行命令。代理立即返回退出码 0。用于 handler 判定命令无关紧要的情况（例如用户想跳过的编译器调用）。
 - **`INJECT`（1）** -- 挂载钩子库后执行命令。代理重新添加 `LD_PRELOAD`（或在 Windows 上执行 DLL 注入），使此命令的子进程也被拦截。这是需要监控子进程的构建命令的默认动作。
-- **`WRAP`（2）** -- 直接执行命令，不挂载钩子。代理运行命令并捕获标准输出/标准错误，但不注入钩子。用于叶子命令（如实际的编译器调用），这些命令不会生成更多的构建子进程。
+- **`WRAP`（2）** -- 直接执行命令，不挂载钩子。代理运行命令，但不注入钩子。用于叶子命令（如实际的编译器调用），这些命令不会生成更多的构建子进程。
 - **`FAIL`（3）** -- 不执行命令：代理立即返回退出码 1。会话已因错误结束（某个 handler 中止了构建，或者自身出错），此后启动的每条命令都会这样失败，直到构建结束。
 
 守护进程可能会修改返回动作中的命令。例如，handler 可以更改编译器标志、重定向输出路径或替换可执行文件。
@@ -117,11 +117,9 @@ enum class RequestType : uint8_t {
 
 **Params** -- `process_result`：
 
-| 字段      | 类型      | 说明           |
-| --------- | --------- | -------------- |
-| `code`    | `int64_t` | 进程退出码     |
-| `std_out` | `string`  | 捕获的标准输出 |
-| `std_err` | `string`  | 捕获的标准错误 |
+| 字段   | 类型      | 说明       |
+| ------ | --------- | ---------- |
+| `code` | `int64_t` | 进程退出码 |
 
 **Result**: `null`（无响应负载）
 
@@ -212,8 +210,6 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
-    std::string std_out;               // Captured stdout
-    std::string std_err;               // Captured stderr
 };
 
 // Decision returned by the daemon

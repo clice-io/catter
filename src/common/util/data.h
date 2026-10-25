@@ -19,8 +19,6 @@ struct command {
 
 struct process_result {
     int64_t code = -1;
-    std::string std_out{};
-    std::string std_err{};
 };
 
 struct action {

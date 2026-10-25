@@ -1,4 +1,5 @@
 #pragma once
+#include <format>
 #include <print>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/io/loop.h>
@@ -8,7 +9,6 @@
 #include <kota/ipc/transport.h>
 
 #include "util/data.h"
-#include "util/kotatsu.h"
 
 namespace catter::proxy::ipc {
 

@@ -10,19 +10,15 @@ stdout = '''
 exit = 0
 
 [test."$ catter script::cdb -q -o compile_commands.json -- cmake --build build -j 1".win32]
-wrong = "command output gets its line endings rewritten, which leaves blank lines in Ninja's output (catter#139)"
+differs = "CMake builds with MSVC: cl.exe prints the module it compiles, and Ninja names files the Windows way"
 stdout = '''
 [1/6] Scanning ${WS}/main.cc for CXX dependencies
-
 [2/6] Scanning ${WS}/greet.cppm for CXX dependencies
 greet.cppm
-
 [3/6] Generating CXX dyndep file CMakeFiles\modules.dir\CXX.dd
 [4/6] Building CXX object CMakeFiles\modules.dir\greet.cppm.obj
 greet.cppm
-
 [5/6] Building CXX object CMakeFiles\modules.dir\main.cc.obj
-
 [6/6] Linking CXX executable modules.exe
 '''
 exit = 0

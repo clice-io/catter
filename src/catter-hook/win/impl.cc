@@ -14,7 +14,6 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
-#include <io.h>
 #include <uv.h>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
@@ -24,7 +23,6 @@
 #include "util/data.h"
 #include "util/encoding.h"
 #include "util/exception.h"
-#include "util/kotatsu.h"
 #include "util/log.h"
 #include "win/env.h"
 #include "win/inject.h"
@@ -73,54 +71,32 @@ std::vector<wchar_t> build_environment_block(const std::vector<std::string>& env
     return env_block;
 }
 
-struct AnonymousPipe {
-    win::Handle read{};
-    win::Handle write{};
-};
-
-AnonymousPipe create_capture_pipe(std::string_view name) {
-    SECURITY_ATTRIBUTES sa{
-        .nLength = sizeof(SECURITY_ATTRIBUTES),
-        .lpSecurityDescriptor = nullptr,
-        .bInheritHandle = TRUE,
-    };
-
-    HANDLE read = nullptr;
-    HANDLE write = nullptr;
-    if(!CreatePipe(&read, &write, &sa, 0)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   std::format("Failed to create {} capture pipe", name));
+/// The proxy's standard handle `which`, duplicated for the command to inherit
+/// as its own; null when the proxy has no valid one.
+win::Handle std_handle_for_command(DWORD which) {
+    HANDLE own = GetStdHandle(which);
+    // INVALID_HANDLE_VALUE is also the pseudo handle of the current process,
+    // which DuplicateHandle would duplicate.
+    if(own == INVALID_HANDLE_VALUE) {
+        return {};
     }
 
-    if(!SetHandleInformation(read, HANDLE_FLAG_INHERIT, 0)) {
-        auto err = GetLastError();
-        CloseHandle(read);
-        CloseHandle(write);
-        throw catter::system_error(
-            err,
-            std::system_category(),
-            std::format("Failed to disable inheritance for {} capture pipe", name));
+    // The proxy's own handle is not inherited beside the command's copy: a
+    // server the command starts would keep that second copy, and with it
+    // whatever reads the build's output, open for as long as it lives.
+    SetHandleInformation(own, HANDLE_FLAG_INHERIT, 0);
+    HANDLE duplicate = nullptr;
+    if(!DuplicateHandle(GetCurrentProcess(),
+                        own,
+                        GetCurrentProcess(),
+                        &duplicate,
+                        0,
+                        TRUE,
+                        DUPLICATE_SAME_ACCESS)) {
+        // None, or one the build passed without letting the proxy inherit it.
+        return {};
     }
-
-    return AnonymousPipe{.read = win::Handle(read), .write = win::Handle(write)};
-}
-
-kota::pipe open_capture_pipe(win::Handle pipe, std::string_view name, kota::event_loop& loop) {
-    auto fd = uv_open_osfhandle(pipe.get());
-    if(fd < 0) {
-        throw cpptrace::runtime_error(
-            std::format("Failed to convert {} pipe handle to CRT fd", name));
-    }
-
-    auto opened = kota::pipe::open(fd, kota::pipe::options{}, loop);
-    if(!opened) {
-        throw cpptrace::runtime_error(
-            std::format("{} pipe open failed: {}", name, opened.error().message()));
-    }
-    pipe.release();  // Ownership transferred to kotatsu
-
-    return std::move(*opened);
+    return win::Handle(duplicate);
 }
 
 class RunningProcess {
@@ -166,12 +142,6 @@ private:
 
     win::Handle process = INVALID_HANDLE_VALUE;
     win::Handle thread = INVALID_HANDLE_VALUE;
-};
-
-struct StartedProcess {
-    RunningProcess process;
-    win::Handle stdout_read{};
-    win::Handle stderr_read{};
 };
 
 class ProcessWaiter {
@@ -242,16 +212,7 @@ private:
     std::coroutine_handle<> awaiter_handle{};
 };
 
-kota::task<int64_t, kota::error> wait_for_process_exit(RunningProcess process,
-                                                       kota::event_loop* loop) noexcept {
-    auto wait_ret = co_await ProcessWaiter(process.process_handle(), loop->create_relay());
-    if(!wait_ret) {
-        co_return kota::outcome_error(wait_ret.error());
-    }
-    co_return wait_ret->status;
-}
-
-StartedProcess start_process(data::command cmd,
+RunningProcess start_process(data::command cmd,
                              data::ipcid_t id,
                              const std::string& pipe_name,
                              std::string proxy_path) {
@@ -262,25 +223,17 @@ StartedProcess start_process(data::command cmd,
 
     auto env_block = build_environment_block(env);  // Double null termination
 
-    auto stdout_pipe = create_capture_pipe("stdout");
-    auto stderr_pipe = create_capture_pipe("stderr");
-
+    auto input = std_handle_for_command(STD_INPUT_HANDLE);
+    auto output = std_handle_for_command(STD_OUTPUT_HANDLE);
+    auto error = std_handle_for_command(STD_ERROR_HANDLE);
     STARTUPINFOW si{
         .cb = sizeof(STARTUPINFOW),
         .dwFlags = STARTF_USESTDHANDLES,
-        .hStdInput = GetStdHandle(STD_INPUT_HANDLE),
-        .hStdOutput = stdout_pipe.write.get(),
-        .hStdError = stderr_pipe.write.get(),
+        .hStdInput = input.get(),
+        .hStdOutput = output.get(),
+        .hStdError = error.get(),
     };
     PROCESS_INFORMATION pi{};
-
-    // The command writes to the capture pipes, which the proxy forwards: the
-    // proxy's own output handles, catter's pipes, are not the command's.
-    // Inherited, they would hold the session open as long as the command, or a
-    // server it started, lives.
-    for(auto own: {STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
-        SetHandleInformation(GetStdHandle(own), HANDLE_FLAG_INHERIT, 0);
-    }
 
     auto cmdline = cmdline_of(cmd);
     auto executable = util::to_wide(cmd.executable);
@@ -318,27 +271,21 @@ StartedProcess start_process(data::command cmd,
                                    "Failed to resume target process");
     }
 
-    return StartedProcess{
-        .process = std::move(process),
-        .stdout_read = std::move(stdout_pipe.read),
-        .stderr_read = std::move(stderr_pipe.read),
-    };
+    return process;
 }
 }  // namespace
 
 kota::task<data::process_result>
     run(data::command cmd, data::ipcid_t id, std::string pipe_name, std::string proxy_path) {
+    LOG_INFO("new command id is: {}", id);
+    auto process = start_process(std::move(cmd), id, pipe_name, std::move(proxy_path));
 
-    return capture_process_result(
-        [cmd, id, pipe_name, proxy_path](kota::event_loop& loop) mutable -> catter::process_info {
-            LOG_INFO("new command id is: {}", id);
-            auto started = start_process(std::move(cmd), id, pipe_name, std::move(proxy_path));
-
-            return {
-                .wait_task = wait_for_process_exit(std::move(started.process), &loop),
-                .stdout_pipe = open_capture_pipe(std::move(started.stdout_read), "stdout", loop),
-                .stderr_pipe = open_capture_pipe(std::move(started.stderr_read), "stderr", loop),
-            };
-        });
+    auto exit = co_await ProcessWaiter(process.process_handle(),
+                                       kota::event_loop::current().create_relay());
+    if(!exit) {
+        throw cpptrace::runtime_error(
+            std::format("Process wait failed `{}`", exit.error().message()));
+    }
+    co_return data::process_result{.code = exit->status};
 };
 };  // namespace catter::proxy::hook
