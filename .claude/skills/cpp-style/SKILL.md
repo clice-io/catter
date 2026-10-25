@@ -67,8 +67,10 @@ build sees the command's real exit status and output. Open issues such as
 The hook payloads (`src/catter-hook/*/payload`) run inside every process
 of the build, next to that program's own runtime. They:
 
-- link only what they must (`common-resolver`; the rest of `common` only
-  in `debug`, for logging), keep their symbols hidden (`exports.map`,
+- link only what they must (the resolver: `common-resolver` on Unix,
+  its sources compiled into each Windows DLL, for the DLL's architecture
+  and without ASan; the rest of `common` only in the Unix `debug` build,
+  for logging), keep their symbols hidden (`exports.map`,
   `exports.def`), and on Unix carry a private C++ runtime (static
   libstdc++ on Linux, a force-loaded libc++ on macOS), so nothing they
   bring can clash with the host program's;

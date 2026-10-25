@@ -7,8 +7,6 @@
 
 namespace catter::win {
 
-constexpr static char DLL_NAME[] = "catter-hook-win64.dll";
-
 template <CharT char_t>
 constexpr char_t ENV_VAR_IPC_ID[] = {};
 

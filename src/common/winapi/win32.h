@@ -2,7 +2,6 @@
 #ifdef CATTER_WINDOWS
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <type_traits>
 
 // clang-format off
@@ -127,60 +126,6 @@ public:
 private:
     HANDLE h;
 };
-
-class RemoteMemory {
-public:
-    RemoteMemory() = default;
-
-    RemoteMemory(HANDLE hProcess,
-                 LPVOID lpAddress,
-                 SIZE_T dwSize,
-                 DWORD flAllocationType,
-                 DWORD flProtect) : process(hProcess) {
-        space = VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect);
-        if(!space)
-            throw std::runtime_error("VirtualAllocEx failed");
-    }
-
-    RemoteMemory(const RemoteMemory&) = delete;
-
-    RemoteMemory(RemoteMemory&& other) noexcept :
-        process(std::exchange(other.process, nullptr)), space(std::exchange(other.space, nullptr)) {
-    }
-
-    RemoteMemory& operator= (const RemoteMemory&) = delete;
-
-    RemoteMemory& operator= (RemoteMemory&& other) noexcept {
-        if(this != &other) {
-            this->free();
-            this->process = std::exchange(other.process, nullptr);
-            this->space = std::exchange(other.space, nullptr);
-        }
-        return *this;
-    }
-
-    void free() {
-        if(this->space && this->process) {
-            VirtualFreeEx(process, space, 0, MEM_RELEASE);
-            space = nullptr;
-        }
-    }
-
-    ~RemoteMemory() {
-        this->free();
-    }
-
-    LPVOID get() const {
-        return space;
-    }
-
-private:
-    HANDLE process = nullptr;
-    LPVOID space = nullptr;
-};
-
-/// Waits until `handle` is signaled; the error of a wait that failed.
-std::error_code wait_for_object(HANDLE handle) noexcept;
 
 std::string quote_win32_arg(std::string_view arg) noexcept;
 }  // namespace catter::win

@@ -119,11 +119,20 @@ Every process in this tree inherits `LD_PRELOAD` and gets hooked. Each invocatio
 The Windows hook uses a fundamentally different approach because Windows has no equivalent to `LD_PRELOAD`. Instead, catter combines:
 
 1. **DLL injection** -- to load the hook library into target processes
-2. **API hooking via MinHook** -- to intercept `CreateProcess` calls within those processes
+2. **API hooking via [Microsoft Detours](https://github.com/microsoft/Detours)** -- to intercept `CreateProcess` calls within those processes
 
-### Hook DLL
+### Hook DLLs
 
-The hook is compiled as `catter-hook-win64.dll`. It uses MinHook, a lightweight x86/x64 API hooking library that works by overwriting the first few bytes of a target function with a jump to a detour function (trampoline hooking).
+A process loads only DLLs of its own architecture, so there is one hook DLL per architecture, each installed next to `catter-proxy.exe`:
+
+| DLL                     | Loaded into                                                      |
+| ----------------------- | ---------------------------------------------------------------- |
+| `catter-hook-x64.dll`   | x64 processes, x64 processes emulated on ARM64, ARM64EC programs |
+| `catter-hook-arm64.dll` | native ARM64 processes                                           |
+
+Every Windows build of catter carries both: on Windows on ARM, a build mixes native ARM64 tools with emulated x64 ones. A 32-bit (x86) process has no hook DLL yet: it runs without one, as it would without catter, and the commands it starts are not captured. catter-proxy logs a warning naming the program.
+
+Each DLL is built without AddressSanitizer and with the static C runtime: it runs inside every process of the build, which may lack the runtime DLLs, and Detours' search of the address space reads ASan's shadow memory.
 
 ### Environment Variables
 
@@ -141,31 +150,22 @@ When `catter-proxy` (in injector mode) needs to start a build command with the h
 
 2. **Set environment variables**. `CATTER_IPC_ID`, `CATTER_IPC_PIPE` and `CATTER_PROXY_PATH` are set in the target process environment before creation (passed via the environment block).
 
-3. **Allocate memory in the target process**. The proxy calls `VirtualAllocEx()` to allocate a region of memory in the target process's address space.
+3. **Find the process's architecture**. `GetProcessInformation(ProcessMachineTypeInfo)` gives the machine whose code the process runs: x64 for x64 processes emulated on ARM64 and for ARM64EC ones, which `IsWow64Process2` cannot tell from native ARM64 processes. On Windows 10, which has no `ProcessMachineTypeInfo` and emulates no x64, `IsWow64Process2` gives it.
 
-4. **Write the DLL path**. The proxy calls `WriteProcessMemory()` to write the full path of `catter-hook-win64.dll` into the allocated memory.
+4. **Add the hook DLL to the process's imports**. `DetourUpdateProcessWithDll()` adds the DLL of that architecture to the import table of the suspended executable, so the loader maps it before any of the program's own code runs. The loader reads the DLL's path there in the process's own ANSI code page, which a program can make UTF-8, so the path must be ASCII: a path that is not goes by its 8.3 short name, or, on a volume that keeps no short names, by a copy of the DLL in catter's data directory.
 
-5. **Create a remote thread to load the DLL**. The proxy tries three methods in order:
-   - `CreateRemoteThread()` -- Documented Win32 API. Tried first as it is the most widely supported.
-   - `NtCreateThreadEx()` -- Undocumented NT API. Fallback that works reliably on modern Windows (Vista+).
-   - `RtlCreateUserThread()` -- Another undocumented NT API. Last resort fallback.
-
-   The remote thread's entry point is `LoadLibraryA`, and its argument is the pointer to the DLL path string written in step 4. When the thread runs, it loads `catter-hook-win64.dll` into the target process.
-
-6. **Wait for injection to complete**. The proxy waits for the remote thread to finish.
-
-7. **Resume the main thread**. The proxy calls `ResumeThread()` to let the target process start executing. By this point, the hook DLL is loaded and its hooks are active.
+5. **Resume the main thread**. The proxy calls `ResumeThread()` to let the target process start executing. The loader maps the hook DLL with the program's other imports, and its hooks are active before the program's entry point runs.
 
 ### Hooked Windows APIs
 
-The hook DLL installs MinHook trampoline hooks on these functions during `DLL_PROCESS_ATTACH`:
+The hook DLL attaches Detours hooks to these functions in one transaction during `DLL_PROCESS_ATTACH`:
 
 - **`CreateProcessA()`** -- ANSI version of process creation
 - **`CreateProcessW()`** -- Wide-character version of process creation
-- **`CreateProcessAsUserA()`** -- Passthrough (currently not rewritten)
-- **`CreateProcessAsUserW()`** -- Passthrough (currently not rewritten)
 
-MinHook works by:
+A process a program starts under another account's token (`CreateProcessAsUser`, `CreateProcessWithTokenW`, `CreateProcessWithLogonW`) runs without the hook and is not captured: `catter-proxy` would have to run under that token too, and that account may be unable to start it or to reach the session's pipe.
+
+Detours works by:
 
 1. Saving the first few instructions of the target function
 2. Overwriting them with a jump to the detour function
@@ -187,7 +187,7 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 
    The `lpApplicationName` is set to `nullptr` so that the command line is parsed by `CreateProcess` normally.
 
-4. **Call the original `CreateProcess`** via the MinHook trampoline with the modified command line.
+4. **Call the original `CreateProcess`** via the Detours trampoline with the modified command line.
 
 ### Key Difference from Unix
 
@@ -199,30 +199,27 @@ On Windows, there is no such mechanism. The hook DLL must be explicitly injected
 2. It rewrites the command to go through `catter-proxy`
 3. When the proxy decides to execute with `INJECT` action, it performs DLL injection into the new process (create suspended, inject, resume)
 
-This means the proxy is responsible for re-injecting the hook into each generation of child processes, maintaining the recursive interception chain.
+This means the proxy is responsible for re-injecting the hook into each generation of child processes, maintaining the recursive interception chain. Processes of different architectures can alternate along the chain: each gets the hook DLL of its own.
 
 ### DLL Lifecycle
 
 ```
 DLL_PROCESS_ATTACH:
-  MH_Initialize()       -- Initialize MinHook
-  MH_CreateHook(...)    -- Install hooks on CreateProcess variants
-  MH_EnableHook(...)    -- Activate all hooks
-
-DLL_PROCESS_DETACH:
-  MH_DisableHook(...)   -- Deactivate all hooks
-  MH_Uninitialize()     -- Clean up MinHook
+  DetourRestoreAfterWith()   -- Restore the import table catter-proxy changed
+  DetourTransactionBegin()
+  DetourAttach(...)          -- Hook CreateProcessA and CreateProcessW
+  DetourTransactionCommit()  -- Activate all hooks at once
 ```
 
-`DisableThreadLibraryCalls()` is called during attach to suppress `DLL_THREAD_ATTACH` and `DLL_THREAD_DETACH` notifications, reducing overhead.
+`DisableThreadLibraryCalls()` is called during attach to suppress `DLL_THREAD_ATTACH` and `DLL_THREAD_DETACH` notifications, reducing overhead. The DLL is an import of the executable, unloaded only with the process, so `DLL_PROCESS_DETACH` has nothing to undo. It exports ordinal 1, as every DLL Detours injects must.
 
 ## Platform Comparison
 
 | Aspect               | Linux                                                      | macOS                           | Windows                                |
 | -------------------- | ---------------------------------------------------------- | ------------------------------- | -------------------------------------- |
-| Hook library         | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`     | `catter-hook-win64.dll`                |
-| Injection method     | `LD_PRELOAD` env var                                       | `DYLD_INSERT_LIBRARIES` env var | `VirtualAllocEx` + `LoadLibraryA`      |
-| Interposition        | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` macro          | MinHook trampoline hooking             |
+| Hook library         | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`     | `catter-hook-{x64,arm64}.dll`          |
+| Injection method     | `LD_PRELOAD` env var                                       | `DYLD_INSERT_LIBRARIES` env var | `DetourUpdateProcessWithDll`           |
+| Interposition        | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` macro          | Detours trampoline hooking             |
 | Intercepted APIs     | `execve`, `execvp`, `posix_spawn`, etc.                    | Same as Linux                   | `CreateProcessA`, `CreateProcessW`     |
 | Recursive hooking    | Automatic (env inherited)                                  | Automatic (env inherited)       | Explicit (DLL re-injected per process) |
 | Env vars for session | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux                   | `CATTER_PROXY_PATH`, `CATTER_IPC_ID`   |

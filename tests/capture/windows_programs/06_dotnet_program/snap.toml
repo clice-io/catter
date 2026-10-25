@@ -1,0 +1,12 @@
+[test."$ spawn.exe CreateProcessW command.txt"]
+stdout = "64-bit: True"
+exit = 7
+
+[test."$ catter cmd-tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
+stdout = '''
+64-bit: True
+Build failed with exit code 7. Printing partial command tree.
+spawn.exe CreateProcessW command.txt
+└── app.exe
+'''
+exit = 0

@@ -41,6 +41,9 @@ jobs:
       os: windows-2025
       target: x86_64-pc-windows-msvc
       package: package-windows-2025
+      # The package Windows on ARM installs too, run emulated there: its
+      # catter-proxy injects the arm64 hook into native processes.
+      cases_runners: '["windows-2025", "windows-11-arm"]'
 
   windows-x64-debug:
     uses: ./.github/workflows/test-target.yml
@@ -52,6 +55,15 @@ jobs:
       # that made them, which the build cache does not keep: cached ones
       # would link without it.
       build_cache: false
+
+  # Built natively by MSVC for ARM64, the pixi environments running emulated.
+  # The cases' programs are x64 (vcvars64) and the system's arm64, so the
+  # build's processes mix both hook DLLs.
+  windows-arm64:
+    uses: ./.github/workflows/test-target.yml
+    with:
+      os: windows-11-arm
+      target: aarch64-pc-windows-msvc
 
   # Windows built with xclang for MinGW.
   windows-x64-mingw:
