@@ -26,8 +26,8 @@ rules and the pitfalls. The framework is `tools/testing/`
    compiler or argument parser makes of one command is an `explain` case,
    a line of its `commands.txt`.
 3. Run it alone on the box the build ran on (the test skill):
-   `CATTER_CASES=<topic>/<subtopic>/NN_name UPDATE_SNAPSHOTS=1 pixi run -e dev cases-test <mode>`,
-   the mode of the build there (PowerShell on Windows: the test skill).
+   `CATTER_CASES=<topic>/<subtopic>/NN_name UPDATE_SNAPSHOTS=1 pixi run -e dev cases-test <type>`,
+   the build type of the build there (PowerShell on Windows: the test skill).
    The update prints what changed: review every block like code. Update on
    Linux first, the reference; then macOS and Windows, which write only the
    sub-blocks where they differ. Each sub-block, and each block of an answer
@@ -81,9 +81,6 @@ rules and the pitfalls. The framework is `tools/testing/`
   run without the hook (`src/capture/inject/unix/impl.cc`): what they start
   goes uncaptured, so the macOS blocks of make and Ninja builds carry that
   `wrong`; node-based capture cases still cover macOS.
-- A debug (ASan) catter on Linux puts the sanitizer runtime first in the
-  preload of every program the hook enters, with leak detection off for
-  them (`src/capture/inject/unix/impl.cc`): a case needs nothing for it.
 - A native stack trace never reaches stdout (only the log): one in a block
   is a regression.
 

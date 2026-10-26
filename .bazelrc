@@ -1,0 +1,24 @@
+common --enable_platform_specific_config
+# xclang, kotatsu and the third-party libraries come from the clice Bazel
+# registry, the rest from the Bazel Central Registry.
+common --registry=https://bazel.clice.io/
+common --registry=https://bcr.bazel.build/
+# The C++ toolchain is xclang's (MODULE.bazel), on every platform; rules_cc's
+# detection of another is off.
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+common --cxxopt=-std=c++23 --host_cxxopt=-std=c++23
+common:macos --macos_minimum_os=15.0
+# catter logs through spdlog with std::format, and nothing it logs throws.
+common --@spdlog//:std_format=true --@spdlog//:exceptions=false
+
+# The build types, each in a directory of its own: build/<type>/bin is
+# Bazel's output tree of it, the programs in its bin/. RelWithDebInfo is the
+# default; `--config=Debug` is an ASan build, but for the hook payloads
+# (bazel/defs.bzl). Windows on ARM has no ASan: xclang refuses its Debug
+# build.
+common -c opt --copt=-g --symlink_prefix=build/RelWithDebInfo/
+common:RelWithDebInfo -c opt
+common:Debug -c dbg --features=asan --symlink_prefix=build/Debug/
+
+# A local file of one's own (a disk cache, say), never committed.
+try-import %workspace%/user.bazelrc

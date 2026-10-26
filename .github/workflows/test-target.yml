@@ -1,35 +1,34 @@
 name: test-target
 
-# One target and build mode: a build job, which runs the unit tests too, then
-# the cases in jobs of their own that wait for this build only, never for
-# another target's. They run on the programs the build uploads, on a runner
-# that did not build them, as a user runs catter. A cross build (build_os)
-# cannot run its unit tests where it builds: they run beside the cases, in a
-# job of their own.
+# One target and build type: a build job, then the unit tests and the cases
+# in jobs of their own that wait for this build only, never for another
+# target's. They run on the programs the build uploads, on a runner that did
+# not build them, as a user runs catter. A cross build (build_os) builds on
+# a faster runner, with xclang's toolchain for the target.
 
 on:
   workflow_call:
     inputs:
-      # The runner the tests run on, and the build unless build_os is set.
+      # The runner the suites run on, and the build unless build_os is set.
       os:
         required: true
         type: string
-      # The runner a cross build builds on, with pixi's ci-cross-build.
       build_os:
         type: string
         default: ""
-      # Names the artifacts and caches.
+      # The triple of the target: the platform of a cross build, and the
+      # name of the artifacts, the caches and the release package.
       target:
         required: true
         type: string
-      mode:
+      build_type:
         type: string
-        default: release
-      # The package artifact of a release build; publish.yml lists the ones
-      # releases promote.
+        default: RelWithDebInfo
+      # Builds the release package of this target, which releases promote
+      # once the run is green (publish.yml).
       package:
-        type: string
-        default: ""
+        type: boolean
+        default: false
       # The shards the cases split into, each "i/n", as a JSON array.
       cases_shards:
         type: string
@@ -47,116 +46,142 @@ jobs:
         with:
           persist-credentials: false
 
-      # The package cache is keyed by a hash of every package's
-      # configuration, so a run saves one only when that changed.
-      - name: Setup xmake
-        uses: xmake-io/github-action-setup-xmake@v1
-        with:
-          xmake-version: v3.0.8
-          actions-cache-folder: ".xmake-cache"
-          actions-cache-key: ${{ inputs.build_os || inputs.os }}
-          package-cache: true
-          # Debug builds install their packages with sanitizer configs, so
-          # the two modes must not share one package cache. agent-box.yml, on
-          # the agent-box branch, restores these entries by this prefix.
-          package-cache-key: ${{ inputs.target }}-${{ inputs.mode }}-pixi
-
       - uses: ./.github/actions/setup-pixi
 
-      # xmake's compile cache (build.ccache in xmake.lua). Pull requests only
-      # restore: every push saving its own copy would churn the repository's
-      # cache pool faster than the next run can reuse it. main starts empty
-      # and saves what its build compiled, once per merge: xmake does not
-      # mark the entries it reads, so a restored cache could never shed the
-      # ones the tree no longer compiles. Its entries name the compiler by
-      # path, not by version: pixi.lock in the key keeps a toolchain update
-      # from reusing what the old compiler made.
-      - name: Restore the build cache
-        if: github.ref != 'refs/heads/main'
+      # Pull requests only restore: every push saving its own copy churns
+      # the repository's cache pool faster than the next run can reuse it.
+      # Saved from main below, once per merge. Every input of an action, the
+      # toolchain's files among them, is in its key, so nothing else needs to
+      # be in the cache's.
+      - name: Restore Bazel caches
         uses: actions/cache/restore@v6
         with:
-          path: build/.build_cache
-          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/bazel-disk
+            ${{ runner.temp }}/bazel-repo
+          key: bazel-${{ inputs.target }}-${{ inputs.build_type }}-${{ github.sha }}
           restore-keys: |
-            xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-
+            bazel-${{ inputs.target }}-${{ inputs.build_type }}-
 
-      # Configures, builds, and runs the unit tests.
-      - name: Build and test
-        if: ${{ !inputs.build_os }}
-        timeout-minutes: 60
-        run: pixi run -e dev ci-build ${{ inputs.mode }}
+      # Bazel refuses a repository cache inside the workspace. On main every
+      # cached output is fetched, which marks it used for the prune below;
+      # elsewhere only what is asked for. agent-box.yml, on the agent-box
+      # branch, writes the same.
+      - name: Bazel settings
+        shell: bash
+        run: |
+          {
+            echo "common --disk_cache=$RUNNER_TEMP/bazel-disk"
+            echo "common --repository_cache=$RUNNER_TEMP/bazel-repo"
+            echo "build --profile=$RUNNER_TEMP/bazel-profile.json.gz"
+            if [ "$GITHUB_REF" = refs/heads/main ]; then
+              echo "common --remote_download_all"
+            fi
+          } > user.bazelrc
+          touch "$RUNNER_TEMP/bazel-start"
 
+      # A packaged target builds its release archives along: the programs in
+      # them are the ones the suites run.
       - name: Build
-        if: ${{ inputs.build_os }}
         timeout-minutes: 60
-        run: pixi run -e dev ci-cross-build ${{ inputs.mode }}
+        run: >-
+          pixi run -e dev build ${{ inputs.build_type }} --
+          ${{ inputs.build_os && format('--platforms=@xclang//platforms:{0}', inputs.target) || '' }}
+          ${{ inputs.package && '//:package //:symbols' || '' }}
 
-      - name: Save the build cache
+      # Where the build's time went: each action on its critical path, in
+      # seconds. The artifact is the whole timeline, for Perfetto.
+      - name: Critical path
+        shell: bash
+        run: |
+          gzip -dc "$RUNNER_TEMP/bazel-profile.json.gz" |
+            jq -r '.traceEvents[] | select(.cat == "critical path component") | "\((.dur / 1e5 | floor) / 10)\t\(.name)"'
+
+      - name: Upload build profile
+        uses: actions/upload-artifact@v7
+        with:
+          name: bazel-profile-${{ inputs.target }}-${{ inputs.build_type }}
+          path: ${{ runner.temp }}/bazel-profile.json.gz
+          if-no-files-found: error
+          retention-days: 7
+
+      # Bazel refreshes an entry's mtime when it reads it, so what this run
+      # did not touch is what the current tree no longer needs.
+      - name: Prune the disk cache
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        shell: bash
+        run: |
+          find "$RUNNER_TEMP/bazel-disk" -type f ! -newer "$RUNNER_TEMP/bazel-start" -delete
+          du -sh "$RUNNER_TEMP"/bazel-disk "$RUNNER_TEMP"/bazel-repo
+
+      - name: Save Bazel caches
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/cache/save@v6
         with:
-          path: build/.build_cache
-          key: xmake-build-${{ inputs.target }}-${{ inputs.mode }}-${{ hashFiles('pixi.lock') }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/bazel-disk
+            ${{ runner.temp }}/bazel-repo
+          key: bazel-${{ inputs.target }}-${{ inputs.build_type }}-${{ github.sha }}
 
-      # The programs the cases run, side by side as catter finds them, and a
-      # cross build's unit tests.
-      - name: Collect programs
+      # The schema and the SDKs' types generated from it must be the ones
+      # the programs give, the same on every target: one checks.
+      - name: Check the protocol
+        if: ${{ inputs.target == 'x86_64-unknown-linux-gnu' && inputs.build_type == 'RelWithDebInfo' }}
+        run: pixi run -e dev check-protocol
+
+      - name: Check the package's dependencies
+        if: ${{ inputs.package }}
         shell: bash
-        run: |
-          mkdir programs
-          for file in build/*/*/${{ inputs.mode }}/{catter,catter.exe,catter-proxy,catter-proxy.exe,libcatter-hook-unix.so,libcatter-hook-unix.dylib,catter-hook-x64.dll,catter-hook-arm64.dll}; do
-            if [ -f "$file" ]; then cp "$file" programs/; fi
-          done
-          if [ -n "${{ inputs.build_os }}" ]; then
-            cp build/*/*/${{ inputs.mode }}/{unittests,unittests-hook-windows}.exe programs/
-          fi
-          ls programs
+        run: pixi run -e dev python scripts/check_artifact_deps.py build/${{ inputs.build_type }}/bin/catter.${{ contains(inputs.target, 'mingw') && 'zip' || 'tar.gz' }}
 
-      # A failed shard can be rerun alone while it lives.
+      # The programs and payloads side by side, as catter finds them, with
+      # the unit tests. A failed shard can be rerun alone while it lives.
       - name: Upload programs
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{ inputs.target }}-${{ inputs.mode }}
-          path: programs/
+          name: build-${{ inputs.target }}-${{ inputs.build_type }}
+          path: |
+            build/${{ inputs.build_type }}/bin/bin/
+            !build/${{ inputs.build_type }}/bin/bin/bin
+            !build/${{ inputs.build_type }}/bin/bin/*.gsym*
+            !build/${{ inputs.build_type }}/bin/bin/*.params
+            !build/${{ inputs.build_type }}/bin/bin/*.stripped
           if-no-files-found: error
           retention-days: 3
 
-      # Package the exact binaries the suites validate. These artifacts are
-      # what releases promote — there is no separate release build (see
-      # publish.yml).
-      - name: Package
-        if: ${{ inputs.package }}
-        run: pixi run -e dev package
-
-      - name: Upload package artifact
+      # These artifacts are what releases promote — there is no separate
+      # release build — once the whole run is green.
+      - name: Upload package
         if: ${{ inputs.package }}
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.package }}
-          path: release-assets/**
+          name: package-${{ inputs.target }}
+          path: |
+            build/${{ inputs.build_type }}/bin/catter.tar.gz
+            build/${{ inputs.build_type }}/bin/catter.zip
+            build/${{ inputs.build_type }}/bin/catter-symbol.tar.xz
+            build/${{ inputs.build_type }}/bin/catter-symbol.zip
           if-no-files-found: error
           # 30 days bounds how old a commit a tag can still promote.
           retention-days: 30
 
-  # What a cross build's build job cannot run: the unit tests, which xmake
-  # test runs as these do, with no arguments.
   unit:
     needs: build
-    if: ${{ inputs.build_os }}
     runs-on: ${{ inputs.os }}
     steps:
-      - name: Download programs
-        uses: actions/download-artifact@v8
+      - name: Checkout repository
+        uses: actions/checkout@v7
         with:
-          name: build-${{ inputs.target }}-${{ inputs.mode }}
-          path: programs
+          persist-credentials: false
+
+      - uses: ./.github/actions/download-programs
+        with:
+          target: ${{ inputs.target }}
+          build_type: ${{ inputs.build_type }}
 
       - name: Unit tests
         timeout-minutes: 10
-        shell: bash
-        run: |
-          programs/unittests.exe
-          programs/unittests-hook-windows.exe
+        run: pixi run -e dev unit-test ${{ inputs.build_type }}
 
   # The cases under tests/ (tests/README.md).
   cases:
@@ -184,15 +209,10 @@ jobs:
       - uses: ./.github/actions/download-programs
         with:
           target: ${{ inputs.target }}
-          mode: ${{ inputs.mode }}
+          build_type: ${{ inputs.build_type }}
 
-      # In the job's default shell, as the build ran: on Windows not Git
-      # Bash, whose MSYS environment changes how build tools behave.
+      # In the job's default shell: on Windows not Git Bash, whose MSYS
+      # environment changes how build tools behave.
       - name: Cases
         timeout-minutes: 20
-        env:
-          CATTER_EXECUTABLE: ${{ github.workspace }}/programs/catter
-          CATTER_CASES_SHARD: ${{ matrix.shard }}
-        run: |
-          pixi run -e dev npm-install
-          pixi run -e dev pnpm --dir tests run cases
+        run: pixi run -e dev cases-test ${{ inputs.build_type }} ${{ matrix.shard }}

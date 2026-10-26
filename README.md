@@ -63,13 +63,14 @@ the options of one.
 
 ## Building
 
-To build `catter` from source, install [pixi](https://pixi.prefix.dev/),
-[XMake](https://xmake.io/), and Git. XMake drives the native C++ build, while
-pixi provides the development environment and task entrypoints.
+To build `catter` from source, install [pixi](https://pixi.prefix.dev/) and
+Git. pixi provides the development environment and task entrypoints, and
+Bazel, which pixi's tasks run, drives the C++ build with
+[xclang](https://github.com/clice-io/xclang)'s toolchain.
 
 ```bash
 git clone https://github.com/clice-io/catter.git
 cd catter
-pixi run -e dev cfg debug      # Configure debug build
-pixi run -e dev build          # Build the project
+pixi run -e dev build          # Build into build/RelWithDebInfo/bin/bin
+pixi run -e dev build Debug    # Or the ASan build, into build/Debug/bin/bin
 ```

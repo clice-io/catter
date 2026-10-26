@@ -29,8 +29,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ inputs.release_tag }}
-      # The packages of test.yml.
-      PACKAGES: package-windows-2025-mingw package-windows-11-arm-mingw package-ubuntu-24.04 package-macos-15
+      # The targets test.yml packages.
+      TARGETS: x86_64-unknown-linux-gnu aarch64-apple-darwin x86_64-w64-mingw32 aarch64-w64-mingw32
     steps:
       - name: Locate the green build run
         id: find
@@ -69,7 +69,8 @@ jobs:
           # has every package.
           for RUN_ID in $RUN_IDS; do
             MISSING=""
-            for NAME in $PACKAGES; do
+            for TARGET in $TARGETS; do
+              NAME="package-$TARGET"
               LIVE=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=$NAME" \
                 --jq '[.artifacts[] | select(.expired | not)] | length')
               if [ "$LIVE" -eq 0 ]; then
@@ -85,25 +86,25 @@ jobs:
           echo "::error::no green main run for $TAG ($SHA) has live package artifacts (path-filtered build, or expired after 30 days) — if that commit is main's tip, run the main workflow manually, then dispatch this workflow for $TAG"
           exit 1
 
+      # Each package is catter.tar.gz (catter.zip for Windows) and its
+      # symbols, catter-symbol.tar.xz (catter-symbol.zip); the release names
+      # them after the tag's version and the target.
       - name: Download packages
         run: |
-          for NAME in $PACKAGES; do
-            gh run download "${{ steps.find.outputs.run_id }}" \
-              --repo "$GITHUB_REPOSITORY" -n "$NAME" -D pkg
-          done
-
-      # xpack names packages after the version in xmake.lua
-      # (catter-<version>-<plat>-<arch>.<ext>); the release carries the tag's.
-      # The platform anchors the match, since either version may contain '-'.
-      - name: Rename to the tag version
-        working-directory: pkg
-        run: |
           VERSION="${TAG#v}"
-          for FILE in catter-*; do
-            NEW=$(echo "$FILE" | sed -E "s/^catter-.*-(linux|macosx|mingw)-/catter-${VERSION}-\1-/")
-            [ "$FILE" = "$NEW" ] || mv "$FILE" "$NEW"
+          mkdir pkg
+          for TARGET in $TARGETS; do
+            gh run download "${{ steps.find.outputs.run_id }}" \
+              --repo "$GITHUB_REPOSITORY" -n "package-$TARGET" -D "download/$TARGET"
+            for FILE in download/$TARGET/*; do
+              NAME=$(basename "$FILE")
+              case "$NAME" in
+                catter-symbol.*) mv "$FILE" "pkg/catter-$VERSION.$TARGET.symbols.${NAME#catter-symbol.}" ;;
+                catter.*) mv "$FILE" "pkg/catter-$VERSION.$TARGET.${NAME#catter.}" ;;
+              esac
+            done
           done
-          ls -l
+          ls -l pkg
 
       - name: Upload assets to a draft release
         run: |

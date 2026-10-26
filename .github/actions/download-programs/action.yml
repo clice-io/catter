@@ -1,10 +1,10 @@
 name: "Download programs"
-description: "pixi's dev environment and the programs of a build-<target>-<mode> artifact, in programs/"
+description: "pixi's dev environment and the programs of a build-<target>-<build_type> artifact, where the build put them"
 
 inputs:
   target:
     required: true
-  mode:
+  build_type:
     required: true
 
 runs:
@@ -17,11 +17,11 @@ runs:
     - name: Download programs
       uses: actions/download-artifact@v8
       with:
-        name: build-${{ inputs.target }}-${{ inputs.mode }}
-        path: programs
+        name: build-${{ inputs.target }}-${{ inputs.build_type }}
+        path: build/${{ inputs.build_type }}/bin/bin
 
     # An artifact keeps no file modes.
     - name: Make programs executable
       if: runner.os != 'Windows'
       shell: bash
-      run: chmod +x programs/*
+      run: chmod +x build/${{ inputs.build_type }}/bin/bin/*

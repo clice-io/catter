@@ -44,12 +44,10 @@ node_modules
 *.dwo
 
 .cache/
-.xmake
 .venv
 .vscode
 .clangd
 /build*/
-vsxmake*/
 
 # pixi environments
 .pixi/*
@@ -65,5 +63,7 @@ vsxmake*/
 AGENTS.md
 __pycache__/
 
-# Release assets
-release-assets/
+# Bazel
+/user.bazelrc
+MODULE.bazel.lock
+compile_commands.json

@@ -13,34 +13,17 @@ import { REPO_ROOT } from "../../repo.ts";
 import { runProcess, type ProcessResult } from "../process.ts";
 import type { Table } from "../render/value.ts";
 
-/// The catter of build mode `mode` under build/, where xmake puts it:
-/// build/<plat>/<arch>/<mode>/.
-function builtCatter(mode: string): string {
-    const name = process.platform === "win32" ? "catter.exe" : "catter";
-    const found = fs
-        .globSync(`build/*/*/${mode}/${name}`, { cwd: REPO_ROOT })
-        .map((file) => path.join(REPO_ROOT, file));
-    if (found.length !== 1) {
-        throw new Error(
-            `CATTER_BUILD_MODE=${mode}: ${found.length === 0 ? "no catter" : `several: ${found.join(", ")}`} under build/*/*/${mode}/; set CATTER_EXECUTABLE`,
-        );
-    }
-    return found[0] ?? "";
-}
-
 let executable: string | undefined;
 
 /// The catter the tests run: CATTER_EXECUTABLE, with `.exe` supplied on
-/// Windows, or the one CATTER_BUILD_MODE built. catter-proxy and the hook
-/// library sit beside it.
+/// Windows. catter-proxy and the hook library sit beside it.
 export function catterExecutable(): string {
     executable ??= locateCatter();
     return executable;
 }
 
 function locateCatter(): string {
-    const mode = process.env["CATTER_BUILD_MODE"];
-    let exe = process.env["CATTER_EXECUTABLE"] ?? (mode ? builtCatter(mode) : undefined);
+    let exe = process.env["CATTER_EXECUTABLE"];
     if (!exe) {
         throw new Error("CATTER_EXECUTABLE is not set; point it at the catter a build made");
     }

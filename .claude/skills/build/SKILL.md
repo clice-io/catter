@@ -1,57 +1,52 @@
 ---
 name: build
-description: Build catter and run its unit tests, on a box unless a local build is truly necessary; also how to build on macOS and Windows. Optional args = platform (linux | macos | windows | windows-arm, default linux), mode (debug | release | releasedbg, default debug) and the caller's box id. Runs in a forked context; only the outcome returns.
+description: Build catter and run its unit tests, on a box unless a local build is truly necessary; also how to build for macOS and Windows. Optional args = platform (linux | macos | windows | windows-arm, default linux), build type (Debug | RelWithDebInfo, default RelWithDebInfo) and the caller's box id. Runs in a forked context; only the outcome returns.
 context: fork
 ---
 
-Build the project for the requested platform and mode (default: linux, `debug`), as CI does.
+Build the project for the requested platform and build type (default: linux, `RelWithDebInfo`), as CI does.
 
 ## Where it runs
 
 On a box, not on this machine: this machine hosts every agent's session, and one build saturates it. Build here only when truly necessary. The agent-box skill covers the tool itself (leases, limits, safety); for catter:
 
 ```bash
-id=$(box up clice-io/catter)                    # ~1 min; only when the caller passed no id
-box push $id                                    # tracked files only: `git add` new ones first
-box run $id 'pixi run -e dev ci-build debug'    # run_in_background
+id=$(box up clice-io/catter)                            # ~1 min; only when the caller passed no id
+box push $id                                            # tracked files only: `git add` new ones first
+box run $id 'pixi run -e dev build RelWithDebInfo'      # run_in_background
 ```
 
 The box belongs to the calling session, not to this skill: build on the id the caller passed, or lease one and report its id. Never `box down` it — the session reuses it, warm, for every later push, and an idle box stops by itself after an hour.
 
-- Every platform builds on a box of its own OS, as CI does: `--os macos` for macOS, `--os windows` for Windows. Windows on ARM (CI's `windows-arm64` job) is cross-built on the `--os windows` box, and its programs run on a `--os windows-arm` box, copied there with `box cp` (below); nothing else is copied between boxes.
-- A box restores the xmake package cache of CI's debug builds: a `release` or `releasedbg` configure there installs its packages first (minutes), since debug packages carry the sanitizer configs.
-- One box runs one build at a time: two `ci-build`s in one `~/src` reconfigure each other's tree (`cfg` is `xmake config --clean`). x64 and ARM64 on one Windows box, or debug and release on one box, run one after the other; for parallel runs, lease another box.
+- Linux and macOS build on a box of their own OS (`--os macos`), as CI does. The Windows programs, x64 and ARM64, build on a Linux box, with xclang's toolchain for the target, and run on a box of their own (`--os windows`, `--os windows-arm`), copied there with `box cp` (below); a Windows box builds nothing.
+- A box restores the Bazel caches of CI's last `main` run of `RelWithDebInfo` (`user.bazelrc` in `~/src` points Bazel at them; on Linux also Windows x64's): a `Debug` build, or a build of another target, compiles what the cache lacks first.
+- One box runs one build at a time, and the targets of one box share its output tree: a Windows build on a Linux box replaces the Linux programs in `build/<type>/bin/bin`. For Linux and Windows in parallel, lease another Linux box.
 - A session may hold several boxes, one per platform, each leased once and reused, building in parallel. Pushing never waits for a box: CI has the capacity to verify in parallel.
 
 ### Windows
 
-`box run` runs in Git Bash, which makes xmake take the host for MSYS (`msys is not a valid platform`); unsetting `MSYSTEM` in bash does not help. Run every pixi and xmake command through PowerShell; the programs it builds run from Git Bash as they are:
+Build on a Linux box for the target, then bring the programs to a Windows box, which runs them from Git Bash as they are, and every pixi command through PowerShell, as CI's default shell:
 
 ```bash
+box run $lin 'pixi run -e dev build RelWithDebInfo -- --platforms=@xclang//platforms:x86_64-w64-mingw32'
 win=$(box up clice-io/catter --os windows)
 box push $win
-box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev ci-build debug"'
+box cp $lin $win build/RelWithDebInfo/bin/bin --exclude '*.params' --exclude '*.stripped' --exclude '*.gsymutil.sh'
+box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev unit-test RelWithDebInfo"'
 ```
 
-Windows on ARM: x64 Windows builds it and cannot run it, so the build there is the build alone (`ci-cross-build`), and the unit tests run on Windows on ARM (the test skill), as CI's `unit` job does. ARM64 has no ASan: its `debug` build is unsanitized.
-
-```bash
-box run $win 'pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev ci-cross-build release"'
-arm=$(box up clice-io/catter --os windows-arm)
-box push $arm
-box cp $win $arm build/mingw/arm64/release
-```
+Windows on ARM: `aarch64-w64-mingw32` in place of `x86_64-w64-mingw32`, and a `--os windows-arm` box, as CI's `windows-arm64` job. It has no ASan: xclang refuses its `Debug` build.
 
 ## Commands
 
 All from the repo root, in the environment CI uses (`-e dev`):
 
-- Everything a CI build job runs: `pixi run -e dev ci-build <mode>` = `cfg <mode>`, `build`, the unit tests, then `check-protocol` (the protocol's schema and the SDKs' generated types are what the build gives). The snapshot cases run on the built programs: the test skill.
-- Step by step: `pixi run -e dev cfg <mode> [toolchain]` (`xmake config --clean`: a full reconfigure; the toolchain defaults to the OS's: gcc, clang; on Windows `cfg <mode> [arch]`, `x86_64` or `arm64`, both with xclang for MinGW), `pixi run -e dev build` (all default targets, the test programs included).
-- The unit tests alone, on a built tree: `pixi run -e dev unit-test` (`xmake test`).
-- One unit test in the binary's own process, for debugging: `build/<plat>/<arch>/<mode>/unittests --no-isolation --test-filter=<suite>.<test>` (`unittests-hook-unix`, `unittests-hook-windows` likewise; `--help` lists the rest).
-- Release packages: `pixi run -e dev package` after a `release` build writes `release-assets/catter-<version>-<plat>-<arch>.*`, as CI's packaging step does.
-- `compile_commands.json` for catter's own sources: `build/compile_commands.json`, kept up to date by every build.
+- The build: `pixi run -e dev build <type>` builds `//:dist` — the programs, the hook payloads, the unit tests and `catter-protocol-schema` — into `build/<type>/bin/bin` (`.bazelrc`). `Debug` is the ASan build (`-c dbg --features=asan`), but for the hook payloads, which never are (`bazel/defs.bzl`); `RelWithDebInfo` (`-c opt --copt=-g`) is what releases ship. Arguments after `--` go to Bazel: `--platforms=@xclang//platforms:<triple>` builds for another target, `//:package //:symbols` the release package and its symbols (`build/<type>/bin/catter.tar.gz`, `catter.zip` for Windows, and `catter-symbol.*`), as CI's packaged builds do.
+- The unit tests, on a built tree: `pixi run -e dev unit-test <type>`, the programs of `build/<type>/bin/bin` with no arguments, as CI's `unit` job runs them.
+- One unit test in the binary's own process, for debugging: `build/<type>/bin/bin/unittests --no-isolation --test-filter=<suite>.<test>` (`unittests-hook-unix`, `unittests-hook-windows` likewise; `--help` lists the rest).
+- The protocol's schema and the SDKs' types: `pixi run -e dev check-protocol` (`protocol` writes them), which CI's Linux `RelWithDebInfo` build runs.
+- The package's dependencies: `pixi run -e dev python scripts/check_artifact_deps.py build/RelWithDebInfo/bin/catter.tar.gz` (`.zip` for Windows), which CI's packaged builds run.
+- `compile_commands.json` for catter's own sources: `pixi run -e dev pnpm exec bazel run @compdb//:refresh`, which writes it at the repo root.
 
 On failure:
 
@@ -59,4 +54,4 @@ On failure:
 - Design-level errors (the fix requires a decision): do not guess — report the error with `file:line` and the relevant excerpt.
 - A failing test is reported, never fixed from here: the test name, the failed assertion (trimmed), and the command that reruns it alone.
 
-Report back: platform, mode, success or failure, files changed (if any), per suite pass/fail and counts, and for failures a digested error list — never the raw compiler spew.
+Report back: platform, build type, success or failure, files changed (if any), per suite pass/fail and counts, and for failures a digested error list — never the raw compiler spew.

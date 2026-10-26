@@ -5,14 +5,14 @@
 Two kinds of tests: C++ unit tests, and the cases, which run the built catter on small projects and compare every output with a snapshot.
 
 ```bash
-# Run everything: configure, build, unit tests and cases (debug, or another mode)
+# Run everything: build, unit tests and cases (RelWithDebInfo, or Debug)
 pixi run -e dev test
 
-# Unit tests only
+# Unit tests only, on a build
 pixi run -e dev unit-test
 
-# Cases only, against the release build (or debug, releasedbg)
-pixi run -e dev cases-test release
+# Cases only, against the Debug build
+pixi run -e dev cases-test Debug
 ```
 
 ### Unit Tests
@@ -23,11 +23,7 @@ Unit tests use the Kotatsu testing framework (`kota::zest`). Located in `unittes
 - `unittests/protocol/`, `unittests/feature/` -- Tests for the handler protocol and the built-ins
 - `unittests/hook/` -- Tests for the hook payloads
 
-To enable test targets in the build:
-
-```bash
-pixi run cfg  # or: xmake config --test=y
-```
+They build into `unittests`, and the hook payload's `unittests-hook-unix` or `unittests-hook-windows`, of the platform the build is for.
 
 Each test binary runs its tests on a pool of worker processes, several at once, with a 60 second limit per test. A suite that uses a fixed file or directory name must run alone: mark it with `ZEST_SUITE_ATTRS(serial = true);`. To debug a test, run it in the binary's own process with `--no-isolation --test-filter=<suite>.<test>`; `--help` lists the other options.
 

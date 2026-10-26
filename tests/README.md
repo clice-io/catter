@@ -208,7 +208,7 @@ product boundary observes cheaply, built with the sources.
 ## Running
 
 ```
-pixi run -e dev cases-test [mode] [i/n]   every case, or shard i of n, against build/*/*/<mode>
+pixi run -e dev cases-test [type] [i/n]   every case, or shard i of n, against build/<type>/bin/bin
 pnpm --dir tests run cases                every case, against $CATTER_EXECUTABLE
 CATTER_CASES=capture/ …                   the cases under a path
 CATTER_CASES_SHARD=2/4 pnpm --dir tests run cases   shard 2 of 4: whole subtopics, balanced by case count

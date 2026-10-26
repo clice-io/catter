@@ -1,5 +1,8 @@
 {
   "name": "catter-workspace",
   "private": true,
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@bazel/bazelisk": "^1.28.1"
+  }
 }
