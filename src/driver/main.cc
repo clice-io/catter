@@ -19,6 +19,14 @@ using namespace catter;
 
 namespace {
 
+/// Prints why catter failed, where it can: the failure may be its stdout's own,
+/// as a pipe whose reader has ended fails a write.
+void report(std::string_view message) noexcept {
+    try {
+        std::println("{}", message);
+    } catch(const std::exception&) {}
+}
+
 int run(std::span<const std::string> argv) {
 
 #ifdef CATTER_WINDOWS
@@ -55,14 +63,14 @@ int run(std::span<const std::string> argv) {
         }
         return entry->run(std::span(args).subspan(1));
     } catch(const cpptrace::exception& ex) {
-        std::println("{}", ex.message());
+        report(ex.message());
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
         return 1;
     } catch(const std::exception& ex) {
-        std::println("{}", ex.what());
+        report(ex.what());
         return 1;
     } catch(...) {
-        std::println("Unknown fatal error.");
+        report("Unknown fatal error.");
         return 1;
     }
 }
