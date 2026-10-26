@@ -8,6 +8,7 @@ import :driver.app_runner;
 import :driver.cli;
 import :driver.driver;
 import :driver.option;
+import :session.process;
 
 namespace catter::driver {
 
@@ -41,8 +42,7 @@ int run(std::span<std::string> args) {
         throw cpptrace::runtime_error(
             "run: name a handler to give the build's commands to (--handler, --connect)");
     }
-    kota::run(async_run(nullptr, options->session));
-    return 0;
+    return exit_like(run_session(nullptr, options->session));
 }
 
 [[maybe_unused]] const bool registered = register_subcommand(Subcommand::Run,

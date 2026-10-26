@@ -9,6 +9,7 @@ import :driver.cli;
 import :driver.driver;
 import :driver.option;
 import :feature.tree;
+import :session.process;
 
 namespace catter::driver {
 
@@ -40,8 +41,7 @@ int run(std::span<std::string> args) {
     check_at_least<Options>(help, "--depth", options->tree.depth.as_optional(), 0);
     check_at_least<Options>(help, "--args", *options->tree.args, -1);
     check_at_least<Options>(help, "--arg-width", *options->tree.arg_width, 4);
-    kota::run(async_run(feature::make_tree(std::move(options->tree)), options->session));
-    return 0;
+    return exit_like(run_session(feature::make_tree(std::move(options->tree)), options->session));
 }
 
 [[maybe_unused]] const bool registered = register_subcommand(Subcommand::Tree,

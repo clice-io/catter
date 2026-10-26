@@ -97,7 +97,7 @@ ReplayFile parse_replay_file(std::string_view path) {
 
 }  // namespace
 
-kota::task<data::process_result> replay_build(std::string_view path, Handler& handler) {
+kota::task<kota::process::exit_status> replay_build(std::string_view path, Handler& handler) {
     const auto replay = parse_replay_file(path);
     std::string base(kota::fs::path::parent(path));
     kota::fs::path::push(base, replay.cwd.value_or("."));
@@ -125,7 +125,7 @@ kota::task<data::process_result> replay_build(std::string_view path, Handler& ha
         }
     }
 
-    co_return to_process_result(replay.finish.value_or(ReplayResult{.code = 0}));
+    co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
 }
 
 }  // namespace catter

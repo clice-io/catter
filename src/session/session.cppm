@@ -67,15 +67,15 @@ public:
 
     /// Run the session with the given run plan.
     /// @param run_plan The run plan containing the launch plan and service factory.
-    /// @return The result of the process execution: its exit status.
-    kota::task<data::process_result> run(RunPlan run_plan);
+    /// @return How the launched process ended.
+    kota::task<kota::process::exit_status> run(RunPlan run_plan);
 
 private:
     kota::task<void> loop(ClientAcceptor acceptor);
 
-    kota::task<data::process_result> spawn(std::string executable,
-                                           std::vector<std::string> args,
-                                           std::string cwd);
+    kota::task<kota::process::exit_status> spawn(std::string executable,
+                                                 std::vector<std::string> args,
+                                                 std::string cwd);
 
     std::unique_ptr<PipeAcceptor> acc = nullptr;
 };

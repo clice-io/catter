@@ -20,7 +20,6 @@ served
 exit = 0
 
 [replay."$ catter run --handler \"python handler.py\" --from events.json"]
-wrong = "catter exits 0 though the build failed with 2 (catter#116)"
 stderr = '''
 start: version 1, mode replay, build ['events.json'] in ., session of 16 characters
 command 1: parent None, args ['all'], in ., env None
@@ -30,4 +29,4 @@ error 3: parent 1, could not capture
 finish: code 2
 served
 '''
-exit = 0
+exit = 2

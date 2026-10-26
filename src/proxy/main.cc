@@ -2,11 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#ifndef CATTER_WINDOWS
-#include <pthread.h>
-#include <sys/resource.h>
-#endif
-
 #include "support/config/catter-proxy.h"
 #include "support/guard.h"
 #include "support/log.h"
@@ -37,6 +32,7 @@ kota::task<exit_status> run(data::action act,
     stand_in.started = [&](int pid) {
         peer.started(pid);
     };
+    auto exited = make_guard([&]() noexcept { peer.program.reset(); });
 #endif
     switch(act.type) {
         case action::WRAP: {
@@ -87,26 +83,6 @@ std::string format_args(std::span<const std::string> argv) {
         result += arg;
     }
     return result;
-}
-
-/// What this process ends with: what its program ended with, the same signal
-/// or the same exit code.
-int exit_like(const exit_status& status) {
-#ifndef CATTER_WINDOWS
-    if(status.term_signal != 0) {
-        // No core of this process beside the program's own.
-        rlimit none{};
-        ::setrlimit(RLIMIT_CORE, &none);
-        std::signal(status.term_signal, SIG_DFL);
-        // The build may have blocked it for the programs it starts.
-        sigset_t signals;
-        sigemptyset(&signals);
-        sigaddset(&signals, status.term_signal);
-        ::pthread_sigmask(SIG_UNBLOCK, &signals, nullptr);
-        std::raise(status.term_signal);
-    }
-#endif
-    return static_cast<int>(result_of(status).code);
 }
 
 kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
@@ -169,6 +145,18 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
     co_return exit_status{.code = -1};
 };
 
+#ifdef CATTER_MAC
+/// Runs the connection to catter. macOS ends no child with its parent: the
+/// build command ends here when catter ends while it runs, and with catter its
+/// connection.
+kota::task<> run_connection(proxy::Peer& peer, bool build_command) {
+    co_await peer.run();
+    if(build_command && peer.program) {
+        ::kill(static_cast<pid_t>(*peer.program), SIGKILL);
+    }
+}
+#endif
+
 kota::task<exit_status> proxy_main(std::span<const std::string> argv,
                                    const catter::proxy::ProxyOption& opt) noexcept {
     auto& current = kota::event_loop::current();
@@ -193,7 +181,14 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
                                std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
     };
 
-    auto [_, status] = co_await kota::when_all{peer.run(), handle_proxy_request(argv, opt, peer)};
+#ifdef CATTER_MAC
+    // The build command's proxy is started with parent 0.
+    auto connection = run_connection(peer, *opt.parent_id == 0);
+#else
+    auto connection = peer.run();
+#endif
+    auto [_, status] =
+        co_await kota::when_all{std::move(connection), handle_proxy_request(argv, opt, peer)};
 
     co_return status;
 }

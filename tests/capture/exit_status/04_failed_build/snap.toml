@@ -1,0 +1,9 @@
+[test."$ node build.mjs"]
+exit = 3
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+Build failed with exit code 3. Printing partial command tree.
+node build.mjs
+'''
+exit = 3

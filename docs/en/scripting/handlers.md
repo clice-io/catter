@@ -10,7 +10,7 @@ catter speaks to a handler over a small protocol (see [Handler protocol](../desi
 catter run --handler "python handler.py" -- make
 ```
 
-catter starts the handler, speaks to it over the handler's stdin and stdout, and ends it when the build is over. What the handler prints on stderr shows in the terminal. The handler runs outside the build: the programs it starts are not captured.
+catter starts the handler, speaks to it over the handler's stdin and stdout, and ends it when the build is over. What the handler prints on stderr shows in the terminal. A Ctrl+C there stops the build, not the handler, which is told how the build ended. The handler runs outside the build: the programs it starts are not captured.
 
 On Linux and macOS the command is split into words as a POSIX shell splits them, without expanding anything; on Windows it goes to the program as it is, as a Windows command line does.
 

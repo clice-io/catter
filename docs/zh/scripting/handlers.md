@@ -10,7 +10,7 @@ catter 通过一个简单的协议与 handler 通信（见 [Handler 协议](../d
 catter run --handler "python handler.py" -- make
 ```
 
-catter 启动 handler，经它的 stdin 和 stdout 与它通信，并在构建结束时终止它。handler 输出到 stderr 的内容显示在终端中。handler 在构建之外运行：它启动的程序不会被捕获。
+catter 启动 handler，经它的 stdin 和 stdout 与它通信，并在构建结束时终止它。handler 输出到 stderr 的内容显示在终端中。在终端按下 Ctrl+C 停止的是构建而不是 handler，handler 会被告知构建是如何结束的。handler 在构建之外运行：它启动的程序不会被捕获。
 
 在 Linux 和 macOS 上，命令按 POSIX shell 的规则拆分成单词，但不做任何展开；在 Windows 上，它像 Windows 命令行一样原样交给程序。
 

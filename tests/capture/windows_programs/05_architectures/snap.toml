@@ -9,4 +9,4 @@ spawn.exe CreateProcessW command.txt
     └── spawn.exe CreateProcessW inner.txt
         └── cmd.exe /d /c exit 7
 '''
-exit = 0
+exit = 7

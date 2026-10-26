@@ -4,4 +4,4 @@ Build failed with exit code 7. Printing partial command tree.
 spawn.exe CreateProcessW command.txt
 └── cmd.exe /d /c exit 7
 '''
-exit = 0
+exit = 7

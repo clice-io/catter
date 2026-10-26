@@ -4,6 +4,9 @@ module;
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
+#else
+#include <pthread.h>
+#include <sys/resource.h>
 #endif
 
 module catter;
@@ -44,9 +47,16 @@ std::atomic<int> stood_in = -1;
 
 void pass_on(int signum, siginfo_t* info, void*) {
     // One the terminal sends, which no process does, reaches the program too,
-    // in the same foreground process group. macOS leaves si_code 0 for one
-    // kill sends: the sender tells them apart.
-    if(info->si_pid != 0) {
+    // in the same foreground process group. On Linux it is the kernel's
+    // (SI_KERNEL), and a process's has its sender's pid, but 0 for a sender
+    // outside this PID namespace, as `docker stop` is. macOS leaves si_code 0
+    // for one kill sends: the sender tells them apart.
+#ifdef CATTER_LINUX
+    const bool sent = info->si_code != SI_KERNEL;
+#else
+    const bool sent = info->si_pid != 0;
+#endif
+    if(sent) {
         ::kill(stood_in.load(), signum);
     }
 }
@@ -115,6 +125,24 @@ kota::process::options process_options(const data::command& command) {
 
 data::process_result result_of(const kota::process::exit_status& status) {
     return {.code = status.term_signal == 0 ? status.code : 128 + status.term_signal};
+}
+
+int exit_like(const kota::process::exit_status& status) {
+#ifndef CATTER_WINDOWS
+    if(status.term_signal != 0) {
+        // No core of this process beside the program's own.
+        rlimit none{};
+        ::setrlimit(RLIMIT_CORE, &none);
+        std::signal(status.term_signal, SIG_DFL);
+        // The build may have blocked it for the programs it starts.
+        sigset_t signals;
+        sigemptyset(&signals);
+        sigaddset(&signals, status.term_signal);
+        ::pthread_sigmask(SIG_UNBLOCK, &signals, nullptr);
+        std::raise(status.term_signal);
+    }
+#endif
+    return static_cast<int>(result_of(status).code);
 }
 
 kota::task<kota::process::exit_status> run_process(kota::process::options opts, RunOptions run) {

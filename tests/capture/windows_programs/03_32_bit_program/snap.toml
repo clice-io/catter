@@ -8,4 +8,4 @@ Build failed with exit code 7. Printing partial command tree.
 spawn.exe CreateProcessW command.txt
 └── "C:\\Windows\\SysWOW64\\cmd.exe" /d /c spawn.exe CreateProcessW inner.txt
 '''
-exit = 0
+exit = 7

@@ -14,7 +14,7 @@ import :session.session;
 
 namespace catter {
 
-kota::task<data::process_result> Session::run(RunPlan run_plan) {
+kota::task<kota::process::exit_status> Session::run(RunPlan run_plan) {
 #ifndef CATTER_WINDOWS
     // A socket a session of the same pid left behind.
     kota::fs::remove(run_plan.pipe_name);
@@ -34,11 +34,11 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
                                   std::move(run_plan.launch_plan.args),
                                   std::move(run_plan.launch_plan.cwd));
 
-    auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
+    auto [_, status] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
 #ifndef CATTER_WINDOWS
     kota::fs::remove(run_plan.pipe_name);
 #endif
-    co_return std::move(process_result);
+    co_return status;
 }
 
 kota::task<void> Session::loop(ClientAcceptor acceptor) {
@@ -76,9 +76,9 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
     co_return;
 }
 
-kota::task<data::process_result> Session::spawn(std::string executable,
-                                                std::vector<std::string> args,
-                                                std::string cwd) {
+kota::task<kota::process::exit_status> Session::spawn(std::string executable,
+                                                      std::vector<std::string> args,
+                                                      std::string cwd) {
     // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
     // prevent the session from running
     auto guard = make_guard([&]() noexcept {
@@ -101,16 +101,12 @@ kota::task<data::process_result> Session::spawn(std::string executable,
              cwd,
              args_str);
 
-    // The build gets the signals as catter was given them, as nohup leaves
-    // them for it.
     kota::process::options opts{
         .program = std::move(executable),
         .args = std::move(args),
         .cwd = std::move(cwd),
-        .creation = {.keep_signals = true},
     };
-    auto status = co_await run_process(std::move(opts));
-    co_return result_of(status);
+    co_return co_await run_process(std::move(opts), {.stand_in = true});
 }
 
 }  // namespace catter
