@@ -1,11 +1,10 @@
-#include <algorithm>
-#include <cstddef>
-#include <string>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
+module;
 
-#include "feature/flat_tree.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :feature.flat_tree;
 
 using namespace catter;
 

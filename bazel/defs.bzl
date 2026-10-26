@@ -6,6 +6,7 @@ load("@rules_pkg//pkg:mappings.bzl", "pkg_attributes", "pkg_files")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
 load("@xclang//bazel:debug_symbols.bzl", "xclang_debug_symbols")
+load("//modules:modules.bzl", "MODULE_COPTS")
 
 # What catter's own sources compile with; the libraries keep their own flags.
 # Every include names its header by its path under src/.
@@ -21,6 +22,10 @@ COPTS = ["-Isrc"] + select({
     "//bazel:dbg": ["-DDEBUG"],
     "//conditions:default": [],
 })
+
+# What catter's module units compile with, with a dependency on //modules
+# and the cpp_modules feature.
+MODULE_UNIT_COPTS = COPTS + MODULE_COPTS
 
 # Link optimizations in optimized builds: what the cases run is what
 # releases ship. icf=safe (not =all) so address-taken functions keep C++

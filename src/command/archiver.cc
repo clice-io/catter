@@ -1,17 +1,8 @@
-#include "command/archiver.h"
+module;
 
-#include <algorithm>
-#include <array>
-#include <expected>
-#include <format>
-#include <optional>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include "modules/prelude.h"
 
-#include "command/lowercase.h"
+module catter.command;
 
 namespace catter {
 

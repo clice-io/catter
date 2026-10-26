@@ -1,20 +1,11 @@
-#include "protocol/analysis.h"
+module;
 
-#include <algorithm>
-#include <expected>
-#include <format>
-#include <optional>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <variant>
-#include <vector>
-#include <kota/support/utf8.h>
-#include <kota/meta/enum.h>
+#include "modules/prelude.h"
 
-#include "command/edit.h"
-#include "command/syntax.h"
+module catter;
+
+import catter.command;
+import :protocol.analysis;
 
 namespace catter {
 

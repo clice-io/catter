@@ -1,20 +1,14 @@
-#include "session/process.h"
+module;
 
-#include <array>
-#include <atomic>
-#include <format>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
+#include "modules/prelude.h"
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
-#include <kota/sys/windows.h>
-#else
-#include <csignal>
 #endif
+
+module catter;
+
+import :session.process;
 
 namespace catter {
 

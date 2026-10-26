@@ -1,13 +1,13 @@
-#include <span>
-#include <string>
-#include <cpptrace/exceptions.hpp>
-#include <kota/async/io/loop.h>
-#include <kota/deco/deco.h>
+module;
 
-#include "driver/app_runner.h"
-#include "driver/cli.h"
-#include "driver/driver.h"
-#include "driver/option.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :driver.app_runner;
+import :driver.cli;
+import :driver.driver;
+import :driver.option;
 
 namespace catter::driver {
 

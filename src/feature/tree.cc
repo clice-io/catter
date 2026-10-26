@@ -1,24 +1,14 @@
-#include "feature/tree.h"
+module;
 
-#include <algorithm>
-#include <cstdint>
-#include <expected>
-#include <format>
-#include <memory>
-#include <optional>
-#include <print>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/support/utf8.h>
+#include "modules/prelude.h"
 
-#include "feature/flat_tree.h"
-#include "feature/text.h"
-#include "session/data.h"
-#include "session/handler.h"
+module catter;
+
+import :feature.flat_tree;
+import :feature.text;
+import :feature.tree;
+import :session.data;
+import :session.handler;
 
 namespace catter::feature {
 

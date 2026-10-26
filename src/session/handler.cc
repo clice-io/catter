@@ -1,6 +1,10 @@
-#include "session/handler.h"
+module;
 
-#include <utility>
+#include "modules/prelude.h"
+
+module catter;
+
+import :session.handler;
 
 namespace catter {
 

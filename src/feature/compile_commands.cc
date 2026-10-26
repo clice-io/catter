@@ -1,33 +1,19 @@
-#include "feature/compile_commands.h"
+module;
 
-#include <algorithm>
-#include <cstdint>
-#include <format>
-#include <memory>
-#include <optional>
-#include <print>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <variant>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/support/utf8.h>
-#include <kota/codec/dyn/dyn.h>
+#include "modules/prelude.h"
 
-#include "command/compiler.h"
-#include "feature/compilation_database.h"
-#include "feature/descendants.h"
-#include "feature/flat_tree.h"
-#include "feature/json.h"
-#include "feature/path.h"
-#include "feature/text.h"
-#include "session/data.h"
-#include "session/handler.h"
+module catter;
+
+import catter.command;
+import :feature.compilation_database;
+import :feature.compile_commands;
+import :feature.descendants;
+import :feature.flat_tree;
+import :feature.json;
+import :feature.path;
+import :feature.text;
+import :session.data;
+import :session.handler;
 
 namespace catter::feature {
 

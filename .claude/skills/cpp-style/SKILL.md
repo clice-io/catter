@@ -41,12 +41,31 @@ defending against ghosts.
 
 ## Files & Organization
 
-- C++23, in headers (`.h`, `#pragma once`, never include guards) and
-  sources (`.cc`). File names are `snake_case`.
+- C++23. File names are `snake_case`.
+- Above `support` the code is C++20 modules (CLAUDE.md): `src/command` is
+  `catter.command`, the rest `catter`. What other files use is declared in
+  a partition, `<stem>.cppm`, named by its path:
+  `module catter:session.process;`, and under `src/command`
+  `export module catter.command:option.clang;`, whose namespace is
+  exported (`export namespace catter {`) and which `src/command/module.cppm`
+  re-exports, as `catter` imports it. It is defined in its source, an
+  implementation unit (`module catter;`) that imports the partitions it
+  uses (`import :session.process;`). A module unit starts with `module;`,
+  then `#include "modules/prelude.h"`, then the headers it still includes:
+  `support`'s and the platform's (`<windows.h>`, `<sys/resource.h>`); then
+  its module declaration and imports. A `main` is `extern "C++"`.
+- The standard library and the libraries of `modules/` come from the
+  prelude's `import std.compat;` and `import deps;`, never from an include
+  in a module unit. A header or macro of theirs `deps` does not export yet
+  goes into `modules/demand.cpp`, and `modules/` is regenerated (the
+  upgrade-deps skill).
+- `support` and the hook payloads stay headers (`.h`, `#pragma once`,
+  never include guards) and sources (`.cc`), which include the standard
+  and library headers themselves: the payloads import nothing.
 - Includes name the header by its path under `src/`, whatever directory
-  includes it: `"support/log.h"`, `"command/option/clang.h"`,
-  `"hook/unix/session.h"`; a directory includes only the layers below it
-  (CLAUDE.md, `pixi run -e dev check-layers`).
+  includes it: `"support/log.h"`, `"hook/unix/session.h"`; a directory
+  includes and imports only the layers below it (CLAUDE.md,
+  `pixi run -e dev check-layers`).
 - Code lives in `namespace catter`, flat as clice's: a namespace of its
   own only for the built-ins (`catter::feature`), the programs and the
   payloads (`catter::driver`, `catter::proxy`, `catter::hook`), for a

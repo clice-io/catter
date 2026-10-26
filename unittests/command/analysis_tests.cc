@@ -1,13 +1,10 @@
-#include <optional>
-#include <ranges>
-#include <string>
-#include <string_view>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-#include <kota/fs/path.h>
+module;
 
-#include "command/compiler.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import catter.command;
 
 using namespace catter;
 

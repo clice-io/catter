@@ -1,16 +1,20 @@
-#include <string>
-#include <string_view>
-#include <system_error>
+module;
+
+#include "modules/prelude.h"
+
 #include <windows.h>
 
-#include "capture/inject/hook.h"
-#include "capture/inject/windows/inject.h"
-#include "session/data.h"
-#include "session/process.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/hook_windows.h"
 #include "support/log.h"
 #include "support/paths.h"
+
+module catter;
+
+import :capture.inject.hook;
+import :capture.inject.windows.inject;
+import :session.data;
+import :session.process;
 
 namespace catter {
 

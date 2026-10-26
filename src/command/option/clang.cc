@@ -1,9 +1,8 @@
-#include "command/option/clang.h"
+module;
 
-#include <array>
-#include <span>
-#include <string_view>
-#include <kota/deco/option.h>
+#include "modules/prelude.h"
+
+module catter.command;
 
 namespace catter::option::clang {
 
@@ -24,16 +23,16 @@ struct StringTable {
 }  // namespace llvm
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/clang-Driver-Options.inc>
+#include "llvm-options-td/clang-Driver-Options.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/clang-Driver-Options.inc>
+#include "llvm-options-td/clang-Driver-Options.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/clang-Driver-Options.inc>
+#include "llvm-options-td/clang-Driver-Options.inc"
 #undef OPTION
     ;
 
@@ -134,7 +133,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
         .help_text = HELP,                                                                         \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/clang-Driver-Options.inc>
+#include "llvm-options-td/clang-Driver-Options.inc"
 #undef OPTION
 };
 

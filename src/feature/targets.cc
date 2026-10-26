@@ -1,24 +1,15 @@
-#include "feature/targets.h"
+module;
 
-#include <cstdint>
-#include <format>
-#include <memory>
-#include <optional>
-#include <print>
-#include <ranges>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <variant>
-#include <vector>
-#include <kota/support/utf8.h>
-#include <kota/fs/path.h>
+#include "modules/prelude.h"
 
-#include "feature/descendants.h"
-#include "feature/edges.h"
-#include "feature/flat_tree.h"
-#include "session/data.h"
-#include "session/handler.h"
+module catter;
+
+import :feature.descendants;
+import :feature.edges;
+import :feature.flat_tree;
+import :feature.targets;
+import :session.data;
+import :session.handler;
 
 namespace catter::feature {
 

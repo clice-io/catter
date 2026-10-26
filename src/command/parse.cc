@@ -1,22 +1,10 @@
-#include "command/parse.h"
+module;
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <expected>
-#include <format>
-#include <optional>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/deco/option.h>
+#include "modules/prelude.h"
 
-#include "command/lowercase.h"
-#include "command/option/clang.h"
-#include "command/syntax.h"
+module catter.command;
+
+import :parse;
 
 namespace catter {
 

@@ -1,18 +1,8 @@
-#include "command/syntax.h"
+module;
 
-#include <algorithm>
-#include <cstddef>
-#include <expected>
-#include <format>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/deco/option.h>
+#include "modules/prelude.h"
 
-#include "command/option/clang.h"
+module catter.command;
 
 namespace catter {
 

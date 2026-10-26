@@ -1,9 +1,10 @@
-#include "command/option/nvcc.h"
+module;
 
-#include <array>
-#include <span>
+#include "modules/prelude.h"
 
-#include "command/option/tablegen.h"
+module catter.command;
+
+import :option.tablegen;
 
 namespace catter::option::nvcc {
 

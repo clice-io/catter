@@ -1,11 +1,15 @@
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//bazel:defs.bzl", "COPTS", "LINKOPTS", "asan_runtime", "payload", "release_packages")
+load("//bazel:defs.bzl", "COPTS", "LINKOPTS", "MODULE_UNIT_COPTS", "asan_runtime", "payload", "release_packages")
 
-# One library per directory of src/, layered as their includes are:
-# {support, command} <- session <- {capture, protocol, feature}, which the
-# programs link (scripts/check_layers.py checks the includes, which Bazel
-# confines to a target's dependencies).
+# One library per directory of src/, layered as their includes and imports
+# are: {support, command} <- session <- {capture, protocol, feature}, which
+# the programs link (scripts/check_layers.py checks them, which Bazel
+# confines to a target's dependencies). Above support, which the hook
+# payloads include too, the code is C++20 modules: command is catter.command,
+# the rest catter, whose primary interface, src/module.cppm, exports nothing
+# and sits in its lowest library. Declarations are in partitions, <stem>.cppm
+# beside their sources, which are implementation units.
 
 cc_library(
     name = "support",
@@ -24,11 +28,11 @@ cc_library(
 cc_library(
     name = "command",
     srcs = glob(["src/command/**/*.cc"]),
-    hdrs = glob(["src/command/**/*.h"]),
-    copts = COPTS,
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = glob(["src/command/**/*.cppm"]),
     deps = [
-        "@kotatsu//:fs",
-        "@kotatsu//:option",
+        "//modules",
         "@llvm_option_inc",
     ],
 )
@@ -36,25 +40,23 @@ cc_library(
 cc_library(
     name = "session",
     srcs = glob(["src/session/*.cc"]),
-    hdrs = glob(["src/session/*.h"]),
-    copts = COPTS,
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = ["src/module.cppm"] + glob(["src/session/*.cppm"]),
     deps = [
+        ":command",
         ":support",
-        "@kotatsu//:async",
-        "@kotatsu//:ipc",
-        "@kotatsu//:meta",
+        "//modules",
     ],
 )
 
 cc_library(
     name = "capture",
     srcs = glob(["src/capture/*.cc"]),
-    hdrs = glob(["src/capture/*.h"]),
-    copts = COPTS,
-    deps = [
-        ":session",
-        "@kotatsu//:codec_json",
-    ],
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = glob(["src/capture/*.cppm"]),
+    deps = [":session"],
 )
 
 # Launching a command with the hook, which catter-proxy does.
@@ -64,8 +66,12 @@ cc_library(
         "@platforms//os:windows": glob(["src/capture/inject/windows/*.cc"]),
         "//conditions:default": glob(["src/capture/inject/unix/*.cc"]),
     }),
-    hdrs = glob(["src/capture/inject/**/*.h"]),
-    copts = COPTS,
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = ["src/capture/inject/hook.cppm"] + select({
+        "@platforms//os:windows": glob(["src/capture/inject/windows/*.cppm"]),
+        "//conditions:default": [],
+    }),
     deps = [":session"] + select({
         "@platforms//os:windows": ["@detours"],
         "//conditions:default": [],
@@ -78,40 +84,33 @@ cc_library(
         ["src/protocol/*.cc"],
         exclude = ["src/protocol/schema.cc"],
     ),
-    hdrs = glob(["src/protocol/*.h"]),
-    copts = COPTS,
-    deps = [
-        ":command",
-        ":session",
-        "@kotatsu//:codec_json",
-        "@kotatsu//:ipc_json",
-    ],
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = glob(["src/protocol/*.cppm"]),
+    deps = [":session"],
 )
 
 cc_library(
     name = "feature",
     srcs = glob(["src/feature/*.cc"]),
-    hdrs = glob(["src/feature/*.h"]),
-    copts = COPTS,
-    deps = [
-        ":command",
-        ":session",
-        "@kotatsu//:codec_json",
-        "@kotatsu//:deco",
-    ],
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
+    module_interfaces = glob(["src/feature/*.cppm"]),
+    deps = [":session"],
 )
 
 # The programs are in bin/, side by side as catter finds them, with the hook
 # payloads: build/<type>/bin/bin.
 cc_binary(
     name = "bin/catter",
-    srcs = glob([
-        "src/driver/*.cc",
-        "src/driver/*.h",
-    ]),
-    copts = COPTS,
-    features = ["generate_dsym_file"],
+    srcs = glob(["src/driver/*.cc"]),
+    copts = MODULE_UNIT_COPTS,
+    features = [
+        "cpp_modules",
+        "generate_dsym_file",
+    ],
     linkopts = LINKOPTS,
+    module_interfaces = glob(["src/driver/*.cppm"]),
     deps = [
         ":capture",
         ":feature",
@@ -121,17 +120,15 @@ cc_binary(
 
 cc_binary(
     name = "bin/catter-proxy",
-    srcs = glob([
-        "src/proxy/*.cc",
-        "src/proxy/*.h",
-    ]),
-    copts = COPTS,
-    features = ["generate_dsym_file"],
-    linkopts = LINKOPTS,
-    deps = [
-        ":capture_inject",
-        "@kotatsu//:deco",
+    srcs = glob(["src/proxy/*.cc"]),
+    copts = MODULE_UNIT_COPTS,
+    features = [
+        "cpp_modules",
+        "generate_dsym_file",
     ],
+    linkopts = LINKOPTS,
+    module_interfaces = glob(["src/proxy/*.cppm"]),
+    deps = [":capture_inject"],
 )
 
 # Prints the schema the SDKs' protocol types are generated from
@@ -139,7 +136,8 @@ cc_binary(
 cc_binary(
     name = "catter-protocol-schema",
     srcs = ["src/protocol/schema.cc"],
-    copts = COPTS,
+    copts = MODULE_UNIT_COPTS,
+    features = ["cpp_modules"],
     deps = [":protocol"],
 )
 
@@ -276,13 +274,13 @@ cc_binary(
         ],
         exclude = ["unittests/hook/**"],
     ),
-    copts = COPTS + ["-Iunittests"],
+    copts = MODULE_UNIT_COPTS + ["-Iunittests"],
+    features = ["cpp_modules"],
     linkopts = LINKOPTS,
     deps = [
         ":capture",
         ":feature",
         ":protocol",
-        "@kotatsu//:zest",
     ],
 )
 

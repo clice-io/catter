@@ -1,12 +1,10 @@
-#include <print>
-#include <string>
-#include <vector>
-#include <kota/codec/json/schema.h>
-#include <kota/fs/file.h>
-#include <kota/ipc/codec.h>
-#include <kota/sys/process.h>
+module;
 
-#include "protocol/protocol.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :protocol.protocol;
 
 using namespace catter::protocol;
 
@@ -28,9 +26,9 @@ struct Messages {
 
 }  // namespace
 
-/// Writes the JSON Schema of the protocol's messages (src/protocol/protocol.h),
+/// Writes the JSON Schema of the protocol's messages (src/protocol/protocol.cppm),
 /// which the SDKs' types are generated from, to the file it is given.
-int main(int argc, char* argv[]) {
+extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.

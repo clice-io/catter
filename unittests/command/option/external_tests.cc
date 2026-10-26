@@ -1,19 +1,10 @@
-#include <array>
-#include <expected>
-#include <string>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-#include <kota/deco/option.h>
+module;
 
-#include "command/option/lld_coff.h"
-#include "command/option/lld_elf.h"
-#include "command/option/lld_macho.h"
-#include "command/option/lld_mingw.h"
-#include "command/option/lld_wasm.h"
-#include "command/option/llvm_dlltool.h"
-#include "command/option/llvm_lib.h"
-#include "command/option/nvcc.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import catter.command;
 
 namespace kota_opt = kota::option;
 using namespace catter;

@@ -29,7 +29,7 @@ Bincode was chosen for its efficiency -- messages are small and fast to encode/d
 
 Communication follows a strict request-response pattern, but for the `started` notification. The client (proxy) sends a request and waits for the server (daemon) to respond before proceeding. Each request type has a well-defined parameter type and result type.
 
-The protocol is defined in `src/session/data.h` using C++ template specialization:
+The protocol is defined in `src/session/data.cppm` using C++ template specialization:
 
 ```cpp
 enum class RequestType : uint8_t {

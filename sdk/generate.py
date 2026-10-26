@@ -1,7 +1,7 @@
 """Generates the SDKs' protocol types from sdk/protocol.schema.json.
 
 The schema is what `catter-protocol-schema` prints of the messages that
-src/protocol/protocol.h defines; `pixi run -e dev protocol` writes it and
+src/protocol/protocol.cppm defines; `pixi run -e dev protocol` writes it and
 runs this.
 """
 

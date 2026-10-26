@@ -1,10 +1,10 @@
-#include "feature/text.h"
+module;
 
-#include <cstdint>
-#include <format>
-#include <string>
-#include <string_view>
-#include <kota/support/utf8.h>
+#include "modules/prelude.h"
+
+module catter;
+
+import :feature.text;
 
 namespace catter::feature {
 

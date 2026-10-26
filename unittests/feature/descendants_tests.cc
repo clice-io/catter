@@ -1,8 +1,10 @@
-#include <optional>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
+module;
 
-#include "feature/descendants.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :feature.descendants;
 
 using namespace catter;
 

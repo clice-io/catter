@@ -1,9 +1,10 @@
-#include "feature/json.h"
+module;
 
-#include <cassert>
-#include <string>
-#include <utility>
-#include <kota/codec/json/json.h>
+#include "modules/prelude.h"
+
+module catter;
+
+import :feature.json;
 
 namespace catter::feature {
 

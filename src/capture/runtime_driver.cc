@@ -1,21 +1,17 @@
-#include "capture/runtime_driver.h"
+module;
 
-#include <cassert>
-#include <exception>
-#include <format>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <kota/fs/path.h>
+#include "modules/prelude.h"
 
-#include "capture/replay.h"
-#include "session/ipc.h"
-#include "session/session.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
 #include "support/paths.h"
+
+module catter;
+
+import :capture.replay;
+import :capture.runtime_driver;
+import :session.ipc;
+import :session.session;
 
 namespace catter {
 namespace {
@@ -160,7 +156,7 @@ public:
     }
 };
 
-/// Plays a recorded build (see replay.h) instead of running one: the build
+/// Plays a recorded build (see replay.cppm) instead of running one: the build
 /// command is the replay file.
 class ReplayRuntimeDriver final : public RuntimeDriver {
 public:

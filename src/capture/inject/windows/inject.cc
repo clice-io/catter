@@ -1,19 +1,6 @@
-#include "capture/inject/windows/inject.h"
+module;
 
-#include <algorithm>
-#include <cstddef>
-#include <format>
-#include <functional>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <cpptrace/exceptions.hpp>
-#include <kota/support/utf16.h>
-#include <kota/fs/directory.h>
-#include <kota/fs/file.h>
-#include <kota/fs/path.h>
-#include <kota/fs/status.h>
+#include "modules/prelude.h"
 
 // clang-format off
 // <detours.h> needs the architecture macros of <windows.h>.
@@ -24,6 +11,10 @@
 #include "support/exception.h"
 #include "support/log.h"
 #include "support/paths.h"
+
+module catter;
+
+import :capture.inject.windows.inject;
 
 namespace catter {
 

@@ -1,11 +1,10 @@
-#include "protocol/protocol.h"
+module;
 
-#include <cstdint>
-#include <format>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <kota/support/utf8.h>
+#include "modules/prelude.h"
+
+module catter;
+
+import :protocol.protocol;
 
 namespace catter::protocol {
 

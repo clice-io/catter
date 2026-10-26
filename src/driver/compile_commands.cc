@@ -1,15 +1,14 @@
-#include "feature/compile_commands.h"
+module;
 
-#include <span>
-#include <string>
-#include <utility>
-#include <kota/async/io/loop.h>
-#include <kota/deco/deco.h>
+#include "modules/prelude.h"
 
-#include "driver/app_runner.h"
-#include "driver/cli.h"
-#include "driver/driver.h"
-#include "driver/option.h"
+module catter;
+
+import :driver.app_runner;
+import :driver.cli;
+import :driver.driver;
+import :driver.option;
+import :feature.compile_commands;
 
 namespace catter::driver {
 

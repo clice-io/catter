@@ -1,35 +1,24 @@
-#include <csignal>
-#include <cstdint>
-#include <cstdlib>
-#include <format>
-#include <iostream>
-#include <span>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/async/async.h>
-#include <kota/deco/deco.h>
-#include <kota/fs/resolve.h>
-#include <kota/sys/env.h>
-#include <kota/sys/process.h>
+module;
+
+#include "modules/prelude.h"
 
 #ifndef CATTER_WINDOWS
 #include <pthread.h>
 #include <sys/resource.h>
 #endif
 
-#include "capture/inject/hook.h"
-#include "proxy/ipc.h"
-#include "proxy/option.h"
-#include "session/process.h"
 #include "support/config/catter-proxy.h"
 #include "support/guard.h"
 #include "support/log.h"
 #include "support/output.h"
 #include "support/paths.h"
+
+module catter;
+
+import :capture.inject.hook;
+import :proxy.ipc;
+import :proxy.option;
+import :session.process;
 
 using namespace catter;
 
@@ -241,7 +230,7 @@ int run(std::span<const std::string> argv) {
 
 }  // namespace
 
-int main(int argc, char* argv[]) {
+extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.

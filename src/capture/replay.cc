@@ -1,16 +1,10 @@
-#include "capture/replay.h"
+module;
 
-#include <cstdint>
-#include <format>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/codec/json/json.h>
-#include <kota/fs/file.h>
-#include <kota/fs/path.h>
+#include "modules/prelude.h"
+
+module catter;
+
+import :capture.replay;
 
 namespace catter {
 

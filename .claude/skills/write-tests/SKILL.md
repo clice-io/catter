@@ -87,9 +87,13 @@ rules and the pitfalls. The framework is `tools/testing/`
 ## C++ unit tests (zest)
 
 - `unittests/` mirrors `src/`, as clice's does: the tests of
-  `src/<dir>/<name>.h` are `unittests/<dir>/<name>_tests.cc`, the shared
+  `src/<dir>/<name>.cppm` are `unittests/<dir>/<name>_tests.cc`, the shared
   helpers live in `unittests/utils/`, and they build into `unittests`, but
   the hook payloads' into `unittests-hook-unix` and `unittests-hook-windows`.
+  The tests of `unittests` are implementation units of `catter`, which
+  import the partitions they test (`import :feature.flat_tree;`) and
+  `catter.command`; the payloads' tests, `unittests/main.cc` and the
+  helpers stay plain sources and headers, which the three programs share.
   What belongs in a unit test rather than a case is in `tests/README.md`,
   "Unit tests".
 - zest runs each test in a worker process with a 60 second limit; a suite

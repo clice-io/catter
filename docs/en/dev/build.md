@@ -46,6 +46,8 @@ startup --output_user_root=C:/b
 
 The project uses [Bazel](https://bazel.build), run through bazelisk from npm (`pnpm exec bazel`) at the version of `.bazelversion`; its dependencies come from the clice Bazel registry, [bazel.clice.io](https://bazel.clice.io). The C++ standard is C++23. `pixi run -e dev pnpm exec bazel run @compdb//:refresh` writes `compile_commands.json` for editors.
 
+catter's code above `src/support` is C++20 named modules: `src/command` is `catter.command`, the rest `catter`. The hook payloads, and `src/support`, which they share, stay headers. The third-party libraries are one module, `deps`, which `modules/` holds for every configuration CI builds; `scripts/modules.py` writes it with `clice modularize` from `modules/demand.cpp`.
+
 ### Build Targets
 
 - `bin/catter` -- Main CLI executable (the DECISION daemon)
