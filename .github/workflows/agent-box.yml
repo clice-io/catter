@@ -25,67 +25,79 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.actor == '16bit-ykiko' && github.triggering_actor == '16bit-ykiko'
     runs-on: ${{ fromJSON('{"linux":"ubuntu-24.04","linux-arm":"ubuntu-24.04-arm","macos":"macos-15","macos-intel":"macos-15-intel","windows":"windows-2025","windows-arm":"windows-11-arm"}')[inputs.os] || 'ubuntu-24.04' }}
     timeout-minutes: 350
-    # The runner image CI names its caches by, and the target CI builds there, which names its
-    # package caches (none on the runners CI builds nothing on).
-    env:
-      CI_OS: ${{ fromJSON('{"linux":"ubuntu-24.04","linux-arm":"ubuntu-24.04-arm","macos":"macos-15","macos-intel":"macos-15-intel","windows":"windows-2025","windows-arm":"windows-11-arm"}')[inputs.os] || 'ubuntu-24.04' }}
-      CI_TARGET: ${{ fromJSON('{"linux":"x86_64-unknown-linux-gnu","macos":"aarch64-apple-darwin","windows":"x86_64-w64-mingw32"}')[inputs.os] || '' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: main
           persist-credentials: false
 
-      # No cache inputs: setup-xmake saves its caches when the job ends, and the cache quota is
-      # CI's. The package cache is restored below instead.
+      # xmake is one of the build systems the cases build with. No cache
+      # inputs: setup-xmake saves its caches when the job ends, and the cache
+      # quota is CI's.
       - name: Setup xmake
         uses: xmake-io/github-action-setup-xmake@v1
         with:
           xmake-version: v3.0.8
 
-      - name: Setup Pixi
-        uses: prefix-dev/setup-pixi@v0.9.6
-        with:
-          pixi-version: v0.71.1
-          environments: dev
-          activate-environment: false
-          cache: true
-          cache-write: false
-          locked: true
-          post-cleanup: false
+      - uses: ./.github/actions/setup-pixi
 
-      # Restore only; CI saves. The newest debug entry of the target CI builds on this OS: what
-      # the packages lack, configure builds.
-      - name: Restore xmake packages
-        if: env.CI_TARGET != ''
+      # Restore only; main's CI saves. The newest RelWithDebInfo entry of
+      # this OS's target (test-target.yml), and on Linux of Windows x64's too,
+      # which CI builds on Linux: the caches are content-addressed, so the two
+      # merge. Windows boxes build nothing.
+      - name: Restore Bazel caches
+        if: ${{ !startsWith(inputs.os, 'windows') }}
         uses: actions/cache/restore@v6
         with:
-          path: .xmake-package-cache
-          key: xmake-package-cache-${{ env.CI_TARGET }}-debug-pixi-
-          restore-keys: xmake-package-cache-${{ env.CI_TARGET }}-debug-pixi-
-      - name: Install xmake packages
-        if: env.CI_TARGET != ''
-        shell: pwsh
+          path: |
+            ${{ runner.temp }}/bazel-disk
+            ${{ runner.temp }}/bazel-repo
+          key: bazel-${{ fromJSON('{"linux":"x86_64-unknown-linux-gnu","linux-arm":"aarch64-unknown-linux-gnu","macos":"aarch64-apple-darwin","macos-intel":"x86_64-apple-darwin"}')[inputs.os] }}-RelWithDebInfo-
+          restore-keys: |
+            bazel-${{ fromJSON('{"linux":"x86_64-unknown-linux-gnu","linux-arm":"aarch64-unknown-linux-gnu","macos":"aarch64-apple-darwin","macos-intel":"x86_64-apple-darwin"}')[inputs.os] }}-RelWithDebInfo-
+      - name: Restore the Windows Bazel caches
+        if: ${{ inputs.os == 'linux' }}
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ${{ runner.temp }}/bazel-disk
+            ${{ runner.temp }}/bazel-repo
+          key: bazel-x86_64-w64-mingw32-RelWithDebInfo-
+          restore-keys: |
+            bazel-x86_64-w64-mingw32-RelWithDebInfo-
+
+      # As test-target.yml's, so a box builds where and how CI does.
+      - name: Bazel settings
+        if: ${{ !startsWith(inputs.os, 'windows') }}
+        shell: bash
         run: |
-          if (Test-Path .xmake-package-cache) {
-            $dir = (xmake l -c 'import("core.package.package"); print(package.installdir())' | Out-String).Trim()
-            New-Item -ItemType Directory -Force $dir | Out-Null
-            Copy-Item -Recurse -Force .xmake-package-cache/* $dir
-            Remove-Item -Recurse -Force .xmake-package-cache
-          }
+          {
+            echo "common --disk_cache=$RUNNER_TEMP/bazel-disk"
+            echo "common --repository_cache=$RUNNER_TEMP/bazel-repo"
+          } > user.bazelrc
+          mkdir -p ~/.box
+          cat > ~/.box/notes <<'NOTES'
+          Build as CI does, so its Bazel cache hits: pixi run -e dev build RelWithDebInfo
+          (or Debug; user.bazelrc in ~/src points Bazel at the cache CI's main run
+          saved); the programs are built into build/<type>/bin/bin. Windows programs build
+          on a linux box, with -- --platforms=@xclang//platforms:x86_64-w64-mingw32
+          (aarch64-w64-mingw32 for ARM64) after the type.
+          NOTES
 
       - name: Notes
+        if: ${{ startsWith(inputs.os, 'windows') }}
         shell: bash
         run: |
           mkdir -p ~/.box
-          {
-            echo 'Build and test as CI does: pixi run -e dev ci-build debug (or release).'
-            if [ "$RUNNER_OS" = Windows ]; then
-              echo 'Windows on ARM is cross-built on x64 Windows: pixi run -e dev ci-cross-build release.'
-              echo 'Git Bash makes xmake take the host for MSYS, and unsetting MSYSTEM there does not help:'
-              echo 'run pixi and xmake through PowerShell, e.g. pwsh -NoProfile -Command "Remove-Item Env:MSYSTEM -EA 0; pixi run -e dev ci-build debug".'
-            fi
-          } > ~/.box/notes
+          cat > ~/.box/notes <<'NOTES'
+          This box builds nothing: build the Windows programs on a linux box
+          (pixi run -e dev build RelWithDebInfo -- --platforms=@xclang//platforms:x86_64-w64-mingw32,
+          aarch64-w64-mingw32 for windows-arm), bring them over with
+          box cp <linux> <this> build/RelWithDebInfo/bin/bin --exclude '*.params' --exclude '*.stripped' --exclude '*.gsymutil.sh'
+          and run the suites as CI does: pixi run -e dev unit-test RelWithDebInfo,
+          pixi run -e dev cases-test RelWithDebInfo, through PowerShell
+          (pwsh -NoProfile -Command "..."), as CI's default shell.
+          NOTES
 
       - uses: 16bit-ykiko/agent-box@1d433bb4c6ac84e877e2f9861b72fd251adee496
         with:
