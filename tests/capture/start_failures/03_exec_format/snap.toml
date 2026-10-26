@@ -1,0 +1,29 @@
+[test."$ node build.mjs"]
+stdout = '''
+execv ./no-format: failed to start: Exec format error
+posix_spawn ./no-format: failed to start: Exec format error
+posix_spawnp no-format: failed to start: Exec format error
+execvp no-format: run by /bin/sh
+execv ./lost-interpreter: failed to start: No such file or directory
+posix_spawn ./lost-interpreter: failed to start: No such file or directory
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+execv ./no-format: failed to start: Exec format error
+posix_spawn ./no-format: failed to start: Exec format error
+posix_spawnp no-format: failed to start: Exec format error
+execvp no-format: run by /bin/sh
+execv ./lost-interpreter: failed to start: No such file or directory
+posix_spawn ./lost-interpreter: failed to start: No such file or directory
+node build.mjs
+├── ./start execv ./no-format
+├── ./start posix_spawn ./no-format
+├── ./start posix_spawnp no-format
+├── ./start execvp no-format
+│   └── no-format
+├── ./start execv ./lost-interpreter
+└── ./start posix_spawn ./lost-interpreter
+'''
+exit = 0

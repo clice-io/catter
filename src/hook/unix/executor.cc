@@ -1,7 +1,11 @@
 #include "hook/unix/executor.h"
 
+#include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cstdarg>
+#include <cstdint>
+#include <cstring>
 #include <exception>
 #include <format>
 #include <span>
@@ -9,6 +13,7 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <fcntl.h>
 #include <unistd.h>
 #include <kota/sys/env.h>
 #include <kota/sys/process.h>
@@ -95,6 +100,76 @@ std::string resolve_from_path(const char* file, const char* const envp[]) {
     ::confstr(_CS_PATH, defaults.data(), defaults.size());
     defaults.pop_back();
     return resolve_from_search_path(file, defaults);
+}
+
+/// How the system takes a file it is asked to run, where catter-proxy would
+/// run it otherwise.
+enum class Format : std::uint8_t {
+    /// One the system starts itself, or that this process cannot read, as a
+    /// program only executable is: catter-proxy starts it.
+    Program,
+    /// None the system knows of: execve fails with ENOEXEC, or a format
+    /// registered with binfmt_misc starts it.
+    Unknown,
+    /// A script whose interpreter is not there: execve fails with ENOENT.
+    MissingInterpreter,
+};
+
+Format format_of(const char* path) noexcept {
+    int fd = ::open(path, O_RDONLY | O_CLOEXEC);
+    if(fd < 0) {
+        return Format::Program;
+    }
+    std::array<char, 256> head;
+    auto size = ::read(fd, head.data(), head.size());
+    ::close(fd);
+    if(size < 0) {
+        return Format::Program;
+    }
+    std::string_view text(head.data(), static_cast<std::size_t>(size));
+    if(text.starts_with("#!")) {
+        text.remove_prefix(2);
+        text.remove_prefix(std::min(text.find_first_not_of(" \t"), text.size()));
+        auto end = text.find_first_of(" \t\n");
+        if(end == std::string_view::npos) {
+            return Format::Program;
+        }
+        std::string interpreter(text.substr(0, end));
+        return ::access(interpreter.c_str(), X_OK) == 0 ? Format::Program
+                                                        : Format::MissingInterpreter;
+    }
+#ifdef CATTER_LINUX
+    if(text.starts_with("\x7f" "ELF")) {
+        return Format::Program;
+    }
+#else
+    if(text.size() >= 4) {
+        std::uint32_t magic;
+        std::memcpy(&magic, text.data(), sizeof(magic));
+        // Mach-O, 32 and 64 bits, and universal, in either byte order.
+        for(std::uint32_t known: {0xfeedfaceU, 0xfeedfacfU, 0xcafebabeU, 0xcafebabfU}) {
+            if(magic == known || magic == __builtin_bswap32(known)) {
+                return Format::Program;
+            }
+        }
+    }
+#endif
+    return Format::Unknown;
+}
+
+/// Whether posix_spawnp runs a file of no executable format with /bin/sh, as
+/// execvp does: macOS's does, glibc's no longer.
+#ifdef CATTER_MAC
+constexpr bool POSIX_SPAWNP_SHELL_FALLBACK = true;
+#else
+constexpr bool POSIX_SPAWNP_SHELL_FALLBACK = false;
+#endif
+
+/// The system judges a file catter-proxy would run otherwise: it fails, as
+/// without catter, or it starts the file itself, uncaptured.
+bool for_the_system(const char* executable, bool shell_fallback) noexcept {
+    auto format = format_of(executable);
+    return format == Format::MissingInterpreter || (format == Format::Unknown && !shell_fallback);
 }
 
 /// A program that is not there or not executable fails to start as it would
@@ -203,14 +278,18 @@ int Executor::execv(const char* path, char* const argv[]) noexcept {
         require_path_arg(path, "path");
         return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
                                 argv,
-                                environment());
+                                environment(),
+                                false);
     });
 }
 
 int Executor::execve(const char* path, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("execve", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(), argv, envp);
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
+                                argv,
+                                envp,
+                                false);
     });
 }
 
@@ -218,14 +297,14 @@ int Executor::execvp(const char* file, char* const argv[]) noexcept {
     CATTER_EXEC_BOUNDARY("execvp", {
         require_path_arg(file, "file");
         auto envp = environment();
-        return this->run_execve(resolve_from_path(file, envp).c_str(), argv, envp);
+        return this->run_execve(resolve_from_path(file, envp).c_str(), argv, envp, true);
     });
 }
 
 int Executor::execvpe(const char* file, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("execvpe", {
         require_path_arg(file, "file");
-        return this->run_execve(resolve_from_path(file, environment()).c_str(), argv, envp);
+        return this->run_execve(resolve_from_path(file, environment()).c_str(), argv, envp, true);
     });
 }
 
@@ -236,7 +315,8 @@ int Executor::execl(const char* path, const char* arg, va_list* ap) noexcept {
         auto argv = collect_variadic_argv(arg, ap);
         return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
                                 argv.data(),
-                                environment());
+                                environment(),
+                                false);
     });
 }
 
@@ -248,7 +328,8 @@ int Executor::execle(const char* path, const char* arg, va_list* ap) noexcept {
         auto envp = collect_variadic_envp(ap);
         return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
                                 argv.data(),
-                                envp);
+                                envp,
+                                false);
     });
 }
 
@@ -258,7 +339,7 @@ int Executor::execlp(const char* file, const char* arg, va_list* ap) noexcept {
         require_va_list(ap);
         auto argv = collect_variadic_argv(arg, ap);
         auto envp = environment();
-        return this->run_execve(resolve_from_path(file, envp).c_str(), argv.data(), envp);
+        return this->run_execve(resolve_from_path(file, envp).c_str(), argv.data(), envp, true);
     });
 }
 
@@ -269,14 +350,20 @@ int Executor::execvP(const char* file,
     CATTER_EXEC_BOUNDARY("execvP", {
         require_path_arg(file, "file");
         require_path_arg(search_path, "search_path");
-        return this->run_execve(resolve_from_search_path(file, search_path).c_str(), argv, envp);
+        return this->run_execve(resolve_from_search_path(file, search_path).c_str(),
+                                argv,
+                                envp,
+                                true);
     });
 }
 
 int Executor::exect(const char* path, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("exect", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(), argv, envp);
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
+                                argv,
+                                envp,
+                                false);
     });
 }
 
@@ -293,7 +380,8 @@ int Executor::posix_spawn(pid_t* pid,
                                      file_actions,
                                      attrp,
                                      argv,
-                                     envp);
+                                     envp,
+                                     false);
     });
 }
 
@@ -310,13 +398,20 @@ int Executor::posix_spawnp(pid_t* pid,
                                      file_actions,
                                      attrp,
                                      argv,
-                                     envp);
+                                     envp,
+                                     POSIX_SPAWNP_SHELL_FALLBACK);
     });
 }
 
-int Executor::run_execve(const char* executable, const char* const argv[], char* const envp[]) {
+int Executor::run_execve(const char* executable,
+                         const char* const argv[],
+                         char* const envp[],
+                         bool shell_fallback) {
     if(this->m_execve == nullptr) {
         throw PayloadError(ENOSYS, "hook function \"execve\" not initialized");
+    }
+    if(for_the_system(executable, shell_fallback)) {
+        return m_execve(executable, const_cast<char* const*>(argv), envp);
     }
 
     auto clean_env = sanitize_environment(envp);
@@ -346,9 +441,18 @@ int Executor::run_posix_spawn(pid_t* pid,
                               const posix_spawn_file_actions_t* file_actions,
                               const posix_spawnattr_t* attrp,
                               const char* const argv[],
-                              char* const envp[]) {
+                              char* const envp[],
+                              bool shell_fallback) {
     if(m_posix_spawn == nullptr) {
         throw PayloadError(ENOSYS, "hook function \"posix_spawn\" not initialized");
+    }
+    if(for_the_system(executable, shell_fallback)) {
+        return m_posix_spawn(pid,
+                             executable,
+                             file_actions,
+                             attrp,
+                             const_cast<char* const*>(argv),
+                             envp);
     }
     auto clean_env = sanitize_environment(envp);
     auto args = argv_span(argv);
