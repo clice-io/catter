@@ -14,6 +14,7 @@ module catter;
 
 import :driver.cli;
 import :driver.driver;
+import :session.process;
 
 using namespace catter;
 
@@ -28,7 +29,7 @@ void report(std::string_view message) noexcept {
 }
 
 int run(std::span<const std::string> argv) {
-
+    hold_closed_streams();
 #ifdef CATTER_WINDOWS
     SetConsoleOutputCP(CP_UTF8);
 #endif

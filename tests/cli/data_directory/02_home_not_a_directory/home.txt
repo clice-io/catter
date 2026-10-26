@@ -1,0 +1,1 @@
+Not a directory: catter cannot keep its data under it.

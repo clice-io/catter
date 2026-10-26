@@ -8,6 +8,12 @@ import :session.data;
 
 namespace catter {
 
+/// Holds each standard stream this process was started without, which nothing
+/// it opens then takes the number of; the program it stands in for gets it
+/// closed (`RunOptions::stand_in`). Called first in main, before anything is
+/// opened. Windows numbers no handle as a standard stream: nothing to hold.
+void hold_closed_streams();
+
 /// The options that start `command` as it was captured: its program, argv,
 /// environment and working directory. On Windows its command line is written
 /// from its arguments, as CreateProcess takes it, which runs a batch file too.

@@ -197,6 +197,7 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
 // usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
 int run(std::span<const std::string> argv) {
+    hold_closed_streams();
     try {
         log::init_logger("catter-proxy.log", data_path(config::PROXY_LOG_PATH), false);
     } catch(const std::exception&) {
