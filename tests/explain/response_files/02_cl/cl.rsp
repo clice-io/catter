@@ -1,1 +1,1 @@
-/c /DX=\"1\" /DPATH=C:\tools\bin /Fo"out dir/" "src/a b.cc" src/c.cc
+/c /DX=\"1\" /DPATH=C:\tools\bin /Fo"out/" "src/a b.cc" src/c.cc

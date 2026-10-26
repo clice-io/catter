@@ -12,7 +12,8 @@ command 4: gcc @gone.rsp -c d.c
   reads d.c at 3
   writes d.o
   diagnostic response-file-unread: gone.rsp at 1: response file cannot be read
-  gcc @flags.rsp -c a.c: as ['gcc', '-DX=1', '-DY=two words', '-Iinclude', '-c', 'a.c']
+  gcc @flags.rsp -c a.c, in the command's cwd: as ['gcc', '-DX=1', '-DY=two words', '-Iinclude', '-c', 'a.c']
+  gcc @flags.rsp -c a.c, in no cwd: ['response-file-unread']
 '''
 exit = 0
 

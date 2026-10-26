@@ -23,7 +23,7 @@ stdout = '''
         "/c",
         "/DX=\"1\"",
         "/DPATH=C:\\tools\\bin",
-        "/Foout dir/",
+        "/Foout/",
         "src/a b.cc",
         "src/c.cc"
     ],
@@ -36,18 +36,18 @@ stdout = '''
         "src/c.cc"
     ],
     "writes": [
-        "out dir/a b.obj",
-        "out dir/c.obj"
+        "out/a b.obj",
+        "out/c.obj"
     ],
     "edges": [
         {
-            "output": "out dir/a b.obj",
+            "output": "out/a b.obj",
             "inputs": [
                 "src/a b.cc"
             ]
         },
         {
-            "output": "out dir/c.obj",
+            "output": "out/c.obj",
             "inputs": [
                 "src/c.cc"
             ]
@@ -63,11 +63,11 @@ stdout = '''
                 "/c",
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
-                "/Foout dir/",
+                "/Foout/",
                 "src/a b.cc",
                 "src/c.cc"
             ],
-            "output": "${WS}/out dir/a b.obj"
+            "output": "${WS}/out/a b.obj"
         },
         {
             "directory": "${WS}",
@@ -78,11 +78,11 @@ stdout = '''
                 "/c",
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
-                "/Foout dir/",
+                "/Foout/",
                 "src/a b.cc",
                 "src/c.cc"
             ],
-            "output": "${WS}/out dir/c.obj"
+            "output": "${WS}/out/c.obj"
         }
     ]
 }
@@ -114,7 +114,7 @@ stdout = '''
         "/c",
         "/DX=\"1\"",
         "/DPATH=C:\\tools\\bin",
-        "/Foout dir/",
+        "/Foout/",
         "src/a b.cc",
         "src/c.cc"
     ],
@@ -127,18 +127,18 @@ stdout = '''
         "src/c.cc"
     ],
     "writes": [
-        "out dir/a b.obj",
-        "out dir/c.obj"
+        "out/a b.obj",
+        "out/c.obj"
     ],
     "edges": [
         {
-            "output": "out dir/a b.obj",
+            "output": "out/a b.obj",
             "inputs": [
                 "src/a b.cc"
             ]
         },
         {
-            "output": "out dir/c.obj",
+            "output": "out/c.obj",
             "inputs": [
                 "src/c.cc"
             ]
@@ -154,11 +154,11 @@ stdout = '''
                 "/c",
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
-                "/Foout dir/",
+                "/Foout/",
                 "src/a b.cc",
                 "src/c.cc"
             ],
-            "output": "${WS}/out dir/a b.obj"
+            "output": "${WS}/out/a b.obj"
         },
         {
             "directory": "${WS}",
@@ -169,11 +169,11 @@ stdout = '''
                 "/c",
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
-                "/Foout dir/",
+                "/Foout/",
                 "src/a b.cc",
                 "src/c.cc"
             ],
-            "output": "${WS}/out dir/c.obj"
+            "output": "${WS}/out/c.obj"
         }
     ]
 }

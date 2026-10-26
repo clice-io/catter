@@ -1228,6 +1228,24 @@
                             }
                         ]
                     }
+                },
+                "cwd": {
+                    "anyOf": [
+                        {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/Base64"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
                 }
             },
             "required": [

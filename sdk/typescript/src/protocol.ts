@@ -119,6 +119,7 @@ export interface Finish {
 export interface Program {
     executable: OsString;
     args: OsString[];
+    cwd?: OsString | null;
 }
 
 export interface AnalyzeParams {

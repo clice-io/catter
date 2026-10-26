@@ -62,6 +62,27 @@ const auto& rules() {
     return rules;
 }
 
+/// How the compiler `identity` names splits the response files of `argv`, which it reads before
+/// its other arguments: clang as `--rsp-quoting` says, else as Windows splits a command line in
+/// cl mode, which `--driver-mode=cl` sets.
+Quoting quoting_of(const Identity& identity, std::span<const std::string> argv) {
+    if(identity.compiler != Compiler::Clang && identity.compiler != Compiler::ClangCL) {
+        return identity.dialect == Dialect::MSVC ? Quoting::Windows : Quoting::GNU;
+    }
+    auto quoting =
+        identity.dialect == Dialect::MSVC || std::ranges::contains(argv, "--driver-mode=cl")
+            ? Quoting::Windows
+            : Quoting::GNU;
+    for(const auto& argument: argv) {
+        if(argument == "--rsp-quoting=posix") {
+            quoting = Quoting::GNU;
+        } else if(argument == "--rsp-quoting=windows") {
+            quoting = Quoting::Windows;
+        }
+    }
+    return quoting;
+}
+
 }  // namespace
 
 std::optional<Identity> identify(std::string_view executable) {
@@ -96,12 +117,7 @@ std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executa
             .message = "compiler dialect is not supported yet: nvcc",
         });
     }
-    // clang reads `--driver-mode` before its response files, to know how to split them.
-    const bool cl =
-        identity->dialect == Dialect::MSVC ||
-        (identity->dialect == Dialect::Clang && std::ranges::contains(argv, "--driver-mode=cl"));
-    auto expansion =
-        expand_response_files(argv, directory, cl ? Quoting::Windows : Quoting::GNU, read);
+    auto expansion = expand_response_files(argv, directory, quoting_of(*identity, argv), read);
     auto parsed = parse(*identity, expansion.argv);
     if(!parsed.has_value()) {
         return std::unexpected(std::move(parsed.error()));

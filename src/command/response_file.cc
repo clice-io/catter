@@ -97,51 +97,18 @@ std::vector<std::string> split_windows(std::string_view text) {
     return arguments;
 }
 
-void append_utf8(std::string& text, char32_t c) {
-    if(c < 0x80) {
-        text += static_cast<char>(c);
-    } else if(c < 0x800) {
-        text += static_cast<char>(0xC0 | (c >> 6));
-        text += static_cast<char>(0x80 | (c & 0x3F));
-    } else if(c < 0x10000) {
-        text += static_cast<char>(0xE0 | (c >> 12));
-        text += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-        text += static_cast<char>(0x80 | (c & 0x3F));
-    } else {
-        text += static_cast<char>(0xF0 | (c >> 18));
-        text += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
-        text += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-        text += static_cast<char>(0x80 | (c & 0x3F));
-    }
-}
-
-/// The text of UTF-16LE `bytes` in UTF-8, a surrogate without its pair as U+FFFD.
-std::string utf8_of_utf16(std::string_view bytes) {
-    const auto unit = [&](std::size_t i) -> char32_t {
-        return static_cast<unsigned char>(bytes[i]) | static_cast<unsigned char>(bytes[i + 1]) << 8;
-    };
-    const auto in = [](char32_t c, char32_t first, char32_t last) {
-        return c >= first && c <= last;
-    };
-    std::string text;
-    for(std::size_t i = 0; i + 1 < bytes.size(); i += 2) {
-        auto c = unit(i);
-        if(in(c, 0xD800, 0xDBFF) && i + 3 < bytes.size() && in(unit(i + 2), 0xDC00, 0xDFFF)) {
-            c = 0x10000 + ((c - 0xD800) << 10) + (unit(i + 2) - 0xDC00);
-            i += 2;
-        } else if(in(c, 0xD800, 0xDFFF)) {
-            c = 0xFFFD;
-        }
-        append_utf8(text, c);
-    }
-    return text;
-}
-
 /// The text of a response file's `bytes`: those after a UTF-8 byte order mark, or UTF-16's in
 /// UTF-8, as MSVC's tools write them.
 std::string text_of(std::string bytes) {
     if(bytes.starts_with("\xFF\xFE")) {
-        return utf8_of_utf16(std::string_view(bytes).substr(2));
+        std::u16string units;
+        for(std::size_t i = 2; i + 1 < bytes.size(); i += 2) {
+            units += static_cast<char16_t>(static_cast<unsigned char>(bytes[i]) |
+                                           static_cast<unsigned char>(bytes[i + 1]) << 8);
+        }
+        std::string text;
+        kota::from_utf16(text, units);
+        return text;
     }
     if(bytes.starts_with("\xEF\xBB\xBF")) {
         bytes.erase(0, 3);
@@ -160,9 +127,9 @@ struct Builder {
 
     /// Adds `argument`, which the element `origin` of the command's argv is or names the file
     /// of, read `depth` response files deep.
-    void add(const std::string& argument, std::uint32_t origin, std::uint32_t depth) {
+    void add(std::string_view argument, std::uint32_t origin, std::uint32_t depth) {
         if(argument.starts_with('@') && depth < max_depth) {
-            if(auto text = read_file(std::string_view(argument).substr(1))) {
+            if(auto text = read_file(argument.substr(1))) {
                 for(const auto& each:
                     quoting == Quoting::GNU ? split_gnu(*text) : split_windows(*text)) {
                     add(each, origin, depth + 1);
@@ -170,7 +137,7 @@ struct Builder {
                 return;
             }
         }
-        expansion.argv.push_back(argument);
+        expansion.argv.emplace_back(argument);
         expansion.origins.push_back(origin);
     }
 

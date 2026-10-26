@@ -31,6 +31,7 @@
 #define	SIGINT		2	/* Interrupt (ANSI).  */
 #define	SIGKILL		9	/* Kill, unblockable (POSIX).  */
 #define	SIGTERM		15	/* Termination (ANSI).  */
+# define __WCHAR_MAX	(2147483647)
 #define	__GLIBC__	2
 #define	__GLIBC_MINOR__	17
 #define __GLIBC_PREREQ(maj, min) 	((__GLIBC__ << 16) + __GLIBC_MINOR__ >= ((maj) << 16) + (min))
@@ -54,6 +55,7 @@
 #  define __INT64_C(c)	c ## L
 # define INT32_MAX		(2147483647)
 # define INT64_MAX		(__INT64_C(9223372036854775807))
+#  define WCHAR_MAX		__WCHAR_MAX
 #define _IONBF 2		/* No buffering.  */
 #define SEEK_END	2	/* Seek from end of file.  */
 #define stdout stdout

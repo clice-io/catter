@@ -73,6 +73,7 @@
 #include <kota/meta/enum.h>
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
+#include <kota/support/utf16.h>
 #include <kota/support/utf8.h>
 #include <kota/sys/dirs.h>
 #include <kota/sys/process.h>
@@ -80,7 +81,6 @@
 #include <kota/zest/zest.h>
 #include <spdlog/spdlog.h>
 #ifdef _WIN32
-#include <kota/support/utf16.h>
 #include <kota/sys/windows.h>
 #endif
 

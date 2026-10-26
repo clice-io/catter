@@ -90,9 +90,10 @@ ZEST_CASE(a_byte_order_mark_says_the_encoding) {
     ZEXPECT(split("\xEF\xBB\xBF-DX", Quoting::GNU) == Strings{"-DX"});
     ZEXPECT(split("\xFF\xFE" + utf16("/c \"a b.cc\""), Quoting::Windows) ==
             Strings{"/c", "a b.cc"});
-    // U+00E9, U+4E2D and U+1F600, the last a surrogate pair, then a surrogate without its pair.
+    // U+00E9, U+4E2D and U+1F600, the last a surrogate pair, then a surrogate without its pair,
+    // which WTF-8 spells.
     ZEXPECT(split(std::string("\xFF\xFE\xE9\x00\x2D\x4E\x3D\xD8\x00\xDE\x20\x00\x3D\xD8", 14),
-                  Quoting::Windows) == Strings{"\u00E9\u4E2D\U0001F600", "\uFFFD"});
+                  Quoting::Windows) == Strings{"\u00E9\u4E2D\U0001F600", "\xED\xA0\xBD"});
 };
 
 ZEST_CASE(compilers_split_their_files_as_their_driver_does) {
@@ -109,6 +110,10 @@ ZEST_CASE(compilers_split_their_files_as_their_driver_does) {
     ZEXPECT(sources({"clang", "--driver-mode=cl", "@a.rsp"}) == Strings{R"(C:\src\a.cc)"});
     ZEXPECT(sources({"clang-cl", "@a.rsp"}) == Strings{R"(C:\src\a.cc)"});
     ZEXPECT(sources({"clang", "-c", "@a.rsp"}) == Strings{"C:srca.cc"});
+    ZEXPECT(sources({"clang", "--rsp-quoting=windows", "-c", "@a.rsp"}) ==
+            Strings{R"(C:\src\a.cc)"});
+    ZEXPECT(sources({"clang-cl", "--rsp-quoting=posix", "@a.rsp"}) == Strings{"C:srca.cc"});
+    ZEXPECT(sources({"gcc", "--rsp-quoting=windows", "-c", "@a.rsp"}) == Strings{"C:srca.cc"});
 };
 
 ZEST_CASE(a_compiler_reads_its_arguments_from_its_files) {

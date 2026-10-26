@@ -52,7 +52,7 @@ ZEST_CASE(a_filter_names_kinds_names_and_phases_catter_knows) {
 
 ZEST_CASE(a_filter_names_commands_by_their_analysis) {
     auto matches = [](std::vector<std::string> argv, std::vector<protocol::Pattern> filter) {
-        return CommandAnalysis(argv[0], argv, "").matches(filter);
+        return CommandAnalysis(argv[0], argv, std::nullopt).matches(filter);
     };
     const std::vector<protocol::Pattern> archivers{{.kind = "archiver"}};
     const std::vector<protocol::Pattern> coff{
@@ -82,7 +82,7 @@ ZEST_CASE(a_filter_names_commands_by_their_analysis) {
 
 ZEST_CASE(an_edit_of_an_unknown_kind_is_an_error) {
     std::vector<std::string> argv{"gcc", "-c", "a.c"};
-    auto edited = CommandAnalysis(argv[0], argv, "")
+    auto edited = CommandAnalysis(argv[0], argv, std::nullopt)
                       .edit(argv, std::vector<protocol::CommandEdit>{{.kind = "replace"}});
     ZASSERT(!edited.has_value());
     ZEXPECT(edited.error() == "`replace` is no kind of edit: give `remove`, `append` or `prepend`");

@@ -430,18 +430,22 @@ class Finish:
 class Program:
     executable: str
     args: list[str]
+    cwd: str | None = None
 
     @staticmethod
     def from_json(data: dict[str, Any]) -> Program:
         return Program(
             executable=_os_from(data["executable"]),
             args=[_os_from(item) for item in data["args"]],
+            cwd=None if data.get("cwd") is None else _os_from(data.get("cwd")),
         )
 
     def to_json(self) -> dict[str, Any]:
         data: dict[str, Any] = {}
         data["executable"] = _os_to(self.executable)
         data["args"] = [_os_to(item) for item in self.args]
+        if self.cwd is not None:
+            data["cwd"] = _os_to(self.cwd)
         return data
 
 

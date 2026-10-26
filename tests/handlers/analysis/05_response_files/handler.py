@@ -19,9 +19,11 @@ class Handler(catter.Handler):
         for diagnostic in analysis.diagnostics:
             print(f"  diagnostic {diagnostic.code}: {diagnostic.path} at {diagnostic.index}: {diagnostic.message}")
         if command.id == 4:
-            # A program the handler names reads its response files from catter's working directory.
-            (named,) = self.analyze(catter.Program("gcc", ["gcc", "@flags.rsp", "-c", "a.c"]))
-            print(f"  gcc @flags.rsp -c a.c: as {named.expansion.args}")
+            # A program the handler names has its relative response files read from its cwd, if any.
+            args = ["gcc", "@flags.rsp", "-c", "a.c"]
+            here, nowhere = self.analyze(catter.Program("gcc", args, command.cwd), catter.Program("gcc", args))
+            print(f"  gcc @flags.rsp -c a.c, in the command's cwd: as {here.expansion.args}")
+            print(f"  gcc @flags.rsp -c a.c, in no cwd: {[each.code for each in nowhere.diagnostics]}")
 
 
 catter.serve(Handler())

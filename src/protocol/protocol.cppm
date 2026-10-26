@@ -283,6 +283,9 @@ struct Finish {
 struct Program {
     OSString executable;
     std::vector<OSString> args;
+    /// The directory it runs in, which its relative response files are read from; without it,
+    /// only its absolute ones are read.
+    std::optional<OSString> cwd;
 };
 
 /// Request `analyze`, from a handler: what catter makes of programs the handler names.

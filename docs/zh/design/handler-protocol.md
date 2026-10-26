@@ -102,7 +102,7 @@ catter 对一条命令的分析，由其 `kind` 指明。catter 按可执行文�
 
 ### `analyze`
 
-handler 发给 catter 的请求，询问 catter 对 handler 自己给出的命令的分析：`programs`，每项有 `executable` 和 `args`（第一个是程序名），其中相对路径的响应文件从 catter 的工作目录读取。结果是 `analyses`，每个程序一项，catter 对其一无所知的程序为 `null`。
+handler 发给 catter 的请求，询问 catter 对 handler 自己给出的命令的分析：`programs`，每项有 `executable`、`args`（第一个是程序名），以及可选的 `cwd`，即程序运行的目录，相对路径的响应文件从这里读取：没有它时只读取绝对路径的响应文件。结果是 `analyses`，每个程序一项，catter 对其一无所知的程序为 `null`。
 
 ### `error`、`exit` 和 `finish`
 

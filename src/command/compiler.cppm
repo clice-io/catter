@@ -256,7 +256,8 @@ std::optional<Identity> identify(std::string_view executable);
 
 /// Analyzes the command that runs `executable` with `argv`, argv[0] included, in `directory`,
 /// whose response files `read` reads as the compiler would before it runs: cl's and clang's in
-/// cl mode split as Windows splits a command line, the others as GCC does.
+/// cl mode split as Windows splits a command line, the others as GCC does, but as clang's
+/// `--rsp-quoting` says.
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
                                                         std::span<const std::string> argv,
                                                         std::string_view directory,

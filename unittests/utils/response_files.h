@@ -1,10 +1,6 @@
 #pragma once
-#include <functional>
-#include <map>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <kota/support/buffer_ref.h>
+
+// Included by the tests' module units after modules/prelude.h, whose imports it uses.
 
 namespace catter {
 

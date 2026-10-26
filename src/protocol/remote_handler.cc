@@ -150,25 +150,30 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
     peer(kota::event_loop::current(),
          std::make_unique<Transport>(std::move(transport), output_end)),
     process(std::move(process)) {
-    peer.on_request(
-        "analyze",
-        [](kota::ipc::JSONPeer::RequestContext&, const protocol::AnalyzeParams& params)
-            -> kota::task<protocol::AnalyzeResult, kota::ipc::Error> {
-            protocol::AnalyzeResult result;
-            for(const auto& program: params.programs) {
-                auto executable = protocol::to_bytes(program.executable);
-                auto args = protocol::to_bytes(program.args);
-                if(!executable || !args) {
-                    co_return kota::outcome_error(
-                        kota::ipc::Error(kota::ipc::protocol::ErrorCode::InvalidParams,
-                                         executable ? args.error() : executable.error()));
-                }
-                // A program the handler names has no working directory: its relative response
-                // files are read from catter's.
-                result.analyses.push_back(CommandAnalysis(*executable, *args, "").message());
-            }
-            co_return result;
-        });
+    peer.on_request("analyze",
+                    [](kota::ipc::JSONPeer::RequestContext&, const protocol::AnalyzeParams& params)
+                        -> kota::task<protocol::AnalyzeResult, kota::ipc::Error> {
+                        protocol::AnalyzeResult result;
+                        for(const auto& program: params.programs) {
+                            auto executable = protocol::to_bytes(program.executable);
+                            auto args = protocol::to_bytes(program.args);
+                            auto cwd = protocol::to_bytes(program.cwd.value_or(""));
+                            if(!executable || !args || !cwd) {
+                                co_return kota::outcome_error(
+                                    kota::ipc::Error(kota::ipc::protocol::ErrorCode::InvalidParams,
+                                                     !executable ? executable.error()
+                                                     : !args     ? args.error()
+                                                                 : cwd.error()));
+                            }
+                            result.analyses.push_back(
+                                CommandAnalysis(*executable,
+                                                *args,
+                                                program.cwd ? std::optional<std::string_view>(*cwd)
+                                                            : std::nullopt)
+                                    .message());
+                        }
+                        co_return result;
+                    });
     kota::event_loop::current().schedule([](RemoteHandler& self) -> kota::task<> {
         co_await self.peer.run();
         self.stopped.set();

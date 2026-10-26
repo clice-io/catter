@@ -102,7 +102,7 @@ The arguments no edit takes out keep the command's own spelling, and the added f
 
 ### `analyze`
 
-A request a handler sends catter, for what catter makes of commands of its own: `programs`, each with `executable` and `args` (the program's name first), whose relative response files are read from catter's working directory. The result is `analyses`, one for each, `null` for a program catter knows nothing of.
+A request a handler sends catter, for what catter makes of commands of its own: `programs`, each with `executable`, `args` (the program's name first) and, optionally, `cwd`, the directory it runs in, which its relative response files are read from: without it, only its absolute ones are read. The result is `analyses`, one for each, `null` for a program catter knows nothing of.
 
 ### `error`, `exit` and `finish`
 

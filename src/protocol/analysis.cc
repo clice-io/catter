@@ -18,6 +18,13 @@ bool names_one(std::string_view value) {
                                [&](E each) { return name(each) == value; });
 }
 
+std::error_code read_absolute(kota::buffer_ref out, std::string_view path) {
+    if(!kota::fs::path::is_absolute(path)) {
+        return std::make_error_code(std::errc::no_such_file_or_directory);
+    }
+    return kota::fs::read_file(out, path);
+}
+
 bool lists(const std::optional<std::vector<std::string>>& names, std::string_view name) {
     return !names.has_value() || std::ranges::contains(*names, name);
 }
@@ -100,9 +107,13 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
 
 CommandAnalysis::CommandAnalysis(std::string_view executable,
                                  std::span<const std::string> argv,
-                                 std::string_view cwd) {
+                                 std::optional<std::string_view> cwd) {
     if(auto identity = identify(executable)) {
-        auto compiler = analyze_compiler(executable, argv, cwd, kota::fs::read_file);
+        auto compiler =
+            analyze_compiler(executable,
+                             argv,
+                             cwd.value_or(""),
+                             cwd ? ReadFile(kota::fs::read_file) : ReadFile(read_absolute));
         if(compiler.has_value()) {
             result = std::move(*compiler);
         } else {
