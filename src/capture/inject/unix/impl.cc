@@ -35,6 +35,9 @@ static std::string_view arch_of(std::string_view executable) {
         line.remove_prefix(2);
         line.remove_prefix(std::min(line.find_first_not_of(" \t"), line.size()));
         program = line.substr(0, line.find_first_of(" \t\n"));
+        if(program.empty()) {
+            program = "/bin/sh";
+        }
     }
 
     __block std::string_view arch;

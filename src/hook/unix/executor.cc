@@ -13,6 +13,7 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <kota/sys/env.h>
@@ -108,12 +109,105 @@ enum class Format : std::uint8_t {
     /// One the system starts itself, or that this process cannot read, as a
     /// program only executable is: catter-proxy starts it.
     Program,
-    /// None the system knows of: execve fails with ENOEXEC, or a format
-    /// registered with binfmt_misc starts it.
+    /// None the system knows of: execve fails with ENOEXEC.
     Unknown,
     /// A script whose interpreter is not there: execve fails with ENOENT.
     MissingInterpreter,
 };
+
+#ifdef CATTER_LINUX
+int hex_digit(char c) noexcept {
+    if(c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if(c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    return -1;
+}
+
+/// Whether the registration of binfmt_misc that `text` shows, as its file
+/// under /proc/sys/fs/binfmt_misc does, starts the file `path`, whose first
+/// bytes are `head`.
+bool registration_starts(std::string_view text,
+                         std::string_view path,
+                         std::string_view head) noexcept {
+    if(!text.starts_with("enabled\n")) {
+        return false;
+    }
+    std::size_t offset = 0;
+    std::string_view magic;
+    std::string_view mask;
+    std::string_view extension;
+    while(!text.empty()) {
+        auto line = text.substr(0, text.find('\n'));
+        text.remove_prefix(std::min(line.size() + 1, text.size()));
+        if(line.starts_with("offset ")) {
+            offset = 0;
+            for(char c: line.substr(7)) {
+                offset = offset * 10 + static_cast<std::size_t>(c - '0');
+            }
+        } else if(line.starts_with("magic ")) {
+            magic = line.substr(6);
+        } else if(line.starts_with("mask ")) {
+            mask = line.substr(5);
+        } else if(line.starts_with("extension .")) {
+            extension = line.substr(11);
+        }
+    }
+    if(!extension.empty()) {
+        auto dot = path.rfind('.');
+        return dot != std::string_view::npos && path.substr(dot + 1) == extension;
+    }
+    if(magic.empty() || magic.size() % 2 != 0 || offset + magic.size() / 2 > head.size()) {
+        return false;
+    }
+    for(std::size_t i = 0; i < magic.size() / 2; i += 1) {
+        int byte = hex_digit(magic[2 * i]) * 16 + hex_digit(magic[2 * i + 1]);
+        int bits = mask.size() == magic.size()
+                       ? hex_digit(mask[2 * i]) * 16 + hex_digit(mask[2 * i + 1])
+                       : 0xff;
+        if((static_cast<unsigned char>(head[offset + i]) & bits) != (byte & bits)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/// Whether a format registered with binfmt_misc starts the file `path`,
+/// whose first bytes are `head`, as WSL starts Windows programs and Wine
+/// those it runs: the kernel starts it, as catter-proxy does then.
+bool registered_format(std::string_view path, std::string_view head) noexcept {
+    DIR* registrations = ::opendir("/proc/sys/fs/binfmt_misc");
+    if(registrations == nullptr) {
+        return false;
+    }
+    bool found = false;
+    while(!found) {
+        auto* entry = ::readdir(registrations);
+        if(entry == nullptr) {
+            break;
+        }
+        std::string_view name(entry->d_name);
+        if(name.starts_with('.') || name == "register" || name == "status") {
+            continue;
+        }
+        int fd = ::openat(::dirfd(registrations), entry->d_name, O_RDONLY | O_CLOEXEC);
+        if(fd < 0) {
+            continue;
+        }
+        std::array<char, 1024> text;
+        auto size = ::read(fd, text.data(), text.size());
+        ::close(fd);
+        found = size > 0 &&
+                registration_starts(std::string_view(text.data(), static_cast<std::size_t>(size)),
+                                    path,
+                                    head);
+    }
+    ::closedir(registrations);
+    return found;
+}
+#endif
 
 Format format_of(const char* path) noexcept {
     int fd = ::open(path, O_RDONLY | O_CLOEXEC);
@@ -138,12 +232,12 @@ Format format_of(const char* path) noexcept {
             // No interpreter: no format the system knows of.
             return Format::Unknown;
         }
-        std::string interpreter(text.substr(0, end));
-        return ::access(interpreter.c_str(), X_OK) == 0 ? Format::Program
-                                                        : Format::MissingInterpreter;
+        const auto interpreter = text.data();
+        head[static_cast<std::size_t>(interpreter - head.data()) + end] = '\0';
+        return ::access(interpreter, X_OK) == 0 ? Format::Program : Format::MissingInterpreter;
     }
 #ifdef CATTER_LINUX
-    if(text.starts_with("\x7f" "ELF")) {
+    if(text.starts_with("\x7f" "ELF") || registered_format(path, text)) {
         return Format::Program;
     }
 #else
@@ -169,8 +263,8 @@ constexpr bool POSIX_SPAWNP_SHELL_FALLBACK = true;
 constexpr bool POSIX_SPAWNP_SHELL_FALLBACK = false;
 #endif
 
-/// The system judges a file catter-proxy would run otherwise: it fails, as
-/// without catter, or it starts the file itself, uncaptured.
+/// The system judges a file catter-proxy would run otherwise, and fails it as
+/// without catter.
 bool for_the_system(const char* executable, bool shell_fallback) noexcept {
     auto format = format_of(executable);
     return format == Format::MissingInterpreter || (format == Format::Unknown && !shell_fallback);
