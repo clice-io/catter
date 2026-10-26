@@ -19,7 +19,7 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 pnpm = "*"
 # The LLVM tools the artifact check runs (scripts/check_artifact_deps.py), of
 # the xclang release MODULE.bazel builds with (clice-io/xclang).
-xclang = "==23.1.3.4"
+xclang = "==23.1.3.5"
 
 # The compilers the cases build with on Linux (tests/builds).
 [target.linux-64.dependencies]
