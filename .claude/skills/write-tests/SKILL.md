@@ -77,9 +77,10 @@ rules and the pitfalls. The framework is `tools/testing/`
   Visual Studio (vcvars in a clean environment); MSVC's `cl` reads response
   files in the ANSI code page, so a response file naming the copy's
   non-ASCII root does not work there.
-- On macOS, Apple's arm64e tools are killed by dyld when the hook is
-  inserted (#115): every macOS build block carries that `wrong`; node-based
-  capture cases still cover macOS.
+- On macOS, Apple's own tools (`/bin/sh`, `/usr/bin/make`, `/usr/bin/cc`)
+  run without the hook (`src/capture/inject/unix/impl.cc`): what they start
+  goes uncaptured, so the macOS blocks of make and Ninja builds carry that
+  `wrong`; node-based capture cases still cover macOS.
 - A debug (ASan) catter on Linux puts the sanitizer runtime first in the
   preload of every program the hook enters, with leak detection off for
   them (`src/capture/inject/unix/impl.cc`): a case needs nothing for it.

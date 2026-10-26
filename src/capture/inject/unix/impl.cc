@@ -1,24 +1,26 @@
 #include <algorithm>
-#include <climits>
-#include <cstdio>
-#include <cstdlib>
-#include <filesystem>
+#include <array>
 #include <format>
-#include <dirent.h>
-#include <spawn.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <string>
+#include <string_view>
+#include <vector>
 #include <cpptrace/exceptions.hpp>
+#include <kota/fs/path.h>
+#include <kota/fs/status.h>
 #if defined(CATTER_LINUX)
 #include <link.h>
+#elif defined(CATTER_MAC)
+#include <mach-o/utils.h>
+#include <kota/fs/file.h>
 #endif
 
 #include "capture/inject/hook.h"
 #include "session/data.h"
 #include "session/process.h"
+#include "support/config/catter-proxy.h"
 #include "support/config/hook_unix.h"
-#include "support/crossplat.h"
 #include "support/log.h"
+#include "support/paths.h"
 
 #if defined(__SANITIZE_ADDRESS__)
 #define CATTER_ASAN 1
@@ -37,7 +39,7 @@ static std::string sanitizer_runtime() {
     std::string runtime;
     dl_iterate_phdr(
         [](dl_phdr_info* info, size_t, void* data) {
-            auto name = std::filesystem::path(info->dlpi_name).filename().string();
+            auto name = kota::fs::path::filename(info->dlpi_name);
             if(name.starts_with("libasan") || name.starts_with("libclang_rt.asan")) {
                 *static_cast<std::string*>(data) = info->dlpi_name;
                 return 1;
@@ -75,38 +77,76 @@ static void add_sanitizer_runtime(std::vector<std::string>& env,
 }
 #endif
 
-kota::task<data::process_result> run_with_hook(data::command command,
-                                               data::ipcid_t id,
-                                               std::string pipe_name,
-                                               std::string proxy_path) {
+#if defined(CATTER_MAC)
+/// The architecture `executable` runs as, as dyld names it; a script runs as
+/// its interpreter. Empty for what this Mac cannot run.
+static std::string_view arch_of(std::string_view executable) {
+    std::array<char, 512> head;
+    std::size_t size = 0;
+    if(auto file = kota::fs::File::open(executable)) {
+        size = file->read(head).value_or(0);
+    }
+    std::string_view line(head.data(), size);
+    std::string program(executable);
+    if(line.starts_with("#!")) {
+        line.remove_prefix(2);
+        line.remove_prefix(std::min(line.find_first_not_of(" \t"), line.size()));
+        program = line.substr(0, line.find_first_of(" \t\n"));
+    }
+
+    __block std::string_view arch;
+    macho_best_slice(program.c_str(), ^(const mach_header* slice, uint64_t, size_t) {
+        arch = macho_arch_name_for_mach_header(slice);
+    });
+    return arch;
+}
+#endif
+
+kota::process::options hook_options(data::command command,
+                                    data::ipcid_t id,
+                                    std::string_view pipe_name) {
     LOG_INFO("new command id is: {}", id);
 
-    const auto lib_path = get_catter_root_path() / catter::config::RELATIVE_PATH_OF_HOOK_LIB;
+#if defined(CATTER_MAC)
+    // dyld ends a program that cannot load a library inserted into it: Apple's
+    // own tools, which run as arm64e, and Intel programs under Rosetta. Where
+    // System Integrity Protection is on, dyld drops the hook from Apple's tools
+    // all the same.
+    if(auto arch = arch_of(command.executable);
+       !arch.empty() && arch != macho_arch_name_for_mach_header(nullptr)) {
+        LOG_WARN("No hook for {}: {} runs, but what it starts is not captured",
+                 arch,
+                 command.executable);
+        return process_options(command);
+    }
+#endif
 
-    // check hook_lib exists
-    if(!std::filesystem::exists(lib_path)) {
+    const auto lib_path = program_path(catter::config::RELATIVE_PATH_OF_HOOK_LIB);
+    if(!kota::fs::is_file(lib_path)) {
         throw cpptrace::runtime_error(
-            std::format("Catter-Proxy Hook library not found at path `{}`", lib_path.string()));
+            std::format("Catter-Proxy Hook library not found at path `{}`", lib_path));
     }
 
     bool preload_injected = false;
     std::string key_preload_prefix = std::string(catter::config::KEY_PRELOAD) + "=";
     for(auto& env_item: command.env) {
         if(env_item.starts_with(key_preload_prefix)) {
-            env_item += catter::config::OS_PATH_SEPARATOR + lib_path.string();
+            env_item += catter::config::OS_PATH_SEPARATOR + lib_path;
             preload_injected = true;
             break;
         }
     }
 
     if(!preload_injected) {
-        command.env.push_back(std::format("{}={}", catter::config::KEY_PRELOAD, lib_path.string()));
+        command.env.push_back(std::format("{}={}", catter::config::KEY_PRELOAD, lib_path));
     }
 #if defined(CATTER_LINUX) && defined(CATTER_ASAN)
     add_sanitizer_runtime(command.env, key_preload_prefix);
 #endif
     command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_COMMAND_ID, id));
-    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_PROXY_PATH, proxy_path));
+    command.env.push_back(std::format("{}={}",
+                                      catter::config::KEY_CATTER_PROXY_PATH,
+                                      program_path(catter::config::PROXY_EXE_NAME)));
     command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_IPC, pipe_name));
 
     std::string cmd_for_print = "";
@@ -117,12 +157,7 @@ kota::task<data::process_result> run_with_hook(data::command command,
              command.executable,
              cmd_for_print);
 
-    return catter::run_process({
-        .file = std::move(command.executable),
-        .args = std::move(command.args),
-        .env = std::move(command.env),
-        .cwd = std::move(command.cwd),
-    });
-};
+    return process_options(command);
+}
 
 };  // namespace catter

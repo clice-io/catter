@@ -1,39 +1,9 @@
 #pragma once
 
-#include <filesystem>
-#include <vector>
-
-#include "support/winapi/win32.h"
-
 namespace catter::config {
 
-template <CharT char_t>
-constexpr char_t ENV_VAR_IPC_ID[] = {};
-
-template <>
-constexpr inline char ENV_VAR_IPC_ID<char>[] = "CATTER_IPC_ID";
-
-template <>
-constexpr inline wchar_t ENV_VAR_IPC_ID<wchar_t>[] = L"CATTER_IPC_ID";
-
-template <CharT char_t>
-constexpr char_t ENV_VAR_IPC_PIPE[] = {};
-
-template <>
-constexpr inline char ENV_VAR_IPC_PIPE<char>[] = "CATTER_IPC_PIPE";
-
-template <>
-constexpr inline wchar_t ENV_VAR_IPC_PIPE<wchar_t>[] = L"CATTER_IPC_PIPE";
-
-template <CharT char_t>
-constexpr char_t ENV_VAR_PROXY_PATH[] = {};
-
-template <>
-constexpr inline char ENV_VAR_PROXY_PATH<char>[] = "CATTER_PROXY_PATH";
-
-template <>
-constexpr inline wchar_t ENV_VAR_PROXY_PATH<wchar_t>[] = L"CATTER_PROXY_PATH";
-
-using ipc_id_t = int64_t;
+constexpr static char ENV_VAR_IPC_ID[] = "CATTER_IPC_ID";
+constexpr static char ENV_VAR_IPC_PIPE[] = "CATTER_IPC_PIPE";
+constexpr static char ENV_VAR_PROXY_PATH[] = "CATTER_PROXY_PATH";
 
 }  // namespace catter::config

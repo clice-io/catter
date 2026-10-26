@@ -15,6 +15,7 @@ IndentRequiresClause: true
 IndentWrappedFunctionNames: true
 NamespaceIndentation: None
 LambdaBodyIndentation: Signature
+ObjCBlockIndentWidth: 4
 BitFieldColonSpacing: Both
 
 # Insert

@@ -6,7 +6,7 @@ set_allowedplats("mingw", "linux", "macosx")
 
 set_languages("c++23")
 -- Sources and narrow string literals are UTF-8, the encoding catter's strings
--- hold on every platform (src/support/encoding.h).
+-- hold on every platform, as kotatsu's do.
 set_encodings("utf-8")
 
 option("dev", {default = true})
@@ -108,9 +108,17 @@ end
 
 -- Detours searches the address space for the data it leaves in a process,
 -- ASan's shadow memory included, and an instrumented read of it aborts: never
--- instrument it.
+-- instrument it, nor the kota::sys and kota::fs a hook DLL links, built for the
+-- DLL's architecture without the rest of kotatsu.
 for _, arch in ipairs(windows_hook_archs) do
     add_requires("detours~" .. arch, {arch = xmake_arch(arch), configs = {asan = false}})
+    add_requires("kotatsu~" .. arch, {arch = xmake_arch(arch), configs = {
+        asan = false,
+        async = false,
+        deco = false,
+        ztest = false,
+        codec_simdjson = false,
+    }})
 end
 
 add_requires("spdlog", {version = "1.15.3", configs = {header_only = false, std_format = true, noexcept = true}})
@@ -123,27 +131,6 @@ target("support")
     add_files("src/support/*.cc")
     add_packages("spdlog", {public = true})
     add_packages("kotatsu", {public = true})
-
-target("support-winapi")
-    set_default(is_plat("mingw"))
-    set_kind("static")
-    add_includedirs("src", {public = true})
-    add_files("src/support/winapi/*.cc")
-    add_syslinks("user32", "advapi32")
-
-target("support-resolver")
-    set_kind("static")
-    add_local_prefix_includedirs()
-    add_includedirs("src", {public = true})
-    if is_plat("mingw") then
-        add_files("src/support/resolver/win.cc")
-    else
-        add_files("src/support/resolver/unix.cc")
-    end
-
-    if is_plat("mingw") then
-        add_deps("support-winapi", {public = true})
-    end
 
 target("command")
     set_kind("static")
@@ -168,9 +155,8 @@ target("capture")
 target("capture-inject")
     set_kind("static")
     add_local_prefix_includedirs()
-    add_deps("support", {public = true})
+    add_deps("session", {public = true})
     if is_plat("mingw") then
-        add_deps("support-winapi", {public = true})
         add_files("src/capture/inject/windows/*.cc")
         add_packages("detours~" .. (is_arch("arm64", "aarch64") and "arm64" or "x64"), {public = true})
     elseif is_plat("linux", "macosx") then
@@ -194,10 +180,6 @@ target("catter")
     add_local_prefix_includedirs()
     add_deps("capture", "protocol", "feature")
     add_files("src/driver/*.cc")
-    -- main is wmain on Windows (src/driver/main.cc).
-    if is_plat("mingw") then
-        add_ldflags("-municode", {force = true})
-    end
 
 
 target("catter-protocol-schema")
@@ -216,14 +198,12 @@ target("catter-hook-" .. arch)
     -- MinGW would name it lib*.dll.
     set_prefixname("")
     -- It runs inside every process of the build, and Detours trips ASan (see
-    -- its add_requires): no sanitizer, and the resolver compiled in, of the
-    -- DLL's architecture, rather than linked from support-resolver.
+    -- its add_requires): no sanitizer, and kotatsu of the DLL's architecture
+    -- rather than catter's support.
     set_policy("build.sanitizer.address", false)
     add_includedirs("src")
     add_files("src/hook/windows/*.cc")
-    add_files("src/support/resolver/win.cc", "src/support/winapi/*.cc")
-    add_syslinks("user32", "advapi32")
-    add_packages("detours~" .. arch)
+    add_packages("detours~" .. arch, "kotatsu~" .. arch)
     add_cxxflags("-fno-rtti")
     -- lld's MinGW driver takes a .def input as the only exports.
     add_shflags("src/hook/windows/exports.def", {force = true})
@@ -234,7 +214,8 @@ target("catter-hook-unix")
     set_default(is_plat("linux", "macosx"))
     set_kind("shared")
     add_local_prefix_includedirs()
-    add_deps("support-resolver")
+    add_includedirs("src")
+    add_packages("kotatsu")
 
     if is_mode("debug") then
         add_deps("support")
@@ -274,12 +255,8 @@ target("catter-hook-unix")
 target("catter-proxy")
     set_kind("binary")
     add_local_prefix_includedirs()
-    add_deps("support-resolver", "capture-inject")
+    add_deps("capture-inject")
     add_files("src/proxy/*.cc")
-    -- main is wmain on Windows (src/proxy/main.cc).
-    if is_plat("mingw") then
-        add_ldflags("-municode", {force = true})
-    end
 
 rule("unittests-main")
     on_load(function (target)
@@ -295,7 +272,7 @@ target("unittests")
     add_rules("unittests-main")
 
     add_files("unittests/**.cc|main.cc|hook/**.cc")
-    add_deps("support-resolver", "capture", "protocol", "feature")
+    add_deps("capture", "protocol", "feature")
 
     add_tests("default")
 
@@ -312,7 +289,7 @@ target("unittests-hook-unix")
 
     add_files("unittests/hook/unix/**.cc")
 
-    add_deps("support", "support-resolver")
+    add_deps("support")
 
     if is_plat("linux", "macosx") then
         add_tests("default")
@@ -326,7 +303,7 @@ target("unittests-hook-windows")
     add_files("src/hook/windows/util.cc")
     add_files("unittests/hook/windows/**.cc")
 
-    add_deps("support", "support-resolver")
+    add_deps("support")
 
     if is_plat("mingw") then
         add_tests("default")
@@ -372,15 +349,34 @@ package("kotatsu")
 
     set_urls("https://github.com/clice-io/kotatsu.git")
     -- version from `git rev-list --count HEAD`
-    add_versions("210", "4f5fc11be4133d6de4525b5c7556a45de59d0be1")
+    add_versions("244", "08de62dfdb48b7228506a32d6e9acc1a604e72d9")
 
-    add_deps("libuv v1.52.0")
-    add_deps("cpptrace v1.0.4")
-    -- The JSON codec and kota::ipc::JsonPeer, which catter speaks to handlers
-    -- with. A config, not only an install option, so that it is part of the
-    -- package's hash and a cached build without it is not reused.
+    -- The modules catter consumes, which the hook DLLs leave out. Configs, not
+    -- only install options, so that they are part of the package's hash and a
+    -- cached build of others is not reused.
+    add_configs("async", {description = "Build kota::async and kota::ipc, on libuv.", default = true, type = "boolean"})
+    add_configs("deco", {description = "Build the option parser.", default = true, type = "boolean"})
+    add_configs("ztest", {description = "Build zest, the test framework.", default = true, type = "boolean"})
+    -- The JSON codec and kota::ipc::JSONPeer, which catter speaks to handlers
+    -- with.
     add_configs("codec_simdjson", {description = "Build the JSON codec.", default = true, type = "boolean"})
-    add_deps("simdjson v4.2.4")
+
+    -- What kotatsu's sys target links, which its install does not record.
+    if is_plat("mingw") then
+        add_syslinks("advapi32", "ntdll", "ole32", "shell32")
+    end
+
+    on_load(function (package)
+        if package:config("async") then
+            package:add("deps", "libuv v1.52.0")
+        end
+        if package:config("ztest") then
+            package:add("deps", "cpptrace v1.0.4")
+        end
+        if package:config("codec_simdjson") then
+            package:add("deps", "simdjson v4.2.4")
+        end
+    end)
 
     on_install(function (package)
         local configs = {}
@@ -388,11 +384,11 @@ package("kotatsu")
         -- in kotatsu's repo-local dev toolchain tweaks during package install.
         configs.dev = false
         configs.test = false
-        -- Pin the kotatsu submodules catter actually consumes so upstream
-        -- default flips do not silently drop features we depend on.
-        configs.async = true
-        configs.deco = true
-        configs.ztest = true
+        -- Pinned, so that upstream default flips do not silently drop features
+        -- catter depends on.
+        configs.async = package:config("async")
+        configs.deco = package:config("deco")
+        configs.ztest = package:config("ztest")
         -- http defaults on upstream and would pull in libcurl and OpenSSL.
         configs.http = false
         configs.codec_simdjson = package:config("codec_simdjson")

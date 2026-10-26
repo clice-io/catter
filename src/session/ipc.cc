@@ -11,6 +11,9 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#ifdef CATTER_MAC
+#include <csignal>
+#endif
 #include <kota/support/functional.h>
 #include <kota/support/type_traits.h>
 #include <kota/meta/enum.h>
@@ -26,6 +29,13 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     kota::ipc::BincodePeer peer(kota::event_loop::current(),
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(client)));
     using Context = kota::ipc::BincodePeer::RequestContext;
+
+#ifdef CATTER_MAC
+    // The program the proxy started, until it tells how it ended: macOS has
+    // nothing to end it with its proxy.
+    std::optional<int64_t> running;
+    peer.on_notification(Started::method, [&](const Started& started) { running = started.pid; });
+#endif
 
     peer.on_request(Request<RequestType::CHECK_MODE>::method,
                     [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
@@ -49,6 +59,9 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     peer.on_request(Request<RequestType::FINISH>::method,
                     [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
                         -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
+#ifdef CATTER_MAC
+                        running.reset();
+#endif
                         co_await service->finish(params);
                         co_return nullptr;
                     });
@@ -63,6 +76,12 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
 
     co_await peer.run();
     LOG_INFO("IPC peer disconnected");
+#ifdef CATTER_MAC
+    if(running) {
+        LOG_WARN("The proxy of program {} is gone: the program is killed", *running);
+        ::kill(static_cast<pid_t>(*running), SIGKILL);
+    }
+#endif
     co_return;
 }
 

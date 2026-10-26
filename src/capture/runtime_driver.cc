@@ -2,21 +2,20 @@
 
 #include <cassert>
 #include <exception>
-#include <filesystem>
 #include <format>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <kota/fs/path.h>
 
 #include "capture/replay.h"
 #include "session/ipc.h"
 #include "session/session.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
-#include "support/crossplat.h"
-#include "support/encoding.h"
+#include "support/paths.h"
 
 namespace catter {
 namespace {
@@ -140,19 +139,13 @@ public:
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
         assert(!build.command.empty());
 
-        auto proxy_path = get_catter_root_path() / config::PROXY_EXE_NAME;
         auto pipe_name = config::session_pipe_name();
         Session::ProcessLaunchPlan launch_plan{
             .cwd = build.cwd,
-            .executable = to_utf8(proxy_path),
-            .args =
-                {
-                       to_utf8(proxy_path),
-                       "-p", "0",
-                       "--ipc", pipe_name,
-                       "--", },
+            .executable = program_path(config::PROXY_EXE_NAME),
+            .args = {"-p", "0", "--ipc", pipe_name, "--"},
         };
-        append_range_to_vector(launch_plan.args, build.command);
+        launch_plan.args.insert(launch_plan.args.end(), build.command.begin(), build.command.end());
 
         Failure failure;
         Session session;
@@ -177,8 +170,10 @@ public:
 
     kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
         assert(build.command.size() == 1);
-        auto file = from_utf8(build.cwd) / from_utf8(build.command.front());
-        co_return co_await replay_build(file.lexically_normal(), handler);
+        auto file = build.cwd;
+        kota::fs::path::push(file, build.command.front());
+        kota::fs::path::normalize(file);
+        co_return co_await replay_build(file, handler);
     }
 };
 

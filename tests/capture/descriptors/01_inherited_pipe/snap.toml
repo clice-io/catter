@@ -9,12 +9,3 @@ node build.mjs
 └── node child.mjs
 '''
 exit = 0
-
-[test."$ catter tree -w 1000 -- node build.mjs".darwin]
-wrong = "a descriptor a parent passes to its child is closed (catter#153)"
-stdout = '''
-through fd 3: ""
-node build.mjs
-└── node child.mjs
-'''
-exit = 0

@@ -4,7 +4,6 @@
 #include <array>
 #include <cstdint>
 #include <expected>
-#include <filesystem>
 #include <format>
 #include <optional>
 #include <ranges>
@@ -13,6 +12,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <kota/fs/path.h>
 
 #include "command/lowercase.h"
 
@@ -190,23 +190,11 @@ bool is_directory_like(std::string_view path) {
     return path.ends_with('/') || path.ends_with('\\');
 }
 
-/// The path UTF-8 `text` names, which a std::string would be read as in the code page of on
-/// Windows.
-std::filesystem::path path_of(std::string_view text) {
-    return std::filesystem::path(std::u8string(text.begin(), text.end()));
-}
-
-std::string text_of(const std::filesystem::path& path) {
-    auto text = path.u8string();
-    return std::string(text.begin(), text.end());
-}
-
-std::string stem_of(std::string_view path) {
-    return text_of(path_of(path).stem());
-}
-
 std::string join(std::string_view directory, std::string_view name) {
-    return text_of((path_of(directory) / path_of(name)).lexically_normal());
+    std::string path(directory);
+    kota::fs::path::push(path, name);
+    kota::fs::path::normalize(path);
+    return path;
 }
 
 /// What a positional argument names: a file read in a role, a source in its language.
@@ -367,7 +355,7 @@ struct Builder {
                     std::optional<std::string_view> directory,
                     WriteOrigin origin) {
         for(auto read: from) {
-            auto file = stem_of(reads[read].path) + std::string(suffix);
+            auto file = std::format("{}{}", kota::fs::path::stem(reads[read].path), suffix);
             write(directory.has_value() ? join(*directory, file) : std::move(file), {read}, origin);
         }
     }
@@ -383,8 +371,9 @@ struct Builder {
         if(is_directory_like(output.path) && !naming.empty()) {
             if(auto extension = extension_of(parsed.artifact, convention)) {
                 for(auto read: naming) {
-                    paths.push_back(
-                        join(output.path, stem_of(reads[read].path) + std::string(*extension)));
+                    paths.push_back(join(
+                        output.path,
+                        std::format("{}{}", kota::fs::path::stem(reads[read].path), *extension)));
                 }
             } else {
                 diagnose(
@@ -442,7 +431,7 @@ struct Builder {
         }
         const auto suffix = parsed.artifact == Artifact::Executable ? convention.executable
                                                                     : convention.shared_library;
-        auto path = stem_of(reads[from.front()].path) + std::string(suffix);
+        auto path = std::format("{}{}", kota::fs::path::stem(reads[from.front()].path), suffix);
         write(std::move(path), std::move(from), WriteOrigin::DefaultOutput);
     }
 

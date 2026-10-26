@@ -72,81 +72,6 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter explain -- cl /nologo /c /Fo:out/ a.cc b.cc".win32]
-differs = "Windows joins an output directory and the name of a file in it with a backslash"
-stdout = '''
-{
-    "analyzer": "compiler",
-    "compiler": "builtin:msvc",
-    "dialect": "msvc",
-    "phase": "compile",
-    "artifact": "object",
-    "target": {
-        "triple": "unknown-pc-windows-msvc",
-        "os": "windows",
-        "objectFormat": "coff",
-        "env": "msvc",
-        "artifactModel": "coff-msvc",
-        "from": "driver-default"
-    },
-    "sources": [
-        "a.cc",
-        "b.cc"
-    ],
-    "reads": [
-        "a.cc",
-        "b.cc"
-    ],
-    "writes": [
-        "out\\a.obj",
-        "out\\b.obj"
-    ],
-    "edges": [
-        {
-            "output": "out\\a.obj",
-            "inputs": [
-                "a.cc"
-            ]
-        },
-        {
-            "output": "out\\b.obj",
-            "inputs": [
-                "b.cc"
-            ]
-        }
-    ],
-    "entries": [
-        {
-            "directory": "${WS}",
-            "file": "a.cc",
-            "arguments": [
-                "cl",
-                "/nologo",
-                "/c",
-                "/Fo:out/",
-                "a.cc",
-                "b.cc"
-            ],
-            "output": "${WS}/out/a.obj"
-        },
-        {
-            "directory": "${WS}",
-            "file": "b.cc",
-            "arguments": [
-                "cl",
-                "/nologo",
-                "/c",
-                "/Fo:out/",
-                "a.cc",
-                "b.cc"
-            ],
-            "output": "${WS}/out/b.obj"
-        }
-    ]
-}
-'''
-exit = 0
-
 [test."$ catter explain -- cl /nologo a.cc /Fe:bin/"]
 stdout = '''
 {
@@ -175,57 +100,6 @@ stdout = '''
     "edges": [
         {
             "output": "bin/a.exe",
-            "inputs": [
-                "a.cc"
-            ]
-        }
-    ],
-    "entries": [
-        {
-            "directory": "${WS}",
-            "file": "a.cc",
-            "arguments": [
-                "cl",
-                "/nologo",
-                "a.cc",
-                "/Fe:bin/"
-            ],
-            "output": "${WS}/bin/a.exe"
-        }
-    ]
-}
-'''
-exit = 0
-
-[test."$ catter explain -- cl /nologo a.cc /Fe:bin/".win32]
-differs = "Windows joins an output directory and the name of a file in it with a backslash"
-stdout = '''
-{
-    "analyzer": "compiler",
-    "compiler": "builtin:msvc",
-    "dialect": "msvc",
-    "phase": "link",
-    "artifact": "exe",
-    "target": {
-        "triple": "unknown-pc-windows-msvc",
-        "os": "windows",
-        "objectFormat": "coff",
-        "env": "msvc",
-        "artifactModel": "coff-msvc",
-        "from": "driver-default"
-    },
-    "sources": [
-        "a.cc"
-    ],
-    "reads": [
-        "a.cc"
-    ],
-    "writes": [
-        "bin\\a.exe"
-    ],
-    "edges": [
-        {
-            "output": "bin\\a.exe",
             "inputs": [
                 "a.cc"
             ]

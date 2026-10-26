@@ -1,22 +1,24 @@
 #include "feature/compilation_database.h"
 
 #include <cstddef>
-#include <filesystem>
 #include <format>
-#include <fstream>
 #include <iterator>
 #include <ranges>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 #include <cpptrace/exceptions.hpp>
 #include <kota/codec/dyn/dyn.h>
 #include <kota/codec/json/json.h>
+#include <kota/fs/directory.h>
+#include <kota/fs/file.h>
+#include <kota/fs/path.h>
+#include <kota/fs/status.h>
 
 #include "feature/json.h"
 #include "feature/path.h"
-#include "support/encoding.h"
 
 namespace catter::feature {
 
@@ -24,11 +26,14 @@ namespace {
 
 namespace dyn = kota::codec::dyn;
 
-namespace fs = std::filesystem;
-
-fs::path resolve(std::string_view cwd, std::string_view path) {
-    auto resolved = from_utf8(path);
-    return resolved.is_absolute() ? resolved : (from_utf8(cwd) / resolved).lexically_normal();
+std::string resolve(std::string_view cwd, std::string_view path) {
+    if(kota::fs::path::is_absolute(path)) {
+        return std::string(path);
+    }
+    std::string resolved(cwd);
+    kota::fs::path::push(resolved, path);
+    kota::fs::path::normalize(resolved);
+    return resolved;
 }
 
 /// Throws unless `entry`, which `context` names, is an entry as the format has it: a non-empty
@@ -66,16 +71,15 @@ void validate(const JSON& entry, std::string_view context) {
 }
 
 /// The entries of the database file `file`, which the user names `path`.
-std::vector<JSON> read(std::string_view path, const fs::path& file) {
-    std::error_code error;
-    if(!fs::exists(file, error)) {
-        return {};
+std::vector<JSON> read(std::string_view path, std::string_view file) {
+    std::string text;
+    if(auto error = kota::fs::read_file(text, file)) {
+        if(error == std::errc::no_such_file_or_directory) {
+            return {};
+        }
+        throw cpptrace::runtime_error(
+            std::format("Failed to read the CDB file: {}: {}", path, error.message()));
     }
-    std::ifstream stream(file, std::ios::binary);
-    if(!stream) {
-        throw cpptrace::runtime_error(std::format("Failed to read the CDB file: {}", path));
-    }
-    std::string text(std::istreambuf_iterator<char>{stream}, std::istreambuf_iterator<char>{});
 
     std::string_view content = text;
     // A byte order mark, which editors on Windows may begin the file with.
@@ -107,7 +111,7 @@ std::vector<JSON> read(std::string_view path, const fs::path& file) {
 
 void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     const auto& object = entry.as_object();
-    const auto file = absolute_path(to_utf8(resolve(cwd, object.find("directory")->as_string())),
+    const auto file = absolute_path(resolve(cwd, object.find("directory")->as_string()),
                                     object.find("file")->as_string());
     const auto field = [&](std::string_view name, JSON absent) {
         const auto* value = object.find(name);
@@ -134,8 +138,8 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
 
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
-    std::error_code error;
-    if(fs::exists(file, error) && !fs::is_regular_file(file, error)) {
+    if(auto status = kota::fs::status(file);
+       status.has_value() && status->type != kota::fs::FileType::Regular) {
         throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
     }
     if(inherit) {
@@ -162,15 +166,15 @@ std::vector<JSON> CompilationDatabase::entries() const {
     return entries;
 }
 
-const fs::path& CompilationDatabase::save() const {
-    if(file.has_parent_path()) {
-        fs::create_directories(file.parent_path());
-    }
-    std::ofstream stream(file, std::ios::binary | std::ios::trunc);
-    stream << to_json(dyn::Array(entries()));
-    if(!stream) {
+const std::string& CompilationDatabase::save() const {
+    auto created = kota::fs::create_directories(kota::fs::path::parent(file));
+    auto error = created.has_value() ? kota::fs::write_file(file, to_json(dyn::Array(entries())))
+                                     : created.error();
+    if(error) {
         throw cpptrace::runtime_error(
-            std::format("Failed to write the compilation database `{}`", to_utf8(file)));
+            std::format("Failed to write the compilation database `{}`: {}",
+                        file,
+                        error.message()));
     }
     return file;
 }

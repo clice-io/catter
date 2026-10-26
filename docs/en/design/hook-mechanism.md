@@ -32,12 +32,14 @@ On Linux, the hook uses `dlsym(RTLD_NEXT, "execve")` to obtain the original func
 
 On macOS, the hook uses the `DYLD_INTERPOSE` macro to replace functions at the dyld level, which is the preferred technique on that platform.
 
+dyld ends a program that cannot load a library inserted into it, and the hook is built for catter's own architecture, which Apple's own tools (arm64e) and Intel programs under Rosetta (x86_64) do not run as. Before it inserts the hook, `catter-proxy` asks dyld which architecture the program runs as (`macho_best_slice`; a script runs as its interpreter): a program of another runs without the hook, and what it starts is not captured. Where System Integrity Protection is on, dyld drops the hook from Apple's tools all the same, so a build is captured down to the Apple tools it runs and no further: `/usr/bin/make`, or `/bin/sh`, which Ninja runs every command with.
+
 ### Key Classes
 
 The hook is implemented as a set of cooperating classes:
 
 - **`Session`** -- Reads and stores session information from the environment (the proxy path, the self command ID and the session's pipe).
-- **`Resolver`** -- Resolves the target executable path. Handles PATH lookups, relative path resolution, and edge cases like missing executables.
+- **`find_program()`** (kotatsu) -- Finds the target executable as the exec function would, in `PATH` or the current directory; a program that is missing or cannot run fails as the call would.
 - **`Command` / `build_proxy_command()`** -- Builds the rewritten proxy command, substituting `catter-proxy` for the original executable.
 - **`SanitizedEnv` / `sanitize_environment()`** -- Scrubs the environment before the real `execve` is called. Removes catter variables and strips the hook library from the preload variable.
 - **`Executor`** -- Orchestrates the interception. Validates the session, resolves the executable, builds the proxy command, cleans the environment, and calls the original function; it also holds the real `execve` / `posix_spawn` function pointers (the earlier standalone `Linker` class has been folded into it).
@@ -67,7 +69,7 @@ When any process creation function is called (e.g., `execve("/usr/bin/g++", argv
 
 2. **`Executor`** validates the session. If the session is invalid (missing environment variables), it builds an error command that reports the problem to the daemon.
 
-3. **`Resolver`** resolves the target executable to an absolute path. For functions like `execvp()` and `execvpe()`, it searches directories in `PATH`. For `execve()`, it resolves relative to the current directory.
+3. **`Executor`** finds the target executable with kotatsu's `find_program()`. For functions like `execvp()` and `execvpe()`, it searches the directories of `PATH`. For `execve()`, a path without a `/` is taken from the current directory.
 
 4. **`Command`** (`build_proxy_command()`) constructs the proxy command:
 
@@ -146,7 +148,7 @@ Each DLL is built without AddressSanitizer and with the C++ runtime linked in, i
 
 When `catter-proxy` (in injector mode) needs to start a build command with the hook attached:
 
-1. **Create the target process suspended**. The proxy calls `CreateProcessW()` with the `CREATE_SUSPENDED` flag. The process is created but its main thread does not run.
+1. **Create the target process suspended**. The proxy starts it with kotatsu's `kota::sys::spawn`, whose `windows_before_start` callback receives the process created, in a job object of its own, before its main thread runs.
 
 2. **Set environment variables**. `CATTER_IPC_ID`, `CATTER_IPC_PIPE` and `CATTER_PROXY_PATH` are set in the target process environment before creation (passed via the environment block).
 
@@ -154,7 +156,7 @@ When `catter-proxy` (in injector mode) needs to start a build command with the h
 
 4. **Add the hook DLL to the process's imports**. `DetourUpdateProcessWithDll()` adds the DLL of that architecture to the import table of the suspended executable, so the loader maps it before any of the program's own code runs. The loader reads the DLL's path there in the process's own ANSI code page, which a program can make UTF-8, so the path must be ASCII: a path that is not goes by its 8.3 short name, or, on a volume that keeps no short names, by a copy of the DLL in catter's data directory.
 
-5. **Resume the main thread**. The proxy calls `ResumeThread()` to let the target process start executing. The loader maps the hook DLL with the program's other imports, and its hooks are active before the program's entry point runs.
+5. **Resume the main thread**. Once the callback returns, `spawn` resumes the main thread. The loader maps the hook DLL with the program's other imports, and its hooks are active before the program's entry point runs.
 
 ### Hooked Windows APIs
 
@@ -177,7 +179,7 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 
 1. **Extract the command line**. The hook reads `lpApplicationName` and `lpCommandLine`.
 
-2. **Resolve the absolute path**. The hook resolves the executable using `resolve_abspath()`, which searches the program directory, current directory, System32, Windows directory, and `PATH` (matching the standard Windows search order).
+2. **Resolve the program**. The hook resolves it with `resolve_program()`: `lpApplicationName` made absolute from the current directory, or else the first token of the command line, looked for as `CreateProcess` looks for it (kotatsu's `find_create_process_program`: the program's directory, the current directory, the system directories, the Windows directory, then `PATH`).
 
 3. **Rewrite the command line**:
 

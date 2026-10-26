@@ -1,19 +1,15 @@
 #include "protocol/protocol.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <simdjson.h>
+#include <kota/support/utf8.h>
 
 namespace catter::protocol {
 
 namespace {
-
-/// U+FFFD in UTF-8.
-constexpr std::string_view replacement_character = "\xEF\xBF\xBD";
 
 constexpr std::string_view alphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -73,7 +69,7 @@ std::expected<std::string, std::string> decode_base64(std::string_view text) {
 }  // namespace
 
 OSString to_os_string(std::string bytes) {
-    if(simdjson::validate_utf8(bytes.data(), bytes.size())) {
+    if(kota::is_utf8(bytes)) {
         return bytes;
     }
     return Base64{.base64 = encode_base64(bytes)};
@@ -106,32 +102,6 @@ std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OSStri
         bytes.push_back(std::move(*item));
     }
     return bytes;
-}
-
-std::string to_text(std::string bytes) {
-    if(simdjson::validate_utf8(bytes.data(), bytes.size())) {
-        return bytes;
-    }
-    std::string text;
-    std::size_t i = 0;
-    while(i < bytes.size()) {
-        // Bytes are valid UTF-8 alone only when they hold whole characters:
-        // the shortest valid run from `i` is one character, and a byte that
-        // starts none has no valid run.
-        const auto longest = std::min<std::size_t>(4, bytes.size() - i);
-        std::size_t length = 1;
-        while(length <= longest && !simdjson::validate_utf8(bytes.data() + i, length)) {
-            length += 1;
-        }
-        if(length > longest) {
-            text += replacement_character;
-            i += 1;
-        } else {
-            text.append(bytes, i, length);
-            i += length;
-        }
-    }
-    return text;
 }
 
 }  // namespace catter::protocol

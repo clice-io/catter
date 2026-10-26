@@ -3,11 +3,15 @@
 #include <cerrno>
 #include <cstdarg>
 #include <exception>
-#include <filesystem>
 #include <format>
 #include <span>
+#include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
+#include <unistd.h>
+#include <kota/sys/env.h>
+#include <kota/sys/process.h>
 
 #include "hook/unix/command.h"
 #include "hook/unix/crossplat.h"
@@ -16,7 +20,6 @@
 #include "hook/unix/environment.h"
 #include "hook/unix/error.h"
 #include "hook/unix/session.h"
-#include "support/resolver/resolver.h"
 
 namespace catter::hook {
 namespace {
@@ -61,31 +64,37 @@ char** collect_variadic_envp(va_list* ap) {
     return va_arg(*ap, char**);
 }
 
-std::filesystem::path resolve_path_like(const char* path) {
-    auto resolved = catter::resolve_path_like(path);
-    if(!resolved.has_value()) {
-        throw PayloadError(resolved.error(), std::format("failed to resolve executable: {}", path));
+/// The program `file` names, looked for as `search` says, by execvp's rules;
+/// `{.directories = {""}}` looks in the current directory alone, from which
+/// execve runs a path without a `/`.
+std::string resolve_program(const char* file, const kota::sys::ProgramSearch& search) {
+    std::string path;
+    if(auto error = kota::sys::find_program(path, file, search)) {
+        throw PayloadError(error.value(), std::format("failed to resolve executable: {}", file));
     }
-    return *resolved;
+    return path;
 }
 
-std::filesystem::path resolve_from_path(const char* file, const char* const envp[]) {
-    auto path_env = envp == nullptr ? nullptr : get_env_value(envp, "PATH");
-    auto resolved = catter::resolve_from_path_env(file, path_env);
-    if(!resolved.has_value()) {
-        throw PayloadError(resolved.error(),
-                           std::format("failed to resolve executable from PATH: {}", file));
+std::string resolve_from_search_path(const char* file, std::string_view search_path) {
+    kota::sys::ProgramSearch search;
+    for(auto directory: kota::sys::split_paths(search_path)) {
+        search.directories.emplace_back(directory);
     }
-    return *resolved;
+    return resolve_program(file, search);
 }
 
-std::filesystem::path resolve_from_search_path(const char* file, const char* search_path) {
-    auto resolved = catter::resolve_from_search_path(file, search_path);
-    if(!resolved.has_value()) {
-        throw PayloadError(resolved.error(),
-                           std::format("failed to resolve executable from search path: {}", file));
+/// The program `file` names, looked for in the PATH of `envp`, or in
+/// confstr(_CS_PATH)'s directories without one, as execvp looks.
+std::string resolve_from_path(const char* file, const char* const envp[]) {
+    // Read here: kota::sys reads the environment under a lock, which a child
+    // forked while another thread held it would wait on forever.
+    if(auto path = envp == nullptr ? nullptr : get_env_value(envp, "PATH")) {
+        return resolve_from_search_path(file, path);
     }
-    return *resolved;
+    std::string defaults(::confstr(_CS_PATH, nullptr, 0), '\0');
+    ::confstr(_CS_PATH, defaults.data(), defaults.size());
+    defaults.pop_back();
+    return resolve_from_search_path(file, defaults);
 }
 
 /// A program that is not there or not executable fails to start as it would
@@ -192,14 +201,16 @@ void Executor::init(Session session, ExecveFn* execve, PosixSpawnFn* posix_spawn
 int Executor::execv(const char* path, char* const argv[]) noexcept {
     CATTER_EXEC_BOUNDARY("execv", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, environment());
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
+                                argv,
+                                environment());
     });
 }
 
 int Executor::execve(const char* path, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("execve", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, envp);
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(), argv, envp);
     });
 }
 
@@ -223,7 +234,9 @@ int Executor::execl(const char* path, const char* arg, va_list* ap) noexcept {
         require_path_arg(path, "path");
         require_va_list(ap);
         auto argv = collect_variadic_argv(arg, ap);
-        return this->run_execve(resolve_path_like(path).c_str(), argv.data(), environment());
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
+                                argv.data(),
+                                environment());
     });
 }
 
@@ -233,7 +246,9 @@ int Executor::execle(const char* path, const char* arg, va_list* ap) noexcept {
         require_va_list(ap);
         auto argv = collect_variadic_argv(arg, ap);
         auto envp = collect_variadic_envp(ap);
-        return this->run_execve(resolve_path_like(path).c_str(), argv.data(), envp);
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(),
+                                argv.data(),
+                                envp);
     });
 }
 
@@ -254,14 +269,14 @@ int Executor::execvP(const char* file,
     CATTER_EXEC_BOUNDARY("execvP", {
         require_path_arg(file, "file");
         require_path_arg(search_path, "search_path");
-        return run_execve(resolve_from_search_path(file, search_path).c_str(), argv, envp);
+        return this->run_execve(resolve_from_search_path(file, search_path).c_str(), argv, envp);
     });
 }
 
 int Executor::exect(const char* path, char* const argv[], char* const envp[]) noexcept {
     CATTER_EXEC_BOUNDARY("exect", {
         require_path_arg(path, "path");
-        return this->run_execve(resolve_path_like(path).c_str(), argv, envp);
+        return this->run_execve(resolve_program(path, {.directories = {""}}).c_str(), argv, envp);
     });
 }
 
@@ -274,7 +289,7 @@ int Executor::posix_spawn(pid_t* pid,
     CATTER_SPAWN_BOUNDARY("posix_spawn", {
         require_path_arg(path, "path");
         return this->run_posix_spawn(pid,
-                                     resolve_path_like(path).c_str(),
+                                     resolve_program(path, {.directories = {""}}).c_str(),
                                      file_actions,
                                      attrp,
                                      argv,

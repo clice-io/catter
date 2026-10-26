@@ -8,9 +8,8 @@ stdout = "status 134, signal null"
 exit = 0
 
 [test."$ catter tree -w 1000 -- node build.mjs"]
-wrong = "a command killed by a signal is reported as exiting with 0 (catter#119)"
 stdout = '''
-status 0, signal null
+status null, signal SIGABRT
 node build.mjs
 └── node -e process.abort()
 '''

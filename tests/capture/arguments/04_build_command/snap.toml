@@ -16,13 +16,3 @@ stdout = '''
 node child.mjs "with space" "quote\"inside" "" 中文-é
 '''
 exit = 0
-
-[test."$ catter tree -w 1000 -- node child.mjs \"with space\" \"quote\\\"inside\" \"\" 中文-é".win32]
-wrong = "the build command's arguments are split at spaces and lose their quotes (catter#151)"
-stdout = '''
-"with"
-"space"
-"quoteinside  中文-é"
-node child.mjs with space "quoteinside  中文-é"
-'''
-exit = 0

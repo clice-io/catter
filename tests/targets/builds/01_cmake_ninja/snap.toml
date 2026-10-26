@@ -12,17 +12,11 @@ hello
 exit = 0
 
 [test."$ catter targets -- cmake --build build -j 1".darwin]
-wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+wrong = "Ninja runs each command through Apple's /bin/sh, which runs without the hook, and what it starts goes uncaptured"
 stdout = '''
 [1/3] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
-dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
-dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
 [2/3] Building CXX object CMakeFiles/hello.dir/src/util.cc.o
-dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
-dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
 [3/3] Linking CXX executable hello
-dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
-dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
 No targets found.
 '''
 exit = 0

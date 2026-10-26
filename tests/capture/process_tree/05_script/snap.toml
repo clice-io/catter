@@ -1,0 +1,11 @@
+[test."$ node build.mjs"]
+stdout = "the script ran, exit 0"
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+the script ran, exit 0
+node build.mjs
+└── ./script.sh
+'''
+exit = 0

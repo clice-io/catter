@@ -2,19 +2,17 @@
 
 #include <cstdint>
 #include <format>
-#include <fstream>
-#include <iterator>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <cpptrace/exceptions.hpp>
 #include <kota/codec/json/json.h>
-
-#include "support/encoding.h"
+#include <kota/fs/file.h>
+#include <kota/fs/path.h>
 
 namespace catter {
-namespace fs = std::filesystem;
 
 namespace {
 
@@ -75,19 +73,6 @@ void validate_replay_file(const ReplayFile& replay) {
     }
 }
 
-std::string command_cwd(const fs::path& base, const ReplayEvent& event) {
-    if(!event.cwd.has_value()) {
-        return to_utf8(base);
-    }
-
-    fs::path cwd = from_utf8(*event.cwd);
-    if(!cwd.is_absolute()) {
-        cwd = base / cwd;
-    }
-    cwd = cwd.lexically_normal();
-    return to_utf8(cwd.has_filename() ? cwd : cwd.parent_path());
-}
-
 /// A replay file's `parent` of 0, like an absent one, is no parent.
 std::optional<data::ipcid_t> parent_of(std::optional<data::ipcid_t> parent) {
     if(parent == 0) {
@@ -100,17 +85,17 @@ data::process_result to_process_result(const ReplayResult& result) {
     return {.code = result.code};
 }
 
-ReplayFile parse_replay_file(const fs::path& path) {
-    std::ifstream input(path, std::ios::binary);
-    if(!input) {
-        throw cpptrace::runtime_error("Failed to open replay file: " + to_utf8(path));
+ReplayFile parse_replay_file(std::string_view path) {
+    std::string content;
+    if(auto error = kota::fs::read_file(content, path)) {
+        throw cpptrace::runtime_error(
+            std::format("Failed to open replay file: {}: {}", path, error.message()));
     }
-    std::string content(std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{});
 
     auto replay = kota::codec::json::from_string<ReplayFile>(content);
     if(!replay.has_value()) {
         throw cpptrace::runtime_error(
-            std::format("Replay file is not valid: {}: {}", to_utf8(path), replay.error().message));
+            std::format("Replay file is not valid: {}: {}", path, replay.error().message));
     }
     validate_replay_file(*replay);
     return std::move(*replay);
@@ -118,12 +103,11 @@ ReplayFile parse_replay_file(const fs::path& path) {
 
 }  // namespace
 
-kota::task<data::process_result> replay_build(const fs::path& path, Handler& handler) {
+kota::task<data::process_result> replay_build(std::string_view path, Handler& handler) {
     const auto replay = parse_replay_file(path);
-    auto base = (path.parent_path() / from_utf8(replay.cwd.value_or("."))).lexically_normal();
-    if(!base.has_filename()) {
-        base = base.parent_path();
-    }
+    std::string base(kota::fs::path::parent(path));
+    kota::fs::path::push(base, replay.cwd.value_or("."));
+    kota::fs::path::normalize(base);
     for(const auto& event: replay.events) {
         if(event.error.has_value()) {
             co_await handler.on_error(event.id,
@@ -131,10 +115,13 @@ kota::task<data::process_result> replay_build(const fs::path& path, Handler& han
                                       event.error->message);
             continue;
         }
+        auto cwd = base;
+        kota::fs::path::push(cwd, event.cwd.value_or("."));
+        kota::fs::path::normalize(cwd);
         co_await handler.on_command(event.id,
                                     parent_of(event.parent),
                                     data::command{
-                                        .cwd = command_cwd(base, event),
+                                        .cwd = std::move(cwd),
                                         .executable = event.exe,
                                         .args = event.argv,
                                         .env = event.env.value_or(std::vector<std::string>{}),

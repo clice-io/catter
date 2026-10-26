@@ -13,6 +13,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <kota/support/utf8.h>
 
 #include "feature/flat_tree.h"
 #include "feature/text.h"
@@ -29,7 +30,7 @@ std::string format_argument(std::string_view argument, std::int64_t width) {
     if(argument.empty()) {
         return R"("")";
     }
-    auto text = printable(argument);
+    auto text = kota::replace_invalid_utf8(argument);
     const bool quoted = text.find_first_of(" \t\n\v\f\r\"'\\") != std::string::npos;
     std::vector<std::size_t> starts;
     for(std::size_t i = 0; i < text.size(); i += 1) {
@@ -113,7 +114,7 @@ private:
 
     std::string text_of(const Capture& capture) const {
         if(!capture.has_value()) {
-            return std::format("[capture error] {}", printable(capture.error()));
+            return std::format("[capture error] {}", kota::replace_invalid_utf8(capture.error()));
         }
         const auto& argv = *capture;
         if(argv.empty()) {

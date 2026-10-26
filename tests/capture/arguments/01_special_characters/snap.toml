@@ -39,25 +39,3 @@ node build.mjs
 └── node child.mjs plain "with space" "quote\"inside" "back\\slash" "trailing\\" "two\\\\" "" unicode-中文-é "tab\there" a&b|c;d<e>f %PATH% $HOME * "--flag=value with space" "'single'"
 '''
 exit = 0
-
-[test."$ catter tree -w 1000 -- node build.mjs".win32]
-wrong = "an empty argument is dropped (catter#128)"
-stdout = '''
-"plain"
-"with space"
-"quote\"inside"
-"back\\slash"
-"trailing\\"
-"two\\\\"
-"unicode-中文-é"
-"tab\there"
-"a&b|c;d<e>f"
-"%PATH%"
-"$HOME"
-"*"
-"--flag=value with space"
-"'single'"
-node build.mjs
-└── node child.mjs plain "with space" "quote\"inside" "back\\slash" "trailing\\" "two\\\\" "" unicode-中文-é "tab\there" a&b|c;d<e>f %PATH% $HOME * "--flag=value with space" "'single'"
-'''
-exit = 0

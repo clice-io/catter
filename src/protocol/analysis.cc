@@ -10,6 +10,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <kota/support/utf8.h>
 #include <kota/meta/enum.h>
 
 #include "command/edit.h"
@@ -85,7 +86,7 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
     for(const auto& diagnostic: analysis.diagnostics) {
         auto& added = message.diagnostics.emplace_back(protocol::Diagnostic{
             .code = std::string(name(diagnostic.code)),
-            .message = protocol::to_text(diagnostic.message),
+            .message = kota::replace_invalid_utf8(diagnostic.message),
         });
         if(diagnostic.path.has_value()) {
             added.path = protocol::to_os_string(*diagnostic.path);
@@ -166,7 +167,7 @@ std::optional<protocol::Analysis> CommandAnalysis::message() const {
     if(auto* archiver = std::get_if<ArchiverAnalysis>(&result)) {
         return protocol::ArchiverAnalysis{
             .operation = std::string(name(archiver->operation)),
-            .modifiers = protocol::to_text(archiver->modifiers),
+            .modifiers = kota::replace_invalid_utf8(archiver->modifiers),
             .thin = archiver->thin,
             .archive = protocol::to_os_string(archiver->archive),
             .members = protocol::to_os_string(archiver->members),
@@ -185,7 +186,7 @@ std::optional<protocol::Analysis> CommandAnalysis::message() const {
             .of = std::string(unparsed->of),
             .name = unparsed->name,
             .error = std::string(name(unparsed->error.kind)),
-            .message = protocol::to_text(unparsed->error.message),
+            .message = kota::replace_invalid_utf8(unparsed->error.message),
         };
     }
     return std::nullopt;

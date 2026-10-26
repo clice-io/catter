@@ -1,30 +1,18 @@
 #pragma once
 
 #include <string>
-#include <string_view>
-#include <type_traits>
-
-#include "support/winapi/win32.h"
 
 namespace catter::hook {
 
-template <CharT char_t>
-std::basic_string<char_t> resolve_abspath(const char_t* application_name,
-                                          const char_t* command_line);
-template <CharT char_t>
-std::basic_string<char_t> get_proxy_path();
+/// The program CreateProcessW starts for `application_name` and
+/// `command_line`, either of which may be null: the application name, from
+/// the current directory, or else the first token of the command line, looked
+/// for as CreateProcessW looks for it; that token itself when nothing is
+/// found, to fail to start as it would without catter.
+std::string resolve_program(const wchar_t* application_name, const wchar_t* command_line);
 
-template <CharT char_t>
-std::basic_string<char_t> get_ipc_id();
-
-template <CharT char_t>
-std::basic_string<char_t> get_ipc_pipe();
-
-template <CharT char_t>
-std::basic_string<char_t> build_proxy_command(std::basic_string_view<char_t> proxy_path,
-                                              std::basic_string_view<char_t> ipc_id,
-                                              std::basic_string_view<char_t> ipc_pipe,
-                                              const char_t* application_name,
-                                              const char_t* command_line);
+/// The command line that starts catter-proxy, as the hook's environment names
+/// it, in place of what CreateProcessW was asked to start.
+std::wstring proxy_command_line(const wchar_t* application_name, const wchar_t* command_line);
 
 }  // namespace catter::hook

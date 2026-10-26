@@ -1,10 +1,10 @@
 #include <algorithm>
-#include <csignal>
 #include <cstdio>
 #include <print>
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/io/loop.h>
 #include <kota/deco/deco.h>
@@ -12,41 +12,32 @@
 #include "driver/cli.h"
 #include "driver/driver.h"
 #include "support/config/catter.h"
-#include "support/crossplat.h"
-#include "support/encoding.h"
 #include "support/log.h"
+#include "support/paths.h"
 
-#ifdef _WIN32
-#include <uv.h>
+#ifdef CATTER_WINDOWS
 #include <windows.h>
+#include <kota/sys/process.h>
 #endif
 
 using namespace catter;
 
 namespace {
 
-int run(int argc, char* argv[]) {
+int run(std::span<const std::string> argv) {
 
-#ifdef _WIN32
+#ifdef CATTER_WINDOWS
     SetConsoleOutputCP(CP_UTF8);
-    // libuv hands the build catter's stdio as duplicates of its own. The
-    // standard handles themselves, inherited as well by every program catter
-    // starts, would be held open by a server among them after catter exits.
-    uv_disable_stdio_inheritance();
-#else
-    // A write to a handler that has exited fails, and is reported, instead of
-    // killing catter. libuv resets the programs catter starts to the default.
-    std::signal(SIGPIPE, SIG_IGN);
 #endif
     // The build writes to catter's stdout directly: what catter prints during
     // the build keeps its place among the build's output.
     std::setvbuf(stdout, nullptr, _IONBF, 0);
 
-    auto args = kota::deco::util::argvify(argc, argv, 1);
+    std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     try {
         try {
-            log::init_logger("catter", get_catter_data_path() / config::CATTER_LOG_PATH);
+            log::init_logger("catter", data_path(config::CATTER_LOG_PATH));
         } catch(...) {
             // Without its log, catter reports what failed on the terminal only.
             log::mute_logger();
@@ -83,13 +74,12 @@ int run(int argc, char* argv[]) {
 
 }  // namespace
 
-#ifdef _WIN32
-int wmain(int argc, wchar_t* argv[]) {
-    Utf8Arguments arguments(argc, argv);
-    return run(argc, arguments.argv());
-}
-#else
 int main(int argc, char* argv[]) {
-    return run(argc, argv);
-}
+#ifdef CATTER_WINDOWS
+    // main's argv is in the ANSI code page, which holds few characters past
+    // ASCII.
+    return run(kota::sys::arguments());
+#else
+    return run(std::vector<std::string>(argv, argv + argc));
 #endif
+}

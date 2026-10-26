@@ -1,11 +1,12 @@
-#include <filesystem>
-#include <fstream>
-#include <system_error>
+#include <exception>
+#include <string>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/fs/file.h>
+#include <kota/fs/status.h>
+#include <kota/sys/dirs.h>
 
 #include "feature/compilation_database.h"
-#include "support/encoding.h"
 #include "utils/temp_file_manager.h"
 
 using namespace catter;
@@ -16,26 +17,27 @@ ZEST_SUITE_ATTRS(serial = true);
 
 #ifndef CATTER_WINDOWS
 ZEST_CASE(unreadable_database_is_not_replaced) {
-    TempFileManager temp(fs::temp_directory_path() / "catter-ut-unreadable-cdb");
-    std::error_code error;
-    temp.create("compile_commands.json",
-                error,
-                R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])");
-    ASSERT(!error);
-    const auto file = temp.root / "compile_commands.json";
-    fs::permissions(file, fs::perms::owner_write, fs::perm_options::replace);
+    std::string temp_dir;
+    ZASSERT(!kota::sys::temp_dir(temp_dir));
+    std::string root;
+    ZASSERT(!kota::fs::create_temp_directory(root, temp_dir, "catter-ut-"));
+    TempFileManager temp(root);
+    ZASSERT(!temp.create("compile_commands.json",
+                         R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])"));
+    const auto file = temp.path("compile_commands.json");
+    ZASSERT(!kota::fs::set_permissions(file, 0200));
 
     bool thrown = false;
     try {
-        feature::CompilationDatabase database("compile_commands.json", to_utf8(temp.root), true);
+        feature::CompilationDatabase database("compile_commands.json", temp.root, true);
     } catch(const std::exception&) {
         thrown = true;
     }
-    EXPECT(thrown);
-    fs::permissions(file,
-                    fs::perms::owner_read | fs::perms::owner_write,
-                    fs::perm_options::replace);
-    EXPECT(fs::file_size(file) > 0);
+    ZEXPECT(thrown);
+    ZASSERT(!kota::fs::set_permissions(file, 0600));
+    auto status = kota::fs::status(file);
+    ZASSERT(status.has_value());
+    ZEXPECT(status->size > 0);
 };
 #endif
 

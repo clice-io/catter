@@ -40,31 +40,31 @@ ZEST_CASE(links_children_in_the_order_they_come) {
     tree.merge(4, "leaf", 2);
     tree.merge(5, "orphan", 42);
 
-    EXPECT(tree.size() == 5);
-    EXPECT(tree.assemble().empty());
-    EXPECT(tree.starts() == std::vector{1, 5});
-    EXPECT(children_of(tree, 1) == std::vector{2, 3});
-    EXPECT(children_of(tree, 2) == std::vector{4});
-    EXPECT(children_of(tree, 5).empty());
+    ZEXPECT(tree.size() == 5);
+    ZEXPECT(tree.assemble().empty());
+    ZEXPECT(tree.starts() == std::vector{1, 5});
+    ZEXPECT(children_of(tree, 1) == std::vector{2, 3});
+    ZEXPECT(children_of(tree, 2) == std::vector{4});
+    ZEXPECT(children_of(tree, 5).empty());
 };
 
 ZEST_CASE(a_parent_may_come_after_its_children) {
     Tree tree;
     tree.merge(2, "child", 1);
     tree.merge(3, "leaf", 2);
-    EXPECT(tree.assemble().empty());
-    EXPECT(tree.starts() == std::vector{2});
+    ZEXPECT(tree.assemble().empty());
+    ZEXPECT(tree.starts() == std::vector{2});
 
     tree.merge(1, "root");
-    EXPECT(tree.assemble().empty());
-    EXPECT(tree.starts() == std::vector{1});
-    EXPECT(children_of(tree, 1) == std::vector{2});
-    EXPECT(children_of(tree, 2) == std::vector{3});
+    ZEXPECT(tree.assemble().empty());
+    ZEXPECT(tree.starts() == std::vector{1});
+    ZEXPECT(children_of(tree, 1) == std::vector{2});
+    ZEXPECT(children_of(tree, 2) == std::vector{3});
 
     tree.merge(3, "leaf", 1);
     tree.assemble();
-    EXPECT(children_of(tree, 1) == std::vector{2, 3});
-    EXPECT(tree.find(3)->parents == std::vector{2, 1});
+    ZEXPECT(children_of(tree, 1) == std::vector{2, 3});
+    ZEXPECT(tree.find(3)->parents == std::vector{2, 1});
 };
 
 ZEST_CASE(a_node_may_have_several_parents) {
@@ -74,32 +74,32 @@ ZEST_CASE(a_node_may_have_several_parents) {
     tree.merge("main.o", "main.o", "app");
     tree.merge("main.o", "main.o", "tool");
 
-    EXPECT(tree.assemble().empty());
-    EXPECT(tree.starts() == std::vector<std::string>{"app", "tool"});
-    EXPECT(tree.find("app")->children == std::vector<std::string>{"main.o"});
-    EXPECT(tree.find("tool")->children == std::vector<std::string>{"main.o"});
+    ZEXPECT(tree.assemble().empty());
+    ZEXPECT(tree.starts() == std::vector<std::string>{"app", "tool"});
+    ZEXPECT(tree.find("app")->children == std::vector<std::string>{"main.o"});
+    ZEXPECT(tree.find("tool")->children == std::vector<std::string>{"main.o"});
 };
 
 ZEST_CASE(finds_cycles) {
     Tree two;
     two.merge(1, "one", 2);
     two.merge(2, "two", 1);
-    EXPECT(sorted_cycles(two) == std::vector<std::vector<int>>{
-                                     {1, 2}
+    ZEXPECT(sorted_cycles(two) == std::vector<std::vector<int>>{
+                                      {1, 2}
     });
-    EXPECT(two.starts().empty());
+    ZEXPECT(two.starts().empty());
 
     Tree self;
     self.merge(1, "self", 1);
     self.merge(2, "child", 1);
-    EXPECT(sorted_cycles(self) == std::vector<std::vector<int>>{{1}});
+    ZEXPECT(sorted_cycles(self) == std::vector<std::vector<int>>{{1}});
 
     Tree downstream;
     downstream.merge(1, "one", 2);
     downstream.merge(2, "two", 1);
     downstream.merge(3, "downstream", 2);
-    EXPECT(sorted_cycles(downstream) == std::vector<std::vector<int>>{
-                                            {1, 2}
+    ZEXPECT(sorted_cycles(downstream) == std::vector<std::vector<int>>{
+                                             {1, 2}
     });
 
     Tree apart;
@@ -107,9 +107,9 @@ ZEST_CASE(finds_cycles) {
     apart.merge(2, "two", 1);
     apart.merge(3, "three", 4);
     apart.merge(4, "four", 3);
-    EXPECT(sorted_cycles(apart) == std::vector<std::vector<int>>{
-                                       {1, 2},
-                                       {3, 4}
+    ZEXPECT(sorted_cycles(apart) == std::vector<std::vector<int>>{
+                                        {1, 2},
+                                        {3, 4}
     });
 };
 
@@ -122,11 +122,11 @@ ZEST_CASE(a_cycle_is_a_path_that_links_back) {
     tree.merge(1, "one", 4);
 
     const auto cycles = tree.assemble();
-    ASSERT(cycles.size() == 1);
+    ZASSERT(cycles.size() == 1);
     const auto& cycle = cycles.front();
     for(std::size_t i = 0; i < cycle.size(); i += 1) {
         const auto next = cycle[(i + 1) % cycle.size()];
-        EXPECT(std::ranges::contains(children_of(tree, cycle[i]), next));
+        ZEXPECT(std::ranges::contains(children_of(tree, cycle[i]), next));
     }
 };
 

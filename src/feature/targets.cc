@@ -11,14 +11,14 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <kota/support/utf8.h>
+#include <kota/fs/path.h>
 
 #include "feature/descendants.h"
 #include "feature/edges.h"
 #include "feature/flat_tree.h"
-#include "feature/text.h"
 #include "session/data.h"
 #include "session/handler.h"
-#include "support/encoding.h"
 
 namespace catter::feature {
 
@@ -26,8 +26,8 @@ namespace {
 
 /// The name a target shows by: its file's name, or, for a path that ends in none, the path.
 std::string name_of(std::string_view path) {
-    auto name = to_utf8(from_utf8(path).filename());
-    return printable(name.empty() ? path : name);
+    auto name = kota::fs::path::filename(path);
+    return kota::replace_invalid_utf8(name.empty() ? path : name);
 }
 
 /// Renders the files a build makes as the forest of the files each is made from.

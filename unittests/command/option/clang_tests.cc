@@ -74,25 +74,25 @@ ZEST_CASE(parse_clang_compile_command) {
 
     auto parsed = parse_command(argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 5U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 5U);
 
-    EXPECT(parsed.args[0].id == option::clang::ID_c);
+    ZEXPECT(parsed.args[0].id == option::clang::ID_c);
 
-    EXPECT(parsed.args[1].id == option::clang::ID_INPUT);
-    EXPECT(parsed.args[1].spelling == "main.cc");
+    ZEXPECT(parsed.args[1].id == option::clang::ID_INPUT);
+    ZEXPECT(parsed.args[1].spelling == "main.cc");
 
-    EXPECT(parsed.args[2].id == option::clang::ID_I);
-    ASSERT(parsed.args[2].values.size() == 1U);
-    EXPECT(parsed.args[2].values[0] == "include");
+    ZEXPECT(parsed.args[2].id == option::clang::ID_I);
+    ZASSERT(parsed.args[2].values.size() == 1U);
+    ZEXPECT(parsed.args[2].values[0] == "include");
 
-    EXPECT(parsed.args[3].id == option::clang::ID_isystem);
-    ASSERT(parsed.args[3].values.size() == 1U);
-    EXPECT(parsed.args[3].values[0] == "/usr/include");
+    ZEXPECT(parsed.args[3].id == option::clang::ID_isystem);
+    ZASSERT(parsed.args[3].values.size() == 1U);
+    ZEXPECT(parsed.args[3].values[0] == "/usr/include");
 
-    EXPECT(parsed.args[4].id == option::clang::ID_o);
-    ASSERT(parsed.args[4].values.size() == 1U);
-    EXPECT(parsed.args[4].values[0] == "main.o");
+    ZEXPECT(parsed.args[4].id == option::clang::ID_o);
+    ZASSERT(parsed.args[4].values.size() == 1U);
+    ZEXPECT(parsed.args[4].values[0] == "main.o");
 };
 
 ZEST_CASE(parse_alias_and_dash_dash_inputs) {
@@ -101,16 +101,16 @@ ZEST_CASE(parse_alias_and_dash_dash_inputs) {
 
     auto parsed = parse_command(argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(parsed.args[0]) == "-Wall");
-    EXPECT(parsed.args[0].id == option::clang::ID_Wall);
+    ZEXPECT(canonical_spelling(parsed.args[0]) == "-Wall");
+    ZEXPECT(parsed.args[0].id == option::clang::ID_Wall);
 
-    EXPECT(parsed.args[1].id == option::clang::ID_fsyntax_only);
+    ZEXPECT(parsed.args[1].id == option::clang::ID_fsyntax_only);
 
-    EXPECT(parsed.args[2].id == option::clang::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "-dash.cc");
+    ZEXPECT(parsed.args[2].id == option::clang::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "-dash.cc");
 };
 
 ZEST_CASE(parse_unknown_and_missing_value) {
@@ -119,18 +119,18 @@ ZEST_CASE(parse_unknown_and_missing_value) {
         const auto argv =
             std::to_array<std::string>({"clang++", "--definitely-not-a-real-clang-flag"});
         auto parsed = parse_command(argv);
-        EXPECT(parsed.errors.empty());
-        ASSERT(parsed.args.size() == 1U);
-        EXPECT(parsed.args[0].id == option::clang::ID_UNKNOWN);
-        EXPECT(parsed.args[0].spelling == "--definitely-not-a-real-clang-flag");
+        ZEXPECT(parsed.errors.empty());
+        ZASSERT(parsed.args.size() == 1U);
+        ZEXPECT(parsed.args[0].id == option::clang::ID_UNKNOWN);
+        ZEXPECT(parsed.args[0].spelling == "--definitely-not-a-real-clang-flag");
     };
 
     {
         const auto argv = std::to_array<std::string>({"clang++", "-o"});
         auto parsed = parse_command(argv);
-        EXPECT(parsed.args.empty());
-        ASSERT(parsed.errors.size() == 1U);
-        EXPECT(parsed.errors[0].contains("missing argument value"));
+        ZEXPECT(parsed.args.empty());
+        ZASSERT(parsed.errors.size() == 1U);
+        ZEXPECT(parsed.errors[0].contains("missing argument value"));
     };
 }
 
@@ -140,21 +140,21 @@ ZEST_CASE(parse_clang_cl_output_options_with_cl_visibility) {
 
     auto parsed = parse_command(argv, option::clang::DefaultVis | option::clang::CLOption);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 4U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 4U);
 
-    EXPECT(parsed.args[0].id == option::clang::ID_c);
-    EXPECT(parsed.args[0].spelling == "/c");
+    ZEXPECT(parsed.args[0].id == option::clang::ID_c);
+    ZEXPECT(parsed.args[0].spelling == "/c");
 
-    EXPECT(parsed.args[1].id == option::clang::ID_INPUT);
-    EXPECT(parsed.args[1].spelling == "main.cc");
+    ZEXPECT(parsed.args[1].id == option::clang::ID_INPUT);
+    ZEXPECT(parsed.args[1].spelling == "main.cc");
 
-    EXPECT(parsed.args[2].id == option::clang::ID__SLASH_Fo);
-    ASSERT(parsed.args[2].values.size() == 1U);
-    EXPECT(parsed.args[2].values[0] == "obj/main.obj");
+    ZEXPECT(parsed.args[2].id == option::clang::ID__SLASH_Fo);
+    ZASSERT(parsed.args[2].values.size() == 1U);
+    ZEXPECT(parsed.args[2].values[0] == "obj/main.obj");
 
-    EXPECT(parsed.args[3].id == option::clang::ID__SLASH_Fe);
-    ASSERT(parsed.args[3].values.size() == 1U);
-    EXPECT(parsed.args[3].values[0] == "bin/tool.exe");
+    ZEXPECT(parsed.args[3].id == option::clang::ID__SLASH_Fe);
+    ZASSERT(parsed.args[3].values.size() == 1U);
+    ZEXPECT(parsed.args[3].values[0] == "bin/tool.exe");
 };
 };  // ZEST_SUITE(clang_option_table_tests)

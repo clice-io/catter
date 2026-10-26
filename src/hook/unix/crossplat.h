@@ -1,7 +1,5 @@
 #pragma once
 
-#include <array>
-#include <climits>
 #include <cstdint>
 #include <dlfcn.h>
 #include <pthread.h>
@@ -39,32 +37,6 @@ inline char** environment() noexcept {
 #else
 #error "Unsupported platform"
 #endif
-}
-
-#include <string>
-
-#ifdef CATTER_LINUX
-#elif defined(CATTER_MAC)
-#include <mach-o/dyld.h>
-#else
-#error "Unsupported platform"
-#endif
-
-inline std::string get_executable_path() {
-    std::array<char, PATH_MAX> buf;
-#if defined(CATTER_LINUX)
-    ssize_t len = readlink("/proc/self/exe", buf.data(), buf.size() - 1);
-    if(len <= 0) {
-        return {};
-    }
-    buf[len] = '\0';
-#elif defined(CATTER_MAC)
-    uint32_t size = buf.size();
-    if(_NSGetExecutablePath(buf.data(), &size) != 0) {
-        return {};
-    }
-#endif
-    return std::string(buf.data());
 }
 
 #if defined(CATTER_MAC)

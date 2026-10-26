@@ -10,7 +10,6 @@
 #include "driver/cli.h"
 #include "driver/driver.h"
 #include "driver/option.h"
-#include "support/encoding.h"
 
 namespace catter::driver {
 
@@ -47,8 +46,7 @@ int run(std::span<std::string> args) {
     if(options->command->empty()) {
         throw cpptrace::runtime_error("explain: give the command to analyze after --");
     }
-    std::print("{}",
-               feature::explain(to_utf8(options->directory.directory->path), *options->command));
+    std::print("{}", feature::explain(options->directory.directory->path, *options->command));
     return 0;
 }
 

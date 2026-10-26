@@ -17,6 +17,8 @@ Each daemon listens on a socket/pipe of its own, named by its process id, so bui
 
 A program can outlive the session it started in: a build server (an sccache server, a Gradle daemon) runs the commands of later builds with the earlier session's pipe in its environment. When that pipe is gone, `catter-proxy` runs the command as it would run without catter, uncaptured, and logs a warning; a command that ends after its session keeps its exit code.
 
+`catter-proxy` stands in for the program it starts, and the build sees the program's end as the proxy's: a program a signal ended ends the proxy by the same signal. The program starts with the signals as exec would leave them: those the build ignores stay ignored, those it blocks blocked. A SIGTERM, SIGINT or SIGHUP another process sends the proxy goes on to the program; one the terminal sends reaches the program itself. A program ends with its proxy when the proxy is killed: on Linux and Windows the system ends it; macOS has no way to tie the two, and there the daemon ends it, told the program's process id (`started`), when the proxy disconnects before its `FINISH`.
+
 ## Serialization
 
 All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format. The implementation uses `kota::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kota::ipc::StreamTransport`).
@@ -25,7 +27,7 @@ Bincode was chosen for its efficiency -- messages are small and fast to encode/d
 
 ## Request-Response Model
 
-Communication follows a strict request-response pattern. The client (proxy) sends a request and waits for the server (daemon) to respond before proceeding. Each request type has a well-defined parameter type and result type.
+Communication follows a strict request-response pattern, but for the `started` notification. The client (proxy) sends a request and waits for the server (daemon) to respond before proceeding. Each request type has a well-defined parameter type and result type.
 
 The protocol is defined in `src/session/data.h` using C++ template specialization:
 
@@ -88,7 +90,7 @@ The core request. The proxy sends a captured command and the daemon decides what
 **Action types**:
 
 - **`DROP` (0)** -- Do not execute the command. The proxy returns exit code 0 immediately. Used when a handler determines a command is irrelevant (e.g., a compiler invocation the user wants to skip).
-- **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD` (or performs DLL injection on Windows) so that child processes of this command are also intercepted. This is the default for build commands whose children should be monitored.
+- **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD` (or performs DLL injection on Windows) so that child processes of this command are also intercepted, but for a program the hook cannot load (on macOS Apple's own tools and programs under Rosetta, on Windows a machine with no hook DLL), which runs without it. This is the default for build commands whose children should be monitored.
 - **`WRAP` (2)** -- Execute the command directly without hooking. The proxy runs the command, but does not inject the hook. Used for leaf commands (like actual compiler invocations) that do not spawn further build processes.
 - **`FAIL` (3)** -- Do not execute the command: the proxy returns exit code 1 immediately. The session has ended with an error (a handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
 
@@ -117,13 +119,25 @@ Reports that a command has completed execution.
 
 **Params** -- `process_result`:
 
-| Field  | Type      | Description       |
-| ------ | --------- | ----------------- |
-| `code` | `int64_t` | Process exit code |
+| Field  | Type      | Description                                                           |
+| ------ | --------- | --------------------------------------------------------------------- |
+| `code` | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
 
 **Result**: `null` (no response payload)
 
 After the daemon receives this request, it tells the session's handlers the result (the handler protocol's `exit`). The proxy then disconnects.
+
+### started
+
+A notification, not a request: the daemon sends no response. The proxy sends it on macOS once the program runs.
+
+**Params** -- `Started`:
+
+| Field | Type      | Description              |
+| ----- | --------- | ------------------------ |
+| `pid` | `int64_t` | The program's process id |
+
+macOS has nothing to end a child with its parent, as Linux and Windows do: when a proxy disconnects after `started` and before `FINISH`, it was killed, and the daemon kills its program with SIGKILL.
 
 ## Typical Message Sequence
 
@@ -139,7 +153,7 @@ Daemon -> Proxy:  true
 [Proxy exits when build finishes]
 ```
 
-The injector proxy also sends `CREATE`, `MAKE_DECISION`, and `FINISH` for the top-level build command, so the build system command itself reaches the handlers like any other intercepted command.
+The injector proxy also sends `CREATE`, `MAKE_DECISION`, `started` (on macOS) and `FINISH` for the top-level build command, so the build system command itself reaches the handlers like any other intercepted command.
 
 ### Wrapper Mode (intercepted command)
 
@@ -150,7 +164,9 @@ Proxy -> Daemon:  CREATE(parent_id)
 Daemon -> Proxy:  new_session_id
 Proxy -> Daemon:  MAKE_DECISION(command)
 Daemon -> Proxy:  action {type, cmd}
-[Proxy executes or drops the command]
+[Proxy starts the command, or drops it]
+Proxy -> Daemon:  started(pid)              (macOS, a notification)
+[Proxy waits for the command]
 Proxy -> Daemon:  FINISH(process_result)
 Daemon -> Proxy:  null
 [Proxy disconnects]
@@ -189,7 +205,7 @@ Each session is identified by a unique `ipcid_t` (32-bit integer). The tree is b
 2. **Proxy connects** -- Opens a connection to the socket/pipe. The connection is established using `kota::pipe::connect()` on the proxy side.
 3. **Daemon accepts** -- For each incoming connection, the daemon creates a `kota::ipc::BincodePeer` and registers request handlers (`on_request<Request<Type>>(...)`) for each request type.
 4. **Request handling** -- The daemon's event loop dispatches incoming requests to the appropriate handler. Request handlers may be async (using `co_await`), to wait for the session's handlers or other daemon state.
-5. **Peer disconnects** -- When the proxy process exits, the transport closes and the `BincodePeer::run()` coroutine completes. The daemon logs the disconnection and cleans up the session.
+5. **Peer disconnects** -- When the proxy process exits, the transport closes and the `BincodePeer::run()` coroutine completes. The daemon logs the disconnection and cleans up the session; on macOS it kills the program of a proxy that went before its `FINISH`.
 
 ## Data Types
 

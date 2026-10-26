@@ -1,8 +1,7 @@
 #pragma once
 
 #include <string_view>
-
-#include "support/winapi/win32.h"
+#include <windows.h>
 
 namespace catter {
 /// Adds the hook DLL of the suspended process's machine to its imports, so

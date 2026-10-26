@@ -1,32 +1,28 @@
 #include "session/session.h"
 
 #include <cassert>
-#include <filesystem>
 #include <format>
 #include <list>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
+#include <kota/fs/directory.h>
 
 #include "session/process.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
-#include "support/crossplat.h"
-#include "support/encoding.h"
 #include "support/guard.h"
 #include "support/log.h"
 
 namespace catter {
 
 kota::task<data::process_result> Session::run(RunPlan run_plan) {
-#ifndef _WIN32
+#ifndef CATTER_WINDOWS
     // A socket a session of the same pid left behind.
-    std::error_code ec;
-    std::filesystem::remove(from_utf8(run_plan.pipe_name), ec);
+    kota::fs::remove(run_plan.pipe_name);
 #endif
     auto& current_loop = kota::event_loop::current();
     auto acc_ret = kota::pipe::listen(run_plan.pipe_name, kota::pipe::options(), current_loop);
@@ -44,8 +40,8 @@ kota::task<data::process_result> Session::run(RunPlan run_plan) {
                                   std::move(run_plan.launch_plan.cwd));
 
     auto [_, process_result] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
-#ifndef _WIN32
-    std::filesystem::remove(from_utf8(run_plan.pipe_name), ec);
+#ifndef CATTER_WINDOWS
+    kota::fs::remove(run_plan.pipe_name);
 #endif
     co_return std::move(process_result);
 }
@@ -110,13 +106,16 @@ kota::task<data::process_result> Session::spawn(std::string executable,
              cwd,
              args_str);
 
+    // The build gets the signals as catter was given them, as nohup leaves
+    // them for it.
     kota::process::options opts{
-        .file = std::move(executable),
+        .program = std::move(executable),
         .args = std::move(args),
         .cwd = std::move(cwd),
-        .creation = {.windows_hide = true, .windows_verbatim_arguments = true},
+        .creation = {.keep_signals = true},
     };
-    co_return co_await run_process(opts);
+    auto status = co_await run_process(std::move(opts));
+    co_return result_of(status);
 }
 
 }  // namespace catter

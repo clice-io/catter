@@ -1,7 +1,10 @@
-#include <fstream>
 #include <print>
+#include <string>
+#include <vector>
 #include <kota/codec/json/schema.h>
+#include <kota/fs/file.h>
 #include <kota/ipc/codec.h>
+#include <kota/sys/process.h>
 
 #include "protocol/protocol.h"
 
@@ -28,7 +31,14 @@ struct Messages {
 /// Writes the JSON Schema of the protocol's messages (src/protocol/protocol.h),
 /// which the SDKs' types are generated from, to the file it is given.
 int main(int argc, char* argv[]) {
-    if(argc != 2) {
+#ifdef CATTER_WINDOWS
+    // main's argv is in the ANSI code page, which holds few characters past
+    // ASCII.
+    const auto& args = kota::sys::arguments();
+#else
+    const std::vector<std::string> args(argv, argv + argc);
+#endif
+    if(args.size() != 2) {
         std::println(stderr, "usage: catter-protocol-schema <output file>");
         return 1;
     }
@@ -37,10 +47,8 @@ int main(int argc, char* argv[]) {
         std::println(stderr, "{}", schema.error().to_string());
         return 1;
     }
-    std::ofstream output(argv[1], std::ios::binary);
-    output << *schema << '\n';
-    if(!output.good()) {
-        std::println(stderr, "Failed to write the schema to `{}`", argv[1]);
+    if(auto error = kota::fs::write_file(args[1], *schema + '\n')) {
+        std::println(stderr, "Failed to write the schema to `{}`: {}", args[1], error.message());
         return 1;
     }
     return 0;
