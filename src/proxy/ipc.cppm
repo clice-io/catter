@@ -49,6 +49,7 @@ struct Peer {
 
 #ifdef CATTER_MAC
     void started(int64_t pid) {
+        program = pid;
         // The program runs all the same.
         (void)this->peer.send_notification(catter::ipc::Started::method, catter::ipc::Started{pid});
     }
@@ -70,6 +71,11 @@ struct Peer {
 
 public:
     kota::ipc::BincodePeer peer;
+
+#ifdef CATTER_MAC
+    /// The program the proxy stands in for, from its start until its exit.
+    std::optional<int64_t> program;
+#endif
 };
 
 }  // namespace catter::proxy

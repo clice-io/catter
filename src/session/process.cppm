@@ -17,11 +17,16 @@ kota::process::options process_options(const data::command& command);
 /// ended it as 128 and the signal's number, as a shell reports it.
 data::process_result result_of(const kota::process::exit_status& status);
 
+/// Ends this process as `status` says a program ended: by the same signal, or
+/// with the same exit code, which it returns for main to return.
+int exit_like(const kota::process::exit_status& status);
+
 struct RunOptions {
-    /// This process stands in for the program, as catter-proxy does: the
-    /// program starts with the signals as exec leaves them, a signal another
-    /// process sends this one goes on to it, and the program ends when this
-    /// process is killed, but on macOS, where `started` has to see to it.
+    /// This process stands in for the program, as catter stands in for the
+    /// build and catter-proxy for each command: the program starts with the
+    /// signals as exec leaves them, a signal another process sends this one
+    /// goes on to it, and the program ends when this process is killed, but
+    /// on macOS, where nothing ends a child with its parent.
     bool stand_in = false;
 
     /// Told the program's pid once it runs.

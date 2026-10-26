@@ -37,6 +37,12 @@ Every run names a command, and its options come after it. `catter --help` lists 
 
 `explain` takes `-C` too, and the command to analyze after `--`.
 
+### Exit status
+
+catter ends as the build did: with the build's exit code, or, when a signal ended the build, by the same signal. A replayed build ends with the exit code its file records. When catter itself fails, as when the command line is wrong, a handler aborts the build or the compilation database cannot be written, catter prints why and exits with 1.
+
+Stopping catter stops the build: a SIGTERM, SIGINT or SIGHUP sent to catter goes on to the build command, which ends as it would if it were sent to it, and catter then ends as the build did. A build command ends with catter when catter is killed.
+
 ### Data directory
 
 catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.

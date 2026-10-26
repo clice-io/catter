@@ -14,8 +14,9 @@ public:
     virtual ~RuntimeDriver() = default;
 
     virtual std::string_view name() const noexcept = 0;
-    virtual kota::task<data::process_result> execute(const Build& build,
-                                                     Handler& handler) const = 0;
+    /// Runs `build`, its commands decided by `handler`: how the build ended.
+    virtual kota::task<kota::process::exit_status> execute(const Build& build,
+                                                           Handler& handler) const = 0;
 };
 
 /// Runs the build, its commands captured by the hook.

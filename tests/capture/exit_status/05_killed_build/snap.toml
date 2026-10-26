@@ -1,0 +1,9 @@
+[test."$ node build.mjs"]
+killed = "SIGTERM"
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+Build failed with exit code 143. Printing partial command tree.
+node build.mjs
+'''
+killed = "SIGTERM"

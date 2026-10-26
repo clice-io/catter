@@ -37,6 +37,12 @@ catter <command> [options] -- <build-command>
 
 `explain` 也接受 `-C`，要分析的命令写在 `--` 之后。
 
+### 退出状态
+
+catter 像构建那样结束：以构建的退出码退出；构建被信号结束时，catter 也以同一个信号结束。重放的构建以其文件记录的退出码结束。catter 自身失败时，比如命令行有误、handler 中止了构建或编译数据库无法写入，catter 打印原因并以 1 退出。
+
+停止 catter 就会停止构建：发给 catter 的 SIGTERM、SIGINT 或 SIGHUP 会转给构建命令，构建命令像直接收到它一样结束，catter 随后像构建那样结束。catter 被杀死时，构建命令随之结束。
+
 ### 数据目录
 
 catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。

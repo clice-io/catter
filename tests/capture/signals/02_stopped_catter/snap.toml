@@ -1,0 +1,23 @@
+[terminated."$ node stop.mjs SIGTERM node build.mjs"]
+stdout = '''
+the build got SIGTERM
+node ended by SIGTERM
+'''
+exit = 0
+
+[terminated."$ node stop.mjs SIGTERM catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+the build got SIGTERM
+Build failed with exit code 143. Printing partial command tree.
+node build.mjs
+catter ended by SIGTERM
+'''
+exit = 0
+
+[killed."$ node stop.mjs SIGKILL node build.mjs"]
+stdout = "node ended by SIGKILL"
+exit = 0
+
+[killed."$ node stop.mjs SIGKILL catter tree -w 1000 -- node build.mjs"]
+stdout = "catter ended by SIGKILL"
+exit = 0

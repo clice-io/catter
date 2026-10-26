@@ -1,6 +1,6 @@
 [test."$ catter compile-commands --save-on-failure -o compile_commands.json --from events.json"]
 stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
-exit = 0
+exit = 1
 
 [test."compile_commands.json"]
 entries = [

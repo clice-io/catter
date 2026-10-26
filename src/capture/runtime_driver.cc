@@ -132,7 +132,8 @@ public:
         return "inject";
     }
 
-    kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
+    kota::task<kota::process::exit_status> execute(const Build& build,
+                                                   Handler& handler) const override {
         assert(!build.command.empty());
 
         auto pipe_name = config::session_pipe_name();
@@ -150,9 +151,9 @@ public:
             std::move(pipe_name),
             InjectService::Factory{.handler = &handler, .failure = &failure});
 
-        auto result = co_await session.run(std::move(session_plan));
+        auto status = co_await session.run(std::move(session_plan));
         failure.rethrow();
-        co_return result;
+        co_return status;
     }
 };
 
@@ -164,7 +165,8 @@ public:
         return "replay";
     }
 
-    kota::task<data::process_result> execute(const Build& build, Handler& handler) const override {
+    kota::task<kota::process::exit_status> execute(const Build& build,
+                                                   Handler& handler) const override {
         assert(build.command.size() == 1);
         auto file = build.cwd;
         kota::fs::path::push(file, build.command.front());

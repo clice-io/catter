@@ -10,18 +10,23 @@ import :capture.runtime_driver;
 import :driver.app_runner;
 import :protocol.remote_handler;
 import :session.handler;
+import :session.process;
 
 namespace catter::driver {
 
 namespace {
 
 /// Runs the session of `handler`: the build it starts, if any, and then its end.
-kota::task<> run(Handler& handler, const RuntimeDriver& driver, Build build) {
+kota::task<kota::process::exit_status> run(Handler& handler,
+                                           const RuntimeDriver& driver,
+                                           Build build) {
     auto started = co_await handler.on_start(std::move(build));
-    if(started) {
-        auto result = co_await driver.execute(*started, handler);
-        co_await handler.on_finish(std::move(result));
+    if(!started) {
+        co_return kota::process::exit_status{};
     }
+    auto status = co_await driver.execute(*started, handler);
+    co_await handler.on_finish(result_of(status));
+    co_return status;
 }
 
 struct Address {
@@ -86,9 +91,8 @@ std::string session_id() {
     return std::format("{:016x}", random(device));
 }
 
-}  // namespace
-
-kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
+kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builtin,
+                                                 const SessionOptions& options) {
     if(options.from.has_value() && !options.command->empty()) {
         throw cpptrace::runtime_error(
             "--from replays a recorded build in place of the build command after --: give one of them");
@@ -114,6 +118,7 @@ kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& o
     };
 
     std::vector<std::unique_ptr<RemoteHandler>> remotes;
+    kota::process::exit_status status;
     std::exception_ptr error;
     try {
         for(const auto& [connect, text]: options.handlers) {
@@ -134,7 +139,7 @@ kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& o
             chain.push_back(remote.get());
         }
         HandlerChain handler(std::move(chain));
-        co_await run(handler, driver, std::move(build));
+        status = co_await run(handler, driver, std::move(build));
     } catch(...) {
         error = std::current_exception();
     }
@@ -146,6 +151,15 @@ kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& o
     if(error) {
         std::rethrow_exception(error);
     }
+    co_return status;
+}
+
+}  // namespace
+
+kota::process::exit_status run_session(std::unique_ptr<Handler> builtin,
+                                       const SessionOptions& options) {
+    auto [status] = kota::run(async_run(std::move(builtin), options));
+    return *status;
 }
 
 }  // namespace catter::driver

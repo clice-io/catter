@@ -19,6 +19,8 @@ A program can outlive the session it started in: a build server (an sccache serv
 
 `catter-proxy` stands in for the program it starts, and the build sees the program's end as the proxy's: a program a signal ended ends the proxy by the same signal. The program starts with the signals as exec would leave them: those the build ignores stay ignored, those it blocks blocked. A SIGTERM, SIGINT or SIGHUP another process sends the proxy goes on to the program; one the terminal sends reaches the program itself. A program ends with its proxy when the proxy is killed: on Linux and Windows the system ends it; macOS has no way to tie the two, and there the daemon ends it, told the program's process id (`started`), when the proxy disconnects before its `FINISH`.
 
+The daemon stands in for the build the same way: it starts the build command's proxy as a proxy starts its program, and ends as the build did. A SIGTERM, SIGINT or SIGHUP sent to the daemon goes on to the build command, and the proxy of the build command ends with the daemon when the daemon is killed: on macOS that proxy ends its program itself when its connection to the daemon ends before its `FINISH`.
+
 ## Serialization
 
 All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format. The implementation uses `kota::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kota::ipc::StreamTransport`).
