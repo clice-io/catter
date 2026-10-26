@@ -131,9 +131,9 @@ int fake_posix_spawn(pid_t*,
     return spawn_call.result;
 }
 
-/// An empty program `name` in the manager's directory, by its absolute path.
-std::string create_executable(std::string_view name) {
-    ZEXPECT(!manager.create(name));
+/// A script `name` in the manager's directory, by its absolute path.
+std::string create_executable(std::string_view name, std::string_view content = "#!/bin/sh\n") {
+    ZEXPECT(!manager.create(name, content));
     std::string path;
     ZEXPECT(!kota::fs::absolute(path, manager.path(name)));
     return path;
@@ -311,6 +311,74 @@ ZEST_CASE(spawn_boundary_returns_error_code) {
     ZEXPECT(result == EFAULT);
     ZEXPECT(errno == EFAULT);
     ZEXPECT(spawn_call.calls == 0);
+}
+
+ZEST_CASE(execve_leaves_a_file_of_no_executable_format_to_the_system) {
+    exec_call.reset(-1);
+
+    auto executable = create_executable("no-format", "echo not a program\n");
+    MutableCStrings argv = {"no-format"};
+    MutableCStrings envp = {"LANG=C"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
+
+    ZEXPECT(result == -1);
+    ZEXPECT(exec_call.calls == 1);
+    ZEXPECT(exec_call.path == executable);
+    ZEXPECT(exec_call.argv == std::vector<std::string>{"no-format"});
+}
+
+ZEST_CASE(execvp_runs_a_file_of_no_executable_format_through_the_proxy) {
+    exec_call.reset(53);
+
+    auto executable = create_executable("shell-script", "echo run by /bin/sh\n");
+    ScopedEnv path_env("PATH", std::string(kota::fs::path::parent(executable)));
+    MutableCStrings argv = {"shell-script"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    auto result = executor.execvp("shell-script", argv.data());
+
+    ZEXPECT(result == 53);
+    expect_proxy_command(exec_call, valid_session, executable, "shell-script");
+}
+
+ZEST_CASE(execvp_runs_a_script_that_names_no_interpreter_through_the_proxy) {
+    exec_call.reset(54);
+
+    auto executable = create_executable("empty-shebang", "#!\necho run by /bin/sh\n");
+    ScopedEnv path_env("PATH", std::string(kota::fs::path::parent(executable)));
+    MutableCStrings argv = {"empty-shebang"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    auto result = executor.execvp("empty-shebang", argv.data());
+
+    ZEXPECT(result == 54);
+    expect_proxy_command(exec_call, valid_session, executable, "empty-shebang");
+}
+
+ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) {
+    spawn_call.reset(ENOENT);
+
+    auto executable = create_executable("lost-interpreter", "#!/definitely/missing/sh\n");
+    MutableCStrings argv = {"lost-interpreter"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    pid_t pid = 0;
+    auto result =
+        executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), nullptr);
+
+    ZEXPECT(result == ENOENT);
+    ZEXPECT(spawn_call.path == executable);
+    ZEXPECT(spawn_call.argv == std::vector<std::string>{"lost-interpreter"});
 }
 
 };  // ZEST_SUITE(executor)

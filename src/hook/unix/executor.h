@@ -60,14 +60,20 @@ public:
                      char* const envp[]) noexcept;
 
 private:
-    int run_execve(const char* executable, const char* const argv[], char* const envp[]);
+    /// `shell_fallback`: the libc function this stands for runs a file of no
+    /// executable format with /bin/sh, as execvp does.
+    int run_execve(const char* executable,
+                   const char* const argv[],
+                   char* const envp[],
+                   bool shell_fallback);
 
     int run_posix_spawn(pid_t* pid,
                         const char* executable,
                         const posix_spawn_file_actions_t* file_actions,
                         const posix_spawnattr_t* attrp,
                         const char* const argv[],
-                        char* const envp[]);
+                        char* const envp[],
+                        bool shell_fallback);
     Session m_session;
     ExecveFn* m_execve = nullptr;
     PosixSpawnFn* m_posix_spawn = nullptr;
