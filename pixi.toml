@@ -149,7 +149,7 @@ depends-on = [
     { task = "check-layers" },
 ]
 
-# Each directory of src/ includes only the layers below it
+# Each directory of src/ includes and imports only the layers below it
 # (scripts/check_layers.py).
 [tasks.check-layers]
 cmd = "python scripts/check_layers.py"

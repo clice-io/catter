@@ -8,8 +8,8 @@ load("//bazel:defs.bzl", "COPTS", "LINKOPTS", "MODULE_UNIT_COPTS", "asan_runtime
 # confines to a target's dependencies). Above support, which the hook
 # payloads include too, the code is C++20 modules: command is catter.command,
 # the rest catter, whose primary interface, src/module.cppm, exports nothing
-# and sits in its lowest library. Each header is a partition, <stem>.cppm
-# beside its source, and each source an implementation unit.
+# and sits in its lowest library. Declarations are in partitions, <stem>.cppm
+# beside their sources, which are implementation units.
 
 cc_library(
     name = "support",

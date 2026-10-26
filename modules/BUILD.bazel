@@ -7,9 +7,9 @@ load(":modules.bzl", "LIBRARIES", "MODULE_COPTS")
 # deps.cppm includes the libraries' headers in its global module fragment,
 # <configuration>/deps.fragment.h of the configuration whose condition
 # holds, and exports what they declare. prelude.h, which every module unit
-# of catter includes first, imports it and replays the macros its headers
-# define. scripts/modules.py writes all of it from demand.cpp; nothing it
-# writes is edited by hand.
+# of catter includes first, imports it and defines again the macros its
+# headers define. scripts/modules.py writes all of it from demand.cpp;
+# nothing it writes is edited by hand.
 
 # The fragments, the macro headers and the preludes.
 cc_library(

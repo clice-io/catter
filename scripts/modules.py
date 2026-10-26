@@ -7,7 +7,7 @@ are merged into modules/:
   python scripts/modules.py --clice PATH generate <configuration>...
   python scripts/modules.py --clice PATH merge
 
-A configuration's wrapping lands in build/modules/<configuration>; merge
+A configuration's wrapping is written to build/modules/<configuration>; merge
 reads every one of them there. clice is a release of clice for the machine
 (https://github.com/clice-io/clice/releases).
 """

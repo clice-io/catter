@@ -22,7 +22,7 @@ of it), is in two places, which always move together:
   platform, and `@llvm_option_inc`, LLVM's TableGen output for the option
   tables of clang, lld (COFF, ELF, MachO, MinGW, wasm), llvm-lib and
   llvm-dlltool, which `src/command/option` includes
-  (`<llvm-options-td/*.inc>`);
+  (`"llvm-options-td/*.inc"`);
 - `pixi.toml`: `xclang = "==<version>"`, the conda package (channel
   `https://conda.clice.io`), for the LLVM tools
   `scripts/check_artifact_deps.py` runs.
@@ -49,9 +49,11 @@ module kotatsu's CI publishes to the registry for the n-th commit of its
 wrong). Its own `MODULE.bazel` names the libraries it builds on (libuv,
 cpptrace, simdjson, ...) at registry versions, which Bazel resolves with
 catter's own (`cpptrace`, `spdlog`): a newer one of theirs is taken for
-both. catter's targets name the kotatsu libraries they use (`@kotatsu//:fs`,
-`:sys`, `:async`, `:ipc`, `:codec_json`, `:deco`, `:zest`, ...); the hook
-payloads `:fs` and `:sys` alone.
+both. The kotatsu libraries catter's modules use are in `LIBRARIES` of
+`modules/modules.bzl` (`@kotatsu//:fs`, `:sys`, `:async`, `:ipc`,
+`:codec_json`, `:deco`, `:zest`, ...), which `deps` wraps; `support` and
+the hook payloads name theirs in `BUILD.bazel`, the payloads `:fs` and
+`:sys` alone.
 
 1. Pick the version, usually that of kotatsu's `main`; it is in the
    registry once `modules/kotatsu/<version>/` is on clice-io/bazel's
@@ -82,8 +84,8 @@ wraps (kotatsu, spdlog, cpptrace), and catter starting to use a header or
 macro `deps` does not export, regenerate it: the build stops on a name or
 macro it does not know, which goes into `demand.cpp` first (under `#ifdef
 _WIN32` or `#ifndef _WIN32` when one platform alone uses it). A new library
-goes into `LIBRARIES` in `modules/modules.bzl` and the partition in
-`scripts/modules.py`.
+goes into `LIBRARIES` in `modules/modules.bzl`, and its repository into the
+libraries' globs of `scripts/modules.py`.
 
 `scripts/modules.py` builds `demand.cpp` for a configuration, indexes it
 with clice and wraps the libraries' headers, then merges the
@@ -107,8 +109,7 @@ box run $linux 'pixi run -e dev python scripts/modules.py --clice ~/clice/bin/cl
 box cp $linux . modules
 ```
 
-A warning of `clice modularize` stops `generate`: a header the partition
-leaves to the program means a library's include directory moved (the
-partition's globs are in `scripts/modules.py`). The diff of `modules/` is
+A warning of `clice modularize` stops `generate`: a header no glob of
+`scripts/modules.py` claims means a library's include directory moved. The diff of `modules/` is
 part of the review: names the libraries dropped or renamed, and macros
 that changed.
