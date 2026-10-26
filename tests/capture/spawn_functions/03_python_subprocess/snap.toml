@@ -101,6 +101,7 @@ n12 exit 0
 n13 exit 0
 n14 exit 0
 n15 exit 0
+failed to start: The system cannot find the file specified
 python build.py
 ├── "${ENV}/python.exe" -c "print('n0')"
 ├── "${ENV}/python.exe" -c "print('n1')"
@@ -117,8 +118,6 @@ python build.py
 ├── "${ENV}/python.exe" -c "print('n12')"
 ├── "${ENV}/python.exe" -c "print('n13')"
 ├── "${ENV}/python.exe" -c "print('n14')"
-├── "${ENV}/python.exe" -c "print('n15')"
-└── [capture error] Run `${CATTER}/catter-proxy.exe -p 1 --exec catter-test-no-such-program --ipc \\.\pipe\catter-ipc-# -- catter-test-no-such-program` failed:
-Process `catter-test-no-such-program` spawn failed, because `no such file or directory`
+└── "${ENV}/python.exe" -c "print('n15')"
 '''
 exit = 0

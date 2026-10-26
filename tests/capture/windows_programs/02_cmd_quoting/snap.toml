@@ -9,7 +9,7 @@ exit = 0
 [test."$ catter tree -w 1000 -- spawn.exe CreateProcessW command.txt"]
 stdout = '''
 first
-quoted" "arg
+"quoted arg"
 third
 spawn.exe CreateProcessW command.txt
 └── cmd.exe /d /c "echo first&& echo quoted" "arg&& echo third"
