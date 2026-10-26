@@ -267,14 +267,13 @@ PAYLOADS = select({
 
 cc_binary(
     name = "bin/unittests",
-    srcs = [
-        "unittests/main.cc",
-        "unittests/utils/temp_file_manager.h",
-    ] + glob([
-        "unittests/command/**/*.cc",
-        "unittests/feature/**/*.cc",
-        "unittests/protocol/**/*.cc",
-    ]),
+    srcs = glob(
+        [
+            "unittests/**/*.cc",
+            "unittests/**/*.h",
+        ],
+        exclude = ["unittests/hook/**"],
+    ),
     copts = MODULE_UNIT_COPTS + ["-Iunittests"],
     features = ["cpp_modules"],
     linkopts = LINKOPTS,
