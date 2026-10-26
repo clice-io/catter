@@ -118,7 +118,7 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const Er
 
 /// Writes the compilation database of the compiler commands of a build: the entries of each
 /// command, each of the source and the arguments of that command, but of a source another
-/// compile writes.
+/// compile writes, and a preprocess's of a source another command compiles.
 class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
@@ -141,6 +141,11 @@ public:
         if(descendants.left_out(id)) {
             co_return Action{};
         }
+        // A compiler's children are steps of its own, nvcc's too, whose arguments catter does not
+        // read yet.
+        if(identify(command.executable).has_value()) {
+            descendants.leave_out_descendants_of(id);
+        }
         auto analysis =
             analyze_compiler(command.executable, command.args, command.cwd, kota::fs::read_file);
         if(!analysis.has_value()) {
@@ -150,13 +155,20 @@ public:
         verbose_log(success_log(id, command, *analysis));
         compiler_commands.insert(id);
 
-        std::ranges::move(entries_of(command.cwd, *analysis), std::back_inserter(found));
+        const bool preprocess = analysis->phase == Phase::Preprocess;
+        for(auto& entry: entries_of(command.cwd, *analysis)) {
+            auto source = absolute_path(command.cwd, entry.as_object().find("file")->as_string());
+            if(!preprocess) {
+                compiled.insert(source);
+            }
+            found.push_back(
+                {.entry = std::move(entry), .source = std::move(source), .preprocess = preprocess});
+        }
         for(const auto& write: analysis->writes) {
             if(write.path != "-") {
                 written.insert(absolute_path(command.cwd, write.path));
             }
         }
-        descendants.leave_out_descendants_of(id);
         co_return Action{};
     }
 
@@ -195,6 +207,17 @@ public:
     }
 
 private:
+    /// An entry of the build's, of the source it names, absolute.
+    struct Found {
+        JSON entry;
+
+        std::string source;
+
+        /// Whether a preprocess made it, which describes the source only when no other command
+        /// compiles it.
+        bool preprocess;
+    };
+
     void log(std::string_view message) const {
         if(!*options.quiet) {
             std::println("{}", kota::replace_invalid_utf8(message));
@@ -211,12 +234,12 @@ private:
         std::size_t generated = 0;
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
-        for(auto& entry: found) {
-            const auto& object = entry.as_object();
-            const auto file = object.find("file")->as_string();
-            if(written.contains(absolute_path(object.find("directory")->as_string(), file))) {
+        for(const auto& [entry, source, preprocess]: found) {
+            if(written.contains(source) || (preprocess && compiled.contains(source))) {
                 continue;
             }
+            const auto& object = entry.as_object();
+            const auto file = object.find("file")->as_string();
             generated += 1;
             outputs += object.find("output") != nullptr ? 1 : 0;
             files.insert(file);
@@ -242,7 +265,10 @@ private:
     Descendants descendants;
 
     /// The entries of the build's commands, in the order the commands came.
-    std::vector<JSON> found;
+    std::vector<Found> found;
+
+    /// The sources the build's commands but preprocesses read, absolute.
+    std::unordered_set<std::string> compiled;
 
     /// The files the build's compiles write, absolute.
     std::unordered_set<std::string> written;

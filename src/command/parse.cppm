@@ -14,8 +14,7 @@ struct Candidate {
 
     Location location;
 
-    /// The language `-x` set for the inputs after it, or `/TC` or `/TP` for every input, when
-    /// one did.
+    /// The language `-x` set for the inputs after it, when one did.
     std::optional<std::string> language;
 };
 
@@ -58,6 +57,9 @@ struct ParsedCommand {
     std::vector<Read> inputs;
 
     std::vector<Candidate> candidates;
+
+    /// The language `/TC` or `/TP` sets for every source, when one does.
+    std::optional<std::string> every_language;
 
     std::vector<Output> outputs;
 

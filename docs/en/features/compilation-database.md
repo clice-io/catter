@@ -30,7 +30,7 @@ By default, catter **merges** with an existing `compile_commands.json` if one is
 
 A compile's response files (`@file`) are read when the command starts, before it runs, as build tools such as MSBuild delete them once it has: its entries hold the arguments the files hold, split as the compiler splits them, with Windows' rules for MSVC's `cl`, `clang-cl` and clang in cl mode.
 
-Each compiler command gets an entry for each source it compiles and file it writes from it, with that command's directory, its arguments and its spelling of the source; a source it writes nothing from, as with `-fsyntax-only`, gets one without `output`. A file the build compiles into another file, such as a preprocessed `.i`, gets no entry of its own: its source's entry names the file it was made into.
+Each compiler command gets an entry for each of its sources and each file it writes from that source, with the command's directory, its arguments and the source as it names it; a source it writes nothing from, as with `-fsyntax-only`, gets an entry without `output`. A preprocess (`-E`, `-M`) gets one only for a source no other command of the build compiles, and without `output`. A file a compile of the build writes, such as the `.s` of `-S`, gets no entry of its own when the build compiles it too: the entry of its source stands for it.
 
 ## CDB Entry Format
 
@@ -40,18 +40,18 @@ The output follows the standard clang JSON compilation database format:
 [
   {
     "directory": "/path/to/build",
-    "file": "/path/to/source.cpp",
-    "arguments": ["clang++", "-std=c++20", "-c", "source.cpp", "-o", "source.o"],
-    "output": "source.o"
+    "file": "../src/source.cpp",
+    "arguments": ["clang++", "-std=c++20", "-c", "../src/source.cpp", "-o", "source.o"],
+    "output": "/path/to/build/source.o"
   }
 ]
 ```
 
 ## Supported Compilers
 
-- **C/C++**: GCC, Clang
+- GCC, Clang, `clang-cl` and MSVC's `cl`, for sources in C, C++ (modules too), Objective-C and Objective-C++, assembly and CUDA, or in any language `-x` names.
 
-Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and handled transparently. Catter can also identify other compilers (Flang, ifort, NVCC, etc.) but `CompilerAnalysis` currently only generates CDB entries for GCC and Clang commands.
+Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and handled transparently. catter recognizes nvcc, but does not read its arguments yet: its commands get no entries.
 
 ## Examples
 

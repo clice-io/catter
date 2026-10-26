@@ -14,9 +14,15 @@ entries = [
 [msvc."$ catter compile-commands -o compile_commands.json -- cl /nologo /Zs /DCATTER_TEST=1 /Iinclude src/main.cc"]
 stdout = '''
 main.cc
-CDB saved to ${WS}/compile_commands.json with 0 entries.
+CDB saved to ${WS}/compile_commands.json with 1 entries.
 '''
 exit = 0
 
 [msvc."compile_commands.json"]
-entries = []
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        arguments = ["cl", "/nologo", "/Zs", "/DCATTER_TEST=1", "/Iinclude", "src/main.cc"],
+    },
+]

@@ -59,13 +59,17 @@ std::optional<std::string> invalid(const JSON& entry) {
 
 /// The entries of the database file `file`, which the user names `path`.
 std::vector<JSON> read(std::string_view path, std::string_view file) {
+    const auto fail = [](std::string_view reason) {
+        return cpptrace::runtime_error(std::format(
+            "{}\ncatter merges the build's entries into it: give --replace to write a new database over it.",
+            reason));
+    };
     std::string text;
     if(auto error = kota::fs::read_file(text, file)) {
         if(error == std::errc::no_such_file_or_directory) {
             return {};
         }
-        throw cpptrace::runtime_error(
-            std::format("Failed to read the CDB file: {}: {}", path, error.message()));
+        throw fail(std::format("Failed to read the CDB file: {}: {}", path, error.message()));
     }
 
     std::string_view content = text;
@@ -77,11 +81,6 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
         return {};
     }
 
-    const auto fail = [](std::string_view reason) {
-        return cpptrace::runtime_error(std::format(
-            "{}\ncatter merges the build's entries into it: give --replace to write a new database over it.",
-            reason));
-    };
     auto parsed = kota::codec::json::from_string<JSON>(content);
     if(!parsed.has_value()) {
         throw fail(std::format("CDB file is not valid JSON: {}: {}", path, parsed.error().message));
@@ -121,7 +120,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
     };
     std::vector<bool> written(analysis.reads.size());
     for(const auto& write: analysis.writes) {
-        if(write.path == "-") {
+        if(write.path == "-" || analysis.phase == Phase::Preprocess) {
             continue;
         }
         for(auto read: write.reads) {
@@ -142,35 +141,51 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
 void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     const auto& object = entry.as_object();
     const auto directory = resolve(cwd, object.find("directory")->as_string());
+    // A file of a database another tool wrote may be spelled with other separators on Windows.
+    const auto key_of = [&](std::string_view path) {
+        auto absolute = absolute_path(directory, path);
+        kota::fs::path::to_slash(absolute);
+        return absolute;
+    };
     const auto field = [&](std::string_view name, JSON absent) {
         const auto* value = object.find(name);
         return value == nullptr ? std::move(absent) : *value;
     };
     const auto* output = object.find("output");
-    const auto source = to_json(dyn::Array{
-        absolute_path(directory, object.find("file")->as_string()),
-        output == nullptr ? "" : absolute_path(directory, output->as_string()),
-    });
+    Group group{
+        .file = key_of(object.find("file")->as_string()),
+        .output = output == nullptr ? "" : key_of(output->as_string()),
+    };
     const auto key = to_json(dyn::Array{
         field("command", ""),
         field("arguments", dyn::Array{}),
     });
 
-    auto [group_position, new_group] = positions.try_emplace(source, groups.size());
+    auto [group_position, new_group] =
+        positions.try_emplace(to_json(dyn::Array{group.file, group.output}), groups.size());
     if(new_group) {
-        groups.emplace_back(source, Group{});
+        files.insert(group.file);
+        groups.push_back(std::move(group));
     }
-    auto& group = groups[group_position->second].second;
-    auto [entry_position, new_entry] = group.positions.try_emplace(key, group.entries.size());
+    auto& stored = groups[group_position->second];
+    auto [entry_position, new_entry] = stored.positions.try_emplace(key, stored.entries.size());
     if(new_entry) {
-        group.entries.push_back(std::move(entry));
+        stored.entries.push_back(std::move(entry));
     } else {
-        group.entries[entry_position->second] = std::move(entry);
+        stored.entries[entry_position->second] = std::move(entry);
     }
 }
 
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
+    // The save renames a new file over the path it writes, which would replace a symlink.
+    if(auto link = kota::fs::symlink_status(file);
+       link.has_value() && link->type == kota::fs::FileType::Symlink) {
+        std::string target;
+        if(!kota::fs::canonical(target, file)) {
+            file = std::move(target);
+        }
+    }
     if(auto status = kota::fs::status(file);
        status.has_value() && status->type != kota::fs::FileType::Regular) {
         throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
@@ -188,12 +203,16 @@ void CompilationDatabase::add(JSON entry) {
 
 std::vector<JSON> CompilationDatabase::entries() const {
     std::vector<JSON> entries;
-    for(const auto& [source, group]: inherited.groups) {
-        if(!added.positions.contains(source)) {
+    for(const auto& group: inherited.groups) {
+        const bool replaced =
+            group.output.empty()
+                ? added.files.contains(group.file)
+                : added.positions.contains(to_json(dyn::Array{group.file, group.output}));
+        if(!replaced) {
             std::ranges::copy(group.entries, std::back_inserter(entries));
         }
     }
-    for(const auto& [source, group]: added.groups) {
+    for(const auto& group: added.groups) {
         std::ranges::copy(group.entries, std::back_inserter(entries));
     }
     return entries;

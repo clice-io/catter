@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "gcc", "argv": ["gcc", "-MM", "a.c"] },
+    { "id": 2, "exe": "gcc", "argv": ["gcc", "-c", "a.c", "-o", "a.o"] },
+    { "id": 3, "exe": "gcc", "argv": ["gcc", "-E", "b.c", "-o", "b.i"] },
+    { "id": 4, "exe": "gcc", "argv": ["gcc", "-c", "b.i", "-o", "b.o"] },
+    { "id": 5, "cwd": "sub", "exe": "gcc", "argv": ["gcc", "-S", "../c.c", "-o", "c.s"] },
+    { "id": 6, "exe": "gcc", "argv": ["gcc", "-c", "sub/c.s", "-o", "c.o"] },
+    { "id": 7, "exe": "gcc", "argv": ["gcc", "-c", "-x", "c", "/dev/null", "-o", "probe.o"] },
+    { "id": 8, "exe": "nvcc", "argv": ["nvcc", "-c", "d.cu", "-o", "d.o"] },
+    { "id": 9, "parent": 8, "exe": "gcc", "argv": ["gcc", "-E", "-x", "c++", "d.cu", "-o", "d.cpp1.ii"] }
+  ],
+  "finish": { "code": 0 }
+}

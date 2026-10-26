@@ -111,8 +111,9 @@ ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     ZEXPECT(languages("gcc -c a.c -x c++ b.cc -x none c.c d.cpp") ==
             std::vector<std::string>{"a.c:c", "b.cc:c++", "c.c:c", "d.cpp:c++"});
     ZEXPECT(languages("cl /c a.c /TC b.c") == std::vector<std::string>{"a.c:c", "b.c:c"});
-    // `/TP` is for every input, before it too, but objects.
-    ZEXPECT(languages("cl a.c /TP b.cc c.obj") ==
+    // `/TP` is for every source, before it too, not for a file of no source's suffix, which the
+    // value of an option the table does not know may be.
+    ZEXPECT(languages("cl a.c /TP b.cc c.obj /ifcOutput d.ifc") ==
             std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none"});
     ZEXPECT(languages("g++ -x c++ -c legacy.c -x c -c noext -x c++-header pch.hxx.cxx") ==
             std::vector<std::string>{"legacy.c:c++", "noext:c", "pch.hxx.cxx:c++-header"});

@@ -39,8 +39,7 @@ stdout = '''
                 "a.c",
                 "-o",
                 "a.i"
-            ],
-            "output": "${WS}/a.i"
+            ]
         }
     ]
 }
@@ -207,7 +206,17 @@ stdout = '''
     ],
     "writes": [],
     "edges": [],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-fsyntax-only",
+                "a.c"
+            ]
+        }
+    ]
 }
 '''
 exit = 0
@@ -235,7 +244,17 @@ stdout = '''
     ],
     "writes": [],
     "edges": [],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-fsyntax-only",
+                "a.c"
+            ]
+        }
+    ]
 }
 '''
 exit = 0
@@ -937,7 +956,19 @@ stdout = '''
             ]
         }
     ],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "-"
+            ]
+        }
+    ]
 }
 '''
 exit = 0
@@ -974,7 +1005,19 @@ stdout = '''
             ]
         }
     ],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "-"
+            ]
+        }
+    ]
 }
 '''
 exit = 0

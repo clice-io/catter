@@ -232,15 +232,34 @@ stdout = '''
     "reads": [
         "a.c"
     ],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "writes": [
+        "a.out"
+    ],
+    "edges": [
         {
-            "code": "implicit-output-unresolved",
-            "message": "cannot infer implicit output for gcc link/exe"
+            "output": "a.out",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.out",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c"
+            ],
+            "output": "${WS}/a.out"
+        }
+    ]
 }
 '''
 exit = 0
@@ -266,15 +285,34 @@ stdout = '''
     "reads": [
         "a.c"
     ],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "writes": [
+        "a.exe"
+    ],
+    "edges": [
         {
-            "code": "implicit-output-unresolved",
-            "message": "cannot infer implicit output for gcc link/exe"
+            "output": "a.exe",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.exe",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c"
+            ],
+            "output": "${WS}/a.exe"
+        }
+    ]
 }
 '''
 exit = 0

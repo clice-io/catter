@@ -57,9 +57,6 @@ struct Builder {
     /// The language `-x` sets for the inputs after it.
     std::optional<std::string> language;
 
-    /// The language `/TC` or `/TP` sets for every input.
-    std::optional<std::string> every_language;
-
     void compile_object() {
         if(!compiled.has_value() || compiled == Artifact::Unknown) {
             compiled = Artifact::Object;
@@ -173,8 +170,8 @@ struct Builder {
                 command.listing_path =
                     argument.values[0].empty() ? std::nullopt : std::optional(argument.values[0]);
                 break;
-            case ID__SLASH_TC: every_language = "c"; break;
-            case ID__SLASH_TP: every_language = "c++"; break;
+            case ID__SLASH_TC: command.every_language = "c"; break;
+            case ID__SLASH_TP: command.every_language = "c++"; break;
             case ID__SLASH_Tc:
             case ID__SLASH_Tp:
                 command.inputs.push_back(Read{
@@ -234,11 +231,6 @@ struct Builder {
     }
 
     void finish() {
-        if(every_language.has_value()) {
-            for(auto& candidate: command.candidates) {
-                candidate.language = every_language;
-            }
-        }
         if(preprocess) {
             command.phase = Phase::Preprocess;
             command.artifact = Artifact::PreprocessedSource;

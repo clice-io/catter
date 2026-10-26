@@ -235,13 +235,16 @@ std::optional<std::string> language_of(std::string_view path, const ParsedComman
 }
 
 /// The file `candidate` names, or why it names none: an object or a library is read for
-/// linking, and any other file is a source in the language `-x`, `/TC` or `/TP` sets, else
-/// in its suffix's.
+/// linking, any other file a source in the language `-x` sets, and a file whose suffix names
+/// a language a source in it, or in the one `/TC` or `/TP` sets.
 std::expected<Input, std::string_view> input_of(const Candidate& candidate,
                                                 const Convention& convention,
                                                 const ParsedCommand& parsed) {
     if(is_stream(candidate.path)) {
         return std::unexpected("stream input is not a filesystem dependency");
+    }
+    if(candidate.path == "/dev/null") {
+        return std::unexpected("the null device holds no source");
     }
     const auto path = lowercase(candidate.path);
     if(path.ends_with(convention.object) || path.ends_with(convention.shared_library) ||
@@ -252,7 +255,9 @@ std::expected<Input, std::string_view> input_of(const Candidate& candidate,
         return Input{.role = InputRole::Source, .language = candidate.language};
     }
     if(auto language = language_of(candidate.path, parsed)) {
-        return Input{.role = InputRole::Source, .language = std::move(language)};
+        return Input{.role = InputRole::Source,
+                     .language = parsed.every_language.has_value() ? parsed.every_language
+                                                                   : std::move(language)};
     }
     return std::unexpected("input candidate did not match suffix rules");
 }
