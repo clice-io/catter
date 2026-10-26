@@ -42,7 +42,9 @@ std::optional<std::string> not_an_answer(std::string_view message) {
 
 /// The handler's transport, which keeps how the handler's output ended, and
 /// ends it at what is no protocol message: the peer would answer that with an
-/// error, and go on waiting for the answers it asked for.
+/// error, and go on waiting for the answers it asked for. A write that fails
+/// ends it too: a handler that has exited may refuse catter's next message
+/// before its output is seen to end.
 class Transport final : public kota::ipc::Transport {
 public:
     Transport(std::unique_ptr<kota::ipc::Transport> inner, std::optional<ReadError>& end) :
@@ -64,7 +66,11 @@ public:
     }
 
     kota::task<void, kota::ipc::Error> write_message(std::string_view message) override {
-        return inner->write_message(message);
+        auto written = co_await inner->write_message(message);
+        if(!written && !end) {
+            end = ReadError{.kind = ReadError::Kind::Closed};
+        }
+        co_await kota::or_fail(std::move(written));
     }
 
     kota::task<void, kota::ipc::Error> close_output() override {
