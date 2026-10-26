@@ -91,7 +91,7 @@ ZEST_CASE(command_line_path_is_taken_from_the_current_directory) {
 };
 
 ZEST_CASE(unquoted_path_with_blanks_is_read_up_to_each_blank_in_turn) {
-    ScopedFile tool("catter unquoted path", "tool.exe");
+    ScopedFile tool("unquoted path tests", "tool.exe");
 
     ZEXPECT(ct::resolve_program(nullptr, wide(tool.path + " a b").c_str()) == tool.path);
     ZEXPECT(ct::resolve_program(nullptr, wide(tool.path).c_str()) == tool.path);

@@ -83,7 +83,7 @@ python build.py
 exit = 0
 
 [test."$ catter tree -w 1000 -- python build.py".win32]
-differs = "Windows words the error of a program that does not exist its own way"
+differs = "Windows names Python by its own path, and words the error of a program that does not exist its own way"
 stdout = '''
 n0 exit 0
 n1 exit 0

@@ -179,7 +179,7 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 
 1. **Extract the command line**. The hook reads `lpApplicationName` and `lpCommandLine`.
 
-2. **Resolve the program**. The hook resolves it with `resolve_program()`: `lpApplicationName` made absolute from the current directory, or else the first token of the command line, looked for as `CreateProcess` looks for it (kotatsu's `find_create_process_program`: the program's directory, the current directory, the system directories, the Windows directory, then `PATH`).
+2. **Resolve the program**. The hook resolves it with `resolve_program()`: `lpApplicationName` made absolute from the current directory, or else the first token of the command line, looked for as `CreateProcess` looks for it (kotatsu's `find_create_process_program`: the program's directory, the current directory, the system directories, the Windows directory, then `PATH`); a name without quotes is read up to each blank in turn, as `CreateProcess` reads `C:\Program Files\tool.exe a b`. When there is no such file, the call goes to the original `CreateProcess` unchanged, which fails as it does without catter.
 
 3. **Rewrite the command line**:
 
@@ -190,6 +190,8 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
    The `lpApplicationName` is set to `nullptr` so that the command line is parsed by `CreateProcess` normally.
 
 4. **Call the original `CreateProcess`** via the Detours trampoline with the modified command line.
+
+catter-proxy starts the program with `{original_cmdline}` as the caller wrote it, unless a handler changed its arguments: `cmd.exe`, and any other program that reads its command line itself, reads what it would without catter.
 
 ### Key Difference from Unix
 

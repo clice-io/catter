@@ -34,18 +34,18 @@ void keep_command_line([[maybe_unused]] kota::process::options& opts,
 #ifdef CATTER_WINDOWS
     const auto& argv = kota::sys::arguments();
     const auto dashes = std::ranges::find(argv, "--");
-    if(dashes == argv.end() ||
-       !std::ranges::equal(std::ranges::subrange(dashes + 1, argv.end()), args)) {
-        return;
+    if(dashes != argv.end() &&
+       std::ranges::equal(std::ranges::subrange(dashes + 1, argv.end()), args)) {
+        std::string prefix;
+        kota::sys::windows::join_command_line(prefix, std::span(argv.begin(), dashes + 1));
+        prefix += ' ';
+        std::string line;
+        kota::from_utf16(line, std::wstring_view(::GetCommandLineW()));
+        if(line.starts_with(prefix)) {
+            opts.windows_command_line = line.substr(prefix.size());
+        }
     }
-    std::string prefix;
-    kota::sys::windows::join_command_line(prefix, std::span(argv.begin(), dashes + 1));
-    prefix += ' ';
-    std::string line;
-    kota::from_utf16(line, std::wstring_view(::GetCommandLineW()));
-    if(line.starts_with(prefix)) {
-        opts.windows_command_line = line.substr(prefix.size());
-    }
+    LOG_INFO("Starting `{}` with the command line {}", opts.program, opts.windows_command_line);
 #endif
 }
 
@@ -145,9 +145,7 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
                 std::format(
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
                     format_args(cmd.args)));
-            auto opts = process_options(cmd);
-            keep_command_line(opts, cmd.args);
-            co_return co_await run_process(std::move(opts), {.stand_in = true});
+            co_return co_await run_process(process_options(cmd), {.stand_in = true});
         }
 
         if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
