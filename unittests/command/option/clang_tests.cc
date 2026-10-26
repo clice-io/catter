@@ -1,14 +1,10 @@
-#include <array>
-#include <expected>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-#include <kota/deco/option.h>
+module;
 
-#include "command/option/clang.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import catter.command;
 
 using namespace catter;
 

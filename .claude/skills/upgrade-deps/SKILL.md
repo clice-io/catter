@@ -1,6 +1,6 @@
 ---
 name: upgrade-deps
-description: Read before bumping xclang (its `bazel_dep` in MODULE.bazel and its pin in pixi.toml) or kotatsu (its `bazel_dep` in MODULE.bazel) — what moves together, what to regenerate, how to verify. Arg = the new xclang version (e.g. 23.1.3.5) or kotatsu version.
+description: Read before bumping xclang (its `bazel_dep` in MODULE.bazel and its pin in pixi.toml), kotatsu or another library of `modules/` (their `bazel_dep` in MODULE.bazel), or when catter starts to use a library header or macro `modules/` does not export yet — what moves together, how to regenerate `modules/`, how to verify. Arg = the new xclang version (e.g. 23.1.3.5) or kotatsu version.
 ---
 
 # Upgrading xclang and kotatsu
@@ -35,7 +35,9 @@ of it), is in two places, which always move together:
    An option catter names that was renamed or removed upstream shows up as
    a C++ build error; the unit tests under
    `unittests/command/option` and the `tests/explain` cases pin the parsing.
-4. Build and run the unit tests and the cases on everything CI builds (the
+4. Regenerate `modules/` (below): libc++, the C libraries and the
+   compiler's own headers are in every configuration of it.
+5. Build and run the unit tests and the cases on everything CI builds (the
    build and test skills): Linux, macOS and Windows x64, `Debug` and
    `RelWithDebInfo`, and the Windows ARM64 `RelWithDebInfo`.
 
@@ -58,9 +60,55 @@ payloads `:fs` and `:sys` alone.
    (`git log --oneline <old>..<new>`) for API changes and for libraries
    its `BUILD.bazel` split or renamed, adapt catter to them, and list them
    in the PR body.
-3. Build and run the unit tests and the cases on everything CI builds,
+3. Regenerate `modules/` (below).
+4. Build and run the unit tests and the cases on everything CI builds,
    `Debug` and `RelWithDebInfo` (the build and test skills): the cases are
    what exercises kotatsu's IPC, pipes and processes.
 
 catter and clice pin kotatsu separately, so the two need not move
 together.
+
+## Regenerating `modules/`
+
+`modules/` is the third-party libraries as one C++20 module, `deps`, and
+the prelude every module unit of catter includes first, written by `clice
+modularize` from `modules/demand.cpp`, which records what catter takes
+from them: their headers, the C library names only those headers bring, and
+the macros catter uses, an `#ifdef` each. Its headers differ by platform
+and build type, so it is generated for each of the seven configurations CI
+builds and merged; nothing under `modules/` but `demand.cpp`, `BUILD.bazel`
+and `modules.bzl` is edited by hand. A bump of xclang or of a library it
+wraps (kotatsu, spdlog, cpptrace), and catter starting to use a header or
+macro `deps` does not export, regenerate it: the build stops on a name or
+macro it does not know, which goes into `demand.cpp` first (under `#ifdef
+_WIN32` or `#ifndef _WIN32` when one platform alone uses it). A new library
+goes into `LIBRARIES` in `modules/modules.bzl` and the partition in
+`scripts/modules.py`.
+
+`scripts/modules.py` builds `demand.cpp` for a configuration, indexes it
+with clice and wraps the libraries' headers, then merges the
+configurations. It runs any clice release, the one of the box's platform
+(`clice-<version>.<triple>.tar.gz` of
+[clice's releases](https://github.com/clice-io/clice/releases)), on a Linux
+and a macOS box with the tree pushed:
+
+```bash
+# On each box: clice in ~/clice
+curl -fsSL https://github.com/clice-io/clice/releases/download/<tag>/clice-<version>.<triple>.tar.gz | tar xzf - -C ~
+# Linux box: its own configurations and the Windows ones
+pixi run -e dev python scripts/modules.py --clice ~/clice/bin/clice generate \
+    linux-x64 linux-x64-debug windows-x64 windows-x64-debug windows-arm64
+# macOS box
+pixi run -e dev python scripts/modules.py --clice ~/clice/bin/clice generate \
+    macos-arm64 macos-arm64-debug
+# here: the macOS wrappings to the Linux box, the merge, the result back
+box cp $mac $linux build/modules/macos-arm64 build/modules/macos-arm64-debug
+box run $linux 'pixi run -e dev python scripts/modules.py --clice ~/clice/bin/clice merge'
+box cp $linux . modules
+```
+
+A warning of `clice modularize` stops `generate`: a header the partition
+leaves to the program means a library's include directory moved (the
+partition's globs are in `scripts/modules.py`). The diff of `modules/` is
+part of the review: names the libraries dropped or renamed, and macros
+that changed.

@@ -1,23 +1,15 @@
-#include "driver/app_runner.h"
+module;
 
-#include <charconv>
-#include <chrono>
-#include <cstdint>
-#include <exception>
-#include <format>
-#include <memory>
-#include <random>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <utility>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
+#include "modules/prelude.h"
 
-#include "capture/runtime_driver.h"
-#include "protocol/remote_handler.h"
-#include "session/handler.h"
 #include "support/output.h"
+
+module catter;
+
+import :capture.runtime_driver;
+import :driver.app_runner;
+import :protocol.remote_handler;
+import :session.handler;
 
 namespace catter::driver {
 

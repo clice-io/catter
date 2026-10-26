@@ -1,12 +1,10 @@
-#include <string>
-#include <variant>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-#include <kota/codec/json/json.h>
-#include <kota/ipc/codec.h>
+module;
 
-#include "protocol/protocol.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :protocol.protocol;
 
 using namespace catter;
 

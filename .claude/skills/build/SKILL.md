@@ -20,7 +20,7 @@ The box belongs to the calling session, not to this skill: build on the id the c
 
 - Linux and macOS build on a box of their own OS (`--os macos`), as CI does. The Windows programs, x64 and ARM64, build on a Linux box, with xclang's toolchain for the target, and run on a box of their own (`--os windows`, `--os windows-arm`), copied there with `box cp` (below); a Windows box builds nothing.
 - A box restores the Bazel caches of CI's last `main` run of `RelWithDebInfo` (`user.bazelrc` in `~/src` points Bazel at them; on Linux also Windows x64's): a `Debug` build, or a build of another target, compiles what the cache lacks first.
-- One box runs one build at a time, and the targets of one box share its output tree: a Windows build on a Linux box replaces the Linux programs in `build/<type>/bin/bin`. For Linux and Windows in parallel, lease another Linux box.
+- One box runs one build at a time. Each target platform builds into an output tree of its own, and `build/<type>/bin` points at the last build's: after a Windows build on a Linux box, `build/<type>/bin/bin` holds the Windows programs alone, and a Linux build points it back. For Linux and Windows in parallel, lease another Linux box.
 - A session may hold several boxes, one per platform, each leased once and reused, building in parallel. Pushing never waits for a box: CI has the capacity to verify in parallel.
 
 ### Windows
@@ -50,7 +50,7 @@ All from the repo root, in the environment CI uses (`-e dev`):
 
 On failure:
 
-- Mechanical breakage (missing include, renamed symbol, stale call site after an agreed-on change): fix it, rebuild, and list every file you touched in the report.
+- Mechanical breakage (missing include or import, renamed symbol, stale call site after an agreed-on change): fix it, rebuild, and list every file you touched in the report. A module unit that does not know a name or macro of the standard library or of a library of `modules/` needs it in `modules/demand.cpp` and `modules/` regenerated (the upgrade-deps skill), never an include of its header.
 - Design-level errors (the fix requires a decision): do not guess — report the error with `file:line` and the relevant excerpt.
 - A failing test is reported, never fixed from here: the test name, the failed assertion (trimmed), and the command that reruns it alone.
 

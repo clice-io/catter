@@ -1,20 +1,10 @@
-#include "command/resolve.h"
+module;
 
-#include <algorithm>
-#include <array>
-#include <cstdint>
-#include <expected>
-#include <format>
-#include <optional>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/fs/path.h>
+#include "modules/prelude.h"
 
-#include "command/lowercase.h"
+module catter.command;
+
+import :resolve;
 
 namespace catter {
 

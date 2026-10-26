@@ -1,0 +1,18 @@
+export module catter.command;
+
+export import :archiver;
+export import :compiler;
+export import :edit;
+export import :error;
+export import :lowercase;
+export import :option.clang;
+export import :option.lld_coff;
+export import :option.lld_elf;
+export import :option.lld_macho;
+export import :option.lld_mingw;
+export import :option.lld_wasm;
+export import :option.llvm_dlltool;
+export import :option.llvm_lib;
+export import :option.nvcc;
+export import :syntax;
+export import :tool;

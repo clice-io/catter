@@ -1,21 +1,16 @@
-#include "session/session.h"
+module;
 
-#include <cassert>
-#include <format>
-#include <list>
-#include <optional>
-#include <ranges>
-#include <stdexcept>
-#include <string>
-#include <cpptrace/exceptions.hpp>
-#include <kota/async/async.h>
-#include <kota/fs/directory.h>
+#include "modules/prelude.h"
 
-#include "session/process.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
 #include "support/guard.h"
 #include "support/log.h"
+
+module catter;
+
+import :session.process;
+import :session.session;
 
 namespace catter {
 

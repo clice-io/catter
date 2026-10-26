@@ -1,7 +1,8 @@
-#include "command/error.h"
+module;
 
-#include <string_view>
-#include <utility>
+#include "modules/prelude.h"
+
+module catter.command;
 
 namespace catter {
 

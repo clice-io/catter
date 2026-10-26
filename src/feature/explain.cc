@@ -1,23 +1,13 @@
-#include "feature/explain.h"
+module;
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdint>
-#include <format>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/codec/dyn/dyn.h>
+#include "modules/prelude.h"
 
-#include "command/archiver.h"
-#include "command/compiler.h"
-#include "command/lowercase.h"
-#include "command/option/clang.h"
-#include "feature/json.h"
-#include "feature/path.h"
+module catter;
+
+import catter.command;
+import :feature.explain;
+import :feature.json;
+import :feature.path;
 
 namespace catter::feature {
 

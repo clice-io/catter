@@ -1,22 +1,21 @@
-#include <algorithm>
-#include <array>
-#include <format>
-#include <string>
-#include <string_view>
-#include <cpptrace/exceptions.hpp>
-#include <kota/fs/status.h>
+module;
+
+#include "modules/prelude.h"
+
 #if defined(CATTER_MAC)
 #include <mach-o/utils.h>
-#include <kota/fs/file.h>
 #endif
 
-#include "capture/inject/hook.h"
-#include "session/data.h"
-#include "session/process.h"
 #include "support/config/catter-proxy.h"
 #include "support/config/hook_unix.h"
 #include "support/log.h"
 #include "support/paths.h"
+
+module catter;
+
+import :capture.inject.hook;
+import :session.data;
+import :session.process;
 
 namespace catter {
 

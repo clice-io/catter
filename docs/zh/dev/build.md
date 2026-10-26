@@ -46,6 +46,8 @@ startup --output_user_root=C:/b
 
 项目使用 [Bazel](https://bazel.build)，通过 npm 上的 bazelisk 运行（`pnpm exec bazel`），版本由 `.bazelversion` 指定；依赖来自 clice 的 Bazel registry [bazel.clice.io](https://bazel.clice.io)。C++ 标准为 C++23。`pixi run -e dev pnpm exec bazel run @compdb//:refresh` 为编辑器生成 `compile_commands.json`。
 
+`src/support` 之上的 catter 代码是 C++20 具名模块：`src/command` 是 `catter.command`，其余是 `catter`。钩子库和它们共用的 `src/support` 仍是头文件。第三方库合为一个模块 `deps`，`modules/` 里存有 CI 构建的每种配置下的它；`scripts/modules.py` 用 `clice modularize` 从 `modules/demand.cpp` 生成它。
+
 ### 构建目标
 
 - `bin/catter` -- 主 CLI 可执行文件（DECISION 守护进程）

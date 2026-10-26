@@ -1,17 +1,11 @@
-#include "driver/cli.h"
+module;
 
-#include <algorithm>
-#include <cstddef>
-#include <format>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <kota/deco/deco.h>
+#include "modules/prelude.h"
 
-#include "driver/driver.h"
+module catter;
+
+import :driver.cli;
+import :driver.driver;
 
 namespace catter::driver {
 

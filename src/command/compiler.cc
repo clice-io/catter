@@ -1,18 +1,12 @@
-#include "command/compiler.h"
+module;
 
-#include <array>
-#include <expected>
-#include <format>
-#include <optional>
-#include <regex>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
+#include "modules/prelude.h"
 
-#include "command/executable.h"
-#include "command/parse.h"
-#include "command/resolve.h"
+module catter.command;
+
+import :executable;
+import :parse;
+import :resolve;
 
 namespace catter {
 

@@ -1,10 +1,10 @@
-#include <optional>
-#include <string>
-#include <vector>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
+module;
 
-#include "protocol/analysis.h"
+#include "modules/prelude.h"
+
+module catter;
+
+import :protocol.analysis;
 
 using namespace catter;
 

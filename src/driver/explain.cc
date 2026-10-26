@@ -1,15 +1,13 @@
-#include "feature/explain.h"
+module;
 
-#include <print>
-#include <span>
-#include <string>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/deco/deco.h>
+#include "modules/prelude.h"
 
-#include "driver/cli.h"
-#include "driver/driver.h"
-#include "driver/option.h"
+module catter;
+
+import :driver.cli;
+import :driver.driver;
+import :driver.option;
+import :feature.explain;
 
 namespace catter::driver {
 

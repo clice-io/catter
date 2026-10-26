@@ -1,13 +1,12 @@
-#include <exception>
-#include <string>
-#include <kota/zest/macro.h>
-#include <kota/zest/zest.h>
-#include <kota/fs/file.h>
-#include <kota/fs/status.h>
-#include <kota/sys/dirs.h>
+module;
 
-#include "feature/compilation_database.h"
+#include "modules/prelude.h"
+
 #include "utils/temp_file_manager.h"
+
+module catter;
+
+import :feature.compilation_database;
 
 using namespace catter;
 

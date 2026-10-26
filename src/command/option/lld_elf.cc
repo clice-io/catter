@@ -1,9 +1,10 @@
-#include "command/option/lld_elf.h"
+module;
 
-#include <array>
-#include <span>
+#include "modules/prelude.h"
 
-#include "command/option/tablegen.h"
+module catter.command;
+
+import :option.tablegen;
 
 namespace catter::option::lld_elf {
 
@@ -15,16 +16,16 @@ using namespace catter::option::external_detail;
 namespace llvm = catter::option::external_detail::llvm;
 
 #define OPTTABLE_STR_TABLE_CODE
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include "llvm-options-td/lld-ELF-Options.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
 #define OPTTABLE_PREFIXES_TABLE_CODE
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include "llvm-options-td/lld-ELF-Options.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
 
 constexpr std::size_t OptionCount = 0
 #define OPTION(...) +1
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include "llvm-options-td/lld-ELF-Options.inc"
 #undef OPTION
     ;
 
@@ -77,7 +78,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
         .help_text = HELP,                                                                         \
         .meta_var = META_VAR,                                                                      \
     },
-#include <llvm-options-td/lld-ELF-Options.inc>
+#include "llvm-options-td/lld-ELF-Options.inc"
 #undef OPTION
 };
 

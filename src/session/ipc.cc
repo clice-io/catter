@@ -1,26 +1,13 @@
-#include "session/ipc.h"
+module;
 
-#include <cassert>
-#include <cstddef>
-#include <format>
-#include <memory>
-#include <new>
-#include <optional>
-#include <print>
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <vector>
-#ifdef CATTER_MAC
-#include <csignal>
-#endif
-#include <kota/support/functional.h>
-#include <kota/support/type_traits.h>
-#include <kota/meta/enum.h>
-#include <kota/ipc/codec/bincode.h>
+#include "modules/prelude.h"
 
-#include "session/data.h"
 #include "support/log.h"
+
+module catter;
+
+import :session.data;
+import :session.ipc;
 
 namespace catter::ipc {
 using namespace data;

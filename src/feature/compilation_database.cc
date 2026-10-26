@@ -1,24 +1,12 @@
-#include "feature/compilation_database.h"
+module;
 
-#include <cstddef>
-#include <format>
-#include <iterator>
-#include <ranges>
-#include <string>
-#include <string_view>
-#include <system_error>
-#include <utility>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/codec/dyn/dyn.h>
-#include <kota/codec/json/json.h>
-#include <kota/fs/directory.h>
-#include <kota/fs/file.h>
-#include <kota/fs/path.h>
-#include <kota/fs/status.h>
+#include "modules/prelude.h"
 
-#include "feature/json.h"
-#include "feature/path.h"
+module catter;
+
+import :feature.compilation_database;
+import :feature.json;
+import :feature.path;
 
 namespace catter::feature {
 

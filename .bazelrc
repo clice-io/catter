@@ -7,7 +7,13 @@ common --registry=https://bcr.bazel.build/
 # detection of another is off.
 common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 common --cxxopt=-std=c++23 --host_cxxopt=-std=c++23
+# C++20 modules: the third-party libraries are a module (modules/), and so is
+# libc++'s std.
+common --experimental_cpp_modules
 common:macos --macos_minimum_os=15.0
+# An output tree per target platform, so that the programs of a build for
+# another platform are not beside the host's in build/<type>/bin/bin.
+common --experimental_platform_in_output_dir
 # catter logs through spdlog with std::format, and nothing it logs throws.
 common --@spdlog//:std_format=true --@spdlog//:exceptions=false
 

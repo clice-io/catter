@@ -1,17 +1,12 @@
-#include "feature/edges.h"
+module;
 
-#include <cstdint>
-#include <optional>
-#include <ranges>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include "modules/prelude.h"
 
-#include "command/archiver.h"
-#include "command/compiler.h"
-#include "feature/path.h"
+module catter;
+
+import catter.command;
+import :feature.edges;
+import :feature.path;
 
 namespace catter::feature {
 

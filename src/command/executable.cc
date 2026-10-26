@@ -1,8 +1,10 @@
-#include "command/executable.h"
+module;
 
-#include <format>
-#include <regex>
-#include <string_view>
+#include "modules/prelude.h"
+
+module catter.command;
+
+import :executable;
 
 namespace catter {
 

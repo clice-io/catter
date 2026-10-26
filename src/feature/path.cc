@@ -1,8 +1,10 @@
-#include "feature/path.h"
+module;
 
-#include <string>
-#include <string_view>
-#include <kota/fs/path.h>
+#include "modules/prelude.h"
+
+module catter;
+
+import :feature.path;
 
 namespace catter::feature {
 

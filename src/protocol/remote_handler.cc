@@ -1,21 +1,14 @@
-#include "protocol/remote_handler.h"
+module;
 
-#include <chrono>
-#include <format>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <cpptrace/exceptions.hpp>
-#include <kota/support/utf8.h>
+#include "modules/prelude.h"
 
-#ifdef CATTER_WINDOWS
-#include <kota/sys/windows.h>
-#endif
-
-#include "protocol/analysis.h"
 #include "support/log.h"
 #include "support/paths.h"
+
+module catter;
+
+import :protocol.analysis;
+import :protocol.remote_handler;
 
 namespace catter {
 

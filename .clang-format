@@ -105,6 +105,12 @@ IncludeBlocks: Regroup
 # than every SortPriority in the Priority-20 block — otherwise the groups
 # get interleaved. Keep the numbers packed and monotonic below.
 IncludeCategories:
+  # 0. The module prelude, first in a module unit: it imports the standard
+  # library and the third-party module that every later include reads.
+  - Regex: '^"modules/prelude.h"$'
+    Priority: 1
+    SortPriority: 1
+
   # 1. C++ stdlib: <xxx> with no suffix and no subdir
   - Regex: "^<[^./>]+>"
     Priority: 10

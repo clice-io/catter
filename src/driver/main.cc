@@ -1,24 +1,19 @@
-#include <algorithm>
-#include <cstdio>
-#include <print>
-#include <span>
-#include <string>
-#include <string_view>
-#include <vector>
-#include <cpptrace/exceptions.hpp>
-#include <kota/async/io/loop.h>
-#include <kota/deco/deco.h>
+module;
 
-#include "driver/cli.h"
-#include "driver/driver.h"
+#include "modules/prelude.h"
+
 #include "support/config/catter.h"
 #include "support/log.h"
 #include "support/paths.h"
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
-#include <kota/sys/process.h>
 #endif
+
+module catter;
+
+import :driver.cli;
+import :driver.driver;
 
 using namespace catter;
 
@@ -74,7 +69,7 @@ int run(std::span<const std::string> argv) {
 
 }  // namespace
 
-int main(int argc, char* argv[]) {
+extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.

@@ -29,7 +29,7 @@ Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catt
 
 除 `started` 通知外，通信遵循严格的请求 - 响应模式。客户端（代理）发送请求并等待服务端（守护进程）响应后才继续执行。每种请求类型都有明确定义的参数类型和结果类型。
 
-协议在 `src/session/data.h` 中使用 C++ 模板特化定义：
+协议在 `src/session/data.cppm` 中使用 C++ 模板特化定义：
 
 ```cpp
 enum class RequestType : uint8_t {

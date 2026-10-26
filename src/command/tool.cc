@@ -1,23 +1,10 @@
-#include "command/tool.h"
+module;
 
-#include <array>
-#include <expected>
-#include <format>
-#include <optional>
-#include <regex>
-#include <span>
-#include <string>
-#include <string_view>
-#include <utility>
+#include "modules/prelude.h"
 
-#include "command/executable.h"
-#include "command/option/lld_coff.h"
-#include "command/option/lld_elf.h"
-#include "command/option/lld_macho.h"
-#include "command/option/lld_mingw.h"
-#include "command/option/lld_wasm.h"
-#include "command/option/llvm_dlltool.h"
-#include "command/option/llvm_lib.h"
+module catter.command;
+
+import :executable;
 
 namespace catter {
 
