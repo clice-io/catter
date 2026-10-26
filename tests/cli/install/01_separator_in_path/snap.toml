@@ -1,0 +1,28 @@
+[space."$ node run.mjs \"my tools\""]
+stdout = "catter cannot preload its hook `${WS}/my tools/libcatter-hook-unix.so` into the build: LD_PRELOAD splits paths at spaces and colons. Install catter in a directory whose path has none"
+exit = 1
+
+[space."$ node run.mjs \"my tools\"".darwin]
+differs = "dyld splits DYLD_INSERT_LIBRARIES at colons alone: a space is fine"
+stdout = '''
+node build.mjs
+└── node -e 0
+'''
+exit = 0
+
+[space."$ node run.mjs \"my tools\"".win32]
+differs = "Windows preloads no library: the hook goes in by its own path, spaces and all"
+stdout = '''
+node build.mjs
+└── node -e 0
+'''
+exit = 0
+
+[colon."$ node run.mjs my:tools"]
+stdout = "catter cannot preload its hook `${WS}/my:tools/libcatter-hook-unix.so` into the build: LD_PRELOAD splits paths at spaces and colons. Install catter in a directory whose path has none"
+exit = 1
+
+[colon."$ node run.mjs my:tools".darwin]
+differs = "macOS names DYLD_INSERT_LIBRARIES and the .dylib, and dyld splits at colons alone"
+stdout = "catter cannot preload its hook `${WS}/my:tools/libcatter-hook-unix.dylib` into the build: DYLD_INSERT_LIBRARIES splits paths at colons. Install catter in a directory whose path has none"
+exit = 1

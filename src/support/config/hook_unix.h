@@ -15,11 +15,17 @@ constexpr static auto KEYS_TO_INJECT =
 
 #if defined(CATTER_LINUX)
 constexpr static char KEY_PRELOAD[] = "LD_PRELOAD";
+/// What the loader splits KEY_PRELOAD at, with no way to escape them: a path
+/// that holds one cannot be preloaded.
+constexpr static char PRELOAD_SEPARATORS[] = ": ";
+constexpr static char PRELOAD_SEPARATORS_NAMED[] = "spaces and colons";
 constexpr static char LD_PRELOAD_INIT_ENTRY[] = "LD_PRELOAD=";
 constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.so";
 constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.so";
 #elif defined(CATTER_MAC)
 constexpr static char KEY_PRELOAD[] = "DYLD_INSERT_LIBRARIES";
+constexpr static char PRELOAD_SEPARATORS[] = ":";
+constexpr static char PRELOAD_SEPARATORS_NAMED[] = "colons";
 constexpr static char LD_PRELOAD_INIT_ENTRY[] = "DYLD_INSERT_LIBRARIES=";
 constexpr static char RELATIVE_PATH_OF_HOOK_LIB[] = "libcatter-hook-unix.dylib";
 constexpr static char HOOK_LIB_NAME[] = "libcatter-hook-unix.dylib";

@@ -45,7 +45,7 @@ Stopping catter stops the build: a SIGTERM, SIGINT or SIGHUP sent to catter goes
 
 ### Data directory
 
-catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path.
+catter keeps its logs and the socket of each running session in `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows). The `CATTER_HOME` environment variable, when set, names another directory, by an absolute path. On Linux and macOS, what the build's processes log goes to the directory of their session, whatever `HOME` or `CATTER_HOME` a build step gives them.
 
 ## catter-proxy CLI
 

@@ -1,0 +1,10 @@
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+ran, exit 0
+node build.mjs
+└── node -e "console.log('ran')"
+'''
+exit = 0
+
+[test."home/"]
+value = []
