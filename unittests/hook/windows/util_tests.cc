@@ -38,7 +38,7 @@ struct ScopedEnvVar {
 };
 
 /// A file `name` in directory `directory` under the current one, which goes
-/// with it.
+/// with it. Tests run at once: each takes a directory of its own.
 struct ScopedFile {
     std::string path;
 
@@ -78,15 +78,16 @@ ZEST_CASE(proxy_command_line_quotes_what_needs_it) {
 };
 
 ZEST_CASE(application_name_is_taken_from_the_current_directory) {
-    ScopedFile tool("catter-util-tests", "tool.exe");
+    ScopedFile tool("catter-application-name", "tool.exe");
 
-    ZEXPECT(ct::resolve_program(LR"(catter-util-tests\tool.exe)", L"tool a b") == tool.path);
+    ZEXPECT(ct::resolve_program(LR"(catter-application-name\tool.exe)", L"tool a b") == tool.path);
 };
 
 ZEST_CASE(command_line_path_is_taken_from_the_current_directory) {
-    ScopedFile tool("catter-util-tests", "tool.exe");
+    ScopedFile tool("catter-command-line-path", "tool.exe");
 
-    ZEXPECT(ct::resolve_program(nullptr, LR"(.\catter-util-tests\tool.exe a b)") == tool.path);
+    ZEXPECT(ct::resolve_program(nullptr, LR"(.\catter-command-line-path\tool.exe a b)") ==
+            tool.path);
 };
 
 ZEST_CASE(command_line_program_is_looked_for_as_create_process_does) {
