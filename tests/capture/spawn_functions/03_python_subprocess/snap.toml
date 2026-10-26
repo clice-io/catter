@@ -1,0 +1,124 @@
+[test."$ python build.py"]
+stdout = '''
+n0 exit 0
+n1 exit 0
+n2 exit 0
+n3 exit 0
+n4 exit 0
+n5 exit 0
+n6 exit 0
+n7 exit 0
+n8 exit 0
+n9 exit 0
+n10 exit 0
+n11 exit 0
+n12 exit 0
+n13 exit 0
+n14 exit 0
+n15 exit 0
+failed to start: No such file or directory
+'''
+exit = 0
+
+[test."$ python build.py".win32]
+differs = "Windows words the error of a program that does not exist its own way"
+stdout = '''
+n0 exit 0
+n1 exit 0
+n2 exit 0
+n3 exit 0
+n4 exit 0
+n5 exit 0
+n6 exit 0
+n7 exit 0
+n8 exit 0
+n9 exit 0
+n10 exit 0
+n11 exit 0
+n12 exit 0
+n13 exit 0
+n14 exit 0
+n15 exit 0
+failed to start: The system cannot find the file specified
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- python build.py"]
+stdout = '''
+n0 exit 0
+n1 exit 0
+n2 exit 0
+n3 exit 0
+n4 exit 0
+n5 exit 0
+n6 exit 0
+n7 exit 0
+n8 exit 0
+n9 exit 0
+n10 exit 0
+n11 exit 0
+n12 exit 0
+n13 exit 0
+n14 exit 0
+n15 exit 0
+failed to start: No such file or directory
+python build.py
+├── ${ENV}/bin/python -c "print('n0')"
+├── ${ENV}/bin/python -c "print('n1')"
+├── ${ENV}/bin/python -c "print('n2')"
+├── ${ENV}/bin/python -c "print('n3')"
+├── ${ENV}/bin/python -c "print('n4')"
+├── ${ENV}/bin/python -c "print('n5')"
+├── ${ENV}/bin/python -c "print('n6')"
+├── ${ENV}/bin/python -c "print('n7')"
+├── ${ENV}/bin/python -c "print('n8')"
+├── ${ENV}/bin/python -c "print('n9')"
+├── ${ENV}/bin/python -c "print('n10')"
+├── ${ENV}/bin/python -c "print('n11')"
+├── ${ENV}/bin/python -c "print('n12')"
+├── ${ENV}/bin/python -c "print('n13')"
+├── ${ENV}/bin/python -c "print('n14')"
+└── ${ENV}/bin/python -c "print('n15')"
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- python build.py".win32]
+wrong = "a program that does not exist does not fail to start under catter on Windows (catter#152)"
+stdout = '''
+n0 exit 0
+n1 exit 0
+n2 exit 0
+n3 exit 0
+n4 exit 0
+n5 exit 0
+n6 exit 0
+n7 exit 0
+n8 exit 0
+n9 exit 0
+n10 exit 0
+n11 exit 0
+n12 exit 0
+n13 exit 0
+n14 exit 0
+n15 exit 0
+python build.py
+├── "${ENV}/python.exe" -c "print('n0')"
+├── "${ENV}/python.exe" -c "print('n1')"
+├── "${ENV}/python.exe" -c "print('n2')"
+├── "${ENV}/python.exe" -c "print('n3')"
+├── "${ENV}/python.exe" -c "print('n4')"
+├── "${ENV}/python.exe" -c "print('n5')"
+├── "${ENV}/python.exe" -c "print('n6')"
+├── "${ENV}/python.exe" -c "print('n7')"
+├── "${ENV}/python.exe" -c "print('n8')"
+├── "${ENV}/python.exe" -c "print('n9')"
+├── "${ENV}/python.exe" -c "print('n10')"
+├── "${ENV}/python.exe" -c "print('n11')"
+├── "${ENV}/python.exe" -c "print('n12')"
+├── "${ENV}/python.exe" -c "print('n13')"
+├── "${ENV}/python.exe" -c "print('n14')"
+├── "${ENV}/python.exe" -c "print('n15')"
+└── [capture error] Run `${CATTER}/catter-proxy.exe -p 1 --exec catter-test-no-such-program --ipc \\.\pipe\catter-ipc-# -- catter-test-no-such-program` failed:
+Process `catter-test-no-such-program` spawn failed, because `no such file or directory`
+'''
+exit = 0

@@ -156,7 +156,8 @@ let base: NodeJS.ProcessEnv | undefined;
 /// handler under test needs: the catter it may start
 /// (CATTER_EXECUTABLE) and the Python SDK (`import catter`), in a Python
 /// that writes UTF-8, as catter does, and not Windows' ANSI code page, which
-/// cannot spell the copy's root, and no bytecode beside the SDK.
+/// cannot spell the copy's root, and no bytecode beside the SDK; on macOS,
+/// malloc without its nano zone.
 export function testEnvironment(): NodeJS.ProcessEnv {
     if (base !== undefined) {
         return base;
@@ -179,6 +180,13 @@ export function testEnvironment(): NodeJS.ProcessEnv {
         .join(path.delimiter);
     env["PYTHONUTF8"] = "1";
     env["PYTHONDONTWRITEBYTECODE"] = "1";
+    if (process.platform === "darwin") {
+        // ASan, in catter's Debug build, takes the address space of malloc's
+        // nano zone, and malloc says so before main: on a terminal, else
+        // through a socket to the system log, which takes the number of a
+        // standard stream the program was started without.
+        env["MallocNanoZone"] = "0";
+    }
     base = env;
     return env;
 }
@@ -343,12 +351,6 @@ const XMAKE_PROBE = /\$\{TMP\}\/\.xmake#\/#\/_[0-9a-f]{32}/g;
 /// `arm64-apple-macos15.5`.
 const MACOS_VERSION = /\b(MacOSX|apple-macos)\d+(?:\.\d+)*/g;
 
-/// What macOS's malloc prints on a terminal in a program built with ASan,
-/// which has reserved the address space of malloc's nano zone: catter's
-/// `Debug` build, run on a pseudo-terminal.
-const NANO_ZONE =
-    /^\S+\(\d+,0x[0-9a-f]+\) malloc: nano zone abandoned due to inability to reserve vm space\.\n/gm;
-
 /// The pipe a session listens on, named by catter's process id:
 /// `\\.\pipe\catter-ipc-9420`, `${CATTER_HOME}/ipc-9420.sock`.
 const SESSION_PIPE = /\b((?:catter-)?ipc-)\d+\b/g;
@@ -359,7 +361,6 @@ const SESSION_PIPE = /\b((?:catter-)?ipc-)\d+\b/g;
 export function normalize(text: string, places: Places): string {
     return portable(text, places)
         .replace(NATIVE_FRAMES, "#… native frames\n")
-        .replace(NANO_ZONE, "")
         .replace(SESSION_PIPE, "$1#")
         .replace(MACOS_VERSION, "$1#")
         .replace(XMAKE_PROBE_DIR, "${TMP}/.xmake#/#")

@@ -5,8 +5,10 @@ module;
 #ifdef CATTER_WINDOWS
 #include <windows.h>
 #else
+#include <fcntl.h>
 #include <pthread.h>
 #include <sys/resource.h>
+#include <unistd.h>
 #endif
 
 module catter;
@@ -95,9 +97,52 @@ private:
     std::array<struct sigaction, SIGNALS.size()> previous{};
 };
 
+/// The standard streams this process was started without, which it holds open
+/// on the null device: what it opens would take their numbers otherwise, and
+/// reach a program it starts as that stream.
+std::array<bool, 3> held = {};
+
+void hold(int fd) {
+    // The lowest number free is `fd`: the streams below it are open.
+    held[fd] = ::open("/dev/null", O_RDWR | O_CLOEXEC) == fd;
+}
+
+/// While it lives, the streams held are closed: a program started then gets
+/// them closed, as this process got them.
+struct Released {
+    Released() {
+        for(int fd = 0; fd < 3; fd += 1) {
+            if(held[fd]) {
+                ::close(fd);
+            }
+        }
+    }
+
+    Released(const Released&) = delete;
+    Released& operator= (const Released&) = delete;
+
+    ~Released() {
+        for(int fd = 0; fd < 3; fd += 1) {
+            if(held[fd]) {
+                hold(fd);
+            }
+        }
+    }
+};
+
 #endif
 
 }  // namespace
+
+void hold_closed_streams() {
+#ifndef CATTER_WINDOWS
+    for(int fd = 0; fd < 3; fd += 1) {
+        if(::fcntl(fd, F_GETFD) < 0) {
+            hold(fd);
+        }
+    }
+#endif
+}
 
 kota::process::options process_options(const data::command& command) {
     kota::process::options opts{
@@ -164,8 +209,16 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
             SetHandleInformation(GetStdHandle(which), HANDLE_FLAG_INHERIT, 0);
         }
     }
+#else
+    std::optional<Released> released;
+    if(run.stand_in) {
+        released.emplace();
+    }
 #endif
     auto spawned = kota::process::spawn(opts);
+#ifndef CATTER_WINDOWS
+    released.reset();
+#endif
     if(!spawned) {
         throw cpptrace::runtime_error(std::format("Process `{}` spawn failed, because `{}`",
                                                   opts.program,

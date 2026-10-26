@@ -24,7 +24,9 @@ kota::task<kota::process::exit_status> Session::run(RunPlan run_plan) {
 
     if(!acc_ret) {
         throw cpptrace::runtime_error(
-            std::format("Failed to create acceptor `{}`", acc_ret.error().message()));
+            std::format("Failed to listen on `{}` for the build's commands: {}",
+                        run_plan.pipe_name,
+                        acc_ret.error().message()));
     }
 
     this->acc = std::make_unique<PipeAcceptor>(std::move(*acc_ret));
