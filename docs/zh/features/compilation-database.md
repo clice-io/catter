@@ -49,7 +49,7 @@ catter compile-commands [options] -- <build-command>
 
 ## 支持的编译器
 
-- GCC、Clang、`clang-cl` 和 MSVC 的 `cl`，源文件可以是 C、C++（包括模块）、Objective-C、Objective-C++、汇编和 CUDA，也可以是 `-x` 指定的任何语言。
+- GCC、Clang、`clang-cl` 和 MSVC 的 `cl`，名字前可以有目标前缀、后面可以有版本号（`x86_64-linux-gnu-gcc-13`、MacPorts 的 `clang-mp-18`），源文件可以是 C、C++（包括模块）、Objective-C、Objective-C++、汇编和 CUDA，也可以是 `-x` 指定的任何语言。
 
 编译器包装器如 `ccache`、`distcc`、`sccache` 可被正确识别和透明处理。catter 能识别 nvcc，但还不读取它的参数：它的命令没有条目。
 

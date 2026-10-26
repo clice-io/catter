@@ -49,7 +49,7 @@ The output follows the standard clang JSON compilation database format:
 
 ## Supported Compilers
 
-- GCC, Clang, `clang-cl` and MSVC's `cl`, for sources in C, C++ (modules too), Objective-C and Objective-C++, assembly and CUDA, or in any language `-x` names.
+- GCC, Clang, `clang-cl` and MSVC's `cl`, their names perhaps after a target and before a version (`x86_64-linux-gnu-gcc-13`, MacPorts' `clang-mp-18`), for sources in C, C++ (modules too), Objective-C and Objective-C++, assembly and CUDA, or in any language `-x` names.
 
 Compiler wrappers such as `ccache`, `distcc`, and `sccache` are recognized and handled transparently. catter recognizes nvcc, but does not read its arguments yet: its commands get no entries.
 
