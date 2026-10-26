@@ -79,7 +79,7 @@ entries = [
 ]
 
 [test."compile_commands.json".win32]
-wrong = "greet.cppm gets no entry (catter#131), main.cc's module map comes in a response file, which is not expanded (catter#123), and its dependency scan gets one (catter#118)"
+wrong = "greet.cppm gets no entry (catter#131), and main.cc's dependency scan gets one (catter#118)"
 entries = [
     {
         file = "${WS}/main.cc",
@@ -100,7 +100,8 @@ entries = [
             "-MDd",
             "-Zi",
             "/showIncludes",
-            '@CMakeFiles\modules.dir\main.cc.obj.modmap',
+            "-reference",
+            'greet=CMakeFiles\modules.dir\greet.ifc',
             '/FoCMakeFiles\modules.dir\main.cc.obj',
             '/FdCMakeFiles\modules.dir\',
             "/FS",

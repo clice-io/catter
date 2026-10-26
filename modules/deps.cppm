@@ -108,6 +108,7 @@ using ::kota::event_loop;
 using ::kota::fail;
 using ::kota::first_byte_index;
 using ::kota::format_kind;
+using ::kota::from_utf16;
 using ::kota::function;
 using ::kota::function_args_count_v;
 using ::kota::function_args_t;
@@ -183,6 +184,7 @@ using ::kota::task_frame;
 using ::kota::task_group;
 using ::kota::tcp;
 using ::kota::timer;
+using ::kota::to_utf16;
 using ::kota::tuple_any_of_v;
 using ::kota::tuple_count_of_v;
 using ::kota::tuple_find;
@@ -686,6 +688,7 @@ using ::kota::detail::destroy_handle;
 using ::kota::detail::expire;
 using ::kota::detail::fail_await;
 using ::kota::detail::failing;
+using ::kota::detail::from_utf16;
 using ::kota::detail::get_awaiter;
 using ::kota::detail::group_error;
 using ::kota::detail::inline_buffer;
@@ -726,6 +729,7 @@ using ::kota::detail::synth_three_way;
 using ::kota::detail::task_access;
 using ::kota::detail::task_promise;
 using ::kota::detail::task_return_object;
+using ::kota::detail::to_utf16;
 using ::kota::detail::unique_handle;
 using ::kota::detail::when_children;
 using ::kota::detail::when_op;
@@ -1740,16 +1744,6 @@ using ::simdjson::arm64::ondemand::logger::log_level;
 #endif
 
 #if (defined(_WIN32) && defined(__x86_64__) && defined(NDEBUG)) || (defined(_WIN32) && defined(__x86_64__) && !defined(NDEBUG)) || (defined(_WIN32) && defined(__aarch64__) && defined(NDEBUG))
-export namespace kota {
-using ::kota::from_utf16;
-using ::kota::to_utf16;
-}
-
-export namespace kota::detail {
-using ::kota::detail::from_utf16;
-using ::kota::detail::to_utf16;
-}
-
 export namespace kota::sys::windows {
 using ::kota::sys::windows::CommandLineRules;
 using ::kota::sys::windows::create_process_directories;

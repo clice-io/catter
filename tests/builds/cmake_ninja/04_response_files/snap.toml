@@ -7,7 +7,6 @@ stdout = '''
 exit = 0
 
 [test."compile_commands.json"]
-wrong = "the arguments in the response files are not expanded (catter#123)"
 entries = [
     {
         file = "${WS}/src/main.cc",
@@ -15,7 +14,8 @@ entries = [
         output = "${WS}/build/CMakeFiles/hello.dir/src/main.cc.o",
         arguments = [
             "${ENV}/bin/c++",
-            "@CMakeFiles/hello.dir/src/main.cc.o.rsp",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
             "-MD",
             "-MT",
             "CMakeFiles/hello.dir/src/main.cc.o",
@@ -33,7 +33,8 @@ entries = [
         output = "${WS}/build/CMakeFiles/hello.dir/src/util.cc.o",
         arguments = [
             "${ENV}/bin/c++",
-            "@CMakeFiles/hello.dir/src/util.cc.o.rsp",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
             "-MD",
             "-MT",
             "CMakeFiles/hello.dir/src/util.cc.o",

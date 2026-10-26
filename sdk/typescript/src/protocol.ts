@@ -50,6 +50,11 @@ export interface Target {
     source: string;
 }
 
+export interface Expansion {
+    files: OsString[];
+    args: OsString[];
+}
+
 export interface Argument {
     option: string;
     spelling: OsString;
@@ -114,6 +119,7 @@ export interface Finish {
 export interface Program {
     executable: OsString;
     args: OsString[];
+    cwd?: OsString | null;
 }
 
 export interface AnalyzeParams {
@@ -159,6 +165,7 @@ export interface CompilerAnalysis {
     phase: string;
     artifact: string;
     target: Target;
+    expansion?: Expansion | null;
     arguments: Argument[];
     reads: Read[];
     writes: Write[];

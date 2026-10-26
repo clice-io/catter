@@ -28,6 +28,8 @@ catter compile-commands [options] -- <build-command>
 
 默认情况下，如果输出路径已存在 `compile_commands.json`，catter 会与之**合并**。相同源文件的新条目会替换旧条目，因此可以增量构建而不丢失之前的记录。
 
+编译命令的响应文件（`@file`）在命令启动时、运行之前读取，因为 MSBuild 等构建工具会在命令结束后删除它们：条目里是这些文件中的参数，按编译器的方式切分，MSVC 的 `cl`、`clang-cl` 和 cl 模式下的 clang 用 Windows 的规则。
+
 内部流程：
 
 1. 在构建过程中拦截每一次编译器调用。

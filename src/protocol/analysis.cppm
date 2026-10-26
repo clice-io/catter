@@ -14,7 +14,11 @@ namespace catter {
 /// not read.
 class CommandAnalysis {
 public:
-    CommandAnalysis(std::string_view executable, std::span<const std::string> argv);
+    /// The analysis of the command that runs `executable` with `argv` in `cwd`, which its
+    /// relative response files are read from; with no `cwd`, only its absolute ones are read.
+    CommandAnalysis(std::string_view executable,
+                    std::span<const std::string> argv,
+                    std::optional<std::string_view> cwd);
 
     /// Whether a pattern of `filter` names the command.
     bool matches(std::span<const protocol::Pattern> filter) const;

@@ -132,10 +132,10 @@ class Handler(catter.Handler):
 catter.serve(Handler())
 ```
 
-- **The analysis** of a compiler's command has its phase, its target, every argument (the option it is, and as the command writes it), the files it reads, each source in its language, and the files it writes.
+- **The analysis** of a compiler's command has its phase, its target, every argument (the option it is, and as the command writes it), the files it reads, each source in its language, and the files it writes. The arguments of the response files (`@file`) a compiler's command names are read in, before the command runs.
 - **A filter** lists patterns: of a kind of program (`compiler`, `archiver`, `tool`), of some names, of some phases. The handler is told only of the commands a pattern names; the build does not wait for it on the others.
-- **An edit** removes flags, by option and value (`-DX`, `-D*`, `-W*`), appends flags after the command's own, or prepends them after the program. The arguments it does not remove stay as the command wrote them, and the flags it adds go as the handler wrote them: write them as the command's compiler takes them. Only a command whose arguments catter reads can be edited; `modify` replaces any command whole.
-- **`self.analyze(catter.Program(executable, args), ...)`** asks what catter makes of commands the handler names itself. In TypeScript, `catter.analyze(...)` through every callback's second argument.
+- **An edit** removes flags, by option and value (`-DX`, `-D*`, `-W*`), appends flags after the command's own, or prepends them after the program. The arguments it does not remove stay as the command wrote them, a compiler's response file too unless the edit removes an argument it holds or adds flags among them, and the flags it adds go as the handler wrote them: write them as the command's compiler takes them. Only a command whose arguments catter reads can be edited; `modify` replaces any command whole.
+- **`self.analyze(catter.Program(executable, args, cwd), ...)`** asks what catter makes of commands the handler names itself, `cwd` the directory a command's relative response files are read from. In TypeScript, `catter.analyze(...)` through every callback's second argument.
 
 ## Several handlers
 

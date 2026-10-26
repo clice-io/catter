@@ -1,0 +1,27 @@
+[analysis."$ catter run --handler \"python handler.py\" --from events.json"]
+stderr = '''
+command 2: gcc @flags.rsp -c a.c -o a.o
+  reads ['flags.rsp', 'nested.rsp'], as ['gcc', '-DX=1', '-DY=two words', '-Iinclude', '-c', 'a.c', '-o', 'a.o']
+  reads a.c at 5
+  writes a.o
+command 3: cl /nologo @cl.rsp
+  reads ['cl.rsp'], as ['cl', '/nologo', '/c', '/Foout dir/', 'b c.cc']
+  reads b c.cc at 4
+  writes out dir/b c.obj
+command 4: gcc @gone.rsp -c d.c
+  reads d.c at 3
+  writes d.o
+  diagnostic response-file-unread: gone.rsp at 1: response file cannot be read
+  gcc @flags.rsp -c a.c, in the command's cwd: as ['gcc', '-DX=1', '-DY=two words', '-Iinclude', '-c', 'a.c']
+  gcc @flags.rsp -c a.c, in no cwd: ['response-file-unread']
+'''
+exit = 0
+
+[edits."$ catter run --handler \"python decider.py\" --handler \"python observer.py\" --from events.json"]
+stderr = '''
+command 1: make
+command 2: gcc @flags.rsp -c a.c -o a.o -DNEW
+command 3: cl /nologo /c b c.cc
+command 4: gcc @gone.rsp -c d.c
+'''
+exit = 0

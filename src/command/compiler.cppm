@@ -5,6 +5,7 @@ module;
 export module catter.command:compiler;
 
 import :error;
+import :response_file;
 
 export namespace catter {
 
@@ -128,7 +129,7 @@ struct Argument {
     /// of an input or of an unknown option.
     std::uint32_t id;
 
-    /// Where it starts in argv.
+    /// Where it starts in argv, its response files read in.
     std::uint32_t index;
 
     /// How many elements of argv it takes: 2 for `-o a.o`, 1 for `-Iinclude`.
@@ -149,7 +150,7 @@ struct Argument {
 };
 
 /// Where a path is given: the argument it is in, a position in `CompilerAnalysis::arguments`,
-/// and the element of argv it is in.
+/// and the element of argv it is in, its response files read in.
 struct Location {
     std::uint32_t argument;
 
@@ -206,6 +207,8 @@ struct Diagnostic {
         ImplicitOutputUnresolved,
         DirectoryOutputUnsupportedArtifact,
         AssemblyListingAmbiguousOutput,
+        /// A response file that cannot be read, whose arguments are unknown.
+        ResponseFileUnread,
     };
 
     Code code;
@@ -225,6 +228,9 @@ struct CompilerAnalysis {
 
     /// The dialect its arguments are read in: the identity's, or MSVC's for clang in cl mode.
     Dialect dialect;
+
+    /// Its argv with its response files read in, which its arguments are read from.
+    Expansion expansion;
 
     /// Every argument after argv[0].
     std::vector<Argument> arguments;
@@ -248,9 +254,14 @@ struct CompilerAnalysis {
 /// knows.
 std::optional<Identity> identify(std::string_view executable);
 
-/// Analyzes the command that runs `executable` with `argv`, argv[0] included.
+/// Analyzes the command that runs `executable` with `argv`, argv[0] included, in `directory`,
+/// whose response files `read` reads as the compiler would before it runs: cl's and clang's in
+/// cl mode split as Windows splits a command line, the others as GCC does, but as clang's
+/// `--rsp-quoting` says.
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
-                                                        std::span<const std::string> argv);
+                                                        std::span<const std::string> argv,
+                                                        std::string_view directory,
+                                                        ReadFile read);
 
 /// The name of each value in catter's output: "gcc", "clang-cl", "preprocessed-source", ...
 std::string_view name(Compiler compiler);

@@ -79,9 +79,9 @@ The result of the request is an action, named by its `action` field:
 
 What catter makes of a command, named by its `kind`. catter knows a program by its executable's name: `cc` and `c++` are `gcc`, even where they run clang.
 
-- `compiler`: a command of gcc, clang, clang-cl or MSVC's cl. `compiler`; `dialect`, the syntax its arguments are read in (`gcc`, `clang`, or `msvc`, clang's in cl mode too); `phase` and `artifact`, what it makes; `target` (`triple`, `os`, `objectFormat`, `env`, `artifactModel`, `source`: what tells the target); `arguments`; `reads`, each with `path`, `argument` and `index` (where the command names it), `role` (`source` or `link`) and a source's `language`; `writes`, each with `path`, `reads` (the reads it is made from) and `origin`; and `diagnostics`, how catter inferred the files where the arguments leave them open.
+- `compiler`: a command of gcc, clang, clang-cl or MSVC's cl. `compiler`; `dialect`, the syntax its arguments are read in (`gcc`, `clang`, or `msvc`, clang's in cl mode too); `phase` and `artifact`, what it makes; `target` (`triple`, `os`, `objectFormat`, `env`, `artifactModel`, `source`: what tells the target); `expansion`, when the command names response files (`@file`) catter read: `files`, those it read, as named, the files they name too, and `args`, the command's arguments with them read in, which the indices below count in; `arguments`; `reads`, each with `path`, `argument` and `index` (where the command names it), `role` (`source` or `link`) and a source's `language`; `writes`, each with `path`, `reads` (the reads it is made from) and `origin`; and `diagnostics`, how catter inferred the files where the arguments leave them open.
 - `archiver`: a command of `ar`. `operation`, `modifiers`, `thin`, `archive`, `members`, `reads` and `writes`.
-- `tool`: a command of a linker or a librarian, whose arguments catter reads by its option table, `tool`: `lld-elf`, `lld-coff`, `lld-macho`, `lld-mingw`, `lld-wasm`, `llvm-lib` or `llvm-dlltool`. `arguments`.
+- `tool`: a command of a linker or a librarian, whose arguments catter reads by its option table, `tool`: `lld-elf`, `lld-coff`, `lld-macho`, `lld-mingw`, `lld-wasm`, `llvm-lib` or `llvm-dlltool`. `arguments`, a response file among them as the command names it: catter reads no tool's response files.
 - `unparsed`: a command of such a program whose arguments catter cannot read, nvcc's for now. `of`, the kind of program, `name`, `error` and `message`.
 
 Each argument has `option`, the option it is after aliases, by its name with its prefix (`-I` for `/I` too; `<input>` for an input, `<unknown>` for an option the option table does not know); `spelling`, as the command writes it (`-msmall-data-limit=` of what is `-G`); `index` and `count`, the command's arguments it takes; and `values`.
@@ -98,11 +98,11 @@ The edits of `edit` are made in turn. Each has `kind` and `flags`: arguments wri
 | `append`  | Adds the flags after the command's own arguments, where they take effect over them and libraries go: before `--` and `/link`, which end the options.                                                                                                                                                                     |
 | `prepend` | Adds the flags right after the program.                                                                                                                                                                                                                                                                                  |
 
-The arguments no edit takes out keep the command's own spelling, and the added flags go as they are: catter writes no argument anew. Only a command whose arguments catter reads can be edited: a compiler's or a tool's, not `unparsed`.
+The arguments no edit takes out keep the command's own spelling, and the added flags go as they are: catter writes no argument anew. A compiler's response file stays as the command names it unless an edit takes out an argument it holds or adds flags among them, which puts the arguments it holds in its place. Only a command whose arguments catter reads can be edited: a compiler's or a tool's, not `unparsed`.
 
 ### `analyze`
 
-A request a handler sends catter, for what catter makes of commands of its own: `programs`, each with `executable` and `args` (the program's name first). The result is `analyses`, one for each, `null` for a program catter knows nothing of.
+A request a handler sends catter, for what catter makes of commands of its own: `programs`, each with `executable`, `args` (the program's name first) and, optionally, `cwd`, the directory it runs in, which its relative response files are read from: without it, only its absolute ones are read. The result is `analyses`, one for each, `null` for a program catter knows nothing of.
 
 ### `error`, `exit` and `finish`
 

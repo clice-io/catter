@@ -6,6 +6,7 @@ module catter.command:resolve;
 
 import :compiler;
 import :parse;
+import :response_file;
 
 namespace catter {
 
@@ -15,6 +16,6 @@ namespace catter {
 /// argument is read when its suffix names a source, or, with no `-x`, an object or a
 /// library. A write is the output an option names, else the compiler's default, named after
 /// the inputs by the target's conventions.
-CompilerAnalysis resolve(Identity identity, ParsedCommand parsed);
+CompilerAnalysis resolve(Identity identity, Expansion expansion, ParsedCommand parsed);
 
 }  // namespace catter

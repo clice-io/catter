@@ -1,5 +1,4 @@
 [test."$ catter compile-commands -o compile_commands.json -- cmake --build build --config Debug -- -m:1 -nologo"]
-wrong = "MSBuild hands cl.exe its arguments in a response file, which is not expanded (catter#123)"
 stdout = '''
 
   1>Checking Build System
@@ -9,10 +8,84 @@ stdout = '''
   Generating Code...
   hello.vcxproj -> ${WS}/build/Debug/hello.exe
   Building Custom Rule ${WS}/CMakeLists.txt
-CDB saved to ${WS}/compile_commands.json with 0 entries.
+CDB saved to ${WS}/compile_commands.json with 2 entries.
 '''
 exit = 0
 
 [test."compile_commands.json"]
-wrong = "MSBuild hands cl.exe its arguments in a response file, which is not expanded (catter#123)"
-entries = []
+entries = [
+    {
+        file = "${WS}/src/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/hello.dir/Debug/main.obj",
+        arguments = [
+            "${MSVC}/bin/HostX64/x64/CL.exe",
+            "/c",
+            "/I${WS}/include",
+            "/Zi",
+            "/nologo",
+            "/W1",
+            "/WX-",
+            "/diagnostics:column",
+            "/Od",
+            "/Ob0",
+            "/D",
+            "_MBCS",
+            "/D",
+            "WIN32",
+            "/D",
+            "_WINDOWS",
+            "/D",
+            "CATTER_TEST=1",
+            "/D",
+            'CMAKE_INTDIR="Debug"',
+            "/EHsc",
+            "/RTC1",
+            "/MDd",
+            '/Fohello.dir\Debug\',
+            '/Fdhello.dir\Debug\vc145.pdb',
+            "/external:W1",
+            "/TP",
+            "/errorReport:queue",
+            "${WS}/src/main.cc",
+            "${WS}/src/util.cc",
+        ],
+    },
+    {
+        file = "${WS}/src/util.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/hello.dir/Debug/util.obj",
+        arguments = [
+            "${MSVC}/bin/HostX64/x64/CL.exe",
+            "/c",
+            "/I${WS}/include",
+            "/Zi",
+            "/nologo",
+            "/W1",
+            "/WX-",
+            "/diagnostics:column",
+            "/Od",
+            "/Ob0",
+            "/D",
+            "_MBCS",
+            "/D",
+            "WIN32",
+            "/D",
+            "_WINDOWS",
+            "/D",
+            "CATTER_TEST=1",
+            "/D",
+            'CMAKE_INTDIR="Debug"',
+            "/EHsc",
+            "/RTC1",
+            "/MDd",
+            '/Fohello.dir\Debug\',
+            '/Fdhello.dir\Debug\vc145.pdb',
+            "/external:W1",
+            "/TP",
+            "/errorReport:queue",
+            "${WS}/src/main.cc",
+            "${WS}/src/util.cc",
+        ],
+    },
+]

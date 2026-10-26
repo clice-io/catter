@@ -172,6 +172,17 @@
                         "target": {
                             "$ref": "#/$defs/Target"
                         },
+                        "expansion": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/$defs/Expansion"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
                         "arguments": {
                             "type": "array",
                             "items": {
@@ -591,6 +602,41 @@
                 "source"
             ]
         },
+        "Expansion": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/$defs/Base64"
+                            }
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "files",
+                "args"
+            ]
+        },
         "Argument": {
             "type": "object",
             "properties": {
@@ -870,6 +916,17 @@
                                         },
                                         "target": {
                                             "$ref": "#/$defs/Target"
+                                        },
+                                        "expansion": {
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/$defs/Expansion"
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ],
+                                            "default": null
                                         },
                                         "arguments": {
                                             "type": "array",
@@ -1171,6 +1228,24 @@
                             }
                         ]
                     }
+                },
+                "cwd": {
+                    "anyOf": [
+                        {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "$ref": "#/$defs/Base64"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null
                 }
             },
             "required": [
@@ -1218,6 +1293,17 @@
                                             },
                                             "target": {
                                                 "$ref": "#/$defs/Target"
+                                            },
+                                            "expansion": {
+                                                "anyOf": [
+                                                    {
+                                                        "$ref": "#/$defs/Expansion"
+                                                    },
+                                                    {
+                                                        "type": "null"
+                                                    }
+                                                ],
+                                                "default": null
                                             },
                                             "arguments": {
                                                 "type": "array",

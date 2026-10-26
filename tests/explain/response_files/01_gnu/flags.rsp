@@ -1,0 +1,2 @@
+--target=x86_64-linux-gnu -DX=1 "-DY=two words" -I'my include'
+-DESCAPED=a\ b @nested/more.rsp

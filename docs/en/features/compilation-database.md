@@ -28,6 +28,8 @@ A relative output path is from the `-C` directory. `compile-commands` also takes
 
 By default, catter **merges** with an existing `compile_commands.json` if one is found at the output path. New entries for the same source file replace old ones, so you can incrementally rebuild without losing entries from previous runs.
 
+A compile's response files (`@file`) are read when the command starts, before it runs, as build tools such as MSBuild delete them once it has: its entries hold the arguments the files hold, split as the compiler splits them, with Windows' rules for MSVC's `cl`, `clang-cl` and clang in cl mode.
+
 Internally, catter:
 
 1. Intercepts each compiler invocation during the build.

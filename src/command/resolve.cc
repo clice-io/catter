@@ -269,6 +269,13 @@ struct Builder {
             reads.push_back(input);
         }
         for(const auto& candidate: parsed.candidates) {
+            if(candidate.path.starts_with('@')) {
+                diagnose(Diagnostic::Code::ResponseFileUnread,
+                         "response file cannot be read",
+                         candidate.path.substr(1),
+                         candidate.location);
+                continue;
+            }
             auto input = input_of(candidate, convention, parsed);
             if(!input.has_value()) {
                 diagnose(Diagnostic::Code::InputCandidateRejected,
@@ -468,7 +475,7 @@ struct Builder {
 
 }  // namespace
 
-CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
+CompilerAnalysis resolve(Identity identity, Expansion expansion, ParsedCommand parsed) {
     auto target = select_target(identity, parsed);
     Builder builder{.parsed = parsed, .convention = convention_of(target.model)};
     builder.resolve_reads();
@@ -477,6 +484,7 @@ CompilerAnalysis resolve(Identity identity, ParsedCommand parsed) {
     return CompilerAnalysis{
         .identity = std::move(identity),
         .dialect = parsed.dialect,
+        .expansion = std::move(expansion),
         .arguments = std::move(parsed.arguments),
         .phase = parsed.phase,
         .artifact = parsed.artifact,

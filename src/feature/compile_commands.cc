@@ -144,7 +144,8 @@ public:
         if(descendants.left_out(id)) {
             co_return Action{};
         }
-        auto analysis = analyze_compiler(command.executable, command.args);
+        auto analysis =
+            analyze_compiler(command.executable, command.args, command.cwd, kota::fs::read_file);
         if(!analysis.has_value()) {
             verbose_log(failure_log(id, command, analysis.error()));
             co_return Action{};
@@ -168,7 +169,8 @@ public:
                     tree.merge(absolute_path(command.cwd, analysis->reads[read].path), {}, output);
                 }
             }
-            producers[output].push_back(Producer{.cwd = command.cwd, .argv = command.args});
+            producers[output].push_back(
+                Producer{.cwd = command.cwd, .argv = analysis->expansion.argv});
         }
         descendants.leave_out_descendants_of(id);
         co_return Action{};
@@ -209,7 +211,8 @@ public:
     }
 
 private:
-    /// A command that writes a file: where it runs and its argv, those of the file's entries.
+    /// A command that writes a file: where it runs and its argv, those of the file's entries,
+    /// with its response files read in, which build tools delete once it has run (MSBuild).
     struct Producer {
         std::string cwd;
 

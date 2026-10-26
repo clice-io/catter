@@ -79,9 +79,9 @@ catter 读不了参数的命令没有阶段：带 `phases` 的 pattern 不会指
 
 catter 对一条命令的分析，由其 `kind` 指明。catter 按可执行文件的名字认程序：`cc` 和 `c++` 都算 `gcc`，即使它们实际运行的是 clang。
 
-- `compiler`：gcc、clang、clang-cl 或 MSVC 的 cl 的命令。包含 `compiler`；`dialect`，读取其参数所用的语法（`gcc`、`clang` 或 `msvc`，cl 模式下的 clang 也是 `msvc`）；`phase` 和 `artifact`，它产出什么；`target`（`triple`、`os`、`objectFormat`、`env`、`artifactModel`，以及 `source`：目标由什么决定）；`arguments`；`reads`，每项有 `path`、`argument` 和 `index`（命令在哪里指定它）、`role`（`source` 或 `link`），源文件还有 `language`；`writes`，每项有 `path`、`reads`（由哪些读入生成）和 `origin`；以及 `diagnostics`，参数没有说清时 catter 如何推断文件。
+- `compiler`：gcc、clang、clang-cl 或 MSVC 的 cl 的命令。包含 `compiler`；`dialect`，读取其参数所用的语法（`gcc`、`clang` 或 `msvc`，cl 模式下的 clang 也是 `msvc`）；`phase` 和 `artifact`，它产出什么；`target`（`triple`、`os`、`objectFormat`、`env`、`artifactModel`，以及 `source`：目标由什么决定）；`expansion`，命令引用了 catter 读到的响应文件（`@file`）时才有：`files` 是读到的文件，按引用时的写法，也包括这些文件引用的文件，`args` 是读入这些文件后的命令参数，下文的各个下标都按它计算；`arguments`；`reads`，每项有 `path`、`argument` 和 `index`（命令在哪里指定它）、`role`（`source` 或 `link`），源文件还有 `language`；`writes`，每项有 `path`、`reads`（由哪些读入生成）和 `origin`；以及 `diagnostics`，参数没有说清时 catter 如何推断文件。
 - `archiver`：`ar` 的命令。包含 `operation`、`modifiers`、`thin`、`archive`、`members`、`reads` 和 `writes`。
-- `tool`：链接器或库管理工具的命令，catter 用它的选项表读取参数，`tool` 为 `lld-elf`、`lld-coff`、`lld-macho`、`lld-mingw`、`lld-wasm`、`llvm-lib` 或 `llvm-dlltool`。包含 `arguments`。
+- `tool`：链接器或库管理工具的命令，catter 用它的选项表读取参数，`tool` 为 `lld-elf`、`lld-coff`、`lld-macho`、`lld-mingw`、`lld-wasm`、`llvm-lib` 或 `llvm-dlltool`。包含 `arguments`，其中的响应文件保持命令里的写法：catter 不读取工具的响应文件。
 - `unparsed`：上述程序中 catter 读不了参数的命令，目前包括 nvcc 的命令。包含 `of`（程序种类）、`name`、`error` 和 `message`。
 
 每个参数都有 `option`，即解析别名之后的选项，用带前缀的名字表示（`/I` 也写作 `-I`；输入是 `<input>`，选项表不认识的选项是 `<unknown>`）；`spelling`，命令里的原始写法（例如实际是 `-G` 的 `-msmall-data-limit=`）；`index` 和 `count`，它占用命令的哪些参数；以及 `values`。
@@ -98,11 +98,11 @@ catter 对一条命令的分析，由其 `kind` 指明。catter 按可执行文�
 | `append`  | 把 flags 加在命令自己的参数之后，使其优先于这些参数生效，也正是库应在的位置：在结束选项的 `--` 和 `/link` 之前。                                                                                                                                                       |
 | `prepend` | 把 flags 加在程序名之后。                                                                                                                                                                                                                                              |
 
-没有被删掉的参数保留命令原有的写法，添加的 flags 也原样放入：catter 不会重新生成任何参数。只有 catter 读得懂参数的命令可以编辑：编译器或工具的命令，`unparsed` 的不行。
+没有被删掉的参数保留命令原有的写法，添加的 flags 也原样放入：catter 不会重新生成任何参数。编译器命令的响应文件保持命令里的写法，除非某个编辑删掉了其中的参数或在其中的参数之间添加了 flags，这时由它包含的参数替换它。只有 catter 读得懂参数的命令可以编辑：编译器或工具的命令，`unparsed` 的不行。
 
 ### `analyze`
 
-handler 发给 catter 的请求，询问 catter 对 handler 自己给出的命令的分析：`programs`，每项有 `executable` 和 `args`（第一个是程序名）。结果是 `analyses`，每个程序一项，catter 对其一无所知的程序为 `null`。
+handler 发给 catter 的请求，询问 catter 对 handler 自己给出的命令的分析：`programs`，每项有 `executable`、`args`（第一个是程序名），以及可选的 `cwd`，即程序运行的目录，相对路径的响应文件从这里读取：没有它时只读取绝对路径的响应文件。结果是 `analyses`，每个程序一项，catter 对其一无所知的程序为 `null`。
 
 ### `error`、`exit` 和 `finish`
 

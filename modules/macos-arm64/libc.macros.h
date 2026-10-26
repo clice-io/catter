@@ -19,6 +19,7 @@
 #define _PTHREAD_ONCE_SIG_init		0x30B1BCBA
 #define INT32_MAX        2147483647
 #define INT64_MAX        9223372036854775807LL
+#    define WCHAR_MAX     __WCHAR_MAX__
 #define SEEK_END        2       /* set file offset to EOF plus offset */
 #define errno (*__error())
 #define ERANGE          34              /* Result too large */

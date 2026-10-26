@@ -14,7 +14,8 @@ struct Edge {
 };
 
 /// The files the command `argv` of `executable`, run in `cwd`, writes from those it reads, when
-/// it is a compiler's or an archiver's; the standard streams, `-`, left out.
+/// it is a compiler's, its response files read in, or an archiver's; the standard streams, `-`,
+/// left out.
 std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
                                           std::string_view executable,
                                           std::span<const std::string> argv);

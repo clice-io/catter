@@ -34,7 +34,7 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
                                           std::string_view executable,
                                           std::span<const std::string> argv) {
     std::vector<Edge> edges;
-    if(auto compiler = analyze_compiler(executable, argv)) {
+    if(auto compiler = analyze_compiler(executable, argv, cwd, kota::fs::read_file)) {
         for(const auto& write: compiler->writes) {
             add(edges,
                 cwd,

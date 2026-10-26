@@ -1,4 +1,3 @@
-gcc -c a.c @args.rsp -o a.o
 gcc -x assembler -c a.s
 gcc -c -
 cl /nologo /c a.cc /link /out:a.exe

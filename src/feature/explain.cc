@@ -92,9 +92,7 @@ Object describe(const Diagnostic& diagnostic, const CompilerAnalysis& analysis) 
     return object;
 }
 
-Object describe(std::string_view cwd,
-                std::span<const std::string> argv,
-                const CompilerAnalysis& analysis) {
+Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
     const auto path_of = [&](std::uint32_t read) -> std::string_view {
         return analysis.reads[read].path;
     };
@@ -126,7 +124,7 @@ Object describe(std::string_view cwd,
                 entries.push_back(Object{
                     {"directory", cwd},
                     {"file", analysis.reads[read].path},
-                    {"arguments", strings(argv)},
+                    {"arguments", strings(analysis.expansion.argv)},
                     {"output", absolute_path(cwd, write.path)},
                 });
             }
@@ -140,13 +138,17 @@ Object describe(std::string_view cwd,
         {"phase", name(analysis.phase)},
         {"artifact", name(analysis.artifact)},
         {"target", describe(analysis.target)},
-        {"sources",
-         strings(analysis.reads | std::views::filter(is_source) |
-                 std::views::transform(&Read::path))},
-        {"reads", strings(analysis.reads | std::views::transform(&Read::path))},
-        {"writes", strings(analysis.writes | std::views::transform(&Write::path))},
-        {"edges", std::move(edges)},
     };
+    if(!analysis.expansion.files.empty()) {
+        object.insert("responseFiles", strings(analysis.expansion.files));
+        object.insert("arguments", strings(analysis.expansion.argv));
+    }
+    object.insert("sources",
+                  strings(analysis.reads | std::views::filter(is_source) |
+                          std::views::transform(&Read::path)));
+    object.insert("reads", strings(analysis.reads | std::views::transform(&Read::path)));
+    object.insert("writes", strings(analysis.writes | std::views::transform(&Write::path)));
+    object.insert("edges", std::move(edges));
     if(!inferred.empty()) {
         object.insert("inferred", std::move(inferred));
     }
@@ -208,9 +210,9 @@ Object describe(const Error& error) {
 /// what it found, with the outputs it inferred, the notes on how, and the entries
 /// `compile-commands` writes for it; or, when none does, why.
 JSON describe(std::string_view cwd, std::span<const std::string> argv) {
-    auto compiler = analyze_compiler(argv[0], argv);
+    auto compiler = analyze_compiler(argv[0], argv, cwd, kota::fs::read_file);
     if(compiler.has_value()) {
-        return describe(cwd, argv, *compiler);
+        return describe(cwd, *compiler);
     }
     auto archiver = analyze_archiver(argv[0], argv);
     if(archiver.has_value()) {
