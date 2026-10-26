@@ -4,6 +4,8 @@ execv ./no-format: failed to start: Exec format error
 posix_spawn ./no-format: failed to start: Exec format error
 posix_spawnp no-format: failed to start: Exec format error
 execvp no-format: run by /bin/sh
+posix_spawnp empty: failed to start: Exec format error
+execvp empty: exit 0
 execv ./lost-interpreter: failed to start: No such file or directory
 posix_spawn ./lost-interpreter: failed to start: No such file or directory
 '''
@@ -17,6 +19,8 @@ posix_spawn ./no-format: failed to start: Exec format error
 posix_spawnp no-format: run by /bin/sh
 exit 0
 execvp no-format: run by /bin/sh
+posix_spawnp empty: exit 0
+execvp empty: exit 0
 execv ./lost-interpreter: failed to start: No such file or directory
 posix_spawn ./lost-interpreter: failed to start: No such file or directory
 '''
@@ -28,6 +32,8 @@ execv ./no-format: failed to start: Exec format error
 posix_spawn ./no-format: failed to start: Exec format error
 posix_spawnp no-format: failed to start: Exec format error
 execvp no-format: run by /bin/sh
+posix_spawnp empty: failed to start: Exec format error
+execvp empty: exit 0
 execv ./lost-interpreter: failed to start: No such file or directory
 posix_spawn ./lost-interpreter: failed to start: No such file or directory
 node build.mjs
@@ -36,6 +42,9 @@ node build.mjs
 ├── ./start posix_spawnp no-format
 ├── ./start execvp no-format
 │   └── no-format
+├── ./start posix_spawnp empty
+├── ./start execvp empty
+│   └── empty
 ├── ./start execv ./lost-interpreter
 └── ./start posix_spawn ./lost-interpreter
 '''
@@ -49,6 +58,8 @@ posix_spawn ./no-format: failed to start: Exec format error
 posix_spawnp no-format: run by /bin/sh
 exit 0
 execvp no-format: run by /bin/sh
+posix_spawnp empty: exit 0
+execvp empty: exit 0
 execv ./lost-interpreter: failed to start: No such file or directory
 posix_spawn ./lost-interpreter: failed to start: No such file or directory
 node build.mjs
@@ -58,6 +69,10 @@ node build.mjs
 │   └── no-format
 ├── ./start execvp no-format
 │   └── no-format
+├── ./start posix_spawnp empty
+│   └── empty
+├── ./start execvp empty
+│   └── empty
 ├── ./start execv ./lost-interpreter
 └── ./start posix_spawn ./lost-interpreter
 '''

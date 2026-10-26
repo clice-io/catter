@@ -8,10 +8,12 @@ const starts = [
   ["posix_spawn", "./no-format"],
   ["posix_spawnp", "no-format"],
   ["execvp", "no-format"],
+  ["posix_spawnp", "empty"],
+  ["execvp", "empty"],
   ["execv", "./lost-interpreter"],
   ["posix_spawn", "./lost-interpreter"],
 ];
 for (const [fn, file] of starts) {
   const run = spawnSync("./start", [fn, file], { env, encoding: "utf8" });
-  console.log(`${fn} ${file}: ${run.stdout.trim()}`);
+  console.log(`${fn} ${file}: ${run.stdout.trim() || `exit ${run.status}`}`);
 }

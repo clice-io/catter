@@ -44,7 +44,9 @@ static std::string_view arch_of(std::string_view executable) {
     auto slice_arch = ^(const mach_header* slice, uint64_t, size_t) {
         arch = macho_arch_name_for_mach_header(slice);
     };
-    if(macho_best_slice(program.c_str(), slice_arch) == EFTYPE) {
+    // An empty file is EINVAL.
+    if(auto error = macho_best_slice(program.c_str(), slice_arch);
+       error == EFTYPE || error == EINVAL) {
         macho_best_slice("/bin/sh", slice_arch);
     }
     return arch;
