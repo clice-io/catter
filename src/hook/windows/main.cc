@@ -30,10 +30,21 @@ struct CreateProcessW {
                               LPSTARTUPINFOW lpStartupInfo,
                               LPPROCESS_INFORMATION lpProcessInformation) {
 
-        auto converted_cmdline = catter::hook::proxy_command_line(lpApplicationName, lpCommandLine);
-
+        auto proxy = catter::hook::proxy_command_line(lpApplicationName, lpCommandLine);
+        if(!proxy) {
+            return original(lpApplicationName,
+                            lpCommandLine,
+                            lpProcessAttributes,
+                            lpThreadAttributes,
+                            bInheritHandles,
+                            dwCreationFlags,
+                            lpEnvironment,
+                            lpCurrentDirectory,
+                            lpStartupInfo,
+                            lpProcessInformation);
+        }
         return original(nullptr,
-                        converted_cmdline.data(),
+                        proxy->data(),
                         lpProcessAttributes,
                         lpThreadAttributes,
                         bInheritHandles,

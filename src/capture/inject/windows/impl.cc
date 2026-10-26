@@ -23,10 +23,6 @@ kota::process::options hook_options(data::command command,
                                     std::string_view pipe_name) {
     LOG_INFO("new command id is: {}", id);
     auto opts = process_options(command);
-    LOG_INFO("| -> Catter-Proxy Final Executing command: \n    exe = {} \n    args = {}",
-             opts.program,
-             opts.windows_command_line);
-
     opts.env_changes = {
         {.name = config::ENV_VAR_IPC_ID,     .value = std::to_string(id)                  },
         {.name = config::ENV_VAR_PROXY_PATH, .value = program_path(config::PROXY_EXE_NAME)},

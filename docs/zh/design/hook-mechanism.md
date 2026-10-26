@@ -179,7 +179,7 @@ Detours 的工作原理：
 
 1. **提取命令行**。钩子读取 `lpApplicationName` 和 `lpCommandLine`。
 
-2. **解析程序**。钩子用 `resolve_program()` 解析：`lpApplicationName` 从当前目录补全为绝对路径；没有它时，取命令行的第一个词，按 `CreateProcess` 的方式查找（kotatsu 的 `find_create_process_program`：程序所在目录、当前目录、系统目录、Windows 目录，最后是 `PATH`）。
+2. **解析程序**。钩子用 `resolve_program()` 解析：`lpApplicationName` 从当前目录补全为绝对路径；没有它时，取命令行的第一个词，按 `CreateProcess` 的方式查找（kotatsu 的 `find_create_process_program`：程序所在目录、当前目录、系统目录、Windows 目录，最后是 `PATH`）；不带引号的名字会依次读到每个空白处，和 `CreateProcess` 读 `C:\Program Files\tool.exe a b` 的方式一样。找不到这样的文件时，这次调用原样交给原始的 `CreateProcess`，失败方式和没有 catter 时相同。
 
 3. **重写命令行**：
 
@@ -190,6 +190,8 @@ Detours 的工作原理：
    `lpApplicationName` 被设为 `nullptr`，使 `CreateProcess` 正常解析命令行。
 
 4. **通过 Detours trampoline 调用原始 `CreateProcess`**，传入修改后的命令行。
+
+catter-proxy 用调用方写下的 `{original_cmdline}` 原样启动程序，除非 handler 改了它的参数：`cmd.exe` 以及其他自己读取命令行的程序，读到的和没有 catter 时一样。
 
 ### 与 Unix 的关键区别
 
