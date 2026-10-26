@@ -157,6 +157,7 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
         .output = output == nullptr ? "" : key_of(output->as_string()),
     };
     const auto key = to_json(dyn::Array{
+        directory,
         field("command", ""),
         field("arguments", dyn::Array{}),
     });
@@ -178,13 +179,12 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
 
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
-    // The save renames a new file over the path it writes, which would replace a symlink.
-    if(auto link = kota::fs::symlink_status(file);
-       link.has_value() && link->type == kota::fs::FileType::Symlink) {
-        std::string target;
-        if(!kota::fs::canonical(target, file)) {
-            file = std::move(target);
-        }
+    // The save renames a new file over the path it writes, which would replace a symlink: the
+    // database goes to the file the links lead to, which need not exist yet. Linux follows 40
+    // links at most.
+    std::string target;
+    for(int links = 0; links < 40 && !kota::fs::read_symlink(target, file); links += 1) {
+        file = absolute_path(kota::fs::path::parent(file), target);
     }
     if(auto status = kota::fs::status(file);
        status.has_value() && status->type != kota::fs::FileType::Regular) {

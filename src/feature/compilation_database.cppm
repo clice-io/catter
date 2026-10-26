@@ -17,11 +17,11 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
 /// A JSON compilation database, `compile_commands.json`: the entries already in its file, when
 /// it inherits them, and those added, which replace the inherited entries of their source file
 /// and output, and those of their source file without an output. Entries of a source file and
-/// output that are alike, in their command and arguments, are one.
+/// output that are alike, in their directory, command and arguments, are one.
 class CompilationDatabase {
 public:
     /// The database whose file the user names `path`, from the working directory `cwd`, or the
-    /// file a symlink there names; with `inherit`, the entries of that file. Throws for a path
+    /// file the symlinks there lead to; with `inherit`, the entries of that file. Throws for a path
     /// that is no file, and with `inherit` for a file that cannot be read or holds no database.
     CompilationDatabase(std::string_view path, std::string cwd, bool inherit);
 
