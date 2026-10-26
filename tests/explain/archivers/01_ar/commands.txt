@@ -1,2 +1,5 @@
 ar rcs libx.a a.o b.o
 ar t libx.a
+gcc-ar-14 rcs libx.a a.o b.o
+x86_64-linux-gnu-ar qc libx.a a.o
+llvm-ar-18 t libx.a

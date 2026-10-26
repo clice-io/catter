@@ -26,6 +26,7 @@ constexpr std::string_view commands[] = {
     "cl /nologo a.cc /link/out:x.exe lib.lib",
     "clang-cl /c a.cc /link/out:a.exe",
     "gcc a.o b.o -o app -lm",
+    "gcc -c a.c -dumpbase b.c -wrapper echo,c.c -o a.o",
 };
 
 }  // namespace
@@ -96,6 +97,19 @@ ZEST_CASE(missing_option_value_fails_the_parse) {
     auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
     ZASSERT(!analysis.has_value());
     ZEXPECT(analysis.error().kind == Error::Kind::CompilerParse);
+};
+
+ZEST_CASE(options_only_gcc_knows_take_their_values) {
+    auto reads = [](std::string_view command) {
+        const auto argv = split(command);
+        auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
+        return analysis->reads | std::views::transform(&Read::path) |
+               std::ranges::to<std::vector<std::string>>();
+    };
+    ZEXPECT(reads("gcc -c foo.c -dumpbase xx.c") == std::vector<std::string>{"foo.c"});
+    ZEXPECT(reads("g++ -wrapper echo,foo.c -c bar.c") == std::vector<std::string>{"bar.c"});
+    ZEXPECT(reads("gcc -aux-info protos.c -dumpbase-ext .c -c foo.c") ==
+            std::vector<std::string>{"foo.c"});
 };
 
 ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {

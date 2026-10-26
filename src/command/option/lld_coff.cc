@@ -86,8 +86,9 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 
 const kota_opt::OptTable& table() {
     const static auto opt_table = [] {
+        // link.exe, and lld-link after it, match options without case: `/OUT:` is `/out:`.
         auto table =
-            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), false, {});
+            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), true, {});
         table.tablegen_mode = true;
         return table;
     }();

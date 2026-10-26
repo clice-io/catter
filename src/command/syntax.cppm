@@ -14,6 +14,10 @@ struct Syntax {
     const kota::option::OptTable* table;
 
     std::uint32_t visibility;
+
+    /// Options the table does not know that take the next argument as their value, as GCC's
+    /// `-dumpbase` does: each is read as an unknown option with that value.
+    std::span<const std::string_view> separate = {};
 };
 
 /// The syntax of a compiler's arguments.
