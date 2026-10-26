@@ -174,10 +174,13 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
 }
 
 std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Options options) {
+    // The terminal's Ctrl+C is the build's: the handler is told how the build
+    // ended, and ends when catter closes its input.
     kota::process::options opts{
+        .creation = {.process_group = true},
         .streams = {kota::process::stdio::pipe(),
-                    kota::process::stdio::pipe(),
-                    kota::process::stdio::inherit()},
+                     kota::process::stdio::pipe(),
+                     kota::process::stdio::inherit()},
     };
 #ifdef CATTER_WINDOWS
     // The command line goes to CreateProcessW as it is, to be split by the

@@ -1,0 +1,26 @@
+[test."$ python interrupt.py node build.mjs"]
+stdout = '''
+ready
+the build got SIGINT
+node ended by SIGINT
+'''
+exit = 0
+
+[test."$ python interrupt.py catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+ready
+the build got SIGINT
+Build failed with exit code 130. Printing partial command tree.
+node build.mjs
+catter ended by SIGINT
+'''
+exit = 0
+
+[test."$ python interrupt.py catter run --handler \"python handler.py\" -- node build.mjs"]
+stdout = '''
+ready
+the build got SIGINT
+the handler was told the build ended with 130
+catter ended by SIGINT
+'''
+exit = 0
