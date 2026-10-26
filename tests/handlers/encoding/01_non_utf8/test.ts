@@ -10,7 +10,6 @@ test(
         except: {
             win32: "Windows passes arguments as UTF-16, which holds no bytes that are not UTF-8",
         },
-        errors: ["Process `./broken` spawn failed"],
     },
     async (t) => {
         await t.cli(["run", "--handler", "python handler.py", "--", "python", "build.py"]);

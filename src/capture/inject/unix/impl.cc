@@ -21,7 +21,8 @@ namespace catter {
 
 #if defined(CATTER_MAC)
 /// The architecture `executable` runs as, as dyld names it; a script runs as
-/// its interpreter. Empty for what this Mac cannot run.
+/// its interpreter, and a file of no executable format as /bin/sh, which the
+/// program is started with then. Empty for what this Mac cannot run.
 static std::string_view arch_of(std::string_view executable) {
     std::array<char, 512> head;
     std::size_t size = 0;
@@ -37,9 +38,12 @@ static std::string_view arch_of(std::string_view executable) {
     }
 
     __block std::string_view arch;
-    macho_best_slice(program.c_str(), ^(const mach_header* slice, uint64_t, size_t) {
+    auto slice_arch = ^(const mach_header* slice, uint64_t, size_t) {
         arch = macho_arch_name_for_mach_header(slice);
-    });
+    };
+    if(macho_best_slice(program.c_str(), slice_arch) == EFTYPE) {
+        macho_best_slice("/bin/sh", slice_arch);
+    }
     return arch;
 }
 #endif

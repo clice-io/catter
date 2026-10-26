@@ -1,6 +1,6 @@
 # Runs a program with an argument that is not UTF-8, and prints what it
-# received, byte for byte; then a program that fails to start, given that
-# argument, which catter reports with it in its message.
+# received, byte for byte; then one given that argument in a directory the
+# build removed, which catter cannot capture and names in its message.
 import os
 import subprocess
 import sys
@@ -10,7 +10,7 @@ child = subprocess.run(
 )
 sys.stdout.write(child.stdout.decode("ascii"))
 
-with open("broken", "w") as script:
-    script.write("#!/nonexistent/interpreter\n")
-os.chmod("broken", 0o755)
-subprocess.run(["./broken", b"caf\xe9"], check=False)
+os.mkdir("gone")
+os.chdir("gone")
+os.rmdir("../gone")
+subprocess.run([sys.executable, "-c", "0", b"caf\xe9"], check=False)
