@@ -347,6 +347,22 @@ ZEST_CASE(execvp_runs_a_file_of_no_executable_format_through_the_proxy) {
     expect_proxy_command(exec_call, valid_session, executable, "shell-script");
 }
 
+ZEST_CASE(execvp_runs_a_script_that_names_no_interpreter_through_the_proxy) {
+    exec_call.reset(54);
+
+    auto executable = create_executable("empty-shebang", "#!\necho run by /bin/sh\n");
+    ScopedEnv path_env("PATH", std::string(kota::fs::path::parent(executable)));
+    MutableCStrings argv = {"empty-shebang"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    auto result = executor.execvp("empty-shebang", argv.data());
+
+    ZEXPECT(result == 54);
+    expect_proxy_command(exec_call, valid_session, executable, "empty-shebang");
+}
+
 ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) {
     spawn_call.reset(ENOENT);
 

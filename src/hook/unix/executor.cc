@@ -134,6 +134,10 @@ Format format_of(const char* path) noexcept {
         if(end == std::string_view::npos) {
             return Format::Program;
         }
+        if(end == 0) {
+            // No interpreter: no format the system knows of.
+            return Format::Unknown;
+        }
         std::string interpreter(text.substr(0, end));
         return ::access(interpreter.c_str(), X_OK) == 0 ? Format::Program
                                                         : Format::MissingInterpreter;
