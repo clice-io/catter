@@ -55,9 +55,9 @@ public:
     }
 
     kota::task<> on_error(data::ipcid_t id,
-                          [[maybe_unused]] std::optional<data::ipcid_t> parent,
+                          std::optional<data::ipcid_t> parent,
                           std::string message) override {
-        tree.merge(id, std::unexpected(std::move(message)));
+        tree.merge(id, std::unexpected(std::move(message)), parent);
         co_return;
     }
 
