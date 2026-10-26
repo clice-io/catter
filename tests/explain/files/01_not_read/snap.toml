@@ -186,3 +186,113 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- gcc -c foo.c -dumpbase xx.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "foo.c"
+    ],
+    "reads": [
+        "foo.c"
+    ],
+    "writes": [
+        "foo.o"
+    ],
+    "edges": [
+        {
+            "output": "foo.o",
+            "inputs": [
+                "foo.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "foo.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "foo.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "foo.c",
+                "-dumpbase",
+                "xx.c"
+            ],
+            "output": "${WS}/foo.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -wrapper echo,foo.c -c bar.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "bar.c"
+    ],
+    "reads": [
+        "bar.c"
+    ],
+    "writes": [
+        "bar.o"
+    ],
+    "edges": [
+        {
+            "output": "bar.o",
+            "inputs": [
+                "bar.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "bar.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "bar.c",
+            "arguments": [
+                "gcc",
+                "-wrapper",
+                "echo,foo.c",
+                "-c",
+                "bar.c"
+            ],
+            "output": "${WS}/bar.o"
+        }
+    ]
+}
+'''
+exit = 0

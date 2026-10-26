@@ -50,3 +50,87 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- gcc-ar-14 rcs libx.a a.o b.o"]
+stdout = '''
+{
+    "analyzer": "archiver",
+    "operation": "r",
+    "modifiers": [
+        "c",
+        "s"
+    ],
+    "thin": false,
+    "archive": "libx.a",
+    "members": [
+        "a.o",
+        "b.o"
+    ],
+    "reads": [
+        "a.o",
+        "b.o"
+    ],
+    "writes": [
+        "libx.a"
+    ],
+    "edges": [
+        {
+            "output": "libx.a",
+            "inputs": [
+                "a.o",
+                "b.o"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- x86_64-linux-gnu-ar qc libx.a a.o"]
+stdout = '''
+{
+    "analyzer": "archiver",
+    "operation": "q",
+    "modifiers": [
+        "c"
+    ],
+    "thin": false,
+    "archive": "libx.a",
+    "members": [
+        "a.o"
+    ],
+    "reads": [
+        "a.o"
+    ],
+    "writes": [
+        "libx.a"
+    ],
+    "edges": [
+        {
+            "output": "libx.a",
+            "inputs": [
+                "a.o"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- llvm-ar-18 t libx.a"]
+stdout = '''
+{
+    "analyzer": "archiver",
+    "operation": "t",
+    "modifiers": [],
+    "thin": false,
+    "archive": "libx.a",
+    "members": [],
+    "reads": [
+        "libx.a"
+    ],
+    "writes": [],
+    "edges": []
+}
+'''
+exit = 0

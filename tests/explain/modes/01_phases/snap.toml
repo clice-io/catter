@@ -1019,3 +1019,51 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- gcc -MM a.c -o a.d"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "preprocessed-source",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.d"
+    ],
+    "edges": [
+        {
+            "output": "a.d",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-MM",
+                "a.c",
+                "-o",
+                "a.d"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
