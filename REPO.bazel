@@ -1,0 +1,8 @@
+# Directories with no packages of this repository: npm's and pixi's trees,
+# the build output and the local caches.
+ignore_directories([
+    "**/node_modules",
+    ".cache",
+    ".pixi",
+    "build",
+])

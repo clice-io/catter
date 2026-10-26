@@ -1,0 +1,23 @@
+package(default_visibility = ["//:__pkg__"])
+
+config_setting(
+    name = "dbg",
+    values = {"compilation_mode": "dbg"},
+)
+
+config_setting(
+    name = "opt",
+    values = {"compilation_mode": "opt"},
+)
+
+config_setting(
+    name = "opt_macos",
+    constraint_values = ["@platforms//os:macos"],
+    values = {"compilation_mode": "opt"},
+)
+
+config_setting(
+    name = "asan_macos",
+    constraint_values = ["@platforms//os:macos"],
+    values = {"features": "asan"},
+)

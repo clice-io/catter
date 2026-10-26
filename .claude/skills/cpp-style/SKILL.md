@@ -55,7 +55,7 @@ defending against ghosts.
   with `catter-proxy`'s `catter::ipc` and `catter::data`, each option
   table's `catter::option::clang`), and for `catter::log`,
   `catter::output` and `catter::config`.
-- Platform code is chosen by the macros xmake defines (`CATTER_LINUX`,
+- Platform code is chosen by the macros the build defines (`CATTER_LINUX`,
   `CATTER_MAC`, `CATTER_WINDOWS`), or by a file per platform when most of
   it differs (`capture/inject/unix` and `windows`, `hook/unix` and
   `hook/windows`).
@@ -74,14 +74,12 @@ are what breaking this cost.
 The hook payloads (`src/hook`) run inside every process
 of the build, next to that program's own runtime. They:
 
-- link only what they must (`kota::fs` and `kota::sys`: on Unix the
-  objects of catter's kotatsu they use, in each Windows DLL a kotatsu of
-  the DLL's architecture without ASan and without the rest of kotatsu;
-  `support` only in the Unix `debug` build, for logging), keep their
-  symbols hidden (`exports.map`,
-  `exports.def`), and on Unix carry a private C++ runtime (static
-  libstdc++ on Linux, a force-loaded libc++ on macOS), so nothing they
-  bring can clash with the host program's;
+- link only what they must (`kota::fs` and `kota::sys`, and of `support`
+  only the logging of the `Debug` build), built without ASan and, for each
+  Windows DLL, for the DLL's architecture (`payload` in `bazel/defs.bzl`);
+  keep their symbols hidden (`exports.map`, `exports.def`); and carry a
+  private C++ runtime, xclang's libc++ linked in, so nothing they bring can
+  clash with the host program's;
 - never let an exception escape into the host: a hooked entry point
   catches everything and turns it into the error the original call
   reports (`errno` and the return value), as the Unix payload's do
@@ -117,7 +115,7 @@ of the build, next to that program's own runtime. They:
   build command that fails) degrades gracefully — the command runs as it
   would without catter, the database simply lacks what could not be
   parsed. But graceful degradation is not scattered null checks: per the
-  redundancy rule, defend only against states that can occur. The `debug`
+  redundancy rule, defend only against states that can occur. The `Debug`
   (ASan) build is the safety net.
 
 ## Error Handling (control flow)
@@ -157,9 +155,9 @@ of the build, next to that program's own runtime. They:
 - Log through the `LOG_TRACE` / `LOG_DEBUG` / `LOG_INFO` / `LOG_WARN` /
   `LOG_ERROR` / `LOG_CRITICAL` macros of `support/log.h` (`std::format`
   syntax, source location captured automatically; `TRACE` and `DEBUG`
-  compile away outside `debug`). Never call spdlog directly. The Unix hook
+  compile away outside `Debug`). Never call spdlog directly. The Unix hook
   payload logs through its own macros (`hook/unix/debug.h`), which exist
-  only in `debug`.
+  only in `Debug`.
 - stdout and stderr belong to the build under catter and to catter's
   results: diagnostics go to the log. What catter shows the user goes
   through `support/output.h`.

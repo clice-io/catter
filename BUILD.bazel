@@ -1,0 +1,352 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("//bazel:defs.bzl", "COPTS", "LINKOPTS", "asan_runtime", "payload", "release_packages")
+
+# One library per directory of src/, layered as their includes are:
+# {support, command} <- session <- {capture, protocol, feature}, which the
+# programs link (scripts/check_layers.py checks the includes, which Bazel
+# confines to a target's dependencies).
+
+cc_library(
+    name = "support",
+    srcs = glob(["src/support/*.cc"]),
+    hdrs = glob(["src/support/**/*.h"]),
+    copts = COPTS,
+    deps = [
+        "@cpptrace",
+        "@kotatsu//:fs",
+        "@kotatsu//:support",
+        "@kotatsu//:sys",
+        "@spdlog",
+    ],
+)
+
+cc_library(
+    name = "command",
+    srcs = glob(["src/command/**/*.cc"]),
+    hdrs = glob(["src/command/**/*.h"]),
+    copts = COPTS,
+    deps = [
+        "@kotatsu//:fs",
+        "@kotatsu//:option",
+        "@llvm_option_inc",
+    ],
+)
+
+cc_library(
+    name = "session",
+    srcs = glob(["src/session/*.cc"]),
+    hdrs = glob(["src/session/*.h"]),
+    copts = COPTS,
+    deps = [
+        ":support",
+        "@kotatsu//:async",
+        "@kotatsu//:ipc",
+        "@kotatsu//:meta",
+    ],
+)
+
+cc_library(
+    name = "capture",
+    srcs = glob(["src/capture/*.cc"]),
+    hdrs = glob(["src/capture/*.h"]),
+    copts = COPTS,
+    deps = [
+        ":session",
+        "@kotatsu//:codec_json",
+    ],
+)
+
+# Launching a command with the hook, which catter-proxy does.
+cc_library(
+    name = "capture_inject",
+    srcs = select({
+        "@platforms//os:windows": glob(["src/capture/inject/windows/*.cc"]),
+        "//conditions:default": glob(["src/capture/inject/unix/*.cc"]),
+    }),
+    hdrs = glob(["src/capture/inject/**/*.h"]),
+    copts = COPTS,
+    deps = [":session"] + select({
+        "@platforms//os:windows": ["@detours"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "protocol",
+    srcs = glob(
+        ["src/protocol/*.cc"],
+        exclude = ["src/protocol/schema.cc"],
+    ),
+    hdrs = glob(["src/protocol/*.h"]),
+    copts = COPTS,
+    deps = [
+        ":command",
+        ":session",
+        "@kotatsu//:codec_json",
+        "@kotatsu//:ipc_json",
+    ],
+)
+
+cc_library(
+    name = "feature",
+    srcs = glob(["src/feature/*.cc"]),
+    hdrs = glob(["src/feature/*.h"]),
+    copts = COPTS,
+    deps = [
+        ":command",
+        ":session",
+        "@kotatsu//:codec_json",
+        "@kotatsu//:deco",
+    ],
+)
+
+# The programs are in bin/, side by side as catter finds them, with the hook
+# payloads: build/<type>/bin/bin.
+cc_binary(
+    name = "bin/catter",
+    srcs = glob([
+        "src/driver/*.cc",
+        "src/driver/*.h",
+    ]),
+    copts = COPTS,
+    features = ["generate_dsym_file"],
+    linkopts = LINKOPTS,
+    deps = [
+        ":capture",
+        ":feature",
+        ":protocol",
+    ],
+)
+
+cc_binary(
+    name = "bin/catter-proxy",
+    srcs = glob([
+        "src/proxy/*.cc",
+        "src/proxy/*.h",
+    ]),
+    copts = COPTS,
+    features = ["generate_dsym_file"],
+    linkopts = LINKOPTS,
+    deps = [
+        ":capture_inject",
+        "@kotatsu//:deco",
+    ],
+)
+
+# Prints the schema the SDKs' protocol types are generated from
+# (`pixi run -e dev protocol`).
+cc_binary(
+    name = "catter-protocol-schema",
+    srcs = ["src/protocol/schema.cc"],
+    copts = COPTS,
+    deps = [":protocol"],
+)
+
+# The hook payloads, loaded into every process of the build, keep their
+# symbols hidden and carry a C++ runtime of their own, xclang's libc++, so
+# that nothing they bring can clash with the host program's.
+
+UNIX = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+WINDOWS = ["@platforms//os:windows"]
+
+cc_library(
+    name = "hook_unix",
+    srcs = glob(["src/hook/unix/*.cc"]),
+    hdrs = glob(["src/hook/unix/*.h"]),
+    copts = COPTS + [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+        "-ffunction-sections",
+        "-fdata-sections",
+    ],
+    linkopts = select({
+        "@platforms//os:linux": ["-ldl"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = UNIX,
+    deps = [
+        ":support",
+        "@kotatsu//:sys",
+    ],
+)
+
+# Exports the exec-family functions it hooks (exports.map) on Linux, and
+# nothing on macOS, where it interposes them.
+cc_binary(
+    name = "catter-hook-unix",
+    srcs = ["src/hook/unix/inject/lib.cc"],
+    additional_linker_inputs = ["src/hook/unix/inject/exports.map"],
+    copts = COPTS + [
+        "-fvisibility=hidden",
+        "-fvisibility-inlines-hidden",
+    ],
+    linkopts = LINKOPTS + select({
+        "@platforms//os:macos": [
+            "-Wl,-exported_symbols_list,/dev/null",
+            "-Wl,-dead_strip",
+        ],
+        "//conditions:default": [
+            "-Wl,--version-script=$(location src/hook/unix/inject/exports.map)",
+            "-Wl,--gc-sections",
+        ],
+    }),
+    linkshared = True,
+    tags = ["manual"],
+    target_compatible_with = UNIX,
+    deps = [":hook_unix"],
+)
+
+payload(
+    name = "hook_unix_payload",
+    binary = ":catter-hook-unix",
+    file = select({
+        "@platforms//os:macos": "libcatter-hook-unix.dylib",
+        "//conditions:default": "libcatter-hook-unix.so",
+    }),
+    target_compatible_with = UNIX,
+)
+
+cc_library(
+    name = "hook_windows",
+    srcs = ["src/hook/windows/util.cc"],
+    hdrs = ["src/hook/windows/util.h"],
+    copts = COPTS + ["-fno-rtti"],
+    target_compatible_with = WINDOWS,
+    deps = [
+        ":support",
+        "@kotatsu//:fs",
+        "@kotatsu//:sys",
+    ],
+)
+
+# Exports the ordinal 1 of Detours' DLLs (exports.def), which catter-proxy
+# adds to a process's import table, and nothing else.
+cc_binary(
+    name = "catter-hook-windows",
+    srcs = ["src/hook/windows/main.cc"],
+    additional_linker_inputs = ["src/hook/windows/exports.def"],
+    copts = COPTS + ["-fno-rtti"],
+    # lld's MinGW driver takes a .def input as the only exports.
+    linkopts = LINKOPTS + ["$(location src/hook/windows/exports.def)"],
+    linkshared = True,
+    tags = ["manual"],
+    target_compatible_with = WINDOWS,
+    deps = [
+        ":hook_windows",
+        "@detours",
+    ],
+)
+
+# The DLL of every architecture a Windows build's processes have, built
+# by each Windows build: catter-proxy injects into a process the one of its
+# machine (src/capture/inject/windows/inject.cc).
+[payload(
+    name = "hook_%s_payload" % arch,
+    binary = ":catter-hook-windows",
+    file = "catter-hook-%s.dll" % arch,
+    platform = "@xclang//platforms:" + triple,
+    target_compatible_with = WINDOWS,
+) for arch, triple in [
+    ("x64", "x86_64-w64-mingw32"),
+    ("arm64", "aarch64-w64-mingw32"),
+]]
+
+PAYLOADS = select({
+    "@platforms//os:windows": [
+        ":hook_x64_payload",
+        ":hook_arm64_payload",
+    ],
+    "//conditions:default": [":hook_unix_payload"],
+})
+
+# The unit tests, in three programs: catter's, and each payload's, which
+# compile its sources in.
+
+cc_binary(
+    name = "bin/unittests",
+    srcs = glob(
+        [
+            "unittests/**/*.cc",
+            "unittests/**/*.h",
+        ],
+        exclude = ["unittests/hook/**"],
+    ),
+    copts = COPTS + ["-Iunittests"],
+    linkopts = LINKOPTS,
+    deps = [
+        ":capture",
+        ":feature",
+        ":protocol",
+        "@kotatsu//:zest",
+    ],
+)
+
+cc_binary(
+    name = "bin/unittests-hook-unix",
+    srcs = [
+        "unittests/main.cc",
+        "unittests/utils/temp_file_manager.h",
+    ] + glob(["unittests/hook/unix/**/*.cc"]),
+    copts = COPTS + ["-Iunittests"],
+    linkopts = LINKOPTS,
+    target_compatible_with = UNIX,
+    deps = [
+        ":hook_unix",
+        "@kotatsu//:zest",
+    ],
+)
+
+cc_binary(
+    name = "bin/unittests-hook-windows",
+    srcs = ["unittests/main.cc"] + glob(["unittests/hook/windows/**/*.cc"]),
+    copts = COPTS + ["-Iunittests"],
+    linkopts = LINKOPTS,
+    target_compatible_with = WINDOWS,
+    deps = [
+        ":hook_windows",
+        "@kotatsu//:zest",
+    ],
+)
+
+asan_runtime(
+    name = "asan_runtime",
+    runtime = "libclang_rt.asan_osx_dynamic.dylib",
+    tags = ["manual"],
+)
+
+# What `pixi run -e dev build` builds: the programs, the payloads, the unit
+# tests and the schema of the protocol.
+filegroup(
+    name = "dist",
+    srcs = [
+        ":bin/catter",
+        ":bin/catter-proxy",
+        ":bin/unittests",
+        ":catter-protocol-schema",
+    ] + PAYLOADS + select({
+        "@platforms//os:windows": [":bin/unittests-hook-windows"],
+        "//conditions:default": [":bin/unittests-hook-unix"],
+    }) + select({
+        "//bazel:asan_macos": [":asan_runtime"],
+        "//conditions:default": [],
+    }),
+)
+
+release_packages(
+    payloads = select({
+        "@platforms//os:windows": [
+            ":hook_x64_payload.stripped",
+            ":hook_arm64_payload.stripped",
+        ],
+        "//conditions:default": [":hook_unix_payload.stripped"],
+    }),
+    programs = [
+        "bin/catter",
+        "bin/catter-proxy",
+    ],
+)

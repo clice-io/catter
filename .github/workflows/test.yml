@@ -1,5 +1,9 @@
 name: test
 
+# Every target and build type CI builds, each in test-target.yml. The Windows
+# targets build on Linux, whose runners build them several times faster, and
+# run their suites on Windows.
+
 on:
   workflow_call:
 
@@ -12,51 +16,52 @@ jobs:
     with:
       os: ubuntu-24.04
       target: x86_64-unknown-linux-gnu
-      package: package-ubuntu-24.04
+      package: true
 
   linux-x64-debug:
     uses: ./.github/workflows/test-target.yml
     with:
       os: ubuntu-24.04
       target: x86_64-unknown-linux-gnu
-      mode: debug
+      build_type: Debug
 
   macos-arm64:
     uses: ./.github/workflows/test-target.yml
     with:
       os: macos-15
       target: aarch64-apple-darwin
-      package: package-macos-15
+      package: true
 
   macos-arm64-debug:
     uses: ./.github/workflows/test-target.yml
     with:
       os: macos-15
       target: aarch64-apple-darwin
-      mode: debug
+      build_type: Debug
 
-  # Windows built with xclang for MinGW.
   windows-x64:
     uses: ./.github/workflows/test-target.yml
     with:
+      build_os: ubuntu-24.04
       os: windows-2025
       target: x86_64-w64-mingw32
-      package: package-windows-2025-mingw
+      package: true
 
   windows-x64-debug:
     uses: ./.github/workflows/test-target.yml
     with:
+      build_os: ubuntu-24.04
       os: windows-2025
       target: x86_64-w64-mingw32
-      mode: debug
+      build_type: Debug
 
-  # Cross-built on x64, a faster machine than the Windows on ARM runner. The
-  # cases' programs are x64 (vcvars64) and the system's arm64, so the build's
-  # processes mix both hook DLLs.
+  # The cases' programs are x64 (vcvars64) and the system's arm64, so the
+  # build's processes mix both hook DLLs. Windows on ARM has no ASan, so no
+  # Debug build.
   windows-arm64:
     uses: ./.github/workflows/test-target.yml
     with:
-      build_os: windows-2025
+      build_os: ubuntu-24.04
       os: windows-11-arm
       target: aarch64-w64-mingw32
-      package: package-windows-11-arm-mingw
+      package: true

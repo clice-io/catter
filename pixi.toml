@@ -17,61 +17,15 @@ platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [dependencies]
 pnpm = "*"
-# From xclang (clice-io/xclang): the option tables of clang, lld, llvm-lib
-# and llvm-dlltool, and the toolchain whose clang builds catter on macOS and
-# Windows.
-llvm-option-inc = "==23.1.3.4"
+# The LLVM tools the artifact check runs (scripts/check_artifact_deps.py), of
+# the xclang release MODULE.bazel builds with (clice-io/xclang).
 xclang = "==23.1.3.4"
 
+# The compilers the cases build with on Linux (tests/builds).
 [target.linux-64.dependencies]
 sysroot_linux-64 = "==2.17"
 gcc = "==14.2.0"
 gxx = "==14.2.0"
-
-[target.linux.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "gcc"
-
-[target.osx.activation.env]
-CATTER_DEFAULT_TOOLCHAIN = "clang"
-
-# Windows builds with xclang for MinGW: x86_64-w64-mingw32, or
-# aarch64-w64-mingw32 with arch=arm64.
-[target.win-64.tasks.cfg]
-args = [
-    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-    { arg = "arch", choices = ["x86_64", "arm64"], default = "x86_64" },
-]
-cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --plat=mingw --arch={{ arch }} \
---toolchain=llvm --sdk=$CONDA_PREFIX/opt/xclang"""
-
-# What the CI build job of aarch64-w64-mingw32 runs, on x64 Windows: the
-# build alone. Its unit tests and cases run on Windows on ARM, on the
-# programs it uploads (.github/workflows/test-target.yml).
-[target.win-64.tasks.ci-cross-build]
-args = [
-    { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
-]
-depends-on = [
-    { task = "cfg", args = ["{{ mode }}", "arm64"] },
-    { task = "build" },
-]
-
-[feature.clang]
-platforms = ["linux-64", "osx-arm64"]
-
-[feature.clang.dependencies]
-clang = "==20.1.8"
-clangxx = "==20.1.8"
-lld = "==20.1.8"
-llvm-tools = "==20.1.8"
-compiler-rt = "==20.1.8"
-
-[feature.clang.tasks.cfg]
-args = [
-    { arg = "mode", choices = ["debug", "release"] },
-    { arg = "toolchain", choices = ["clang", "gcc"], default = "clang" },
-]
-cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain={{ toolchain }}"""
 
 [feature.dev.dependencies]
 python = ">=3.14.2,<3.15"
@@ -82,32 +36,40 @@ cmake = "==4.1.2"
 ninja = "==1.13.1"
 
 [feature.dev.tasks]
-unit-test = "xmake test --verbose"
 check-doc-translations = "node tools/docs/translations.ts check"
 report-doc-translations = "node tools/docs/translations.ts report"
 record-doc-translations = "node tools/docs/translations.ts record"
 review-doc-translations = "node tools/docs/translations.ts review --glossary=.claude/skills/translate-docs/SKILL.md"
-ut = [{ task = "unit-test" }]
+
+# The unit tests of a build type, on its programs (`build`), with no
+# arguments, as CI runs them.
+[feature.dev.tasks.unit-test]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
+cmd = "build/{{ type }}/bin/bin/unittests && build/{{ type }}/bin/bin/unittests-hook-unix"
 
 # The cases under tests/ (tests/README.md), against the catter of a build
-# mode, or shard i of n of them.
+# type, or shard i of n of them.
 [feature.dev.tasks.cases-test]
 args = [
-    { arg = "mode", choices = ["debug", "release", "releasedbg"], default = "release" },
+    { arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" },
     { arg = "shard", default = "1/1" },
 ]
-cmd = "CATTER_BUILD_MODE={{ mode }} CATTER_CASES_SHARD={{ shard }} pnpm --dir tests run cases"
+cmd = """CATTER_EXECUTABLE=$PIXI_PROJECT_ROOT/build/{{ type }}/bin/bin/catter \
+CATTER_CASES_SHARD={{ shard }} pnpm --dir tests run cases"""
 depends-on = ["npm-install"]
 
-# Configure and build a mode, then run the unit tests and the cases on it.
+# Build a type, then run the unit tests and the cases on it.
 [feature.dev.tasks.test]
-args = [
-    { arg = "mode", choices = ["debug", "release", "releasedbg"], default = "debug" },
-]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
 depends-on = [
-    { task = "ci-build", args = ["{{ mode }}"] },
-    { task = "cases-test", args = ["{{ mode }}"] },
+    { task = "build", args = ["{{ type }}"] },
+    { task = "unit-test", args = ["{{ type }}"] },
+    { task = "cases-test", args = ["{{ type }}"] },
 ]
+
+[feature.dev.target.win-64.tasks.unit-test]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
+cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
 
 # ============================================================================== #
 #                                    FORMAT                                      #
@@ -145,7 +107,6 @@ lint-python = "ruff check ."
 [environments]
 dev = ["dev"]
 format = { features = ["format"], no-default-feature = true }
-clang = { features = ["dev", "clang"] }
 
 [tasks]
 npm-install = {
@@ -159,36 +120,22 @@ npm-install = {
         "tools/package.json",
     ]
 }
-build = "xmake --verbose --diagnosis"
 
-[tasks.cfg]
-args = [
-    { arg = "mode", choices = ["debug", "release", "releasedbg"] },
-    { arg = "toolchain", choices = ["clang", "gcc", "default"], default = "default" },
-]
-cmd = """xmake config --clean --yes --test=y --mode={{ mode }} --toolchain=\
-{% if toolchain == "default" %}$CATTER_DEFAULT_TOOLCHAIN{% else %}{{ toolchain }}{% endif %}"""
-
-# What a CI build job runs: the build, the unit tests, and the check that the
-# generated SDK types are up to date. The cases run in
-# jobs of their own, on the programs it uploads
-# (.github/workflows/test-target.yml).
-[tasks.ci-build]
-args = [
-    { "arg" = "mode", "choices" = ["debug", "release", "releasedbg"] },
-]
-depends-on = [
-    { task = "cfg", args = ["{{ mode }}"] },
-    { task = "build" },
-    { task = "ut" },
-    { task = "check-protocol" },
-]
+# Into build/{{ type }}/bin/bin (.bazelrc), Bazel being npm's
+# bazelisk (package.json), which runs the release of .bazelversion. Arguments
+# after `--` go to Bazel: more targets, such as //:package and //:symbols,
+# and options, such as --platforms=@xclang//platforms:aarch64-w64-mingw32.
+[tasks.build]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
+cmd = "pnpm exec bazel build --config={{ type }} //:dist"
+depends-on = ["npm-install"]
 
 # The protocol's schema, from the messages src/protocol/protocol.h
-# defines, and the SDKs' types generated from it (sdk/generate.py), on a
-# built tree.
+# defines, and the SDKs' types generated from it (sdk/generate.py).
 [tasks.protocol]
-cmd = "xmake run catter-protocol-schema $PIXI_PROJECT_ROOT/sdk/protocol.schema.json && python sdk/generate.py"
+cmd = """pnpm exec bazel run //:catter-protocol-schema -- \
+$PIXI_PROJECT_ROOT/sdk/protocol.schema.json && python sdk/generate.py"""
+depends-on = ["npm-install"]
 
 # Fails when what `protocol` writes differs from what is checked in.
 [tasks.check-protocol]
@@ -217,7 +164,3 @@ depends-on = ["npm-install"]
 [tasks.check-testing]
 cmd = "pnpm --dir tools run check && pnpm --dir tools run test && pnpm --dir tests run check"
 depends-on = ["npm-install"]
-
-[tasks.package]
-args = [{ arg = "outputdir", default = "release-assets" }]
-cmd = "xmake pack --yes --verbose --outputdir={{ outputdir }}"

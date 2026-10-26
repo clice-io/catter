@@ -5,14 +5,14 @@
 测试分两种：C++ 单元测试，以及用例（case）：在小项目上运行构建出的 catter，把每一项输出和快照比较。
 
 ```bash
-# Run everything: configure, build, unit tests and cases (debug, or another mode)
+# Run everything: build, unit tests and cases (RelWithDebInfo, or Debug)
 pixi run -e dev test
 
-# Unit tests only
+# Unit tests only, on a build
 pixi run -e dev unit-test
 
-# Cases only, against the release build (or debug, releasedbg)
-pixi run -e dev cases-test release
+# Cases only, against the Debug build
+pixi run -e dev cases-test Debug
 ```
 
 ### 单元测试
@@ -23,11 +23,7 @@ pixi run -e dev cases-test release
 - `unittests/protocol/`、`unittests/feature/` -- handler 协议和内置功能的测试
 - `unittests/hook/` -- hook payload 的测试
 
-启用测试目标：
-
-```bash
-pixi run cfg  # or: xmake config --test=y
-```
+它们构建成 `unittests`，以及构建所针对平台的 hook payload 的 `unittests-hook-unix` 或 `unittests-hook-windows`。
 
 每个测试程序把测试分给一组 worker 进程同时运行，每个测试限时 60 秒。用到固定文件名或目录名的 suite 必须单独运行：用 `ZEST_SUITE_ATTRS(serial = true);` 标记。调试某个测试时，用 `--no-isolation --test-filter=<suite>.<test>` 让它在测试程序自己的进程里运行；其他选项见 `--help`。
 

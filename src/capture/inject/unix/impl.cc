@@ -3,13 +3,9 @@
 #include <format>
 #include <string>
 #include <string_view>
-#include <vector>
 #include <cpptrace/exceptions.hpp>
-#include <kota/fs/path.h>
 #include <kota/fs/status.h>
-#if defined(CATTER_LINUX)
-#include <link.h>
-#elif defined(CATTER_MAC)
+#if defined(CATTER_MAC)
 #include <mach-o/utils.h>
 #include <kota/fs/file.h>
 #endif
@@ -22,60 +18,7 @@
 #include "support/log.h"
 #include "support/paths.h"
 
-#if defined(__SANITIZE_ADDRESS__)
-#define CATTER_ASAN 1
-#elif defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define CATTER_ASAN 1
-#endif
-#endif
-
 namespace catter {
-
-#if defined(CATTER_LINUX) && defined(CATTER_ASAN)
-/// The sanitizer runtime this program loaded, which a sanitized hook library
-/// needs loaded before it in every program of the build.
-static std::string sanitizer_runtime() {
-    std::string runtime;
-    dl_iterate_phdr(
-        [](dl_phdr_info* info, size_t, void* data) {
-            auto name = kota::fs::path::filename(info->dlpi_name);
-            if(name.starts_with("libasan") || name.starts_with("libclang_rt.asan")) {
-                *static_cast<std::string*>(data) = info->dlpi_name;
-                return 1;
-            }
-            return 0;
-        },
-        &runtime);
-    if(runtime.empty()) {
-        throw cpptrace::runtime_error("the sanitized hook library needs a shared ASan runtime");
-    }
-    return runtime;
-}
-
-/// A build's programs are not sanitized: the runtime goes first in their
-/// preload, and leak detection, which would report their own leaks at exit,
-/// stays off unless the build set it.
-static void add_sanitizer_runtime(std::vector<std::string>& env,
-                                  std::string_view key_preload_prefix) {
-    auto preload = std::ranges::find_if(env, [&](const std::string& item) {
-        return item.starts_with(key_preload_prefix);
-    });
-    auto first = sanitizer_runtime() + catter::config::OS_PATH_SEPARATOR;
-    if(!preload->substr(key_preload_prefix.size()).starts_with(first)) {
-        preload->insert(key_preload_prefix.size(), first);
-    }
-
-    auto options = std::ranges::find_if(env, [](const std::string& item) {
-        return item.starts_with("ASAN_OPTIONS=");
-    });
-    if(options == env.end()) {
-        env.push_back("ASAN_OPTIONS=detect_leaks=0");
-    } else if(!options->contains("detect_leaks")) {
-        *options += ":detect_leaks=0";
-    }
-}
-#endif
 
 #if defined(CATTER_MAC)
 /// The architecture `executable` runs as, as dyld names it; a script runs as
@@ -140,9 +83,6 @@ kota::process::options hook_options(data::command command,
     if(!preload_injected) {
         command.env.push_back(std::format("{}={}", catter::config::KEY_PRELOAD, lib_path));
     }
-#if defined(CATTER_LINUX) && defined(CATTER_ASAN)
-    add_sanitizer_runtime(command.env, key_preload_prefix);
-#endif
     command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_COMMAND_ID, id));
     command.env.push_back(std::format("{}={}",
                                       catter::config::KEY_CATTER_PROXY_PATH,
