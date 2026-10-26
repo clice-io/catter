@@ -47,9 +47,16 @@ std::atomic<int> stood_in = -1;
 
 void pass_on(int signum, siginfo_t* info, void*) {
     // One the terminal sends, which no process does, reaches the program too,
-    // in the same foreground process group. macOS leaves si_code 0 for one
-    // kill sends: the sender tells them apart.
-    if(info->si_pid != 0) {
+    // in the same foreground process group. On Linux it is the kernel's
+    // (SI_KERNEL), and a process's has its sender's pid, but 0 for a sender
+    // outside this PID namespace, as `docker stop` is. macOS leaves si_code 0
+    // for one kill sends: the sender tells them apart.
+#ifdef CATTER_LINUX
+    const bool sent = info->si_code != SI_KERNEL;
+#else
+    const bool sent = info->si_pid != 0;
+#endif
+    if(sent) {
         ::kill(stood_in.load(), signum);
     }
 }
