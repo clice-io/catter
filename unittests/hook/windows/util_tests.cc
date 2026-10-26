@@ -1,7 +1,9 @@
+#include <format>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <kota/zest/zest.h>
+#include <kota/support/utf16.h>
 #include <kota/fs/directory.h>
 #include <kota/fs/file.h>
 #include <kota/fs/path.h>
@@ -35,51 +37,69 @@ struct ScopedEnvVar {
     }
 };
 
+/// A file `name` in directory `directory` under the current one, which goes
+/// with it.
+struct ScopedFile {
+    std::string path;
+
+    ScopedFile(std::string_view directory, std::string_view name) {
+        kota::fs::current_dir(path);
+        kota::fs::path::push(path, directory);
+        kota::fs::create_directories(path);
+        kota::fs::path::push(path, name);
+        kota::fs::write_file(path, "");
+    }
+
+    ~ScopedFile() {
+        kota::fs::remove_all(kota::fs::path::parent(path));
+    }
+};
+
+std::wstring wide(std::string_view text) {
+    std::wstring out;
+    kota::to_utf16(out, text);
+    return out;
+}
+
 ZEST_SUITE(win_payload_util) {
 ZEST_CASE(proxy_command_line_quotes_what_needs_it) {
     ScopedEnvVar proxy("CATTER_PROXY_PATH", R"(C:\Program Files\Catter\catter-proxy.exe)");
     ScopedEnvVar id("CATTER_IPC_ID", "12345");
     ScopedEnvVar pipe("CATTER_IPC_PIPE", R"(\\.\pipe\catter-ipc-1)");
+    ScopedFile tool("catter util tests", "clang-cl.exe");
 
-    auto command = ct::proxy_command_line(LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
-                                          LR"("clang-cl.exe" /c main.cc)");
+    auto command = ct::proxy_command_line(wide(tool.path).c_str(), LR"("clang-cl.exe" /c main.cc)");
 
     ZEXPECT(
         command ==
-        LR"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc \\.\pipe\catter-ipc-1 -- "clang-cl.exe" /c main.cc)");
+        wide(std::format(
+            R"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "{}" --ipc \\.\pipe\catter-ipc-1 -- "clang-cl.exe" /c main.cc)",
+            tool.path)));
 };
 
 ZEST_CASE(application_name_is_taken_from_the_current_directory) {
-    std::string expected;
-    ZEXPECT(!kota::fs::current_dir(expected));
-    kota::fs::path::push(expected, "tool.exe");
+    ScopedFile tool("catter-util-tests", "tool.exe");
 
-    ZEXPECT(ct::resolve_program(L"tool.exe", L"tool a b") == expected);
+    ZEXPECT(ct::resolve_program(LR"(catter-util-tests\tool.exe)", L"tool a b") == tool.path);
 };
 
 ZEST_CASE(command_line_path_is_taken_from_the_current_directory) {
-    std::string expected;
-    ZEXPECT(!kota::fs::current_dir(expected));
-    kota::fs::path::push(expected, "catter-util-tests");
-    ZASSERT(kota::fs::create_directories(expected).has_value());
-    kota::fs::path::push(expected, "tool.exe");
-    ZASSERT(!kota::fs::write_file(expected, ""));
+    ScopedFile tool("catter-util-tests", "tool.exe");
 
-    auto program = ct::resolve_program(nullptr, LR"(.\catter-util-tests\tool.exe a b)");
-    kota::fs::remove_all(kota::fs::path::parent(expected));
-
-    ZEXPECT(program == expected);
+    ZEXPECT(ct::resolve_program(nullptr, LR"(.\catter-util-tests\tool.exe a b)") == tool.path);
 };
 
 ZEST_CASE(command_line_program_is_looked_for_as_create_process_does) {
     auto program = ct::resolve_program(nullptr, LR"("cmd" /c echo)");
 
-    ZEXPECT(program.ends_with(R"(\cmd.exe)"));
+    ZASSERT(program.has_value());
+    ZEXPECT(program->ends_with(R"(\cmd.exe)"));
 };
 
-ZEST_CASE(program_found_nowhere_stays_as_written) {
-    ZEXPECT(ct::resolve_program(nullptr, L"catter-no-such-program a b") ==
-            "catter-no-such-program");
+ZEST_CASE(program_found_nowhere_is_left_to_create_process) {
+    ZEXPECT(ct::resolve_program(nullptr, L"catter-no-such-program a b") == std::nullopt);
+    ZEXPECT(ct::resolve_program(L"catter-no-such-program.exe", L"a b") == std::nullopt);
+    ZEXPECT(ct::proxy_command_line(nullptr, L"catter-no-such-program a b") == std::nullopt);
 };
 };  // ZEST_SUITE(win_payload_util)
 
