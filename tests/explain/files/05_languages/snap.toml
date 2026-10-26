@@ -1,0 +1,314 @@
+[test."$ catter explain -- g++ --target=x86_64-linux-gnu -x c++ -c legacy.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "legacy.c"
+    ],
+    "reads": [
+        "legacy.c"
+    ],
+    "writes": [
+        "legacy.o"
+    ],
+    "edges": [
+        {
+            "output": "legacy.o",
+            "inputs": [
+                "legacy.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "legacy.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "legacy.c",
+            "arguments": [
+                "g++",
+                "--target=x86_64-linux-gnu",
+                "-x",
+                "c++",
+                "-c",
+                "legacy.c"
+            ],
+            "output": "${WS}/legacy.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc --target=x86_64-linux-gnu -x c -c noext"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "noext"
+    ],
+    "reads": [
+        "noext"
+    ],
+    "writes": [
+        "noext.o"
+    ],
+    "edges": [
+        {
+            "output": "noext.o",
+            "inputs": [
+                "noext"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "noext.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "noext",
+            "arguments": [
+                "gcc",
+                "--target=x86_64-linux-gnu",
+                "-x",
+                "c",
+                "-c",
+                "noext"
+            ],
+            "output": "${WS}/noext.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo /c /TP legacy.c other.obj"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "legacy.c"
+    ],
+    "reads": [
+        "legacy.c",
+        "other.obj"
+    ],
+    "writes": [
+        "legacy.obj"
+    ],
+    "edges": [
+        {
+            "output": "legacy.obj",
+            "inputs": [
+                "legacy.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "legacy.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "legacy.c",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/TP",
+                "legacy.c",
+                "other.obj"
+            ],
+            "output": "${WS}/legacy.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang --target=x86_64-linux-gnu -c greet.cppm start.S util.m kernel.cu"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "greet.cppm",
+        "start.S",
+        "util.m",
+        "kernel.cu"
+    ],
+    "reads": [
+        "greet.cppm",
+        "start.S",
+        "util.m",
+        "kernel.cu"
+    ],
+    "writes": [
+        "greet.o",
+        "start.o",
+        "util.o",
+        "kernel.o"
+    ],
+    "edges": [
+        {
+            "output": "greet.o",
+            "inputs": [
+                "greet.cppm"
+            ]
+        },
+        {
+            "output": "start.o",
+            "inputs": [
+                "start.S"
+            ]
+        },
+        {
+            "output": "util.o",
+            "inputs": [
+                "util.m"
+            ]
+        },
+        {
+            "output": "kernel.o",
+            "inputs": [
+                "kernel.cu"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "greet.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "start.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "util.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "kernel.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "greet.cppm",
+            "arguments": [
+                "clang",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "greet.cppm",
+                "start.S",
+                "util.m",
+                "kernel.cu"
+            ],
+            "output": "${WS}/greet.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "start.S",
+            "arguments": [
+                "clang",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "greet.cppm",
+                "start.S",
+                "util.m",
+                "kernel.cu"
+            ],
+            "output": "${WS}/start.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "util.m",
+            "arguments": [
+                "clang",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "greet.cppm",
+                "start.S",
+                "util.m",
+                "kernel.cu"
+            ],
+            "output": "${WS}/util.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "kernel.cu",
+            "arguments": [
+                "clang",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "greet.cppm",
+                "start.S",
+                "util.m",
+                "kernel.cu"
+            ],
+            "output": "${WS}/kernel.o"
+        }
+    ]
+}
+'''
+exit = 0

@@ -8,7 +8,6 @@ import catter.command;
 import :feature.compilation_database;
 import :feature.compile_commands;
 import :feature.descendants;
-import :feature.flat_tree;
 import :feature.json;
 import :feature.path;
 import :feature.text;
@@ -18,9 +17,6 @@ import :session.handler;
 namespace catter::feature {
 
 namespace {
-
-using kota::codec::dyn::Array;
-using kota::codec::dyn::Object;
 
 /// `argument` as a command line shows it: as it is when plain, else as a JSON string.
 std::string quote_argument(std::string_view argument) {
@@ -120,16 +116,17 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const Er
                        error.message);
 }
 
-/// Writes the compilation database of the compiler commands of a build: an entry per source
-/// file a compile reads and object it writes, which, when a command feeds another, names the
-/// output of the command that compiles the source, not the build's final target.
+/// Writes the compilation database of the compiler commands of a build: the entries of each
+/// command, each of the source and the arguments of that command, but of a source another
+/// compile writes.
 class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
 
     kota::task<std::optional<Build>> on_start(Build build) override {
         output_path = options.output.value_or("build/compile_commands.json");
-        cwd = build.cwd;
+        // A database catter cannot merge into ends the session before the build, not after.
+        database.emplace(output_path, build.cwd, !*options.replace);
         verbose_log(std::format(
             "CDB verbose logging enabled.\n  Output file: {}\n  Existing entries: {}\n  Resolver diagnostics: enabled",
             output_path,
@@ -153,24 +150,11 @@ public:
         verbose_log(success_log(id, command, *analysis));
         compiler_commands.insert(id);
 
-        for(const auto& read: analysis->reads) {
-            if(read.role == InputRole::Source && read.path != "-") {
-                sources[absolute_path(command.cwd, read.path)] = read.path;
-            }
-        }
+        std::ranges::move(entries_of(command.cwd, *analysis), std::back_inserter(found));
         for(const auto& write: analysis->writes) {
-            if(write.path == "-") {
-                continue;
+            if(write.path != "-") {
+                written.insert(absolute_path(command.cwd, write.path));
             }
-            auto output = absolute_path(command.cwd, write.path);
-            tree.merge(output, {});
-            for(auto read: write.reads) {
-                if(analysis->reads[read].path != "-") {
-                    tree.merge(absolute_path(command.cwd, analysis->reads[read].path), {}, output);
-                }
-            }
-            producers[output].push_back(
-                Producer{.cwd = command.cwd, .argv = analysis->expansion.argv});
         }
         descendants.leave_out_descendants_of(id);
         co_return Action{};
@@ -211,14 +195,6 @@ public:
     }
 
 private:
-    /// A command that writes a file: where it runs and its argv, those of the file's entries,
-    /// with its response files read in, which build tools delete once it has run (MSBuild).
-    struct Producer {
-        std::string cwd;
-
-        std::vector<std::string> argv;
-    };
-
     void log(std::string_view message) const {
         if(!*options.quiet) {
             std::println("{}", kota::replace_invalid_utf8(message));
@@ -231,60 +207,28 @@ private:
         }
     }
 
-    /// The entries of the build: one per object a source is compiled to, and command that does,
-    /// for each source the tree holds as a leaf.
-    std::vector<JSON> entries() {
-        tree.assemble();
-        std::vector<JSON> entries;
-        for(const auto& node: tree.nodes()) {
-            if(!node.children.empty()) {
-                continue;
-            }
-            auto source = sources.find(node.id);
-            if(source == sources.end()) {
-                continue;
-            }
-            for(const auto& output: node.parents) {
-                auto made = producers.find(output);
-                if(made == producers.end()) {
-                    continue;
-                }
-                for(const auto& producer: made->second) {
-                    Array arguments;
-                    for(const auto& argument: producer.argv) {
-                        arguments.push_back(JSON(std::string_view(argument)));
-                    }
-                    entries.push_back(Object{
-                        {"directory", producer.cwd        },
-                        {"file",      source->second      },
-                        {"arguments", std::move(arguments)},
-                        {"output",    output              },
-                    });
-                }
-            }
-        }
-        return entries;
-    }
-
     void save() {
-        auto generated = entries();
+        std::size_t generated = 0;
+        std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
-        for(const auto& entry: generated) {
-            files.insert(entry.as_object().find("file")->as_string());
+        for(auto& entry: found) {
+            const auto& object = entry.as_object();
+            const auto file = object.find("file")->as_string();
+            if(written.contains(absolute_path(object.find("directory")->as_string(), file))) {
+                continue;
+            }
+            generated += 1;
+            outputs += object.find("output") != nullptr ? 1 : 0;
+            files.insert(file);
+            database->add(entry);
         }
         verbose_log(std::format(
             "Generated {} entries for {} source files; {} entries include an output path.",
-            generated.size(),
+            generated,
             files.size(),
-            generated.size()));
-
-        const auto inherit = !*options.replace;
-        CompilationDatabase database(output_path, cwd, inherit);
-        for(auto& entry: generated) {
-            database.add(std::move(entry));
-        }
-        const auto& file = database.save();
-        log(std::format("CDB saved to {} with {} entries.", file, database.entries().size()));
+            outputs));
+        const auto& file = database->save();
+        log(std::format("CDB saved to {} with {} entries.", file, database->entries().size()));
     }
 
 private:
@@ -292,19 +236,16 @@ private:
 
     std::string output_path;
 
-    /// The working directory, which a relative output path is from.
-    std::string cwd;
+    /// The database the entries go to: those it holds when the build starts, and the build's.
+    std::optional<CompilationDatabase> database;
 
     Descendants descendants;
 
-    /// The files of the build: each output linked to the inputs it is made from.
-    FlatTree<std::string, std::monostate> tree;
+    /// The entries of the build's commands, in the order the commands came.
+    std::vector<JSON> found;
 
-    /// The sources compiles read, as they name them, by their absolute paths.
-    std::unordered_map<std::string, std::string> sources;
-
-    /// The commands that write each output.
-    std::unordered_map<std::string, std::vector<Producer>> producers;
+    /// The files the build's compiles write, absolute.
+    std::unordered_set<std::string> written;
 
     /// The commands analyzed as compilers.
     std::unordered_set<data::ipcid_t> compiler_commands;

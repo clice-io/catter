@@ -1,3 +1,2 @@
-gcc -x assembler -c a.s
 gcc -c -
 cl /nologo /c a.cc /link /out:a.exe

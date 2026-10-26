@@ -1,0 +1,14 @@
+[
+  {
+    "directory": "${WS}",
+    "file": "a.c",
+    "arguments": ["gcc", "-c", "a.c", "-o", "s.o"],
+    "output": "s.o"
+  },
+  {
+    "directory": "${WS}",
+    "file": "a.c",
+    "arguments": ["gcc", "-fPIC", "-c", "a.c", "-o", "p.o"],
+    "output": "p.o"
+  }
+]

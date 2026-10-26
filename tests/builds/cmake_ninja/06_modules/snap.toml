@@ -24,8 +24,58 @@ greet.cppm
 exit = 0
 
 [test."compile_commands.json"]
-wrong = "the module interface greet.cppm gets no entry (catter#131), and main.cc's dependency scan, a preprocess, gets one (catter#118)"
+wrong = "the dependency scans of greet.cppm and main.cc, preprocesses, get entries (catter#118)"
 entries = [
+    {
+        file = "${WS}/greet.cppm",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/modules.dir/greet.cppm.o",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-std=gnu++20",
+            "-MD",
+            "-MT",
+            "CMakeFiles/modules.dir/greet.cppm.o",
+            "-MF",
+            "CMakeFiles/modules.dir/greet.cppm.o.d",
+            "-fmodules-ts",
+            "-fmodule-mapper=CMakeFiles/modules.dir/greet.cppm.o.modmap",
+            "-MD",
+            "-fdeps-format=p1689r5",
+            "-x",
+            "c++",
+            "-o",
+            "CMakeFiles/modules.dir/greet.cppm.o",
+            "-c",
+            "${WS}/greet.cppm",
+        ],
+    },
+    {
+        file = "${WS}/greet.cppm",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/modules.dir/greet.cppm.o.ddi.i",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-std=gnu++20",
+            "-E",
+            "-x",
+            "c++",
+            "${WS}/greet.cppm",
+            "-MT",
+            "CMakeFiles/modules.dir/greet.cppm.o.ddi",
+            "-MD",
+            "-MF",
+            "CMakeFiles/modules.dir/greet.cppm.o.ddi.d",
+            "-fmodules-ts",
+            "-fdeps-file=CMakeFiles/modules.dir/greet.cppm.o.ddi",
+            "-fdeps-target=CMakeFiles/modules.dir/greet.cppm.o",
+            "-fdeps-format=p1689r5",
+            "-o",
+            "CMakeFiles/modules.dir/greet.cppm.o.ddi.i",
+        ],
+    },
     {
         file = "${WS}/main.cc",
         directory = "${WS}/build",
@@ -79,7 +129,7 @@ entries = [
 ]
 
 [test."compile_commands.json".win32]
-wrong = "greet.cppm gets no entry (catter#131), and main.cc's dependency scan gets one (catter#118)"
+wrong = "the dependency scans of greet.cppm and main.cc get entries (catter#118)"
 entries = [
     {
         file = "${WS}/main.cc",

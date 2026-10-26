@@ -148,7 +148,6 @@ stdout = '''
 exit = 0
 
 [test."$ catter explain -- gcc -fsyntax-only a.c"]
-wrong = "a compile that writes no object gets no entry (catter#132)"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -170,13 +169,23 @@ stdout = '''
     ],
     "writes": [],
     "edges": [],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-fsyntax-only",
+                "a.c"
+            ]
+        }
+    ]
 }
 '''
 exit = 0
 
 [test."$ catter explain -- gcc -fsyntax-only a.c".darwin]
-wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
+differs = "a command that names no target compiles for the host"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -204,7 +213,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter explain -- gcc -fsyntax-only a.c".win32]
-wrong = "a compile that writes no object gets no entry (catter#132); a command that names no target compiles for the host"
+differs = "a command that names no target compiles for the host"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -879,7 +888,19 @@ stdout = '''
             ]
         }
     ],
-    "entries": []
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-E",
+                "a.c",
+                "-o",
+                "-"
+            ]
+        }
+    ]
 }
 '''
 exit = 0

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [{ "id": 1, "exe": "gcc", "argv": ["gcc", "-O2", "-c", "a.c", "-o", "s.o"] }],
+  "finish": { "code": 0 }
+}

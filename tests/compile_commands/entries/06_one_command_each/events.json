@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "gcc", "argv": ["gcc", "-c", "a.c", "-o", "shared.o"] },
+    { "id": 2, "exe": "gcc", "argv": ["gcc", "-c", "b.c", "-o", "shared.o"] },
+    { "id": 3, "exe": "gcc", "argv": ["gcc", "-c", "common/util.c", "-o", "top.o"] },
+    { "id": 4, "cwd": "sub", "exe": "gcc", "argv": ["gcc", "-c", "../common/util.c", "-o", "sub.o"] }
+  ],
+  "finish": { "code": 0 }
+}

@@ -85,7 +85,6 @@ stdout = '''
 exit = 0
 
 [test."$ catter explain -- cl /nologo /c /TP a.c"]
-wrong = "a source with an explicit language gets no reads or writes (catter#131)"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -101,26 +100,43 @@ stdout = '''
         "artifactModel": "coff-msvc",
         "from": "driver-default"
     },
-    "sources": [],
-    "reads": [],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
         {
-            "code": "input-candidate-rejected",
-            "message": "input candidate did not match suffix rules",
-            "path": "a.c",
-            "index": 4,
-            "source": {
-                "kind": "argument"
-            }
-        },
-        {
-            "code": "default-output-missing-input",
-            "message": "compile output has no source input to name"
+            "output": "a.obj",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/TP",
+                "a.c"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
 }
 '''
 exit = 0

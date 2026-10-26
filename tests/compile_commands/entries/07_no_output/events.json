@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "gcc", "argv": ["gcc", "-fsyntax-only", "a.c"] },
+    { "id": 2, "exe": "clang", "argv": ["clang", "--target=x86_64-linux-gnu", "b.c", "c.c"] },
+    { "id": 3, "exe": "cl", "argv": ["cl", "/nologo", "/Zs", "d.cpp"] },
+    { "id": 4, "exe": "gcc", "argv": ["gcc", "-E", "e.c"] },
+    { "id": 5, "exe": "gcc", "argv": ["gcc", "-MM", "f.c"] }
+  ],
+  "finish": { "code": 0 }
+}

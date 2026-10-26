@@ -122,7 +122,9 @@ struct Builder {
             case ID_c:
             case ID_emit_obj: compile_object(); break;
             case ID_S: compile_assembly_like(); break;
-            case ID_E: preprocess = true; break;
+            case ID_E:
+            case ID_M:
+            case ID_MM: preprocess = true; break;
             case ID_fsyntax_only: syntax_only = true; break;
             case ID_emit_llvm:
             case ID_emit_llvm_bc: compile_llvm_like(); break;

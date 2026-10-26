@@ -26,16 +26,11 @@ A relative output path is from the `-C` directory. `compile-commands` also takes
 
 ## Behavior
 
-By default, catter **merges** with an existing `compile_commands.json` if one is found at the output path. New entries for the same source file replace old ones, so you can incrementally rebuild without losing entries from previous runs.
+By default, catter **merges** with an existing `compile_commands.json` if one is found at the output path. New entries for the same source file and output replace old ones, so you can incrementally rebuild without losing entries from previous runs. An existing file catter cannot read as a database stops it before the build runs: `--replace` writes a new one over it. The database is written whole or not at all, so a run that is cut short leaves the old one.
 
 A compile's response files (`@file`) are read when the command starts, before it runs, as build tools such as MSBuild delete them once it has: its entries hold the arguments the files hold, split as the compiler splits them, with Windows' rules for MSVC's `cl`, `clang-cl` and clang in cl mode.
 
-Internally, catter:
-
-1. Intercepts each compiler invocation during the build.
-2. Analyzes the command using `CompilerAnalysis` to identify source files, output files, and compiler flags.
-3. Builds a `FlatTree` (DAG) of command relationships to track input-to-output edges.
-4. On completion, traverses the tree to leaf source files and generates one CDB entry per source file.
+Each compiler command gets an entry for each source it compiles and file it writes from it, with that command's directory, its arguments and its spelling of the source; a source it writes nothing from, as with `-fsyntax-only`, gets one without `output`. A file the build compiles into another file, such as a preprocessed `.i`, gets no entry of its own: its source's entry names the file it was made into.
 
 ## CDB Entry Format
 

@@ -231,7 +231,6 @@ std::string_view name(Diagnostic::Code code) {
         case Diagnostic::Code::DefaultOutputMissingInput: return "default-output-missing-input";
         case Diagnostic::Code::DefaultOutputUnsupportedArtifact:
             return "default-output-unsupported-artifact";
-        case Diagnostic::Code::ImplicitOutputUnresolved: return "implicit-output-unresolved";
         case Diagnostic::Code::DirectoryOutputUnsupportedArtifact:
             return "directory-output-unsupported-artifact";
         case Diagnostic::Code::AssemblyListingAmbiguousOutput:
