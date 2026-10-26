@@ -1,5 +1,6 @@
 #include "hook/windows/util.h"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <kota/support/utf16.h>
@@ -31,10 +32,19 @@ std::optional<std::string> resolve_program(const wchar_t* application_name,
             return std::nullopt;
         }
         auto directories = kota::sys::windows::create_process_directories();
-        if(!directories || kota::sys::windows::find_create_process_program(found,
-                                                                           std::string(*first),
-                                                                           *directories)) {
+        if(!directories) {
             return std::nullopt;
+        }
+        // CreateProcessW reads a name without quotes up to each blank in turn,
+        // until one names a file: C:\Program Files\tool.exe a b.
+        std::string name(*first);
+        auto end = name.size();
+        while(kota::sys::windows::find_create_process_program(found, name, *directories)) {
+            if(line.starts_with('"') || end == line.size()) {
+                return std::nullopt;
+            }
+            end = (std::min)(line.find_first_of(" \t", end + 1), line.size());
+            name = line.substr(0, end);
         }
     }
     // Relative to this process's current directory, which the child's need
