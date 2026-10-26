@@ -4,6 +4,7 @@
 #include <string_view>
 #include <kota/support/utf16.h>
 #include <kota/fs/resolve.h>
+#include <kota/fs/status.h>
 #include <kota/sys/env.h>
 #include <kota/sys/windows.h>
 
