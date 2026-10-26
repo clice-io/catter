@@ -141,6 +141,14 @@ struct Diagnostic {
     std::optional<std::uint32_t> index;
 };
 
+/// A command's arguments with the response files they name read in.
+struct Expansion {
+    /// The response files read, as named, those they name too, in the order they are read.
+    std::vector<OSString> files;
+    /// The arguments with the files read in, the program's name first.
+    std::vector<OSString> args;
+};
+
 /// What catter makes of a command that runs a compiler.
 struct CompilerAnalysis {
     /// `gcc`, `clang`, `clang-cl` or `msvc`.
@@ -151,6 +159,10 @@ struct CompilerAnalysis {
     std::string phase;
     std::string artifact;
     Target target;
+    /// Its arguments with its response files read in, which the indices of `arguments`, `reads`
+    /// and `diagnostics` count in; absent when it reads none, the indices then counting in its
+    /// own.
+    std::optional<Expansion> expansion;
     std::vector<Argument> arguments;
     std::vector<Read> reads;
     std::vector<Write> writes;

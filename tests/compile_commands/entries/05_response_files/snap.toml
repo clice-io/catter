@@ -1,0 +1,37 @@
+[posix."$ catter compile-commands -o compile_commands.json -- node build.mjs posix"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
+exit = 0
+
+[posix."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/hello",
+        arguments = [
+            "c++",
+            "-DCATTER_TEST=1",
+            '-DGREETING="hello world"',
+            "-Iinclude",
+            "src/main.cc",
+            "src/util.cc",
+            "-o",
+            "hello",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/hello",
+        arguments = [
+            "c++",
+            "-DCATTER_TEST=1",
+            '-DGREETING="hello world"',
+            "-Iinclude",
+            "src/main.cc",
+            "src/util.cc",
+            "-o",
+            "hello",
+        ],
+    },
+]

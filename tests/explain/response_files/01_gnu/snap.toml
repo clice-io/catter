@@ -1,0 +1,236 @@
+[test."$ catter explain -- gcc @flags.rsp -c src/a.c -o a.o"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "responseFiles": [
+        "flags.rsp",
+        "nested/more.rsp",
+        "nested/last.rsp"
+    ],
+    "arguments": [
+        "gcc",
+        "--target=x86_64-linux-gnu",
+        "-DX=1",
+        "-DY=two words",
+        "-Imy include",
+        "-DESCAPED=a b",
+        "-DMORE",
+        "-DLAST",
+        "-c",
+        "src/a.c",
+        "-o",
+        "a.o"
+    ],
+    "sources": [
+        "src/a.c"
+    ],
+    "reads": [
+        "src/a.c"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "src/a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "src/a.c",
+            "arguments": [
+                "gcc",
+                "--target=x86_64-linux-gnu",
+                "-DX=1",
+                "-DY=two words",
+                "-Imy include",
+                "-DESCAPED=a b",
+                "-DMORE",
+                "-DLAST",
+                "-c",
+                "src/a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- g++ -c @sources.rsp"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "responseFiles": [
+        "sources.rsp"
+    ],
+    "arguments": [
+        "g++",
+        "-c",
+        "--target=x86_64-linux-gnu",
+        "src/a.cc",
+        "src/b c.cc"
+    ],
+    "sources": [
+        "src/a.cc",
+        "src/b c.cc"
+    ],
+    "reads": [
+        "src/a.cc",
+        "src/b c.cc"
+    ],
+    "writes": [
+        "a.o",
+        "b c.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "src/a.cc"
+            ]
+        },
+        {
+            "output": "b c.o",
+            "inputs": [
+                "src/b c.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "b c.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "src/a.cc",
+            "arguments": [
+                "g++",
+                "-c",
+                "--target=x86_64-linux-gnu",
+                "src/a.cc",
+                "src/b c.cc"
+            ],
+            "output": "${WS}/a.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "src/b c.cc",
+            "arguments": [
+                "g++",
+                "-c",
+                "--target=x86_64-linux-gnu",
+                "src/a.cc",
+                "src/b c.cc"
+            ],
+            "output": "${WS}/b c.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc --target=x86_64-linux-gnu -c @gone.rsp src/a.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "src/a.c"
+    ],
+    "reads": [
+        "src/a.c"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "src/a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "diagnostics": [
+        {
+            "code": "response-file-unread",
+            "message": "response file cannot be read",
+            "path": "gone.rsp",
+            "index": 3,
+            "source": {
+                "kind": "argument"
+            }
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "src/a.c",
+            "arguments": [
+                "gcc",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "@gone.rsp",
+                "src/a.c"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0

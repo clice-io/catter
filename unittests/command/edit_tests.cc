@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "utils/response_files.h"
+
 module catter;
 
 import catter.command;
@@ -34,15 +36,20 @@ CommandEdit prepending(std::string_view flags) {
     return {.kind = CommandEdit::Kind::Prepend, .flags = split(flags)};
 }
 
-/// `command` with `edits` made, or the error.
-std::string edited(std::string_view command, std::initializer_list<CommandEdit> edits) {
+/// `command`, whose response files are `files`, with `edits` made, or the error.
+std::string edited(std::string_view command,
+                   std::initializer_list<CommandEdit> edits,
+                   const ResponseFiles& files = {}) {
     const auto argv = split(command);
-    auto analysis = analyze_compiler(argv[0], argv);
+    auto analysis = analyze_compiler(argv[0], argv, "", files);
     if(!analysis.has_value()) {
         return "analysis: " + analysis.error().message;
     }
-    auto result =
-        apply_edits(argv, analysis->arguments, syntax_of(analysis->dialect), std::vector(edits));
+    auto result = apply_edits(argv,
+                              analysis->expansion,
+                              analysis->arguments,
+                              syntax_of(analysis->dialect),
+                              std::vector(edits));
     return result.has_value() ? join(*result) : "error: " + result.error();
 }
 
@@ -107,6 +114,37 @@ ZEST_CASE(flags_that_name_no_option_are_errors) {
     ZEXPECT(edited("gcc -c a.c", {removing("a.c")}) == "error: `a.c` names no option to remove");
     ZEXPECT(edited("gcc -c a.c", {appending("-o")})
                 .starts_with("error: the flags to add do not parse"));
+};
+
+ZEST_CASE(a_response_file_no_edit_changes_stays_as_named) {
+    const ResponseFiles files{
+        .files = {
+                  {"flags.rsp", "-DX -DY"},
+                  {"empty.rsp", ""},
+                  {"cl.rsp", "/c /DX a.cc"},
+                  }
+    };
+    ZEXPECT(edited("gcc @flags.rsp -c a.c", {appending("-DZ"), prepending("-O2")}, files) ==
+            "gcc -O2 @flags.rsp -c a.c -DZ");
+    ZEXPECT(edited("cl /nologo @cl.rsp", {appending("/DY")}, files) == "cl /nologo @cl.rsp /DY");
+    ZEXPECT(edited("gcc @empty.rsp -DX -c a.c @empty.rsp", {removing("-DX")}, files) ==
+            "gcc @empty.rsp -c a.c @empty.rsp");
+    ZEXPECT(edited("gcc @gone.rsp -c a.c", {appending("-DZ")}, files) ==
+            "gcc @gone.rsp -c a.c -DZ");
+};
+
+ZEST_CASE(an_edit_among_the_arguments_of_a_response_file_puts_them_in_its_place) {
+    const ResponseFiles files{
+        .files = {
+                  {"flags.rsp", "-DX -DY @nested.rsp"},
+                  {"nested.rsp", "-DN"},
+                  {"all.rsp", "-c a.c -- b.c"},
+                  {"output.rsp", "-c a.c -o"},
+                  }
+    };
+    ZEXPECT(edited("gcc @flags.rsp -c a.c", {removing("-DX")}, files) == "gcc -DY -DN -c a.c");
+    ZEXPECT(edited("clang @all.rsp", {appending("-DZ")}, files) == "clang -c a.c -DZ -- b.c");
+    ZEXPECT(edited("gcc @output.rsp a.o -DX", {removing("-o")}, files) == "gcc -c a.c -DX");
 };
 
 };  // ZEST_SUITE(cmd_edit_tests)

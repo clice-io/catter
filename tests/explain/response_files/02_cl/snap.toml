@@ -1,0 +1,229 @@
+[test."$ catter explain -- cl /nologo @cl.rsp"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "responseFiles": [
+        "cl.rsp"
+    ],
+    "arguments": [
+        "cl",
+        "/nologo",
+        "/c",
+        "/DX=\"1\"",
+        "/DPATH=C:\\tools\\bin",
+        "/Foout dir/",
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "sources": [
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "reads": [
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "writes": [
+        "out dir/a b.obj",
+        "out dir/c.obj"
+    ],
+    "edges": [
+        {
+            "output": "out dir/a b.obj",
+            "inputs": [
+                "src/a b.cc"
+            ]
+        },
+        {
+            "output": "out dir/c.obj",
+            "inputs": [
+                "src/c.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "src/a b.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/DX=\"1\"",
+                "/DPATH=C:\\tools\\bin",
+                "/Foout dir/",
+                "src/a b.cc",
+                "src/c.cc"
+            ],
+            "output": "${WS}/out dir/a b.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "src/c.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/DX=\"1\"",
+                "/DPATH=C:\\tools\\bin",
+                "/Foout dir/",
+                "src/a b.cc",
+                "src/c.cc"
+            ],
+            "output": "${WS}/out dir/c.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang --driver-mode=cl @cl.rsp"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "responseFiles": [
+        "cl.rsp"
+    ],
+    "arguments": [
+        "clang",
+        "--driver-mode=cl",
+        "/c",
+        "/DX=\"1\"",
+        "/DPATH=C:\\tools\\bin",
+        "/Foout dir/",
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "sources": [
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "reads": [
+        "src/a b.cc",
+        "src/c.cc"
+    ],
+    "writes": [
+        "out dir/a b.obj",
+        "out dir/c.obj"
+    ],
+    "edges": [
+        {
+            "output": "out dir/a b.obj",
+            "inputs": [
+                "src/a b.cc"
+            ]
+        },
+        {
+            "output": "out dir/c.obj",
+            "inputs": [
+                "src/c.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "src/a b.cc",
+            "arguments": [
+                "clang",
+                "--driver-mode=cl",
+                "/c",
+                "/DX=\"1\"",
+                "/DPATH=C:\\tools\\bin",
+                "/Foout dir/",
+                "src/a b.cc",
+                "src/c.cc"
+            ],
+            "output": "${WS}/out dir/a b.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "src/c.cc",
+            "arguments": [
+                "clang",
+                "--driver-mode=cl",
+                "/c",
+                "/DX=\"1\"",
+                "/DPATH=C:\\tools\\bin",
+                "/Foout dir/",
+                "src/a b.cc",
+                "src/c.cc"
+            ],
+            "output": "${WS}/out dir/c.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang-cl @inputs.rsp"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang-cl",
+    "dialect": "msvc",
+    "phase": "link",
+    "artifact": "exe",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "responseFiles": [
+        "inputs.rsp"
+    ],
+    "arguments": [
+        "clang-cl",
+        "src/a.obj",
+        "src/b.obj",
+        "/link",
+        "/out:my app.exe"
+    ],
+    "sources": [],
+    "reads": [
+        "src/a.obj",
+        "src/b.obj"
+    ],
+    "writes": [
+        "my app.exe"
+    ],
+    "edges": [
+        {
+            "output": "my app.exe",
+            "inputs": [
+                "src/a.obj",
+                "src/b.obj"
+            ]
+        }
+    ],
+    "entries": []
+}
+'''
+exit = 0

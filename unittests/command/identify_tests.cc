@@ -116,7 +116,7 @@ constexpr Case uppercase_compilers[] = {
 void expect_identified(std::string_view executable, std::optional<Compiler> compiler) {
     ZEST_CONTEXT("executable: {}", executable);
     const std::vector<std::string> argv = {std::string(executable), "-c", "a.c"};
-    auto analysis = analyze_compiler(executable, argv);
+    auto analysis = analyze_compiler(executable, argv, "", kota::fs::read_file);
     const bool nvcc = compiler == Compiler::NVCC;
     if(compiler.has_value() && !nvcc) {
         ZASSERT(analysis.has_value());
@@ -150,7 +150,7 @@ ZEST_CASE(uppercase_names_match_only_on_windows) {
 
 ZEST_CASE(versioned_clang_names_no_target) {
     const std::vector<std::string> argv = {"clang-20", "-c", "main.cc"};
-    auto analysis = analyze_compiler(argv[0], argv);
+    auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(analysis->identity.compiler == Compiler::Clang);
     ZEXPECT(analysis->identity.dialect == Dialect::Clang);
@@ -161,7 +161,8 @@ ZEST_CASE(versioned_clang_names_no_target) {
 
 ZEST_CASE(prefixed_clang_names_its_target) {
     const std::vector<std::string> argv = {"aarch64-linux-gnu-clang-20", "-c", "main.cc"};
-    auto analysis = analyze_compiler("/opt/bin/aarch64-linux-gnu-clang-20", argv);
+    auto analysis =
+        analyze_compiler("/opt/bin/aarch64-linux-gnu-clang-20", argv, "", kota::fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(analysis->identity.compiler == Compiler::Clang);
     ZEXPECT(analysis->identity.dialect == Dialect::Clang);
@@ -171,7 +172,10 @@ ZEST_CASE(prefixed_clang_names_its_target) {
 
 ZEST_CASE(gcc_internal_is_unsupported) {
     const std::vector<std::string> argv = {"cc1plus", "main.cc"};
-    auto analysis = analyze_compiler("/usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus", argv);
+    auto analysis = analyze_compiler("/usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus",
+                                     argv,
+                                     "",
+                                     kota::fs::read_file);
     ZASSERT(!analysis.has_value());
     ZEXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
     ZEXPECT(!analysis.error().message.contains("nvcc"));

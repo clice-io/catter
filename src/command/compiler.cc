@@ -80,7 +80,9 @@ std::optional<Identity> identify(std::string_view executable) {
 }
 
 std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executable,
-                                                        std::span<const std::string> argv) {
+                                                        std::span<const std::string> argv,
+                                                        std::string_view directory,
+                                                        ReadFile read) {
     auto identity = identify(executable);
     if(!identity.has_value()) {
         return std::unexpected(Error{
@@ -94,11 +96,17 @@ std::expected<CompilerAnalysis, Error> analyze_compiler(std::string_view executa
             .message = "compiler dialect is not supported yet: nvcc",
         });
     }
-    auto parsed = parse(*identity, argv);
+    // clang reads `--driver-mode` before its response files, to know how to split them.
+    const bool cl =
+        identity->dialect == Dialect::MSVC ||
+        (identity->dialect == Dialect::Clang && std::ranges::contains(argv, "--driver-mode=cl"));
+    auto expansion =
+        expand_response_files(argv, directory, cl ? Quoting::Windows : Quoting::GNU, read);
+    auto parsed = parse(*identity, expansion.argv);
     if(!parsed.has_value()) {
         return std::unexpected(std::move(parsed.error()));
     }
-    return resolve(std::move(*identity), std::move(*parsed));
+    return resolve(std::move(*identity), std::move(expansion), std::move(*parsed));
 }
 
 std::string_view name(Compiler compiler) {
@@ -212,6 +220,7 @@ std::string_view name(Diagnostic::Code code) {
             return "directory-output-unsupported-artifact";
         case Diagnostic::Code::AssemblyListingAmbiguousOutput:
             return "assembly-listing-ambiguous-output";
+        case Diagnostic::Code::ResponseFileUnread: return "response-file-unread";
     }
     std::unreachable();
 }

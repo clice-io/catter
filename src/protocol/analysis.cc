@@ -58,6 +58,12 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
                      },
         .arguments = arguments_of(analysis.arguments, syntax_of(analysis.dialect)),
     };
+    if(!analysis.expansion.files.empty()) {
+        message.expansion = protocol::Expansion{
+            .files = protocol::to_os_string(analysis.expansion.files),
+            .args = protocol::to_os_string(analysis.expansion.argv),
+        };
+    }
     for(const auto& read: analysis.reads) {
         message.reads.push_back({
             .path = protocol::to_os_string(read.path),
@@ -92,9 +98,11 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
 
 }  // namespace
 
-CommandAnalysis::CommandAnalysis(std::string_view executable, std::span<const std::string> argv) {
+CommandAnalysis::CommandAnalysis(std::string_view executable,
+                                 std::span<const std::string> argv,
+                                 std::string_view cwd) {
     if(auto identity = identify(executable)) {
-        auto compiler = analyze_compiler(executable, argv);
+        auto compiler = analyze_compiler(executable, argv, cwd, kota::fs::read_file);
         if(compiler.has_value()) {
             result = std::move(*compiler);
         } else {
@@ -186,15 +194,9 @@ std::optional<protocol::Analysis> CommandAnalysis::message() const {
 std::expected<std::vector<std::string>, std::string>
     CommandAnalysis::edit(std::span<const std::string> argv,
                           std::span<const protocol::CommandEdit> edits) const {
-    std::optional<Syntax> syntax;
-    std::span<const Argument> arguments;
-    if(auto* compiler = std::get_if<CompilerAnalysis>(&result)) {
-        syntax = syntax_of(compiler->dialect);
-        arguments = compiler->arguments;
-    } else if(auto* tool = std::get_if<ToolAnalysis>(&result)) {
-        syntax = syntax_of(tool->tool);
-        arguments = tool->arguments;
-    } else {
+    auto* compiler = std::get_if<CompilerAnalysis>(&result);
+    auto* tool = std::get_if<ToolAnalysis>(&result);
+    if(compiler == nullptr && tool == nullptr) {
         return std::unexpected(
             "catter reads no arguments of the command to edit: give it whole with `modify`");
     }
@@ -219,7 +221,14 @@ std::expected<std::vector<std::string>, std::string>
         change.flags = std::move(*flags);
         changes.push_back(std::move(change));
     }
-    return apply_edits(argv, arguments, *syntax, changes);
+    if(compiler != nullptr) {
+        return apply_edits(argv,
+                           compiler->expansion,
+                           compiler->arguments,
+                           syntax_of(compiler->dialect),
+                           changes);
+    }
+    return apply_edits(argv, tool->arguments, syntax_of(tool->tool), changes);
 }
 
 std::optional<std::string> check_filter(std::span<const protocol::Pattern> filter) {

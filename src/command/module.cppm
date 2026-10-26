@@ -14,5 +14,6 @@ export import :option.lld_wasm;
 export import :option.llvm_dlltool;
 export import :option.llvm_lib;
 export import :option.nvcc;
+export import :response_file;
 export import :syntax;
 export import :tool;

@@ -181,6 +181,25 @@ class Target:
 
 
 @dataclass
+class Expansion:
+    files: list[str]
+    args: list[str]
+
+    @staticmethod
+    def from_json(data: dict[str, Any]) -> Expansion:
+        return Expansion(
+            files=[_os_from(item) for item in data["files"]],
+            args=[_os_from(item) for item in data["args"]],
+        )
+
+    def to_json(self) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        data["files"] = [_os_to(item) for item in self.files]
+        data["args"] = [_os_to(item) for item in self.args]
+        return data
+
+
+@dataclass
 class Argument:
     option: str
     spelling: str
@@ -573,6 +592,7 @@ class CompilerAnalysis:
     reads: list[Read]
     writes: list[Write]
     diagnostics: list[Diagnostic]
+    expansion: Expansion | None = None
 
     @staticmethod
     def from_json(data: dict[str, Any]) -> CompilerAnalysis:
@@ -586,6 +606,7 @@ class CompilerAnalysis:
             reads=[Read.from_json(item) for item in data["reads"]],
             writes=[Write.from_json(item) for item in data["writes"]],
             diagnostics=[Diagnostic.from_json(item) for item in data["diagnostics"]],
+            expansion=None if data.get("expansion") is None else Expansion.from_json(data.get("expansion")),
         )
 
     def to_json(self) -> dict[str, Any]:
@@ -599,6 +620,8 @@ class CompilerAnalysis:
         data["reads"] = [item.to_json() for item in self.reads]
         data["writes"] = [item.to_json() for item in self.writes]
         data["diagnostics"] = [item.to_json() for item in self.diagnostics]
+        if self.expansion is not None:
+            data["expansion"] = self.expansion.to_json()
         return data
 
 

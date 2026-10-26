@@ -150,13 +150,14 @@ std::size_t end_of_options(std::span<const Piece> pieces, Syntax syntax) {
 
 std::expected<std::vector<std::string>, std::string>
     apply_edits(std::span<const std::string> argv,
+                const Expansion& expansion,
                 std::span<const Argument> arguments,
                 Syntax syntax,
                 std::span<const CommandEdit> edits) {
     if(argv.empty()) {
         return std::unexpected("the command has no program to edit the arguments of");
     }
-    auto base = pieces_of(argv, arguments);
+    auto base = pieces_of(expansion.argv, arguments);
     std::vector<bool> removed(base.size());
     std::vector<Piece> prepended;
     std::vector<Piece> appended;
@@ -187,24 +188,65 @@ std::expected<std::vector<std::string>, std::string>
         into.insert(into.end(), pieces->begin(), pieces->end());
     }
 
+    // The base pieces hold the elements of the expansion after argv[0], in order.
+    const auto& origins = expansion.origins;
+    const auto slot = end_of_options(base, syntax);
+    std::vector<bool> intact(argv.size(), true);
+    for(std::size_t i = 0, element = 1; i < base.size(); i += 1) {
+        if(i == slot && !appended.empty() && origins[element - 1] == origins[element]) {
+            intact[origins[element]] = false;
+        }
+        for(std::size_t end = element + base[i].elements.size(); element < end; element += 1) {
+            intact[origins[element]] = intact[origins[element]] && !removed[i];
+        }
+    }
+
     std::vector<std::string> edited{argv.front()};
     auto add = [&](const Piece& piece) {
         edited.insert(edited.end(), piece.elements.begin(), piece.elements.end());
     };
     std::ranges::for_each(prepended, add);
-    const auto slot = end_of_options(base, syntax);
-    for(std::size_t i = 0; i < base.size(); i += 1) {
+    // An element of argv whose expansion no edit changes stays as argv writes it: a response
+    // file, and one that holds no arguments.
+    std::uint32_t written = 0;
+    auto write_to = [&](std::uint32_t origin) {
+        for(; written < origin; written += 1) {
+            if(intact[written + 1]) {
+                edited.push_back(argv[written + 1]);
+            }
+        }
+    };
+    for(std::size_t i = 0, element = 1; i < base.size(); i += 1) {
         if(i == slot) {
             std::ranges::for_each(appended, add);
         }
-        if(!removed[i]) {
-            add(base[i]);
+        for(const auto& each: base[i].elements) {
+            const auto origin = origins[element];
+            write_to(origin);
+            if(!intact[origin] && !removed[i]) {
+                edited.push_back(each);
+            }
+            element += 1;
         }
     }
     if(slot == base.size()) {
         std::ranges::for_each(appended, add);
     }
+    write_to(static_cast<std::uint32_t>(argv.size() - 1));
     return edited;
+}
+
+std::expected<std::vector<std::string>, std::string>
+    apply_edits(std::span<const std::string> argv,
+                std::span<const Argument> arguments,
+                Syntax syntax,
+                std::span<const CommandEdit> edits) {
+    const Expansion expansion{
+        .argv = std::ranges::to<std::vector<std::string>>(argv),
+        .origins = std::views::iota(std::uint32_t(0), static_cast<std::uint32_t>(argv.size())) |
+                   std::ranges::to<std::vector>(),
+    };
+    return apply_edits(argv, expansion, arguments, syntax, edits);
 }
 
 }  // namespace catter

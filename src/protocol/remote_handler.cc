@@ -163,7 +163,9 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
                         kota::ipc::Error(kota::ipc::protocol::ErrorCode::InvalidParams,
                                          executable ? args.error() : executable.error()));
                 }
-                result.analyses.push_back(CommandAnalysis(*executable, *args).message());
+                // A program the handler names has no working directory: its relative response
+                // files are read from catter's.
+                result.analyses.push_back(CommandAnalysis(*executable, *args, "").message());
             }
             co_return result;
         });
@@ -319,7 +321,7 @@ kota::task<std::optional<Action>> RemoteHandler::decide(data::ipcid_t id,
                                                         data::command command) {
     std::optional<CommandAnalysis> analysis;
     if(subscription.analysis || subscription.filter) {
-        analysis.emplace(command.executable, command.args);
+        analysis.emplace(command.executable, command.args, command.cwd);
         if(subscription.filter && !analysis->matches(*subscription.filter)) {
             co_return std::nullopt;
         }
@@ -369,7 +371,7 @@ kota::task<std::optional<Action>> RemoteHandler::decide(data::ipcid_t id,
     };
     if(auto* edit = std::get_if<protocol::Edit>(&action)) {
         if(!analysis) {
-            analysis.emplace(command.executable, command.args);
+            analysis.emplace(command.executable, command.args, command.cwd);
         }
         auto args = analysis->edit(command.args, edit->edits);
         if(!args) {

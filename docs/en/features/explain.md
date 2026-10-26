@@ -53,14 +53,15 @@ catter explain -- gcc -c a.c
 }
 ```
 
-| Field                      | Meaning                                                                                                                            |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `analyzer`                 | `compiler`, `archiver`, or `null` when no analyzer recognizes the command; `errors` then says why each declined.                   |
-| `compiler`, `dialect`      | The compiler rule that matched, and the command-line syntax it is parsed with.                                                     |
-| `phase`, `artifact`        | What the command does (`preprocess`, `syntax-only`, `compile`, `link`, …) and what it produces.                                    |
-| `target`                   | The target the outputs are named for, and where it came from (`argument`, `executable-prefix`, `driver-default`, `host-fallback`). |
-| `sources`                  | The sources that get compilation database entries.                                                                                 |
-| `reads`, `writes`, `edges` | The files the command reads and writes, and which output is made from which inputs (the target tree's edges).                      |
-| `inferred`                 | Outputs the command does not name, inferred from the compiler's defaults.                                                          |
-| `diagnostics`              | What the analysis could not settle, such as an output it cannot infer.                                                             |
-| `entries`                  | The compilation database entries `compile-commands` writes for this command.                                                       |
+| Field                        | Meaning                                                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `analyzer`                   | `compiler`, `archiver`, or `null` when no analyzer recognizes the command; `errors` then says why each declined.                                   |
+| `compiler`, `dialect`        | The compiler rule that matched, and the command-line syntax it is parsed with.                                                                     |
+| `phase`, `artifact`          | What the command does (`preprocess`, `syntax-only`, `compile`, `link`, …) and what it produces.                                                    |
+| `target`                     | The target the outputs are named for, and where it came from (`argument`, `executable-prefix`, `driver-default`, `host-fallback`).                 |
+| `responseFiles`, `arguments` | The response files (`@file`) the command names, the files they name too, and its arguments with them read in; only when it names one catter reads. |
+| `sources`                    | The sources that get compilation database entries.                                                                                                 |
+| `reads`, `writes`, `edges`   | The files the command reads and writes, and which output is made from which inputs (the target tree's edges).                                      |
+| `inferred`                   | Outputs the command does not name, inferred from the compiler's defaults.                                                                          |
+| `diagnostics`                | What the analysis could not settle, such as an output it cannot infer or a response file it cannot read.                                           |
+| `entries`                    | The compilation database entries `compile-commands` writes for this command.                                                                       |
