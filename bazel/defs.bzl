@@ -24,18 +24,13 @@ COPTS = ["-Isrc"] + select({
 
 # Link optimizations in optimized builds: what the cases run is what
 # releases ship. icf=safe (not =all) so address-taken functions keep C++
-# pointer identity. On macOS every link names Foundation and the Objective-C
-# runtime (-fobjc-link-runtime), which none of catter's programs calls: the
-# hook payload would load them into every process of the build.
+# pointer identity.
 LINKOPTS = select({
     "//bazel:opt_macos": ["-Wl,--icf=safe"],
     "//bazel:opt": [
         "-Wl,--icf=safe",
         "-Wl,-O2",
     ],
-    "//conditions:default": [],
-}) + select({
-    "@platforms//os:macos": ["-Wl,-dead_strip_dylibs"],
     "//conditions:default": [],
 })
 
