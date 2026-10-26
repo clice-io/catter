@@ -6,6 +6,10 @@ module;
 #include "support/config/ipc.h"
 #include "support/paths.h"
 
+#ifndef CATTER_WINDOWS
+#include "support/config/hook_unix.h"
+#endif
+
 module catter;
 
 import :capture.replay;
@@ -135,6 +139,16 @@ public:
     kota::task<kota::process::exit_status> execute(const Build& build,
                                                    Handler& handler) const override {
         assert(!build.command.empty());
+#ifndef CATTER_WINDOWS
+        if(auto hook = program_path(config::RELATIVE_PATH_OF_HOOK_LIB);
+           hook.find_first_of(config::PRELOAD_SEPARATORS) != std::string::npos) {
+            throw cpptrace::runtime_error(std::format(
+                "catter cannot preload its hook `{}` into the build: {} splits paths at {}. Install catter in a directory whose path has none",
+                hook,
+                config::KEY_PRELOAD,
+                config::PRELOAD_SEPARATORS_NAMED));
+        }
+#endif
 
         auto pipe_name = config::session_pipe_name();
         Session::ProcessLaunchPlan launch_plan{

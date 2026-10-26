@@ -3,6 +3,7 @@ module;
 #include "modules/prelude.h"
 
 #include "support/config/catter-proxy.h"
+#include "support/config/ipc.h"
 #include "support/guard.h"
 #include "support/log.h"
 #include "support/output.h"
@@ -55,16 +56,17 @@ kota::task<exit_status> run(data::action act,
     }
 }
 
-/// The command the proxy stands in for, as it runs here.
+/// The command the proxy stands in for, as it runs here. Its working
+/// directory is empty when it cannot be read, as when the build removed it:
+/// the program starts in it all the same.
 data::command command_of(const catter::proxy::ProxyOption& opt) {
     if(!opt.args.has_value()) {
         throw cpptrace::runtime_error("missing command arguments after --");
     }
 
     data::command cmd = {.args = *opt.args};
-    if(auto error = kota::fs::current_dir(cmd.cwd)) {
-        throw cpptrace::runtime_error(
-            std::format("Failed to read the current directory: {}", error.message()));
+    if(kota::fs::current_dir(cmd.cwd)) {
+        cmd.cwd.clear();
     }
     for(const auto& [name, value]: kota::sys::environment()) {
         cmd.env.push_back(std::format("{}={}", name, value));
@@ -107,6 +109,14 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
         }
 
         auto cmd = command_of(opt);
+        if(cmd.cwd.empty()) {
+            co_await peer.report_error(
+                *opt.parent_id,
+                std::format(
+                    "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
+                    format_args(cmd.args)));
+            co_return co_await run_process(process_options(cmd), {.stand_in = true});
+        }
 
         if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
             throw cpptrace::runtime_error(
@@ -198,12 +208,6 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
 // TODO: act as a fake compiler
 int run(std::span<const std::string> argv) {
     hold_closed_streams();
-    try {
-        log::init_logger("catter-proxy.log", data_path(config::PROXY_LOG_PATH), false);
-    } catch(const std::exception&) {
-        log::mute_logger();
-    }
-
     kota::deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");
 
@@ -213,6 +217,14 @@ int run(std::span<const std::string> argv) {
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
                [&](const auto& opt) {
+                   try {
+                       log::init_logger(
+                           "catter-proxy.log",
+                           config::session_data_path(*opt.proxy_opt.ipc, config::PROXY_LOG_PATH),
+                           false);
+                   } catch(const std::exception&) {
+                       log::mute_logger();
+                   }
                    auto [status] = kota::run(proxy_main(argv, opt.proxy_opt));
                    ret = status.has_value() ? exit_like(*status) : -1;
                })

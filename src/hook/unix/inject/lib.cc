@@ -12,6 +12,11 @@
 #include "hook/unix/executor.h"
 #include "support/config/hook_unix.h"
 
+#ifdef DEBUG
+#include "hook/unix/environment.h"
+#include "support/config/ipc.h"
+#endif
+
 #define EXPORT_SYMBOL __attribute__((visibility("default")))
 
 namespace {
@@ -49,12 +54,13 @@ extern "C" EXPORT_SYMBOL void on_load() {
     if(LOADED.exchange(true))
         return;
 #ifdef DEBUG
-    try {
-        catter::log::init_logger("catter-hook",
-                                 catter::data_path(catter::config::HOOK_LOG_PATH),
-                                 false,
-                                 true);
-    } catch(const std::exception&) {
+    if(auto ipc = catter::hook::get_env_value(environment(), catter::config::KEY_CATTER_IPC)) {
+        catter::log::init_logger(
+            "catter-hook",
+            catter::config::session_data_path(ipc, catter::config::HOOK_LOG_PATH),
+            false,
+            true);
+    } else {
         catter::log::mute_logger();
     }
     std::string executable;

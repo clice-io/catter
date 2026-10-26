@@ -8,6 +8,8 @@
 
 Catter 通过 GitHub Releases 分发预编译包。前往 [GitHub Releases](https://github.com/clice-io/catter/releases) 页面，下载对应平台的压缩包，解压后将 `catter` 可执行文件所在目录加入 `PATH` 即可。
 
+在 Linux 上，请解压到路径中没有空格和冒号的目录；在 macOS 上，路径中不能有冒号：把 catter 的钩子加载进构建的环境变量（`LD_PRELOAD`、`DYLD_INSERT_LIBRARIES`）会在这些字符处拆分路径，catter 拒绝从这样的目录运行构建。
+
 预编译包当前支持的平台：
 
 | 平台    | 架构       |

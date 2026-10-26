@@ -45,7 +45,7 @@ catter 像构建那样结束：以构建的退出码退出；构建被信号结�
 
 ### 数据目录
 
-catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。
+catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）。设置了环境变量 `CATTER_HOME` 时，改用它指定的目录（须为绝对路径）。在 Linux 和 macOS 上，构建中的进程把日志写到它们所属会话的目录，不管构建步骤给它们设置了什么 `HOME` 或 `CATTER_HOME`。
 
 ## catter-proxy 命令行
 

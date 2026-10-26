@@ -1,0 +1,7 @@
+[space."$ node run.mjs \"my tools\""]
+stdout = "catter cannot preload its hook `${WS}/my tools/libcatter-hook-unix.so` into the build: LD_PRELOAD splits paths at spaces and colons. Install catter in a directory whose path has none"
+exit = 1
+
+[colon."$ node run.mjs my:tools"]
+stdout = "catter cannot preload its hook `${WS}/my:tools/libcatter-hook-unix.so` into the build: LD_PRELOAD splits paths at spaces and colons. Install catter in a directory whose path has none"
+exit = 1

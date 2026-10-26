@@ -8,6 +8,8 @@
 
 Catter is distributed as prebuilt packages on [GitHub Releases](https://github.com/clice-io/catter/releases). Download the archive for your platform, extract it, and add the directory containing the `catter` executable to your `PATH`.
 
+On Linux, extract it to a directory whose path has no space and no colon, and on macOS no colon: the variable that loads catter's hook into the build (`LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`) splits paths there, and catter refuses to run a build from such a directory.
+
 Prebuilt packages are currently available for:
 
 | Platform | Architecture |
