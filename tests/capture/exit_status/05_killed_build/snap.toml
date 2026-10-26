@@ -1,9 +1,21 @@
 [test."$ node build.mjs"]
 killed = "SIGTERM"
 
+[test."$ node build.mjs".win32]
+differs = "Windows has no signals: a program that kills itself exits with 1"
+exit = 1
+
 [test."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 Build failed with exit code 143. Printing partial command tree.
 node build.mjs
 '''
 killed = "SIGTERM"
+
+[test."$ catter tree -w 1000 -- node build.mjs".win32]
+differs = "Windows has no signals: a program that kills itself exits with 1"
+stdout = '''
+Build failed with exit code 1. Printing partial command tree.
+node build.mjs
+'''
+exit = 1

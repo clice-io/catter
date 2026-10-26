@@ -5,6 +5,11 @@ node ended by SIGTERM
 '''
 exit = 0
 
+[terminated."$ node stop.mjs SIGTERM node build.mjs".win32]
+differs = "Windows has no signals: SIGTERM ends the program at once, before it can see one"
+stdout = "node ended by SIGTERM"
+exit = 0
+
 [terminated."$ node stop.mjs SIGTERM catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 the build got SIGTERM
@@ -12,6 +17,11 @@ Build failed with exit code 143. Printing partial command tree.
 node build.mjs
 catter ended by SIGTERM
 '''
+exit = 0
+
+[terminated."$ node stop.mjs SIGTERM catter tree -w 1000 -- node build.mjs".win32]
+differs = "Windows has no signals: SIGTERM ends catter at once, and the build with it"
+stdout = "catter ended by SIGTERM"
 exit = 0
 
 [killed."$ node stop.mjs SIGKILL node build.mjs"]
