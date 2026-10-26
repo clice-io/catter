@@ -2,7 +2,7 @@
 stdout = "ran with [b'caf\\xe9', b'caf\\xe9-added']"
 stderr = '''
 command 2 has b'caf\xe9'
-error 3 is about './broken caf�'
+error 3 is about '${ENV}/bin/python -c 0 caf�'
 '''
 exit = 0
 
