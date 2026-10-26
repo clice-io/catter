@@ -2,6 +2,10 @@ module;
 
 #include "modules/prelude.h"
 
+#ifdef CATTER_WINDOWS
+#include <windows.h>
+#endif
+
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
 #include "support/guard.h"
@@ -22,6 +26,29 @@ namespace {
 using catter::data::action;
 using exit_status = kota::process::exit_status;
 
+/// Gives `opts`, which start `args`, the command line the build wrote for them,
+/// which follows `--` in this proxy's own: cmd.exe, and any other program that
+/// reads its command line itself, would read the arguments joined again.
+void keep_command_line([[maybe_unused]] kota::process::options& opts,
+                       [[maybe_unused]] std::span<const std::string> args) {
+#ifdef CATTER_WINDOWS
+    const auto& argv = kota::sys::arguments();
+    const auto dashes = std::ranges::find(argv, "--");
+    if(dashes == argv.end() ||
+       !std::ranges::equal(std::ranges::subrange(dashes + 1, argv.end()), args)) {
+        return;
+    }
+    std::string prefix;
+    kota::sys::windows::join_command_line(prefix, std::span(argv.begin(), dashes + 1));
+    prefix += ' ';
+    std::string line;
+    kota::from_utf16(line, std::wstring_view(::GetCommandLineW()));
+    if(line.starts_with(prefix)) {
+        opts.windows_command_line = line.substr(prefix.size());
+    }
+#endif
+}
+
 kota::task<exit_status> run(data::action act,
                             data::ipcid_t id,
                             std::string pipe_name,
@@ -38,10 +65,13 @@ kota::task<exit_status> run(data::action act,
     switch(act.type) {
         case action::WRAP: {
             auto opts = process_options(act.cmd);
+            keep_command_line(opts, act.cmd.args);
             co_return co_await run_process(std::move(opts), std::move(stand_in));
         }
         case action::INJECT: {
+            const auto args = act.cmd.args;
             auto opts = hook_options(std::move(act.cmd), id, pipe_name);
+            keep_command_line(opts, args);
             co_return co_await run_process(std::move(opts), std::move(stand_in));
         }
         case action::DROP: {
@@ -115,7 +145,9 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
                 std::format(
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
                     format_args(cmd.args)));
-            co_return co_await run_process(process_options(cmd), {.stand_in = true});
+            auto opts = process_options(cmd);
+            keep_command_line(opts, cmd.args);
+            co_return co_await run_process(std::move(opts), {.stand_in = true});
         }
 
         if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
@@ -179,7 +211,9 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
                  *opt.ipc,
                  ret.error().message());
         try {
-            auto opts = process_options(command_of(opt));
+            auto cmd = command_of(opt);
+            auto opts = process_options(cmd);
+            keep_command_line(opts, cmd.args);
             co_return co_await run_process(std::move(opts), {.stand_in = true});
         } catch(const std::exception& ex) {
             LOG_ERROR("Run `{}` failed: {}", format_args(argv), ex.what());
