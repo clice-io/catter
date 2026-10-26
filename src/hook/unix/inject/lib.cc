@@ -13,7 +13,6 @@
 #include "support/config/hook_unix.h"
 
 #ifdef DEBUG
-#include "hook/unix/environment.h"
 #include "support/config/ipc.h"
 #endif
 
@@ -54,7 +53,9 @@ extern "C" EXPORT_SYMBOL void on_load() {
     if(LOADED.exchange(true))
         return;
 #ifdef DEBUG
-    if(auto ipc = catter::hook::get_env_value(environment(), catter::config::KEY_CATTER_IPC)) {
+    // Read without the hook's own lookup, which logs: before the logger
+    // starts, a log goes to stdout, the program's.
+    if(auto ipc = std::getenv(catter::config::KEY_CATTER_IPC)) {
         catter::log::init_logger(
             "catter-hook",
             catter::config::session_data_path(ipc, catter::config::HOOK_LOG_PATH),
