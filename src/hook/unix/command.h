@@ -1,5 +1,4 @@
 #pragma once
-#include <filesystem>
 #include <span>
 #include <string>
 #include <string_view>
@@ -23,9 +22,7 @@ struct Command {
 ///
 /// @example /proxy_path -p self_id --exec /bin/cc -- cc -c main.cc
 [[nodiscard]]
-Command build_proxy_command(const Session& session,
-                            const std::filesystem::path& executable,
-                            ArgvRef argv);
+Command build_proxy_command(const Session& session, std::string_view executable, ArgvRef argv);
 
 /// Build the proxy error command.
 ///
@@ -33,6 +30,6 @@ Command build_proxy_command(const Session& session,
 [[nodiscard]]
 Command build_error_command(const Session& session,
                             std::string_view message,
-                            const std::filesystem::path& executable,
+                            std::string_view executable,
                             ArgvRef argv = {});
 }  // namespace catter::hook

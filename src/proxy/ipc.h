@@ -51,6 +51,13 @@ struct Peer {
         co_return co_await this->send_request<Request<RequestType::MAKE_DECISION>>(cmd);
     }
 
+#ifdef CATTER_MAC
+    void started(int64_t pid) {
+        // The program runs all the same.
+        (void)this->peer.send_notification(catter::ipc::Started::method, catter::ipc::Started{pid});
+    }
+#endif
+
     kota::task<void> finish(data::process_result result) {
         co_await this->send_request<Request<RequestType::FINISH>>(result);
         co_return;

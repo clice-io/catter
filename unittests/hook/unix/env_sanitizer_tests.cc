@@ -38,16 +38,16 @@ ZEST_CASE(removes_injected_keys_and_filters_hook_preload) {
     auto sanitized = ct::sanitize_environment(raw_env);
     auto clean_envp = sanitized.data();
 
-    EXPECT(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
-    EXPECT(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
+    ZEXPECT(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
+    ZEXPECT(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
 
     auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
-    EXPECT(cleaned_preload != nullptr);
+    ZEXPECT(cleaned_preload != nullptr);
     std::string expected_preload =
         std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
-    EXPECT(std::string_view(cleaned_preload) == expected_preload);
+    ZEXPECT(std::string_view(cleaned_preload) == expected_preload);
 
-    EXPECT(find_entry(clean_envp, "LANG") != nullptr);
+    ZEXPECT(find_entry(clean_envp, "LANG") != nullptr);
 };
 
 ZEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
@@ -60,7 +60,7 @@ ZEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     auto clean_envp = sanitized.data();
 
     auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
-    EXPECT(cleaned_preload == nullptr);
+    ZEXPECT(cleaned_preload == nullptr);
 };
 };  // ZEST_SUITE(env_sanitizer)
 

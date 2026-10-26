@@ -16,6 +16,7 @@
 #include <variant>
 #include <vector>
 #include <cpptrace/exceptions.hpp>
+#include <kota/support/utf8.h>
 #include <kota/codec/dyn/dyn.h>
 
 #include "command/compiler.h"
@@ -27,7 +28,6 @@
 #include "feature/text.h"
 #include "session/data.h"
 #include "session/handler.h"
-#include "support/encoding.h"
 
 namespace catter::feature {
 
@@ -232,7 +232,7 @@ private:
 
     void log(std::string_view message) const {
         if(!*options.quiet) {
-            std::println("{}", printable(message));
+            std::println("{}", kota::replace_invalid_utf8(message));
         }
     }
 
@@ -295,9 +295,7 @@ private:
             database.add(std::move(entry));
         }
         const auto& file = database.save();
-        log(std::format("CDB saved to {} with {} entries.",
-                        to_utf8(file),
-                        database.entries().size()));
+        log(std::format("CDB saved to {} with {} entries.", file, database.entries().size()));
     }
 
 private:

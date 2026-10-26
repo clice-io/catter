@@ -5,9 +5,9 @@
 #include <vector>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <kota/fs/path.h>
 
 #include "command/compiler.h"
-#include "support/encoding.h"
 
 using namespace catter;
 
@@ -38,7 +38,10 @@ struct Case {
 };
 
 std::string join(std::string_view directory, std::string_view name) {
-    return to_utf8((from_utf8(directory) / from_utf8(name)).lexically_normal());
+    std::string path(directory);
+    kota::fs::path::push(path, name);
+    kota::fs::path::normalize(path);
+    return path;
 }
 
 std::vector<std::string> paths(const auto& files) {
@@ -481,15 +484,15 @@ const Case cases[] = {
 void expect_analysis(const Case& expected) {
     ZEST_CONTEXT("case: {}", expected.label);
     auto analysis = analyze_compiler(expected.argv[0], expected.argv);
-    ASSERT(analysis.has_value());
-    EXPECT(analysis->phase == expected.phase);
-    EXPECT(analysis->artifact == expected.artifact);
-    EXPECT(paths(analysis->reads) == expected.reads);
-    EXPECT(paths(analysis->writes) == expected.writes);
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->phase == expected.phase);
+    ZEXPECT(analysis->artifact == expected.artifact);
+    ZEXPECT(paths(analysis->reads) == expected.reads);
+    ZEXPECT(paths(analysis->writes) == expected.writes);
     if(expected.target.has_value()) {
-        EXPECT(analysis->target.model == expected.target->model);
-        EXPECT(analysis->target.source == expected.target->source);
-        EXPECT(analysis->target.triple == expected.target->triple);
+        ZEXPECT(analysis->target.model == expected.target->model);
+        ZEXPECT(analysis->target.source == expected.target->source);
+        ZEXPECT(analysis->target.triple == expected.target->triple);
     }
 }
 
@@ -512,16 +515,16 @@ ZEST_CASE(compilers_of_each_dialect_are_analyzed) {
     };
     for(const auto& argv: commands) {
         ZEST_CONTEXT("executable: {}", argv[0]);
-        EXPECT(analyze_compiler(argv[0], argv).has_value());
+        ZEXPECT(analyze_compiler(argv[0], argv).has_value());
     }
 };
 
 ZEST_CASE(nvcc_is_unsupported) {
     const std::vector<std::string> argv = {"nvcc", "-c", "kernel.cu"};
     auto analysis = analyze_compiler(argv[0], argv);
-    ASSERT(!analysis.has_value());
-    EXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
-    EXPECT(analysis.error().message.contains("nvcc"));
+    ZASSERT(!analysis.has_value());
+    ZEXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
+    ZEXPECT(analysis.error().message.contains("nvcc"));
 };
 
 ZEST_CASE(clang_cl_rejects_gnu_modes) {
@@ -531,7 +534,7 @@ ZEST_CASE(clang_cl_rejects_gnu_modes) {
     };
     for(const auto& argv: commands) {
         ZEST_CONTEXT("option: {}", argv[1]);
-        EXPECT(!analyze_compiler(argv[0], argv).has_value());
+        ZEXPECT(!analyze_compiler(argv[0], argv).has_value());
     }
 };
 
@@ -542,23 +545,23 @@ ZEST_CASE(last_target_argument_wins) {
                                            "-c",
                                            "main.c"};
     auto analysis = analyze_compiler(argv[0], argv);
-    ASSERT(analysis.has_value());
-    EXPECT(analysis->target.triple == "x86_64-pc-windows-msvc");
-    EXPECT(analysis->target.source == TargetSource::Argument);
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->target.triple == "x86_64-pc-windows-msvc");
+    ZEXPECT(analysis->target.source == TargetSource::Argument);
 };
 
 ZEST_CASE(absolute_executable_names_default_output) {
     const std::vector<std::string> argv = {"gcc", "-c", "absolute.c"};
     auto analysis = analyze_compiler("/opt/toolchains/bin/gcc", argv);
-    ASSERT(analysis.has_value());
-    EXPECT(paths(analysis->writes) == std::vector<std::string>{"absolute.o"});
+    ZASSERT(analysis.has_value());
+    ZEXPECT(paths(analysis->writes) == std::vector<std::string>{"absolute.o"});
 };
 
 ZEST_CASE(absolute_cross_clang_names_its_target) {
     const std::vector<std::string> argv = {"x86_64-w64-mingw32-clang++.exe", "-c", "main.cpp"};
     auto analysis = analyze_compiler("C:/toolchains/bin/x86_64-w64-mingw32-clang++.exe", argv);
-    ASSERT(analysis.has_value());
-    EXPECT(analysis->target.triple == "x86_64-w64-mingw32");
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->target.triple == "x86_64-w64-mingw32");
 };
 
 };  // ZEST_SUITE(cmd_analysis_tests)

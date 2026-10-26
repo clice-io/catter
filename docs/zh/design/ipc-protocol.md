@@ -17,6 +17,8 @@ Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catt
 
 程序可能比启动它的会话活得更久：构建服务进程（sccache 服务、Gradle 守护进程）会带着早先会话的管道名为之后的构建运行命令。那个管道已经不存在时，`catter-proxy` 像没有 catter 时一样运行该命令，不捕获，并记录一条警告；在会话结束后才结束的命令保留它的退出码。
 
+`catter-proxy` 代替它启动的程序站在构建与程序之间，构建看到的代理的结束就是程序的结束：被信号结束的程序，代理也以同一个信号结束。程序启动时的信号状态与 exec 留下的一致：构建忽略的信号仍被忽略，屏蔽的仍被屏蔽。其他进程发给代理的 SIGTERM、SIGINT 或 SIGHUP 会转给程序；终端发出的信号本来就会到达程序。代理被杀死时，程序随之结束：Linux 和 Windows 上由系统结束它；macOS 没有办法把两者绑在一起，由守护进程结束它——代理通过 `started` 告诉守护进程程序的进程 ID，代理在发送 `FINISH` 之前断开时，守护进程就杀死该程序。
+
 ## 序列化
 
 所有消息使用 [Bincode](https://github.com/bincode-org/bincode) 编码，这是一种紧凑的二进制序列化格式。实现使用 `kota::ipc::BincodePeer`，它在流传输（`kota::ipc::StreamTransport`）之上提供了请求 - 响应抽象。
@@ -25,7 +27,7 @@ Catter 使用进程间通信在守护进程（`catter`）和代理实例（`catt
 
 ## 请求 - 响应模型
 
-通信遵循严格的请求 - 响应模式。客户端（代理）发送请求并等待服务端（守护进程）响应后才继续执行。每种请求类型都有明确定义的参数类型和结果类型。
+除 `started` 通知外，通信遵循严格的请求 - 响应模式。客户端（代理）发送请求并等待服务端（守护进程）响应后才继续执行。每种请求类型都有明确定义的参数类型和结果类型。
 
 协议在 `src/session/data.h` 中使用 C++ 模板特化定义：
 
@@ -88,7 +90,7 @@ enum class RequestType : uint8_t {
 **动作类型**：
 
 - **`DROP`（0）** -- 不执行命令。代理立即返回退出码 0。用于 handler 判定命令无关紧要的情况（例如用户想跳过的编译器调用）。
-- **`INJECT`（1）** -- 挂载钩子库后执行命令。代理重新添加 `LD_PRELOAD`（或在 Windows 上执行 DLL 注入），使此命令的子进程也被拦截。这是需要监控子进程的构建命令的默认动作。
+- **`INJECT`（1）** -- 挂载钩子库后执行命令。代理重新添加 `LD_PRELOAD`（或在 Windows 上执行 DLL 注入），使此命令的子进程也被拦截；钩子无法加载的程序（macOS 上 Apple 自带的工具和在 Rosetta 下运行的程序，Windows 上没有对应钩子 DLL 的架构）除外，它们不带钩子运行。这是需要监控子进程的构建命令的默认动作。
 - **`WRAP`（2）** -- 直接执行命令，不挂载钩子。代理运行命令，但不注入钩子。用于叶子命令（如实际的编译器调用），这些命令不会生成更多的构建子进程。
 - **`FAIL`（3）** -- 不执行命令：代理立即返回退出码 1。会话已因错误结束（某个 handler 中止了构建，或者自身出错），此后启动的每条命令都会这样失败，直到构建结束。
 
@@ -117,13 +119,25 @@ enum class RequestType : uint8_t {
 
 **Params** -- `process_result`：
 
-| 字段   | 类型      | 说明       |
-| ------ | --------- | ---------- |
-| `code` | `int64_t` | 进程退出码 |
+| 字段   | 类型      | 说明                                          |
+| ------ | --------- | --------------------------------------------- |
+| `code` | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号 |
 
 **Result**: `null`（无响应负载）
 
 守护进程收到此请求后，把结果告知会话的各个 handler（即 handler 协议中的 `exit`）。随后代理断开连接。
+
+### started
+
+这是一个通知而不是请求：守护进程不作响应。在 macOS 上，代理在程序运行后发送它。
+
+**Params** -- `Started`：
+
+| 字段  | 类型      | 说明          |
+| ----- | --------- | ------------- |
+| `pid` | `int64_t` | 程序的进程 ID |
+
+macOS 不像 Linux 和 Windows 那样能让子进程随父进程结束：代理在 `started` 之后、`FINISH` 之前断开，说明它被杀死了，守护进程就用 SIGKILL 杀死它的程序。
 
 ## 典型消息序列
 
@@ -139,7 +153,7 @@ Daemon -> Proxy:  true
 [Proxy exits when build finishes]
 ```
 
-注入模式的代理同样会为顶层构建命令发送 `CREATE`、`MAKE_DECISION` 和 `FINISH`，因此构建系统命令本身也会像其他被拦截的命令一样送达各个 handler。
+注入模式的代理同样会为顶层构建命令发送 `CREATE`、`MAKE_DECISION`、`started`（macOS 上）和 `FINISH`，因此构建系统命令本身也会像其他被拦截的命令一样送达各个 handler。
 
 ### 包装模式（被拦截的命令）
 
@@ -150,7 +164,9 @@ Proxy -> Daemon:  CREATE(parent_id)
 Daemon -> Proxy:  new_session_id
 Proxy -> Daemon:  MAKE_DECISION(command)
 Daemon -> Proxy:  action {type, cmd}
-[Proxy executes or drops the command]
+[Proxy starts the command, or drops it]
+Proxy -> Daemon:  started(pid)              (macOS, a notification)
+[Proxy waits for the command]
 Proxy -> Daemon:  FINISH(process_result)
 Daemon -> Proxy:  null
 [Proxy disconnects]
@@ -189,7 +205,7 @@ Session 0 (root -- injector proxy)
 2. **代理连接** -- 使用 `kota::pipe::connect()` 打开到套接字/管道的连接。
 3. **守护进程接受连接** -- 对于每个传入连接，守护进程创建一个 `kota::ipc::BincodePeer` 并为每种请求类型注册请求处理器（`on_request<Request<Type>>(...)`）。
 4. **请求处理** -- 守护进程的事件循环将传入请求分发到相应的处理器。请求处理器可以是异步的（使用 `co_await`），以等待会话的各个 handler 或其他守护进程状态。
-5. **对端断开** -- 当代理进程退出时，传输层关闭，`BincodePeer::run()` 协程完成。守护进程记录断开事件并清理会话。
+5. **对端断开** -- 当代理进程退出时，传输层关闭，`BincodePeer::run()` 协程完成。守护进程记录断开事件并清理会话；在 macOS 上，若代理在 `FINISH` 之前就已断开，守护进程会杀死它的程序。
 
 ## 数据类型
 

@@ -120,13 +120,13 @@ void expect_identified(std::string_view executable, std::optional<Compiler> comp
     auto analysis = analyze_compiler(executable, argv);
     const bool nvcc = compiler == Compiler::NVCC;
     if(compiler.has_value() && !nvcc) {
-        ASSERT(analysis.has_value());
-        EXPECT(analysis->identity.compiler == *compiler);
+        ZASSERT(analysis.has_value());
+        ZEXPECT(analysis->identity.compiler == *compiler);
         return;
     }
-    ASSERT(!analysis.has_value());
-    EXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
-    EXPECT(analysis.error().message.contains("nvcc") == nvcc);
+    ZASSERT(!analysis.has_value());
+    ZEXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
+    ZEXPECT(analysis.error().message.contains("nvcc") == nvcc);
 }
 
 }  // namespace
@@ -152,30 +152,30 @@ ZEST_CASE(uppercase_names_match_only_on_windows) {
 ZEST_CASE(versioned_clang_names_no_target) {
     const std::vector<std::string> argv = {"clang-20", "-c", "main.cc"};
     auto analysis = analyze_compiler(argv[0], argv);
-    ASSERT(analysis.has_value());
-    EXPECT(analysis->identity.compiler == Compiler::Clang);
-    EXPECT(analysis->identity.dialect == Dialect::Clang);
-    EXPECT(analysis->identity.prefix.empty());
-    EXPECT(analysis->target.source != TargetSource::ExecutablePrefix);
-    EXPECT(!analysis->target.triple.has_value());
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->identity.compiler == Compiler::Clang);
+    ZEXPECT(analysis->identity.dialect == Dialect::Clang);
+    ZEXPECT(analysis->identity.prefix.empty());
+    ZEXPECT(analysis->target.source != TargetSource::ExecutablePrefix);
+    ZEXPECT(!analysis->target.triple.has_value());
 };
 
 ZEST_CASE(prefixed_clang_names_its_target) {
     const std::vector<std::string> argv = {"aarch64-linux-gnu-clang-20", "-c", "main.cc"};
     auto analysis = analyze_compiler("/opt/bin/aarch64-linux-gnu-clang-20", argv);
-    ASSERT(analysis.has_value());
-    EXPECT(analysis->identity.compiler == Compiler::Clang);
-    EXPECT(analysis->identity.dialect == Dialect::Clang);
-    EXPECT(analysis->target.triple == "aarch64-linux-gnu");
-    EXPECT(analysis->target.source == TargetSource::ExecutablePrefix);
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->identity.compiler == Compiler::Clang);
+    ZEXPECT(analysis->identity.dialect == Dialect::Clang);
+    ZEXPECT(analysis->target.triple == "aarch64-linux-gnu");
+    ZEXPECT(analysis->target.source == TargetSource::ExecutablePrefix);
 };
 
 ZEST_CASE(gcc_internal_is_unsupported) {
     const std::vector<std::string> argv = {"cc1plus", "main.cc"};
     auto analysis = analyze_compiler("/usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus", argv);
-    ASSERT(!analysis.has_value());
-    EXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
-    EXPECT(!analysis.error().message.contains("nvcc"));
+    ZASSERT(!analysis.has_value());
+    ZEXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
+    ZEXPECT(!analysis.error().message.contains("nvcc"));
 };
 
 };  // ZEST_SUITE(cmd_identify_tests)

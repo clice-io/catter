@@ -1,7 +1,12 @@
-
+#include <optional>
 #include <string>
-#include <windows.h>
+#include <string_view>
 #include <kota/zest/zest.h>
+#include <kota/fs/directory.h>
+#include <kota/fs/file.h>
+#include <kota/fs/path.h>
+#include <kota/fs/resolve.h>
+#include <kota/sys/env.h>
 
 #include "hook/windows/util.h"
 
@@ -10,64 +15,71 @@ namespace ct = catter::hook;
 namespace {
 
 struct ScopedEnvVar {
-    std::wstring name;
-    std::wstring original;
-    bool had_original = false;
+    std::string name;
+    std::optional<std::string> original;
 
-    ScopedEnvVar(std::wstring name_value, const std::wstring& value) : name(std::move(name_value)) {
-        wchar_t buffer[32768];
-        auto len = GetEnvironmentVariableW(name.c_str(), buffer, 32768);
-        if(len > 0 && len < 32768) {
-            had_original = true;
-            original.assign(buffer, len);
+    ScopedEnvVar(std::string name_value, std::string_view value) : name(std::move(name_value)) {
+        std::string old;
+        if(kota::sys::get_env(old, name)) {
+            original = std::move(old);
         }
-        SetEnvironmentVariableW(name.c_str(), value.c_str());
+        kota::sys::set_env(name, value);
     }
 
     ~ScopedEnvVar() {
-        if(had_original) {
-            SetEnvironmentVariableW(name.c_str(), original.c_str());
+        if(original) {
+            kota::sys::set_env(name, *original);
         } else {
-            SetEnvironmentVariableW(name.c_str(), nullptr);
+            kota::sys::unset_env(name);
         }
     }
 };
 
 ZEST_SUITE(win_payload_util) {
-ZEST_CASE(get_proxy_path_reads_environment_variable) {
-    ScopedEnvVar scope(L"CATTER_PROXY_PATH", L"C:\\tmp\\proxy.exe");
-    EXPECT(ct::get_proxy_path<char>() == "C:\\tmp\\proxy.exe");
-    EXPECT(ct::get_proxy_path<wchar_t>() == L"C:\\tmp\\proxy.exe");
-};
+ZEST_CASE(proxy_command_line_quotes_what_needs_it) {
+    ScopedEnvVar proxy("CATTER_PROXY_PATH", R"(C:\Program Files\Catter\catter-proxy.exe)");
+    ScopedEnvVar id("CATTER_IPC_ID", "12345");
+    ScopedEnvVar pipe("CATTER_IPC_PIPE", R"(\\.\pipe\catter-ipc-1)");
 
-ZEST_CASE(get_ipc_id_reads_environment_variable) {
-    ScopedEnvVar scope(L"CATTER_IPC_ID", L"12345");
-    EXPECT(ct::get_ipc_id<char>() == "12345");
-    EXPECT(ct::get_ipc_id<wchar_t>() == L"12345");
-};
+    auto command = ct::proxy_command_line(LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
+                                          LR"("clang-cl.exe" /c main.cc)");
 
-ZEST_CASE(build_proxy_command_quotes_proxy_and_exec_paths) {
-    auto command = ct::build_proxy_command<char>(R"(C:\Program Files\Catter\catter-proxy.exe)",
-                                                 "12345",
-                                                 R"(\\.\pipe\catter-ipc-1)",
-                                                 R"(C:\Program Files\LLVM\bin\clang-cl.exe)",
-                                                 R"("clang-cl.exe" /c main.cc)");
-
-    EXPECT(
+    ZEXPECT(
         command ==
-        R"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc "\\.\pipe\catter-ipc-1" -- "clang-cl.exe" /c main.cc)");
+        LR"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc \\.\pipe\catter-ipc-1 -- "clang-cl.exe" /c main.cc)");
 };
 
-ZEST_CASE(build_proxy_command_supports_wide_strings) {
-    auto command = ct::build_proxy_command<wchar_t>(LR"(C:\Program Files\Catter\catter-proxy.exe)",
-                                                    L"12345",
-                                                    LR"(\\.\pipe\catter-ipc-1)",
-                                                    LR"(C:\Program Files\LLVM\bin\clang-cl.exe)",
-                                                    LR"("clang-cl.exe" /c main.cc)");
+ZEST_CASE(application_name_is_taken_from_the_current_directory) {
+    std::string expected;
+    ZEXPECT(!kota::fs::current_dir(expected));
+    kota::fs::path::push(expected, "tool.exe");
 
-    EXPECT(
-        command ==
-        LR"("C:\Program Files\Catter\catter-proxy.exe" -p 12345 --exec "C:\Program Files\LLVM\bin\clang-cl.exe" --ipc "\\.\pipe\catter-ipc-1" -- "clang-cl.exe" /c main.cc)");
+    ZEXPECT(ct::resolve_program(L"tool.exe", L"tool a b") == expected);
+};
+
+ZEST_CASE(command_line_path_is_taken_from_the_current_directory) {
+    std::string expected;
+    ZEXPECT(!kota::fs::current_dir(expected));
+    kota::fs::path::push(expected, "catter-util-tests");
+    ZASSERT(kota::fs::create_directories(expected).has_value());
+    kota::fs::path::push(expected, "tool.exe");
+    ZASSERT(!kota::fs::write_file(expected, ""));
+
+    auto program = ct::resolve_program(nullptr, LR"(.\catter-util-tests\tool.exe a b)");
+    kota::fs::remove_all(kota::fs::path::parent(expected));
+
+    ZEXPECT(program == expected);
+};
+
+ZEST_CASE(command_line_program_is_looked_for_as_create_process_does) {
+    auto program = ct::resolve_program(nullptr, LR"("cmd" /c echo)");
+
+    ZEXPECT(program.ends_with(R"(\cmd.exe)"));
+};
+
+ZEST_CASE(program_found_nowhere_stays_as_written) {
+    ZEXPECT(ct::resolve_program(nullptr, L"catter-no-such-program a b") ==
+            "catter-no-such-program");
 };
 };  // ZEST_SUITE(win_payload_util)
 

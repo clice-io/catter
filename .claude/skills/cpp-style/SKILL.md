@@ -57,7 +57,7 @@ defending against ghosts.
   `catter::output` and `catter::config`.
 - Platform code is chosen by the macros xmake defines (`CATTER_LINUX`,
   `CATTER_MAC`, `CATTER_WINDOWS`), or by a file per platform when most of
-  it differs (`resolver/unix.cc` and `win.cc`, `hook/unix` and
+  it differs (`capture/inject/unix` and `windows`, `hook/unix` and
   `hook/windows`).
 - File-local helpers: a single one is `static`; a cluster of them goes in
   one anonymous namespace.
@@ -68,16 +68,17 @@ The hook and `catter-proxy` stand between the build and every command it
 starts. A command under catter sees what it would see without catter: its
 arguments byte for byte, its environment and working directory, the
 descriptors and signal dispositions it inherits, its terminal; and the
-build sees the command's real exit status and output. Open issues such as
-#119, #128, #145 and #153 are what breaking this costs.
+build sees the command's real exit status and output. #119, #138 and #145
+are what breaking this cost.
 
 The hook payloads (`src/hook`) run inside every process
 of the build, next to that program's own runtime. They:
 
-- link only what they must (the resolver: `support-resolver` on Unix,
-  its sources compiled into each Windows DLL, for the DLL's architecture
-  and without ASan; the rest of `support` only in the Unix `debug` build,
-  for logging), keep their symbols hidden (`exports.map`,
+- link only what they must (`kota::fs` and `kota::sys`: on Unix the
+  objects of catter's kotatsu they use, in each Windows DLL a kotatsu of
+  the DLL's architecture without ASan and without the rest of kotatsu;
+  `support` only in the Unix `debug` build, for logging), keep their
+  symbols hidden (`exports.map`,
   `exports.def`), and on Unix carry a private C++ runtime (static
   libstdc++ on Linux, a force-loaded libc++ on macOS), so nothing they
   bring can clash with the host program's;
@@ -250,7 +251,7 @@ Domain words with one meaning each — use them only in that meaning:
 
 - Use C++23 APIs whenever possible. Do NOT use `<iostream>` facilities (`std::cout`, `std::cin`, `std::cerr`, etc.) or C-style I/O (`printf`, `fprintf`, etc.); `std::format` and `std::print` instead.
 - Prefer `std::ranges` / `std::views` APIs over raw loops and traditional `<algorithm>` calls.
-- Use kotatsu for what it covers — processes, pipes, the event loop, IPC, option parsing, tests — rather than libuv or the OS directly; the hook payloads are the exception (their code uses no kotatsu).
+- Use kotatsu for what it covers — paths and files (`kota::fs`), processes, the environment and program search (`kota::sys`), pipes, the event loop, IPC, option parsing, tests — rather than std::filesystem, libuv or the OS directly. std::filesystem is used nowhere, the unit tests included. The hook payloads use `kota::fs` and `kota::sys` alone, which need no event loop.
 
 ## Parameter Passing Preferences
 

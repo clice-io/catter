@@ -5,15 +5,21 @@
 #include <utility>
 #include <kota/codec/json/json.h>
 
-#include "feature/text.h"
-
 namespace catter::feature {
 
+namespace {
+
+/// A command's arguments need not be UTF-8, which JSON is.
+struct Config {
+    constexpr static auto invalid_utf8 = kota::codec::invalid_utf8::Replace;
+};
+
+}  // namespace
+
 std::string to_json(const JSON& value) {
-    auto compact = kota::codec::json::to_string(value);
+    auto compact = kota::codec::json::to_string<Config>(value);
     assert(compact.has_value());
-    // The parser under prettify takes only UTF-8, which a command's arguments need not be.
-    auto pretty = kota::codec::json::prettify(printable(*compact));
+    auto pretty = kota::codec::json::prettify(*compact);
     assert(pretty.has_value());
     return std::move(*pretty);
 }

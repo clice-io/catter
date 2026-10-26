@@ -126,10 +126,10 @@ CDB saved to ${WS}/compile_commands.json with 1 entries.
 exit = 0
 
 [test."$ catter compile-commands -o compile_commands.json -- make".darwin]
-wrong = "dyld kills Apple's arm64e tools when the hook is inserted (catter#115)"
-stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
-stderr = '''
-dyld[#]: terminating because inserted dylib …
+wrong = "Apple's make runs without the hook, and what it starts goes uncaptured"
+stdout = '''
+c++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
+CDB saved to ${WS}/compile_commands.json with 0 entries.
 '''
 exit = 0
 ```
@@ -144,7 +144,7 @@ exit = 0
   catter's own directory `${CATTER}`, the pixi environment `${ENV}`, the
   temporary directory `${TMP}`, MSVC `${MSVC}`, the Windows SDK `${WINSDK}`,
   Xcode `${XCODE}`, each with `/` after it; the macOS SDK's version
-  (`MacOSX#.sdk`), durations (`#ms`, `#s`), process ids (`dyld[#]`), native
+  (`MacOSX#.sdk`), durations (`#ms`, `#s`), process ids (`ipc-#`), native
   stack frames (`#… native frames`), xmake's probe files
   (`${TMP}/.xmake#/#/_#`). Line ends read LF and colors are dropped.
 - **Platforms.** One file serves linux, darwin and win32. A block holds the

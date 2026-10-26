@@ -95,7 +95,7 @@ private:
     /// How the handler's output ended, once it has.
     std::optional<kota::ipc::ReadError> output_end;
 
-    kota::ipc::JsonPeer peer;
+    kota::ipc::JSONPeer peer;
 
     /// Set once the peer has stopped.
     kota::event stopped;

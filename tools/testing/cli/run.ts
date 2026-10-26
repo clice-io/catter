@@ -370,7 +370,6 @@ const SESSION_PIPE = /\b((?:catter-)?ipc-)\d+\b/g;
 export function normalize(text: string, places: Places): string {
     return portable(text, places)
         .replace(NATIVE_FRAMES, "#… native frames\n")
-        .replace(/\bdyld\[\d+\]/g, "dyld[#]")
         .replace(SESSION_PIPE, "$1#")
         .replace(MACOS_VERSION, "$1#")
         .replace(XMAKE_PROBE_DIR, "${TMP}/.xmake#/#")

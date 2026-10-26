@@ -1,0 +1,29 @@
+[test."$ node build.mjs"]
+stdout = '''
+the program got SIGTERM
+the command ended by SIGTERM
+'''
+exit = 0
+
+[test."$ node build.mjs".win32]
+differs = "Windows has no signals: SIGTERM ends the program at once, before it can see one"
+stdout = "the command ended by SIGTERM"
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+the program got SIGTERM
+the command ended by SIGTERM
+node build.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs".win32]
+differs = "Windows has no signals: SIGTERM ends the program at once, before it can see one"
+stdout = '''
+the command ended by SIGTERM
+node build.mjs
+└── node child.mjs
+'''
+exit = 0

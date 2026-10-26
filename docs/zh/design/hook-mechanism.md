@@ -32,12 +32,14 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 在 macOS 上，钩子使用 `DYLD_INTERPOSE` 宏在 dyld 层面替换函数，这是该平台上的首选技术。
 
+dyld 会终止无法加载插入库的程序，而钩子是按 catter 自身的架构构建的，Apple 自带的工具（arm64e）和在 Rosetta 下运行的 Intel 程序（x86_64）都不以这个架构运行。插入钩子之前，`catter-proxy` 先向 dyld 询问程序以哪种架构运行（`macho_best_slice`；脚本按其解释器计）：架构不同的程序不带钩子运行，它启动的进程不会被捕获。开启系统完整性保护（SIP）时，dyld 同样会从 Apple 的工具中去掉钩子，因此构建只能捕获到它所运行的 Apple 工具为止：`/usr/bin/make`，或 Ninja 用来运行每条命令的 `/bin/sh`。
+
 ### 核心类
 
 钩子由一组协作的类实现：
 
 - **`Session`** -- 从环境变量中读取并存储会话信息（代理路径、自身命令 ID 和会话的管道）。
-- **`Resolver`** -- 解析目标可执行文件的路径。处理 PATH 查找、相对路径解析及可执行文件缺失等边界情况。
+- **`find_program()`**（kotatsu）-- 像 exec 函数那样，在 `PATH` 或当前目录中查找目标可执行文件；程序不存在或无法运行时，像原调用一样失败。
 - **`Command` / `build_proxy_command()`** -- 构造重写后的代理命令，将 `catter-proxy` 替换原始可执行文件。
 - **`SanitizedEnv` / `sanitize_environment()`** -- 在调用真正的 `execve` 之前清理环境。移除 catter 相关变量，并从预加载变量中剥离钩子库。
 - **`Executor`** -- 协调整个拦截过程。验证会话、解析可执行文件、构造代理命令、清理环境、调用原始函数；并持有真实 `execve` / `posix_spawn` 的函数指针（早期独立的 `Linker` 类已并入其中）。
@@ -67,7 +69,7 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 
 2. **`Executor`** 验证会话。如果会话无效（缺少环境变量），它会构建一个错误命令，将问题报告给守护进程。
 
-3. **`Resolver`** 将目标可执行文件解析为绝对路径。对于 `execvp()` 和 `execvpe()` 等函数，它会搜索 `PATH` 中的目录。对于 `execve()`，则相对于当前目录解析。
+3. **`Executor`** 用 kotatsu 的 `find_program()` 查找目标可执行文件。对于 `execvp()` 和 `execvpe()` 等函数，它会搜索 `PATH` 中的目录。对于 `execve()`，不含 `/` 的路径从当前目录查找。
 
 4. **`Command`**（`build_proxy_command()`）构造代理命令：
 
@@ -146,7 +148,7 @@ catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM
 
 当 `catter-proxy`（注入模式）需要启动挂载了钩子的构建命令时：
 
-1. **以挂起状态创建目标进程**。代理调用 `CreateProcessW()`，使用 `CREATE_SUSPENDED` 标志。进程被创建但主线程不会运行。
+1. **以挂起状态创建目标进程**。代理用 kotatsu 的 `kota::sys::spawn` 启动它，其 `windows_before_start` 回调拿到已创建的进程：进程已在自己的 job 对象中，主线程尚未运行。
 
 2. **设置环境变量**。`CATTER_IPC_ID`、`CATTER_IPC_PIPE` 和 `CATTER_PROXY_PATH` 在创建进程前通过环境块传入目标进程。
 
@@ -154,7 +156,7 @@ catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM
 
 4. **把钩子 DLL 加入进程的导入表**。`DetourUpdateProcessWithDll()` 把对应架构的 DLL 加入挂起的可执行文件的导入表，这样加载器会在程序自身的任何代码运行之前映射它。加载器按进程自己的 ANSI 代码页读取导入表里的 DLL 路径，而程序可以把这个代码页设为 UTF-8，所以路径必须是纯 ASCII：含非 ASCII 字符的路径改用它的 8.3 短文件名；在不保留短文件名的卷上，则改用复制到 catter 数据目录中的那份 DLL。
 
-5. **恢复主线程**。代理调用 `ResumeThread()` 让目标进程开始执行。加载器把钩子 DLL 与程序的其他导入项一同映射，钩子在程序入口点运行之前就已激活。
+5. **恢复主线程**。回调返回后，`spawn` 恢复主线程。加载器把钩子 DLL 与程序的其他导入项一同映射，钩子在程序入口点运行之前就已激活。
 
 ### 被钩住的 Windows API
 
@@ -177,7 +179,7 @@ Detours 的工作原理：
 
 1. **提取命令行**。钩子读取 `lpApplicationName` 和 `lpCommandLine`。
 
-2. **解析绝对路径**。钩子使用 `resolve_abspath()` 解析可执行文件路径，搜索程序目录、当前目录、System32、Windows 目录和 `PATH`（与标准 Windows 搜索顺序一致）。
+2. **解析程序**。钩子用 `resolve_program()` 解析：`lpApplicationName` 从当前目录补全为绝对路径；没有它时，取命令行的第一个词，按 `CreateProcess` 的方式查找（kotatsu 的 `find_create_process_program`：程序所在目录、当前目录、系统目录、Windows 目录，最后是 `PATH`）。
 
 3. **重写命令行**：
 

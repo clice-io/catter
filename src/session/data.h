@@ -89,6 +89,14 @@ struct Request<RequestType::FINISH> {
     using Result = std::nullptr_t;
     constexpr inline static std::string_view method = "finish";
 };
+
+/// A notification: catter-proxy started the program it stands in for. Sent on
+/// macOS, which has nothing to end a child with its parent: catter ends the
+/// program of a proxy that goes without its finish.
+struct Started {
+    int64_t pid;
+    constexpr inline static std::string_view method = "started";
+};
 };  // namespace catter::ipc
 
 namespace kota::ipc::protocol {

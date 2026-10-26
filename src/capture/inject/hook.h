@@ -1,17 +1,14 @@
 #pragma once
 
-#include <kota/async/runtime/task.h>
+#include <string_view>
+#include <kota/async/async.h>
 
 #include "session/data.h"
-#include "support/crossplat.h"
-#include "support/encoding.h"
 
 namespace catter {
-/// Run the command with catter proxy hook, its commands reporting to the
-/// session's pipe.
-kota::task<data::process_result>
-    run_with_hook(data::command command,
-                  data::ipcid_t id,
-                  std::string pipe_name,
-                  std::string proxy_path = to_utf8(get_executable_path()));
+/// The options that start the command with the hook, which reports the
+/// commands it starts to the session's pipe as children of command `id`.
+kota::process::options hook_options(data::command command,
+                                    data::ipcid_t id,
+                                    std::string_view pipe_name);
 }  // namespace catter

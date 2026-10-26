@@ -1,17 +1,21 @@
 #include "protocol/remote_handler.h"
 
-#include <algorithm>
 #include <chrono>
-#include <csignal>
 #include <format>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <cpptrace/exceptions.hpp>
+#include <kota/support/utf8.h>
+
+#ifdef CATTER_WINDOWS
+#include <kota/sys/windows.h>
+#endif
 
 #include "protocol/analysis.h"
 #include "support/log.h"
+#include "support/paths.h"
 
 namespace catter {
 
@@ -40,7 +44,7 @@ std::optional<std::string> not_an_answer(std::string_view message) {
                 return incoming.error.message;
             }
         },
-        kota::ipc::JsonCodec().parse_message(message));
+        kota::ipc::JSONCodec().parse_message(std::string(message)));
 }
 
 /// The handler's transport, which keeps how the handler's output ended, and
@@ -84,20 +88,7 @@ private:
     std::optional<ReadError>& end;
 };
 
-#ifdef CATTER_WINDOWS
-
-/// The program of a command line, as CreateProcessW and CommandLineToArgvW
-/// take it: up to the first space, or between the quotes it starts with.
-std::string program_of(std::string_view command) {
-    command.remove_prefix(std::min(command.find_first_not_of(" \t"), command.size()));
-    if(command.starts_with('"')) {
-        command.remove_prefix(1);
-        return std::string(command.substr(0, command.find('"')));
-    }
-    return std::string(command.substr(0, command.find_first_of(" \t")));
-}
-
-#else
+#ifndef CATTER_WINDOWS
 
 /// The words of a command line as a POSIX shell splits it, without expanding
 /// anything: blanks separate words, and quotes and backslashes quote.
@@ -153,13 +144,6 @@ std::vector<std::string> split_words(std::string_view command) {
 
 #endif
 
-#ifdef CATTER_WINDOWS
-// libuv terminates the process for any signal it takes on Windows.
-constexpr int kill_signal = SIGTERM;
-#else
-constexpr int kill_signal = SIGKILL;
-#endif
-
 std::string seconds(std::chrono::milliseconds time) {
     return std::format("{} s", std::chrono::duration<double>(time).count());
 }
@@ -175,7 +159,7 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
     process(std::move(process)) {
     peer.on_request(
         "analyze",
-        [](kota::ipc::JsonPeer::RequestContext&, const protocol::AnalyzeParams& params)
+        [](kota::ipc::JSONPeer::RequestContext&, const protocol::AnalyzeParams& params)
             -> kota::task<protocol::AnalyzeResult, kota::ipc::Error> {
             protocol::AnalyzeResult result;
             for(const auto& program: params.programs) {
@@ -198,22 +182,26 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
 
 std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Options options) {
     kota::process::options opts{
-        .streams = {kota::process::stdio::pipe(true, false),
-                    kota::process::stdio::pipe(false, true),
+        .streams = {kota::process::stdio::pipe(),
+                    kota::process::stdio::pipe(),
                     kota::process::stdio::inherit()},
     };
 #ifdef CATTER_WINDOWS
     // The command line goes to CreateProcessW as it is, to be split by the
     // program as Windows programs split theirs.
-    opts.file = program_of(command);
-    opts.args = {std::string(command)};
-    opts.creation.windows_verbatim_arguments = true;
-#else
-    opts.args = split_words(command);
-    if(opts.args.empty()) {
+    auto words = kota::sys::windows::split_command_line(command);
+    if(words.begin() == words.end()) {
         throw cpptrace::runtime_error("The handler command is empty");
     }
-    opts.file = opts.args.front();
+    opts.program = resolve_program(*words.begin());
+    opts.windows_command_line = command;
+#else
+    auto words = split_words(command);
+    if(words.empty()) {
+        throw cpptrace::runtime_error("The handler command is empty");
+    }
+    opts.program = words.front();
+    opts.args.assign(words.begin() + 1, words.end());
 #endif
     auto spawned = kota::process::spawn(opts);
     if(!spawned) {
@@ -436,7 +424,7 @@ kota::task<> RemoteHandler::on_error(data::ipcid_t id,
                protocol::CaptureError{
                    .id = id,
                    .parent = parent,
-                   .message = protocol::to_text(std::move(message)),
+                   .message = kota::replace_invalid_utf8(message),
                });
     }
     co_return;
@@ -484,7 +472,7 @@ kota::task<> RemoteHandler::close() {
              options.name,
              seconds(options.timeout));
     if(process.pid() != -1) {
-        if(auto error = process.kill(kill_signal)) {
+        if(auto error = process.kill()) {
             LOG_WARN("Failed to kill handler `{}`: {}", options.name, error.message());
         }
         co_await process.wait();

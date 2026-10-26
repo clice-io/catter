@@ -1,34 +1,25 @@
 #pragma once
-#include <exception>
-#include <filesystem>
 #include <format>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <kota/deco/deco.h>
-
-#include "support/encoding.h"
+#include <kota/fs/resolve.h>
 
 namespace catter::driver {
 
-inline auto default_working_directory() noexcept -> std::filesystem::path {
-    try {
-        return std::filesystem::current_path();
-    } catch(const std::exception&) {
-        return {};
-    }
-}
-
 struct WorkingDirectory {
-    std::filesystem::path path = default_working_directory();
+    std::string path = [] {
+        std::string cwd;
+        kota::fs::current_dir(cwd);
+        return cwd;
+    }();
 
     auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
-        try {
-            path = std::filesystem::absolute(from_utf8(text));
-        } catch(const std::exception& ex) {
-            return context.format_error(std::format("Wrong Path: {}", ex.what()));
+        if(auto error = kota::fs::absolute(path, text)) {
+            return context.format_error(std::format("Wrong Path: {}", error.message()));
         }
         return std::nullopt;
     }

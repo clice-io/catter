@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <filesystem>
 #include <format>
 #include <functional>
 #include <optional>
@@ -10,17 +9,21 @@
 #include <string_view>
 #include <system_error>
 #include <cpptrace/exceptions.hpp>
+#include <kota/support/utf16.h>
+#include <kota/fs/directory.h>
+#include <kota/fs/file.h>
+#include <kota/fs/path.h>
+#include <kota/fs/status.h>
 
 // clang-format off
 // <detours.h> needs the architecture macros of <windows.h>.
-#include "support/winapi/win32.h"
+#include <windows.h>
 #include <detours.h>
 // clang-format on
 
-#include "support/crossplat.h"
-#include "support/encoding.h"
 #include "support/exception.h"
 #include "support/log.h"
+#include "support/paths.h"
 
 namespace catter {
 
@@ -102,15 +105,19 @@ void fix_converted_header(HANDLE process, USHORT machine) {
 
 /// `path` by its 8.3 short name; nothing when that is not ASCII, as on a volume
 /// that keeps no short names.
-std::optional<std::string> ascii_path(const std::filesystem::path& path) {
-    const DWORD size = GetShortPathNameW(path.c_str(), nullptr, 0);
+std::optional<std::string> ascii_path(std::string_view path) {
+    std::wstring wide;
+    if(auto error = kota::to_utf16(wide, path)) {
+        throw catter::system_error(error, std::format("Failed to find {}", path));
+    }
+    const DWORD size = GetShortPathNameW(wide.c_str(), nullptr, 0);
     if(size == 0) {
         throw catter::system_error(GetLastError(),
                                    std::system_category(),
-                                   std::format("Failed to find {}", to_utf8(path)));
+                                   std::format("Failed to find {}", path));
     }
     std::wstring short_path(size, L'\0');
-    short_path.resize(GetShortPathNameW(path.c_str(), short_path.data(), size));
+    short_path.resize(GetShortPathNameW(wide.c_str(), short_path.data(), size));
     if(!std::ranges::all_of(short_path, [](wchar_t c) { return c < 0x80; })) {
         return std::nullopt;
     }
@@ -118,41 +125,43 @@ std::optional<std::string> ascii_path(const std::filesystem::path& path) {
 }
 
 /// A copy of `dll` in catter's data directory, one per build of the DLL.
-std::filesystem::path temporary_copy(const std::filesystem::path& dll) {
-    WIN32_FILE_ATTRIBUTE_DATA data{};
-    if(!GetFileAttributesExW(dll.c_str(), GetFileExInfoStandard, &data)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   std::format("Failed to find {}", to_utf8(dll)));
+std::string temporary_copy(std::string_view dll) {
+    auto status = kota::fs::status(dll);
+    if(!status) {
+        throw catter::system_error(status.error(), std::format("Failed to find {}", dll));
     }
-    const auto build = std::format(L"{}|{}|{}|{}",
-                                   dll.native(),
-                                   data.nFileSizeLow,
-                                   data.ftLastWriteTime.dwHighDateTime,
-                                   data.ftLastWriteTime.dwLowDateTime);
-    const auto dir =
-        get_catter_data_path() / std::format("hook-{:016x}", std::hash<std::wstring>{}(build));
-    const auto copy = dir / dll.filename();
-    if(std::filesystem::exists(copy)) {
+    const auto build =
+        std::format("{}|{}|{}", dll, status->size, status->mtime.time_since_epoch().count());
+    auto copy = data_path(std::format("hook-{:016x}", std::hash<std::string>{}(build)));
+    kota::fs::path::push(copy, kota::fs::path::filename(dll));
+    if(kota::fs::is_file(copy)) {
         return copy;
     }
 
-    // Written under a name of its own, then renamed: a process another
-    // catter-proxy starts meanwhile never loads half a DLL.
-    std::filesystem::create_directories(dir);
-    auto partial = copy;
-    partial += std::format(".{}", GetCurrentProcessId());
-    std::filesystem::copy_file(dll, partial, std::filesystem::copy_options::overwrite_existing);
-    if(!MoveFileExW(partial.c_str(), copy.c_str(), 0)) {
-        const DWORD error = GetLastError();
-        std::filesystem::remove(partial);
-        // Another catter-proxy renamed its copy first.
-        if(!std::filesystem::exists(copy)) {
-            throw catter::system_error(
-                error,
-                std::system_category(),
-                std::format("Failed to copy {} to {}", to_utf8(dll), to_utf8(copy)));
+    // Written whole under a name of its own, then renamed, over nothing: a
+    // process another catter-proxy starts meanwhile never loads half a DLL,
+    // nor finds the one it loads renamed over.
+    const auto partial = std::format("{}.{}", copy, GetCurrentProcessId());
+    std::string bytes;
+    auto error = kota::fs::read_file(bytes, dll);
+    if(!error) {
+        auto created = kota::fs::create_directories(kota::fs::path::parent(copy));
+        error = created ? kota::fs::write_file(partial, bytes) : created.error();
+    }
+    if(!error) {
+        std::wstring from;
+        std::wstring to;
+        kota::to_utf16(from, partial);
+        kota::to_utf16(to, copy);
+        if(!MoveFileExW(from.c_str(), to.c_str(), 0)) {
+            error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+            kota::fs::remove(partial);
         }
+    }
+    // Another catter-proxy renamed its copy first, which a process may have
+    // loaded already.
+    if(error && !kota::fs::is_file(copy)) {
+        throw catter::system_error(error, std::format("Failed to copy {} to {}", dll, copy));
     }
     return copy;
 }
@@ -160,7 +169,7 @@ std::filesystem::path temporary_copy(const std::filesystem::path& dll) {
 /// `dll` as Detours writes it into the import table. The loader reads that
 /// name in the process's own ANSI code page, which a program can make UTF-8:
 /// only ASCII reads the same in every process.
-std::string import_name(const std::filesystem::path& dll) {
+std::string import_name(std::string_view dll) {
     if(auto name = ascii_path(dll)) {
         return *name;
     }
@@ -172,8 +181,8 @@ std::string import_name(const std::filesystem::path& dll) {
     }
     throw cpptrace::runtime_error(
         std::format("Cannot load {} into a process: neither it nor its copy {} has an ASCII path",
-                    to_utf8(dll),
-                    to_utf8(copy)));
+                    dll,
+                    copy));
 }
 
 }  // namespace
@@ -188,8 +197,7 @@ void inject_hook(HANDLE process, std::string_view executable) {
         return;
     }
 
-    const auto dll =
-        import_name(get_catter_root_path() / std::format("catter-hook-{}.dll", hook->arch));
+    const auto dll = import_name(program_path(std::format("catter-hook-{}.dll", hook->arch)));
     LPCSTR dlls[] = {dll.c_str()};
     if(!DetourUpdateProcessWithDll(process, dlls, 1)) {
         throw catter::system_error(

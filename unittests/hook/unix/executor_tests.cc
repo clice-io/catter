@@ -1,6 +1,5 @@
 #include <cerrno>
 #include <cstdlib>
-#include <filesystem>
 #include <initializer_list>
 #include <optional>
 #include <string>
@@ -9,6 +8,8 @@
 #include <vector>
 #include <spawn.h>
 #include <kota/zest/zest.h>
+#include <kota/fs/path.h>
+#include <kota/fs/resolve.h>
 
 #include "hook/unix/executor.h"
 #include "support/config/hook_unix.h"
@@ -16,7 +17,6 @@
 
 namespace ct = catter::hook;
 namespace cfg = catter::config;
-namespace fs = std::filesystem;
 
 namespace {
 
@@ -50,7 +50,7 @@ public:
         if(auto* old_value = std::getenv(m_key.c_str()); old_value != nullptr) {
             m_old_value = old_value;
         }
-        EXPECT(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
+        ZEXPECT(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
     }
 
     ~ScopedEnv() {
@@ -131,28 +131,29 @@ int fake_posix_spawn(pid_t*,
     return spawn_call.result;
 }
 
-fs::path create_executable(std::string_view name) {
-    std::error_code ec;
-    manager.create(std::string(name), ec);
-    EXPECT(!ec);
-    return manager.root / name;
+/// An empty program `name` in the manager's directory, by its absolute path.
+std::string create_executable(std::string_view name) {
+    ZEXPECT(!manager.create(name));
+    std::string path;
+    ZEXPECT(!kota::fs::absolute(path, manager.path(name)));
+    return path;
 }
 
 void expect_proxy_command(const CapturedCall& call,
                           const ct::Session& session,
-                          const fs::path& executable,
+                          std::string_view executable,
                           std::string_view argv0) {
-    EXPECT(call.path == session.proxy_path);
-    EXPECT(call.argv.size() >= 9);
-    EXPECT(call.argv.at(0) == session.proxy_path);
-    EXPECT(call.argv.at(1) == "-p");
-    EXPECT(call.argv.at(2) == session.self_id);
-    EXPECT(call.argv.at(3) == "--exec");
-    EXPECT(call.argv.at(4) == executable.string());
-    EXPECT(call.argv.at(5) == "--ipc");
-    EXPECT(call.argv.at(6) == session.ipc);
-    EXPECT(call.argv.at(7) == "--");
-    EXPECT(call.argv.at(8) == argv0);
+    ZEXPECT(call.path == session.proxy_path);
+    ZEXPECT(call.argv.size() >= 9);
+    ZEXPECT(call.argv.at(0) == session.proxy_path);
+    ZEXPECT(call.argv.at(1) == "-p");
+    ZEXPECT(call.argv.at(2) == session.self_id);
+    ZEXPECT(call.argv.at(3) == "--exec");
+    ZEXPECT(call.argv.at(4) == executable);
+    ZEXPECT(call.argv.at(5) == "--ipc");
+    ZEXPECT(call.argv.at(6) == session.ipc);
+    ZEXPECT(call.argv.at(7) == "--");
+    ZEXPECT(call.argv.at(8) == argv0);
 }
 
 ZEST_SUITE(executor) {
@@ -178,24 +179,24 @@ ZEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
 
     auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
 
-    EXPECT(result == 42);
-    EXPECT(exec_call.calls == 1);
+    ZEXPECT(result == 42);
+    ZEXPECT(exec_call.calls == 1);
     expect_proxy_command(exec_call, valid_session, executable, "execve-tool");
-    EXPECT(exec_call.argv.at(9) == "-c");
-    EXPECT(exec_call.argv.at(10) == "main.cc");
-    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
-    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
-    EXPECT(has_env_entry(exec_call.envp, "LANG"));
-    EXPECT(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
-    EXPECT((exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
-            exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so"));
+    ZEXPECT(exec_call.argv.at(9) == "-c");
+    ZEXPECT(exec_call.argv.at(10) == "main.cc");
+    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
+    ZEXPECT(has_env_entry(exec_call.envp, "LANG"));
+    ZEXPECT(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
+    ZEXPECT((exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
+             exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so"));
 }
 
 ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
     exec_call.reset(51);
 
     auto executable = create_executable("path-tool");
-    auto search_path = fs::absolute(manager.root).string();
+    auto search_path = std::string(kota::fs::path::parent(executable));
     ScopedEnv path_env("PATH", search_path);
     ScopedEnv command_id(std::string(cfg::KEY_CATTER_COMMAND_ID), "11");
 
@@ -206,11 +207,44 @@ ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
 
     auto result = executor.execvp("path-tool", argv.data());
 
-    EXPECT(result == 51);
-    EXPECT(exec_call.calls == 1);
-    expect_proxy_command(exec_call, valid_session, fs::absolute(executable), "path-tool");
-    EXPECT(has_env_entry(exec_call.envp, "PATH"));
-    EXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    ZEXPECT(result == 51);
+    ZEXPECT(exec_call.calls == 1);
+    expect_proxy_command(exec_call, valid_session, executable, "path-tool");
+    ZEXPECT(has_env_entry(exec_call.envp, "PATH"));
+    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+}
+
+ZEST_CASE(execvP_looks_in_the_search_path_it_is_given) {
+    exec_call.reset(52);
+
+    auto executable = create_executable("search-tool");
+    auto search_path = "/definitely/missing:" + std::string(kota::fs::path::parent(executable));
+    MutableCStrings argv = {"search-tool"};
+    MutableCStrings envp = {"LANG=C"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    auto result = executor.execvP("search-tool", search_path.c_str(), argv.data(), envp.data());
+
+    ZEXPECT(result == 52);
+    ZEXPECT(exec_call.calls == 1);
+    expect_proxy_command(exec_call, valid_session, executable, "search-tool");
+}
+
+ZEST_CASE(execvP_fails_with_enoent_for_a_program_found_nowhere) {
+    exec_call.reset();
+    MutableCStrings argv = {"missing-tool"};
+
+    ct::Executor executor;
+    executor.init(valid_session, fake_execve, fake_posix_spawn);
+
+    errno = 0;
+    auto result = executor.execvP("missing-tool", "/definitely/missing", argv.data(), nullptr);
+
+    ZEXPECT(result == -1);
+    ZEXPECT(errno == ENOENT);
+    ZEXPECT(exec_call.calls == 0);
 }
 
 ZEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_missing) {
@@ -225,9 +259,9 @@ ZEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_miss
     errno = 0;
     auto result = executor.execve("/definitely/missing/tool", argv.data(), nullptr);
 
-    EXPECT(result == -1);
-    EXPECT(errno == ENOENT);
-    EXPECT(exec_call.calls == 0);
+    ZEXPECT(result == -1);
+    ZEXPECT(errno == ENOENT);
+    ZEXPECT(exec_call.calls == 0);
 }
 
 ZEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
@@ -240,9 +274,9 @@ ZEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
     errno = 0;
     auto result = executor.execve(nullptr, argv.data(), nullptr);
 
-    EXPECT(result == -1);
-    EXPECT(errno == EFAULT);
-    EXPECT(exec_call.calls == 0);
+    ZEXPECT(result == -1);
+    ZEXPECT(errno == EFAULT);
+    ZEXPECT(exec_call.calls == 0);
 }
 
 ZEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
@@ -258,8 +292,8 @@ ZEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
     auto result =
         executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), nullptr);
 
-    EXPECT(result == 17);
-    EXPECT(spawn_call.calls == 1);
+    ZEXPECT(result == 17);
+    ZEXPECT(spawn_call.calls == 1);
     expect_proxy_command(spawn_call, valid_session, executable, "spawn-tool");
 }
 
@@ -274,9 +308,9 @@ ZEST_CASE(spawn_boundary_returns_error_code) {
     errno = 0;
     auto result = executor.posix_spawn(&pid, nullptr, nullptr, nullptr, argv.data(), nullptr);
 
-    EXPECT(result == EFAULT);
-    EXPECT(errno == EFAULT);
-    EXPECT(spawn_call.calls == 0);
+    ZEXPECT(result == EFAULT);
+    ZEXPECT(errno == EFAULT);
+    ZEXPECT(spawn_call.calls == 0);
 }
 
 };  // ZEST_SUITE(executor)

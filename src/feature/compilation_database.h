@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <filesystem>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -29,7 +28,7 @@ public:
     std::vector<JSON> entries() const;
 
     /// Writes the database to its file, and returns the file.
-    const std::filesystem::path& save() const;
+    const std::string& save() const;
 
 private:
     /// Entries by the source file they compile, alike entries as one, in the order they came.
@@ -48,7 +47,7 @@ private:
     };
 
 private:
-    std::filesystem::path file;
+    std::string file;
 
     std::string cwd;
 

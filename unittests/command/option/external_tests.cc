@@ -80,21 +80,21 @@ ZEST_CASE(parse_lld_coff_link_command) {
 
     auto parsed = parse_command(option::lld_coff::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 4U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 4U);
 
-    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[0]) == "/out:");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "app.exe");
+    ZEXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[0]) == "/out:");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "app.exe");
 
-    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[1]) == "/libpath:");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "lib");
+    ZEXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[1]) == "/libpath:");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "lib");
 
-    EXPECT(parsed.args[2].id == option::lld_coff::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.obj");
+    ZEXPECT(parsed.args[2].id == option::lld_coff::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.obj");
 
-    EXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[3]) == "/WX");
+    ZEXPECT(canonical_spelling(option::lld_coff::table(), parsed.args[3]) == "/WX");
 };
 
 ZEST_CASE(parse_lld_elf_link_command) {
@@ -103,19 +103,19 @@ ZEST_CASE(parse_lld_elf_link_command) {
 
     auto parsed = parse_command(option::lld_elf::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[0]) == "-o");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "a.out");
+    ZEXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[0]) == "-o");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "a.out");
 
-    EXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[1]) == "--build-id=");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "sha1");
+    ZEXPECT(canonical_spelling(option::lld_elf::table(), parsed.args[1]) == "--build-id=");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "sha1");
 
-    EXPECT(parsed.args[2].id == option::lld_elf::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.o");
+    ZEXPECT(parsed.args[2].id == option::lld_elf::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.o");
 };
 
 ZEST_CASE(parse_lld_macho_link_command) {
@@ -124,21 +124,21 @@ ZEST_CASE(parse_lld_macho_link_command) {
 
     auto parsed = parse_command(option::lld_macho::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[0]) == "-o");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "a.out");
+    ZEXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[0]) == "-o");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "a.out");
 
-    EXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[1]) == "--help-hidden");
-    EXPECT(option::lld_macho::table()
-               .option(option::lld_macho::ID_force_cpusubtype_ALL)
-               .value()
-               .has_flag(kota_opt::HelpHidden));
+    ZEXPECT(canonical_spelling(option::lld_macho::table(), parsed.args[1]) == "--help-hidden");
+    ZEXPECT(option::lld_macho::table()
+                .option(option::lld_macho::ID_force_cpusubtype_ALL)
+                .value()
+                .has_flag(kota_opt::HelpHidden));
 
-    EXPECT(parsed.args[2].id == option::lld_macho::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.o");
+    ZEXPECT(parsed.args[2].id == option::lld_macho::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.o");
 };
 
 ZEST_CASE(parse_lld_mingw_link_command) {
@@ -146,19 +146,19 @@ ZEST_CASE(parse_lld_mingw_link_command) {
 
     auto parsed = parse_command(option::lld_mingw::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[0]) == "-L");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "lib");
+    ZEXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[0]) == "-L");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "lib");
 
-    EXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[1]) == "-o");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "app.exe");
+    ZEXPECT(canonical_spelling(option::lld_mingw::table(), parsed.args[1]) == "-o");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "app.exe");
 
-    EXPECT(parsed.args[2].id == option::lld_mingw::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.o");
+    ZEXPECT(parsed.args[2].id == option::lld_mingw::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.o");
 };
 
 ZEST_CASE(parse_lld_wasm_link_command) {
@@ -167,17 +167,17 @@ ZEST_CASE(parse_lld_wasm_link_command) {
 
     auto parsed = parse_command(option::lld_wasm::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[0]) == "-o");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "a.wasm");
+    ZEXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[0]) == "-o");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "a.wasm");
 
-    EXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[1]) == "--export-all");
+    ZEXPECT(canonical_spelling(option::lld_wasm::table(), parsed.args[1]) == "--export-all");
 
-    EXPECT(parsed.args[2].id == option::lld_wasm::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.o");
+    ZEXPECT(parsed.args[2].id == option::lld_wasm::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.o");
 };
 
 ZEST_CASE(parse_llvm_dlltool_aliases) {
@@ -186,18 +186,18 @@ ZEST_CASE(parse_llvm_dlltool_aliases) {
 
     auto parsed = parse_command(option::llvm_dlltool::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 2U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 2U);
 
-    EXPECT(parsed.args[0].id == option::llvm_dlltool::ID_m);
-    EXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[0]) == "-m");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "i386:x86-64");
+    ZEXPECT(parsed.args[0].id == option::llvm_dlltool::ID_m);
+    ZEXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[0]) == "-m");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "i386:x86-64");
 
-    EXPECT(parsed.args[1].id == option::llvm_dlltool::ID_D);
-    EXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[1]) == "-D");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "foo.dll");
+    ZEXPECT(parsed.args[1].id == option::llvm_dlltool::ID_D);
+    ZEXPECT(canonical_spelling(option::llvm_dlltool::table(), parsed.args[1]) == "-D");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "foo.dll");
 };
 
 ZEST_CASE(parse_llvm_lib_command) {
@@ -206,19 +206,19 @@ ZEST_CASE(parse_llvm_lib_command) {
 
     auto parsed = parse_command(option::llvm_lib::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 3U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 3U);
 
-    EXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[0]) == "/out:");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "foo.lib");
+    ZEXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[0]) == "/out:");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "foo.lib");
 
-    EXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[1]) == "/libpath:");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "lib");
+    ZEXPECT(canonical_spelling(option::llvm_lib::table(), parsed.args[1]) == "/libpath:");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "lib");
 
-    EXPECT(parsed.args[2].id == option::llvm_lib::ID_INPUT);
-    EXPECT(parsed.args[2].spelling == "foo.obj");
+    ZEXPECT(parsed.args[2].id == option::llvm_lib::ID_INPUT);
+    ZEXPECT(parsed.args[2].spelling == "foo.obj");
 };
 
 ZEST_CASE(parse_nvcc_command_and_aliases) {
@@ -227,28 +227,28 @@ ZEST_CASE(parse_nvcc_command_and_aliases) {
 
     auto parsed = parse_command(option::nvcc::table(), argv);
 
-    EXPECT(parsed.errors.empty());
-    ASSERT(parsed.args.size() == 5U);
+    ZEXPECT(parsed.errors.empty());
+    ZASSERT(parsed.args.size() == 5U);
 
-    EXPECT(parsed.args[0].id == option::nvcc::ID_output_file);
-    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[0]) == "--output-file");
-    ASSERT(parsed.args[0].values.size() == 1U);
-    EXPECT(parsed.args[0].values[0] == "foo.o");
+    ZEXPECT(parsed.args[0].id == option::nvcc::ID_output_file);
+    ZEXPECT(canonical_spelling(option::nvcc::table(), parsed.args[0]) == "--output-file");
+    ZASSERT(parsed.args[0].values.size() == 1U);
+    ZEXPECT(parsed.args[0].values[0] == "foo.o");
 
-    EXPECT(parsed.args[1].id == option::nvcc::ID_include_path);
-    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[1]) == "--include-path");
-    ASSERT(parsed.args[1].values.size() == 1U);
-    EXPECT(parsed.args[1].values[0] == "include");
+    ZEXPECT(parsed.args[1].id == option::nvcc::ID_include_path);
+    ZEXPECT(canonical_spelling(option::nvcc::table(), parsed.args[1]) == "--include-path");
+    ZASSERT(parsed.args[1].values.size() == 1U);
+    ZEXPECT(parsed.args[1].values[0] == "include");
 
-    EXPECT(parsed.args[2].id == option::nvcc::ID_std);
-    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[2]) == "--std");
-    ASSERT(parsed.args[2].values.size() == 1U);
-    EXPECT(parsed.args[2].values[0] == "c++17");
+    ZEXPECT(parsed.args[2].id == option::nvcc::ID_std);
+    ZEXPECT(canonical_spelling(option::nvcc::table(), parsed.args[2]) == "--std");
+    ZASSERT(parsed.args[2].values.size() == 1U);
+    ZEXPECT(parsed.args[2].values[0] == "c++17");
 
-    EXPECT(parsed.args[3].id == option::nvcc::ID_no_align_double);
-    EXPECT(canonical_spelling(option::nvcc::table(), parsed.args[3]) == "--no-align-double");
+    ZEXPECT(parsed.args[3].id == option::nvcc::ID_no_align_double);
+    ZEXPECT(canonical_spelling(option::nvcc::table(), parsed.args[3]) == "--no-align-double");
 
-    EXPECT(parsed.args[4].id == option::nvcc::ID_INPUT);
-    EXPECT(parsed.args[4].spelling == "kernel.cu");
+    ZEXPECT(parsed.args[4].id == option::nvcc::ID_INPUT);
+    ZEXPECT(parsed.args[4].spelling == "kernel.cu");
 };
 };  // ZEST_SUITE(external_option_table_tests)

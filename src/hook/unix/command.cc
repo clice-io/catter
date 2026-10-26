@@ -22,8 +22,6 @@ void push_proxy_args(std::vector<std::string>& argv,
 }
 };  // namespace
 
-namespace fs = std::filesystem;
-
 namespace catter::hook {
 
 std::vector<char*> Command::c_argv() {
@@ -36,10 +34,10 @@ std::vector<char*> Command::c_argv() {
     return res;
 }
 
-Command build_proxy_command(const Session& session, const fs::path& path, ArgvRef argv) {
+Command build_proxy_command(const Session& session, std::string_view executable, ArgvRef argv) {
     Command cmd;
     cmd.path = session.proxy_path;
-    push_proxy_args(cmd.argv, session, path.string());
+    push_proxy_args(cmd.argv, session, executable);
     for(const auto arg: argv) {
         cmd.argv.emplace_back(arg);
     }
@@ -48,11 +46,11 @@ Command build_proxy_command(const Session& session, const fs::path& path, ArgvRe
 
 Command build_error_command(const Session& session,
                             std::string_view message,
-                            const fs::path& path,
+                            std::string_view executable,
                             ArgvRef argv) {
     Command cmd;
     cmd.path = session.proxy_path;
-    push_proxy_args(cmd.argv, session, path.string(), true);
+    push_proxy_args(cmd.argv, session, executable, true);
     std::string res_msg = std::format("Catter Proxy Error: {}\n", message);
     if(!argv.empty()) {
         res_msg.append(std::format("in command: "));

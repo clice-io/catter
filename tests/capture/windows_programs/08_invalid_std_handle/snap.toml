@@ -1,0 +1,11 @@
+[test."$ invalid.exe"]
+stdout = "child exit 0"
+exit = 0
+
+[test."$ catter tree -a 0 -- invalid.exe"]
+stdout = '''
+child exit 0
+inv....exe
+└── "C:\\....exe" ...
+'''
+exit = 0

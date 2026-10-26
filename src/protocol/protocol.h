@@ -13,7 +13,7 @@
 
 /// The messages catter and a handler exchange (docs/en/design/handler-protocol.md):
 /// JSON-RPC 2.0, each message framed by a Content-Length header. Field names
-/// are in lower camel case, as kota::ipc::JsonCodec writes them; the SDKs'
+/// are in lower camel case, as kota::ipc::JSONCodec writes them; the SDKs'
 /// types are generated from the schema of these.
 namespace catter::protocol {
 
@@ -37,10 +37,6 @@ std::vector<OSString> to_os_string(std::vector<std::string> bytes);
 std::expected<std::string, std::string> to_bytes(OSString text);
 
 std::expected<std::vector<std::string>, std::string> to_bytes(std::vector<OSString> texts);
-
-/// `bytes` as a string of the protocol, which is valid UTF-8: each byte that
-/// is not becomes U+FFFD.
-std::string to_text(std::string bytes);
 
 /// The build a session runs.
 struct Build {

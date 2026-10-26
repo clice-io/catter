@@ -19,9 +19,6 @@ public:
     system_error(int __v, const std::error_category& __ecat, const char* __what) :
         system_error(std::error_code(__v, __ecat), __what) {}
 
-    system_error(int __v, const std::error_category& __ecat) :
-        runtime_error(std::error_code(__v, __ecat).message()), ec(__v, __ecat) {}
-
     system_error(int __v, const std::error_category& __ecat, const std::string& __what) :
         runtime_error(__what + (": " + std::error_code(__v, __ecat).message())), ec(__v, __ecat) {}
 

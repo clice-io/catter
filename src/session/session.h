@@ -1,7 +1,6 @@
 #pragma once
 #include <cassert>
 #include <concepts>
-#include <filesystem>
 #include <format>
 #include <list>
 #include <memory>
@@ -41,6 +40,7 @@ public:
     struct ProcessLaunchPlan {
         std::string cwd;
         std::string executable;
+        /// The arguments after argv[0].
         std::vector<std::string> args;
     };
 

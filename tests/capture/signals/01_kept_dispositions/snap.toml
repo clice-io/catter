@@ -1,0 +1,51 @@
+[test."$ node build.mjs"]
+stdout = '''
+SIGHUP default, SIGPIPE default, SIGCHLD default, SIGUSR1 not blocked
+SIGHUP ignored, SIGPIPE ignored, SIGCHLD ignored, SIGUSR1 blocked
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+SIGHUP default, SIGPIPE default, SIGCHLD default, SIGUSR1 not blocked
+SIGHUP ignored, SIGPIPE ignored, SIGCHLD ignored, SIGUSR1 blocked
+node build.mjs
+├── ./report
+└── python -c "import os, signal, sys; signal.signal(signal.SIGHUP, signal.SIG_IGN); signal.signal(signal.SIGCHLD, signal.SIG_IGN); signal.pthread_sigmask(signal.SIG_BLOCK, [signal.SIGUSR1]); os.execvp(sys.argv[1], sys.argv[1:])" ./report
+    └── ./report
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- node build.mjs".darwin]
+wrong = "on macOS kotatsu's spawn sets an ignored SIGCHLD back to its default, and the program gets it so"
+stdout = '''
+SIGHUP default, SIGPIPE default, SIGCHLD default, SIGUSR1 not blocked
+SIGHUP ignored, SIGPIPE ignored, SIGCHLD default, SIGUSR1 blocked
+node build.mjs
+├── ./report
+└── python -c "import os, signal, sys; signal.signal(signal.SIGHUP, signal.SIG_IGN); signal.signal(signal.SIGCHLD, signal.SIG_IGN); signal.pthread_sigmask(signal.SIG_BLOCK, [signal.SIGUSR1]); os.execvp(sys.argv[1], sys.argv[1:])" ./report
+    └── ./report
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 -- ./report"]
+stdout = '''
+SIGHUP default, SIGPIPE default, SIGCHLD default, SIGUSR1 not blocked
+./report
+'''
+exit = 0
+
+[test."$ node catter.mjs"]
+stdout = '''
+SIGHUP ignored, SIGPIPE ignored, SIGCHLD ignored, SIGUSR1 blocked
+./report
+'''
+exit = 0
+
+[test."$ node catter.mjs".darwin]
+wrong = "on macOS kotatsu's spawn sets an ignored SIGCHLD back to its default, and the program gets it so"
+stdout = '''
+SIGHUP ignored, SIGPIPE ignored, SIGCHLD default, SIGUSR1 blocked
+./report
+'''
+exit = 0

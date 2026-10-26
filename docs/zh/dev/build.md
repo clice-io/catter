@@ -42,7 +42,7 @@ pixi run cfg release
 - `catter-proxy` -- 代理进程管理器
 - `catter-hook-unix` -- Unix 钩子共享库（Linux/macOS）
 - `catter-hook-x64`、`catter-hook-arm64` -- Windows 钩子 DLL，每种架构一个，Windows 上的每次构建都会同时生成两者
-- `support`（以及 `support-resolver` 和 `support-winapi`）、`command`、`session`、`capture`（以及 `capture-inject`）、`protocol`、`feature` -- 静态库，`src/` 下每个目录一个
+- `support`、`command`、`session`、`capture`（以及 `capture-inject`）、`protocol`、`feature` -- 静态库，`src/` 下每个目录一个
 
 ## 主要依赖
 

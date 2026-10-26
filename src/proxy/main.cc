@@ -1,86 +1,71 @@
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
-#include <filesystem>
+#include <format>
 #include <iostream>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 #include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 #include <kota/deco/deco.h>
+#include <kota/fs/resolve.h>
+#include <kota/sys/env.h>
+#include <kota/sys/process.h>
+
+#ifndef CATTER_WINDOWS
+#include <pthread.h>
+#include <sys/resource.h>
+#endif
 
 #include "capture/inject/hook.h"
 #include "proxy/ipc.h"
 #include "proxy/option.h"
 #include "session/process.h"
 #include "support/config/catter-proxy.h"
-#include "support/crossplat.h"
-#include "support/encoding.h"
 #include "support/guard.h"
 #include "support/log.h"
 #include "support/output.h"
-#include "support/resolver/resolver.h"
+#include "support/paths.h"
 
 using namespace catter;
 
 namespace {
 using catter::data::action;
+using exit_status = kota::process::exit_status;
 
-std::string resolve_executable(std::string_view exe, const std::vector<std::string>& env) {
-
-#ifdef CATTER_WINDOWS
-    return from_wide(catter::resolve_command_line_token<wchar_t>(to_wide(exe)));
-#else
-    std::string path_env;
-    for(const auto& env_var: env) {
-        if(env_var.starts_with("PATH=")) {
-            path_env = env_var.substr(5);
-            break;
-        }
-    }
-    if(path_env.empty()) {
-        throw cpptrace::runtime_error("PATH environment variable not found");
-    }
-    auto resolved = catter::resolve_from_path_env(exe, path_env.c_str());
-    if(!resolved.has_value()) {
-        // if not found, just return the original string and let the system handle it, which will
-        // produce the same error as if we did not resolve it.
-        return std::string(exe);
-    }
-    return to_utf8(*resolved);
-#endif
-}
-
-kota::process::options process_options(const data::command& cmd, bool verbatim_arguments) {
-    return {
-        .file = cmd.executable,
-        .args = cmd.args,
-        .env = cmd.env,
-        .cwd = cmd.cwd,
-        .creation = {.windows_hide = true, .windows_verbatim_arguments = verbatim_arguments},
-    };
-}
-
-kota::task<data::process_result> run(data::action act, data::ipcid_t id, std::string pipe_name) {
+kota::task<exit_status> run(data::action act,
+                            data::ipcid_t id,
+                            std::string pipe_name,
+                            [[maybe_unused]] proxy::Peer& peer) {
     using catter::data::action;
 
+    RunOptions stand_in{.stand_in = true};
+#ifdef CATTER_MAC
+    stand_in.started = [&](int pid) {
+        peer.started(pid);
+    };
+#endif
     switch(act.type) {
         case action::WRAP: {
-            auto opts = process_options(act.cmd, true);
-            co_return co_await run_process(opts);
+            auto opts = process_options(act.cmd);
+            co_return co_await run_process(std::move(opts), std::move(stand_in));
         }
         case action::INJECT: {
-            co_return co_await run_with_hook(act.cmd, id, std::move(pipe_name));
+            auto opts = hook_options(std::move(act.cmd), id, pipe_name);
+            co_return co_await run_process(std::move(opts), std::move(stand_in));
         }
         case action::DROP: {
-            co_return data::process_result{.code = 0};
+            co_return exit_status{.code = 0};
         }
         case action::FAIL: {
-            co_return data::process_result{.code = 1};
+            co_return exit_status{.code = 1};
         }
         default: {
-            co_return data::process_result{.code = -1};
+            co_return exit_status{.code = -1};
         }
     }
 }
@@ -91,33 +76,53 @@ data::command command_of(const catter::proxy::ProxyOption& opt) {
         throw cpptrace::runtime_error("missing command arguments after --");
     }
 
-    data::command cmd = {
-        .cwd = to_utf8(std::filesystem::current_path()),
-        .args = *opt.args,
-        .env = catter::get_environment(),
-    };
-
-    if(opt.exec.has_value()) {
-        cmd.executable = *opt.exec;
-    } else {
-        cmd.executable = resolve_executable(cmd.args.at(0), cmd.env);
+    data::command cmd = {.args = *opt.args};
+    if(auto error = kota::fs::current_dir(cmd.cwd)) {
+        throw cpptrace::runtime_error(
+            std::format("Failed to read the current directory: {}", error.message()));
     }
+    for(const auto& [name, value]: kota::sys::environment()) {
+        cmd.env.push_back(std::format("{}={}", name, value));
+    }
+
+    cmd.executable = opt.exec.has_value() ? *opt.exec : resolve_program(cmd.args.at(0));
     return cmd;
 }
 
-std::string format_args(int argc, char* argv[]) {
-    std::string result = argv[0];
-    for(int i = 1; i < argc; i++) {
-        result += ' ';
-        result += argv[i];
+std::string format_args(std::span<const std::string> argv) {
+    std::string result;
+    for(const auto& arg: argv) {
+        if(!result.empty()) {
+            result += ' ';
+        }
+        result += arg;
     }
     return result;
 }
 
-kota::task<int> handle_proxy_request(int argc,
-                                     char* argv[],
-                                     const catter::proxy::ProxyOption& opt,
-                                     proxy::Peer& peer) noexcept {
+/// What this process ends with: what its program ended with, the same signal
+/// or the same exit code.
+int exit_like(const exit_status& status) {
+#ifndef CATTER_WINDOWS
+    if(status.term_signal != 0) {
+        // No core of this process beside the program's own.
+        rlimit none{};
+        ::setrlimit(RLIMIT_CORE, &none);
+        std::signal(status.term_signal, SIG_DFL);
+        // The build may have blocked it for the programs it starts.
+        sigset_t signals;
+        sigemptyset(&signals);
+        sigaddset(&signals, status.term_signal);
+        ::pthread_sigmask(SIG_UNBLOCK, &signals, nullptr);
+        std::raise(status.term_signal);
+    }
+#endif
+    return static_cast<int>(result_of(status).code);
+}
+
+kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
+                                             const catter::proxy::ProxyOption& opt,
+                                             proxy::Peer& peer) noexcept {
     // ensure peer is closed when proxy_main exits, otherwise the peer might still be
     // running and trying to access resources that have been cleaned up after proxy_main
     // exits.
@@ -133,7 +138,7 @@ kota::task<int> handle_proxy_request(int argc,
     try {
         if(opt.error_msg.has_value() && !opt.args.has_value()) {
             co_await peer.report_error(*opt.parent_id, *opt.error_msg);
-            co_return -1;
+            co_return exit_status{.code = -1};
         }
 
         auto cmd = command_of(opt);
@@ -147,18 +152,17 @@ kota::task<int> handle_proxy_request(int argc,
 
         auto received_act = co_await peer.make_decision(cmd);
 
-        auto result = co_await run(received_act, id, *opt.ipc);
-        auto code = static_cast<int>(result.code);
+        auto status = co_await run(received_act, id, *opt.ipc, peer);
 
         // A command can outlive its session (a build server): its result
         // stands, though catter is gone.
         try {
-            co_await peer.finish(std::move(result));
+            co_await peer.finish(result_of(status));
         } catch(const std::exception& ex) {
             LOG_WARN("Command {} ended after its session: {}", id, ex.what());
         }
 
-        co_return code;
+        co_return status;
     } catch(const cpptrace::exception& ex) {
         err = std::format("{}\n", ex.message());
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
@@ -168,15 +172,16 @@ kota::task<int> handle_proxy_request(int argc,
         err = "Unknown fatal error.\n";
     }
 
-    auto msg = std::format("Run `{}` failed:\n{}", format_args(argc, argv), err);
+    auto msg = std::format("Run `{}` failed:\n{}", format_args(argv), err);
 
     LOG_ERROR(msg);
     co_await peer.report_error(*opt.parent_id, msg);
 
-    co_return -1;
+    co_return exit_status{.code = -1};
 };
 
-kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOption& opt) noexcept {
+kota::task<exit_status> proxy_main(std::span<const std::string> argv,
+                                   const catter::proxy::ProxyOption& opt) noexcept {
     auto& current = kota::event_loop::current();
     auto ret = co_await kota::pipe::connect(*opt.ipc, kota::pipe::options(), current);
     if(!ret) {
@@ -187,14 +192,11 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
                  *opt.ipc,
                  ret.error().message());
         try {
-            // The arguments are the ones the hook took apart: quoted back,
-            // not joined as they are.
-            auto opts = process_options(command_of(opt), false);
-            auto result = co_await run_process(opts);
-            co_return static_cast<int>(result.code);
+            auto opts = process_options(command_of(opt));
+            co_return co_await run_process(std::move(opts), {.stand_in = true});
         } catch(const std::exception& ex) {
-            LOG_ERROR("Run `{}` failed: {}", format_args(argc, argv), ex.what());
-            co_return -1;
+            LOG_ERROR("Run `{}` failed: {}", format_args(argv), ex.what());
+            co_return exit_status{.code = -1};
         }
     }
     auto peer = proxy::Peer{
@@ -202,20 +204,17 @@ kota::task<int> proxy_main(int argc, char* argv[], const catter::proxy::ProxyOpt
                                std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
     };
 
-    auto [_, code] =
-        co_await kota::when_all{peer.run(), handle_proxy_request(argc, argv, opt, peer)};
+    auto [_, status] = co_await kota::when_all{peer.run(), handle_proxy_request(argv, opt, peer)};
 
-    co_return code;
+    co_return status;
 }
 
 // we do not output in proxy, it must be invoked by main program.
 // usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
-int run(int argc, char* argv[]) {
+int run(std::span<const std::string> argv) {
     try {
-        log::init_logger("catter-proxy.log",
-                         get_catter_data_path() / config::PROXY_LOG_PATH,
-                         false);
+        log::init_logger("catter-proxy.log", data_path(config::PROXY_LOG_PATH), false);
     } catch(const std::exception&) {
         log::mute_logger();
     }
@@ -224,13 +223,13 @@ int run(int argc, char* argv[]) {
         "Catter Proxy, the tool for receive hook info and send it to catter.");
 
     int ret = 0;
-    auto args = kota::deco::util::argvify(argc, argv, 1);
+    std::vector<std::string> args(argv.begin() + 1, argv.end());
     cli.match(catter::proxy::Option::Cate::help,
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
                [&](const auto& opt) {
-                   auto [code] = kota::run(proxy_main(argc, argv, opt.proxy_opt));
-                   ret = code.has_value() ? *code : -1;
+                   auto [status] = kota::run(proxy_main(argv, opt.proxy_opt));
+                   ret = status.has_value() ? exit_like(*status) : -1;
                })
         .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
@@ -242,13 +241,12 @@ int run(int argc, char* argv[]) {
 
 }  // namespace
 
-#ifdef CATTER_WINDOWS
-int wmain(int argc, wchar_t* argv[]) {
-    Utf8Arguments arguments(argc, argv);
-    return run(argc, arguments.argv());
-}
-#else
 int main(int argc, char* argv[]) {
-    return run(argc, argv);
-}
+#ifdef CATTER_WINDOWS
+    // main's argv is in the ANSI code page, which holds few characters past
+    // ASCII.
+    return run(kota::sys::arguments());
+#else
+    return run(std::vector<std::string>(argv, argv + argc));
 #endif
+}

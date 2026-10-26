@@ -1,6 +1,7 @@
 #pragma once
-#include <filesystem>
 #include <ranges>
+#include <string>
+#include <string_view>
 
 #include "spdlog/spdlog.h"
 
@@ -22,9 +23,13 @@
 #define LOG_CRITICAL(...) SPDLOG_CRITICAL(__VA_ARGS__)
 
 namespace catter::log {
+/// With `reopen` the log file is opened for each message rather than kept
+/// open: the hook logs inside the build's programs, which may put another
+/// file at a descriptor kept open, as a child does between fork and exec.
 void init_logger(const std::string& logger_name,
-                 const std::filesystem::path& file_path,
-                 bool cmdline = false) noexcept;
+                 std::string_view file_path,
+                 bool cmdline = false,
+                 bool reopen = false) noexcept;
 
 void mute_logger() noexcept;
 

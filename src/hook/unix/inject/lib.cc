@@ -2,8 +2,10 @@
 #include <cerrno>
 #include <cstdarg>
 #include <cstdlib>
+#include <string>
 #include <spawn.h>
 #include <unistd.h>
+#include <kota/sys/process.h>
 
 #include "hook/unix/crossplat.h"
 #include "hook/unix/debug.h"
@@ -48,13 +50,17 @@ extern "C" EXPORT_SYMBOL void on_load() {
         return;
 #ifdef DEBUG
     try {
-        auto path = catter::get_catter_data_path() / catter::config::HOOK_LOG_PATH;
-        catter::log::init_logger("catter-hook", path, false);
+        catter::log::init_logger("catter-hook",
+                                 catter::data_path(catter::config::HOOK_LOG_PATH),
+                                 false,
+                                 true);
     } catch(const std::exception&) {
         catter::log::mute_logger();
     }
+    std::string executable;
+    kota::sys::executable_path(executable);
+    INFO("catter hook library loaded, from executable path: {}", executable);
 #endif
-    INFO("catter hook library loaded, from executable path: {}", get_executable_path());
     EXECUTOR.init(environment());
     errno = 0;
 }

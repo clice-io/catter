@@ -17,7 +17,6 @@
 #include "capture/runtime_driver.h"
 #include "protocol/remote_handler.h"
 #include "session/handler.h"
-#include "support/encoding.h"
 #include "support/output.h"
 
 namespace catter::driver {
@@ -110,7 +109,7 @@ kota::task<> async_run(std::unique_ptr<Handler> builtin, const SessionOptions& o
         options.from.has_value() ? replay_runtime_driver() : inject_runtime_driver();
     Build build{
         .command = options.from.has_value() ? std::vector{*options.from} : *options.command,
-        .cwd = to_utf8(options.directory.directory->path),
+        .cwd = options.directory.directory->path,
     };
 
     const auto handler_options = [&, session = session_id()](std::string_view name) {

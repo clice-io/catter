@@ -10,11 +10,12 @@ CDB saved to ${WS}/compile_commands.json with 2 entries.
 exit = 0
 
 [test."$ catter compile-commands -o compile_commands.json -- make -j4".darwin]
-wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
-stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
-stderr = '''
-dyld[#]: terminating because inserted dylib '${CATTER}/libcatter-hook-unix.dylib' could not be loaded: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
-dyld[#]: tried: '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e')), '/System/Volumes/Preboot/Cryptexes/OS${CATTER}/libcatter-hook-unix.dylib' (no such file), '${CATTER}/libcatter-hook-unix.dylib' (mach-o file, but is an incompatible architecture (have 'arm64', need 'arm64e'))
+wrong = "Apple's make runs without the hook, and what it starts goes uncaptured"
+stdout = '''
+${XCODE}/usr/bin/make -C sub
+c++ -DCATTER_TEST=1 -c a.cc -o a.o
+c++ -DCATTER_TEST=1 -c b.cc -o b.o
+CDB saved to ${WS}/compile_commands.json with 0 entries.
 '''
 exit = 0
 
@@ -35,5 +36,5 @@ entries = [
 ]
 
 [test."compile_commands.json".darwin]
-wrong = "dyld kills Apple's arm64e tools when the hook library is inserted (catter#115)"
+wrong = "Apple's make runs without the hook, and what it starts goes uncaptured"
 entries = []

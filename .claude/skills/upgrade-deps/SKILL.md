@@ -39,11 +39,15 @@ They always move together:
 `xmake.lua` defines the package: `package("kotatsu")` with one
 `add_versions("<n>", "<sha>")`, where `<n>` is `git rev-list --count <sha>`
 in a full clone of clice-io/kotatsu (a shallow clone counts wrong), and the
-configs catter consumes (`async`, `deco`, `ztest` on, `http` off).
+configs catter consumes (`async`, `deco`, `ztest`, `codec_simdjson` on by
+default, `http` off). Each Windows hook DLL links a `kotatsu~<arch>` of its
+own architecture with those configs off: `kota::fs` and `kota::sys` alone.
 
 1. Pick the commit, usually kotatsu's `main`; replace the version line.
-2. Keep the package's `add_deps` (libuv, cpptrace) at the versions
-   kotatsu's own `xmake.lua` requires at that commit.
+2. Keep the dependencies the package's `on_load` adds (libuv, cpptrace,
+   simdjson) at the versions kotatsu's own `xmake.lua` requires at that
+   commit, and its MinGW `add_syslinks` equal to those of kotatsu's `sys`
+   target, which the installed package does not record.
 3. Read kotatsu's history since the old pin
    (`git log --oneline <old>..<new>`) for API changes, adapt catter to
    them, and list them in the PR body.

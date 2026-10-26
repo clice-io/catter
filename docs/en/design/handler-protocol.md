@@ -106,11 +106,11 @@ A request a handler sends catter, for what catter makes of commands of its own: 
 
 ### `error`, `exit` and `finish`
 
-| Message  | Fields                                                                                                                                                                                               |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                                                                                                                      |
-| `exit`   | `id`, `code`: its exit code, `duration`: microseconds from the handler's decision on the command (its notification, to an observer) to its exit, in which the handlers after it in the chain decide. |
-| `finish` | `code`: the build's exit code. The result is `null`.                                                                                                                                                 |
+| Message  | Fields                                                                                                                                                                                                                                                   |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                                                                                                                                                                          |
+| `exit`   | `id`, `code`: its exit code, 128 and the signal's number for one a signal ended, `duration`: microseconds from the handler's decision on the command (its notification, to an observer) to its exit, in which the handlers after it in the chain decide. |
+| `finish` | `code`: the build's exit code, as `exit`'s. The result is `null`.                                                                                                                                                                                        |
 
 ## Strings and numbers
 
