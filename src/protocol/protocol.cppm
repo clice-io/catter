@@ -118,7 +118,7 @@ struct Read {
     std::uint32_t index;
     /// `source`, or `link`.
     std::string role;
-    /// The language of a source: `c` or `c++`.
+    /// The language of a source, as `-x` names it: `c`, `c++`, `c++-module`, `assembler`, ...
     std::optional<std::string> language;
 };
 

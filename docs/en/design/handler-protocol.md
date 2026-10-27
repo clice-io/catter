@@ -86,7 +86,7 @@ What catter makes of a command, named by its `kind`. catter knows a program by i
 
 Each argument has `option`, the option it is after aliases, by its name with its prefix (`-I` for `/I` too; `<input>` for an input, `<unknown>` for an option the option table does not know); `spelling`, as the command writes it (`-msmall-data-limit=` of what is `-G`); `index` and `count`, the command's arguments it takes; and `values`.
 
-A source's language is `c` or `c++`: the one `/Tc` or `/Tp` names it with, the one the last `-x` before it sets (`-x none` resets it), the one `/TC` or `/TP` sets for every input, else its suffix's, `.C` being C++ but to cl, and `.c` and `.i` C++ to a C++ driver (`g++`, `c++`, `clang++`, `--driver-mode=g++`). For now catter reads a source of a set language only when its suffix names that language too.
+A source's language is named as `-x` names it (`c`, `c++`, `c++-module`, `objective-c`, `assembler`, `cuda`, …): the one `/Tc` or `/Tp` names it with, the one the last `-x` before it sets (`-x none` resets it), the one `/TC` or `/TP` sets for every source, else its suffix's, `.C`, `.M` and `.S` naming other languages than in lower case but to cl, and `.c` and `.i` C++ to a C++ driver (`g++`, `c++`, `clang++`, `--driver-mode=g++`). An input after `-x` is a source of its language whatever its suffix, but an object or a library.
 
 ### Edits
 

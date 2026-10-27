@@ -172,8 +172,9 @@ struct Read {
 
     InputRole role;
 
-    /// The language a source is read in: the one `-x` before it sets, `/TC` or `/TP` for all,
-    /// else its suffix's, `c` or `c++`. None for a file read for linking.
+    /// The language a source is read in, as `-x` names it: the one `/Tc` or `/Tp` gives it, the
+    /// one `-x` before it sets, `/TC` or `/TP` for all, else its suffix's, `c`, `c++`,
+    /// `c++-module`, `objective-c`, `assembler`, `cuda`, ... None for a file read for linking.
     std::optional<std::string> language;
 };
 
@@ -204,7 +205,6 @@ struct Diagnostic {
         OutputKindIgnored,
         DefaultOutputMissingInput,
         DefaultOutputUnsupportedArtifact,
-        ImplicitOutputUnresolved,
         DirectoryOutputUnsupportedArtifact,
         AssemblyListingAmbiguousOutput,
         /// A response file that cannot be read, whose arguments are unknown.

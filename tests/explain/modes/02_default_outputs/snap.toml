@@ -160,7 +160,6 @@ stdout = '''
 exit = 0
 
 [test."$ catter explain -- gcc a.c"]
-wrong = "the default a.out is not inferred, so the command gets no entry (catter#132)"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -180,21 +179,40 @@ stdout = '''
     "reads": [
         "a.c"
     ],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "writes": [
+        "a.out"
+    ],
+    "edges": [
         {
-            "code": "implicit-output-unresolved",
-            "message": "cannot infer implicit output for gcc link/exe"
+            "output": "a.out",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.out",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c"
+            ],
+            "output": "${WS}/a.out"
+        }
+    ]
 }
 '''
 exit = 0
 
 [test."$ catter explain -- gcc a.c".darwin]
-wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
+differs = "a command that names no target compiles for the host"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -214,21 +232,40 @@ stdout = '''
     "reads": [
         "a.c"
     ],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "writes": [
+        "a.out"
+    ],
+    "edges": [
         {
-            "code": "implicit-output-unresolved",
-            "message": "cannot infer implicit output for gcc link/exe"
+            "output": "a.out",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.out",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c"
+            ],
+            "output": "${WS}/a.out"
+        }
+    ]
 }
 '''
 exit = 0
 
 [test."$ catter explain -- gcc a.c".win32]
-wrong = "the default a.out is not inferred, so the command gets no entry (catter#132); a command that names no target compiles for the host"
+differs = "a command that names no target compiles for the host"
 stdout = '''
 {
     "analyzer": "compiler",
@@ -248,15 +285,34 @@ stdout = '''
     "reads": [
         "a.c"
     ],
-    "writes": [],
-    "edges": [],
-    "diagnostics": [
+    "writes": [
+        "a.exe"
+    ],
+    "edges": [
         {
-            "code": "implicit-output-unresolved",
-            "message": "cannot infer implicit output for gcc link/exe"
+            "output": "a.exe",
+            "inputs": [
+                "a.c"
+            ]
         }
     ],
-    "entries": []
+    "inferred": [
+        {
+            "path": "a.exe",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "a.c"
+            ],
+            "output": "${WS}/a.exe"
+        }
+    ]
 }
 '''
 exit = 0

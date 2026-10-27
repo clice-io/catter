@@ -1,0 +1,4 @@
+g++ --target=x86_64-linux-gnu -x c++ -c legacy.c
+gcc --target=x86_64-linux-gnu -x c -c noext
+cl /nologo /c /TP legacy.c other.obj
+clang --target=x86_64-linux-gnu -c greet.cppm start.S util.m kernel.cu

@@ -1,0 +1,9 @@
+[test."$ catter compile-commands -o compile_commands.json -- node -e \"console.log('built')\""]
+stdout = '''
+CDB file is not valid JSON: compile_commands.json: TAPE_ERROR: The JSON document has an improper structure: missing or superfluous commas, braces, missing keys, etc.  This is a fatal and unrecoverable error.
+catter merges the build's entries into it: give --replace to write a new database over it.
+'''
+exit = 1
+
+[test."compile_commands.json"]
+value = '[{"directory": "/work", "file":'

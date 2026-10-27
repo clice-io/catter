@@ -168,9 +168,35 @@ Target select_target(const Identity& identity, const ParsedCommand& parsed) {
     return host_target();
 }
 
-constexpr std::array<std::string_view, 2> c_suffixes = {".c", ".i"};
-constexpr std::array<std::string_view, 6> cxx_suffixes =
-    {".c++", ".cc", ".cp", ".cpp", ".cxx", ".ii"};
+/// The languages of sources by their suffix, as `-x` names them. A suffix in upper case, `.C`,
+/// names another language than in lower case, but to cl, which takes no case.
+constexpr std::array<std::pair<std::string_view, std::string_view>, 23> languages = {
+    {
+     {".C", "c++"},
+     {".M", "objective-c++"},
+     {".S", "assembler-with-cpp"},
+     {".c", "c"},
+     {".i", "c"},
+     {".cc", "c++"},
+     {".cp", "c++"},
+     {".cpp", "c++"},
+     {".cxx", "c++"},
+     {".c++", "c++"},
+     {".ii", "c++"},
+     {".cppm", "c++-module"},
+     {".ccm", "c++-module"},
+     {".cxxm", "c++-module"},
+     {".c++m", "c++-module"},
+     {".ixx", "c++-module"},
+     {".m", "objective-c"},
+     {".mi", "objective-c"},
+     {".mm", "objective-c++"},
+     {".mii", "objective-c++"},
+     {".s", "assembler"},
+     {".sx", "assembler-with-cpp"},
+     {".cu", "cuda"},
+     }
+};
 
 bool is_stream(std::string_view path) {
     return path == "-";
@@ -194,41 +220,44 @@ struct Input {
     std::optional<std::string> language;
 };
 
-/// The file `candidate` names, or why it names none. `.C` is a C++ source but to cl, and so is
-/// every C source to a C++ driver.
+/// The language of the source `path` by its suffix, as the compiler takes it: a C source C++
+/// to a C++ driver.
+std::optional<std::string> language_of(std::string_view path, const ParsedCommand& parsed) {
+    const auto lower = lowercase(path);
+    for(auto [suffix, language]: languages) {
+        const bool cased = suffix != lowercase(suffix);
+        if(cased ? parsed.dialect != Dialect::MSVC && path.ends_with(suffix)
+                 : lower.ends_with(suffix)) {
+            return std::string(language == "c" && parsed.cxx ? "c++" : language);
+        }
+    }
+    return std::nullopt;
+}
+
+/// The file `candidate` names, or why it names none: an object or a library is read for
+/// linking, any other file a source in the language `-x` sets, and a file whose suffix names
+/// a language a source in it, or in the one `/TC` or `/TP` sets.
 std::expected<Input, std::string_view> input_of(const Candidate& candidate,
                                                 const Convention& convention,
                                                 const ParsedCommand& parsed) {
     if(is_stream(candidate.path)) {
         return std::unexpected("stream input is not a filesystem dependency");
     }
+    if(candidate.path == "/dev/null") {
+        return std::unexpected("the null device holds no source");
+    }
     const auto path = lowercase(candidate.path);
-    const auto ends_with = [&](std::string_view suffix) {
-        return path.ends_with(suffix);
-    };
-    const bool c = std::ranges::any_of(c_suffixes, ends_with);
-    const bool cxx = std::ranges::any_of(cxx_suffixes, ends_with);
-    const auto language = lowercase(candidate.language.value_or("none"));
-    if(language == "c") {
-        if(c) {
-            return Input{.role = InputRole::Source, .language = "c"};
-        }
-    } else if(language == "c++") {
-        if(cxx) {
-            return Input{.role = InputRole::Source, .language = "c++"};
-        }
-    } else if(language == "none") {
-        if(c || cxx) {
-            const bool upper_c = parsed.dialect != Dialect::MSVC && candidate.path.ends_with(".C");
-            return Input{.role = InputRole::Source,
-                         .language = c && !upper_c && !parsed.cxx ? "c" : "c++"};
-        }
-        if(ends_with(convention.object) || ends_with(convention.shared_library) ||
-           ends_with(convention.static_library)) {
-            return Input{.role = InputRole::Link};
-        }
-    } else {
-        return std::unexpected("input candidate has unsupported explicit language");
+    if(path.ends_with(convention.object) || path.ends_with(convention.shared_library) ||
+       path.ends_with(convention.static_library)) {
+        return Input{.role = InputRole::Link};
+    }
+    if(candidate.language.has_value() && lowercase(*candidate.language) != "none") {
+        return Input{.role = InputRole::Source, .language = candidate.language};
+    }
+    if(auto language = language_of(candidate.path, parsed)) {
+        return Input{.role = InputRole::Source,
+                     .language = parsed.every_language.has_value() ? parsed.every_language
+                                                                   : std::move(language)};
     }
     return std::unexpected("input candidate did not match suffix rules");
 }
@@ -410,7 +439,8 @@ struct Builder {
         write_each(from, *extension, std::nullopt, WriteOrigin::DefaultOutput);
     }
 
-    /// The one output of a link, which only MSVC's driver names after its first input.
+    /// The one output of a link: MSVC's driver names it after its first input, the others
+    /// `a.out`, `a.exe` for a target whose executables are named so.
     void resolve_default_link() {
         auto from = primary_reads();
         if(from.empty()) {
@@ -418,12 +448,10 @@ struct Builder {
                      "single output has no input to name");
             return;
         }
-        if(parsed.dialect != Dialect::MSVC || parsed.phase != Phase::Link) {
-            diagnose(Diagnostic::Code::ImplicitOutputUnresolved,
-                     std::format("cannot infer implicit output for {} {}/{}",
-                                 name(parsed.dialect),
-                                 name(parsed.phase),
-                                 name(parsed.artifact)));
+        if(parsed.dialect != Dialect::MSVC) {
+            write(convention.executable.empty() ? "a.out" : "a.exe",
+                  std::move(from),
+                  WriteOrigin::DefaultOutput);
             return;
         }
         const auto suffix = parsed.artifact == Artifact::Executable ? convention.executable

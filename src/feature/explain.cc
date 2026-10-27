@@ -5,9 +5,9 @@ module;
 module catter;
 
 import catter.command;
+import :feature.compilation_database;
 import :feature.explain;
 import :feature.json;
-import :feature.path;
 
 namespace catter::feature {
 
@@ -102,7 +102,6 @@ Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
 
     Array edges;
     Array inferred;
-    Array entries;
     for(const auto& write: analysis.writes) {
         edges.push_back(Object{
             {"output", write.path                                           },
@@ -115,19 +114,6 @@ Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
                  write.origin == WriteOrigin::DefaultOutput ? "default-output"
                                                             : "assembly-listing"},
             });
-        }
-        if(write.path == "-") {
-            continue;
-        }
-        for(auto read: write.reads) {
-            if(is_source(analysis.reads[read])) {
-                entries.push_back(Object{
-                    {"directory", cwd},
-                    {"file", analysis.reads[read].path},
-                    {"arguments", strings(analysis.expansion.argv)},
-                    {"output", absolute_path(cwd, write.path)},
-                });
-            }
         }
     }
 
@@ -159,7 +145,7 @@ Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
         }
         object.insert("diagnostics", std::move(diagnostics));
     }
-    object.insert("entries", std::move(entries));
+    object.insert("entries", Array(entries_of(cwd, analysis)));
     return object;
 }
 
