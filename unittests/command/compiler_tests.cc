@@ -111,6 +111,24 @@ ZEST_CASE(options_only_gcc_knows_take_their_values) {
     ZEXPECT(reads("g++ -wrapper echo,foo.c -c bar.c") == std::vector<std::string>{"bar.c"});
     ZEXPECT(reads("gcc -aux-info protos.c -dumpbase-ext .c -c foo.c") ==
             std::vector<std::string>{"foo.c"});
+    // cl's options of C++ modules, with either prefix, even where `/TP` makes any input a source.
+    for(auto option: {"ifcMap", "ifcOutput", "ifcSearchDir", "scanDependencies", "stdIfcDir"}) {
+        for(auto prefix: {"/", "-"}) {
+            ZEST_CONTEXT("option: {}{}", prefix, option);
+            ZEXPECT(reads(std::format("cl /c /TP a.cc {}{} value", prefix, option)) ==
+                    std::vector<std::string>{"a.cc"});
+        }
+    }
+};
+
+ZEST_CASE(an_option_the_table_does_not_know_keeps_its_value) {
+    const auto argv = split("gcc -c foo.c -dumpbase xx.c");
+    auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
+    ZASSERT(analysis.has_value());
+    const auto& argument = analysis->arguments.back();
+    ZEXPECT(option_name(syntax_of(Dialect::GCC), argument.id) == "<unknown>");
+    ZEXPECT(argument.spelling == "-dumpbase");
+    ZEXPECT(argument.values == std::vector<std::string>{"xx.c"});
 };
 
 ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {

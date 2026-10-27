@@ -67,15 +67,18 @@ std::expected<std::vector<Argument>, std::string>
                                 result.error().message));
             }
             const auto index = static_cast<std::uint32_t>(start + result->index);
-            if(index + 1 < argv.size() && std::ranges::contains(syntax.separate, argv[index])) {
+            if(std::ranges::contains(syntax.separate, argv[index])) {
+                // An edit that removes it may name it alone.
+                const auto values =
+                    argv.subspan(index + 1, std::min<std::size_t>(argv.size() - index - 1, 1));
                 arguments.push_back(Argument{
                     .id = syntax.table->unknown_option_id,
                     .index = index,
-                    .count = 2,
+                    .count = static_cast<std::uint32_t>(1 + values.size()),
                     .spelling = argv[index],
-                    .values = {argv[index + 1]},
+                    .values = values | std::ranges::to<std::vector<std::string>>(),
                 });
-                next = index + 2;
+                next = index + 1 + values.size();
                 break;
             }
             arguments.push_back(Argument{

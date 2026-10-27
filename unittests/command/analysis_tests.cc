@@ -97,7 +97,23 @@ const Case cases[] = {
      .writes = {"a.d"},
      },
     {
+     .label = "gcc dependencies to standard output",
+     .argv = {"gcc", "-M", "src/a.c"},
+     .phase = Phase::Preprocess,
+     .artifact = Artifact::Dependencies,
+     .reads = {"src/a.c"},
+     .writes = {},
+     },
+    {
      .label = "cl dependency scan compiles nothing",
+     .argv = {"cl", "src/a.cppm", "/TP", "/scanDependencies", "a.ddi", "/Foa.obj"},
+     .phase = Phase::Preprocess,
+     .artifact = Artifact::Dependencies,
+     .reads = {"src/a.cppm"},
+     .writes = {"a.ddi"},
+     },
+    {
+     .label = "cl dependency scan with dashes",
      .argv = {"cl", "src/a.cppm", "-TP", "-scanDependencies", "a.ddi", "-Foa.obj"},
      .phase = Phase::Preprocess,
      .artifact = Artifact::Dependencies,
