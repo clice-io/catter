@@ -10,7 +10,7 @@ test(
     },
     async (t) => {
         const env = {
-            PATH: [path.join(t.root, "tools"), process.env.PATH ?? ""].join(path.delimiter),
+            PATH: [path.join(t.root, "tools"), process.env["PATH"] ?? ""].join(path.delimiter),
         };
         await t.cli(
             [

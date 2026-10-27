@@ -6,9 +6,11 @@ import { test } from "@catter/tools/testing";
 // once.
 test({ except: { win32: "the wrapper backend runs on Linux and macOS" } }, async (t) => {
     const env = {
-        PATH: [path.join(t.root, "cache"), path.join(t.root, "tools"), process.env.PATH ?? ""].join(
-            path.delimiter,
-        ),
+        PATH: [
+            path.join(t.root, "cache"),
+            path.join(t.root, "tools"),
+            process.env["PATH"] ?? "",
+        ].join(path.delimiter),
     };
     await t.run("node build.mjs", { env });
     await t.cli("tree -w 1000 --capture wrapper -- node build.mjs", { env });

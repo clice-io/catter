@@ -6,7 +6,7 @@ import { test } from "@catter/tools/testing";
 // first on PATH, and in CC's place.
 test({ except: { win32: "the wrapper backend runs on Linux and macOS" } }, async (t) => {
     const env = {
-        PATH: [path.join(t.root, "tools"), process.env.PATH ?? ""].join(path.delimiter),
+        PATH: [path.join(t.root, "tools"), process.env["PATH"] ?? ""].join(path.delimiter),
         CC: path.join(t.root, "other", "cc"),
     };
     await t.run("node build.mjs", { env });
