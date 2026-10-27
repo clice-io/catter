@@ -108,6 +108,12 @@ std::array<bool, 3> held = {};
 
 #endif
 
+/// How a program ended, as a shell reports it: a signal that ended it as 128
+/// and the signal's number.
+std::int64_t code_of(const kota::process::exit_status& status) {
+    return status.term_signal == 0 ? status.code : 128 + status.term_signal;
+}
+
 }  // namespace
 
 void hold_closed_streams() {
@@ -147,10 +153,7 @@ kota::process::options process_options(const data::command& command) {
 
 data::process_result result_of(const kota::process::exit_status& status,
                                std::chrono::microseconds ran) {
-    return {
-        .code = status.term_signal == 0 ? status.code : 128 + status.term_signal,
-        .duration = ran.count(),
-    };
+    return {.code = code_of(status), .duration = ran.count()};
 }
 
 data::process_result result_of(const kota::process::exit_status& status,
@@ -175,7 +178,7 @@ int exit_like(const kota::process::exit_status& status) {
         std::raise(status.term_signal);
     }
 #endif
-    return static_cast<int>(result_of(status).code);
+    return static_cast<int>(code_of(status));
 }
 
 kota::task<kota::process::exit_status> run_process(kota::process::options opts, RunOptions run) {
