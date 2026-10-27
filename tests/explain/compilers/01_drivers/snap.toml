@@ -426,6 +426,55 @@ stdout = '''
 '''
 exit = 0
 
+[test."$ catter explain -- gcc-mp-14 -c a.c -o a.o".win32]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc-mp-14",
+                "-c",
+                "a.c",
+                "-o",
+                "a.o"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0
+
 [test."$ catter explain -- clang++-mp-18 -c a.cc"]
 stdout = '''
 {
@@ -438,6 +487,59 @@ stdout = '''
         "os": "linux",
         "objectFormat": "elf",
         "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.cc"
+    ],
+    "reads": [
+        "a.cc"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang++-mp-18",
+                "-c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang++-mp-18 -c a.cc".win32]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
         "from": "host-fallback"
     },
     "sources": [
