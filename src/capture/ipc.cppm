@@ -6,6 +6,7 @@ module;
 
 module catter:capture.ipc;
 
+import :session.process;
 import :session.session;
 
 /// The requests of the IPC, as kota's peers send and serve them.
@@ -19,49 +20,62 @@ struct RequestTraits<Request<Type>> : Request<Type> {};
 
 namespace catter::ipc {
 
-/// Serves a client of the session's pipe, which reports one command of the
-/// build, `id`, and asks what it is to do: catter-proxy on Unix, the hook on
-/// Windows.
-class Service {
+/// The pipe a build reports its commands to `session` over, while it runs:
+/// each client is a command, which catter-proxy reports, or on Windows the
+/// hook as it starts a program. On Windows catter makes the program the hook
+/// started run as decided, and waits for its exit.
+class Server {
 public:
-    Service(Session& session, data::ipcid_t id) noexcept : session(session), id(id) {}
+    using Start = kota::function<kota::task<kota::process::exit_status>()>;
 
-    Service(const Service&) = delete;
-    Service& operator= (const Service&) = delete;
+    explicit Server(Session& session);
 
-    virtual ~Service() = default;
+    Server(const Server&) = delete;
+    Server& operator= (const Server&) = delete;
 
-    /// `parent_id` is the command that started this one, 0 for the build
-    /// command.
-    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept;
+    std::string_view pipe() const noexcept {
+        return name;
+    }
 
-    virtual kota::task<data::action> make_decision(data::command cmd) noexcept;
-
-    kota::task<> finish(data::process_result result) noexcept;
-
-    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept;
+    /// Runs the build with `start`, and serves the pipe while it runs: how the
+    /// build ended.
+    kota::task<kota::process::exit_status> serve(Start start);
 
 #ifdef CATTER_WINDOWS
-    /// The hook started the command's program suspended, as process `pid`:
-    /// whether it is made to run as decided, which the hook resumes then, or
-    /// cannot run, which the hook ends. A client that runs its program itself,
-    /// as a shim does, hands none over.
-    virtual kota::task<bool> started(std::int64_t pid) noexcept;
-
-    /// Waits for the program started to exit, and finishes the command as
-    /// finish() does; at once when none was. The hook goes once it has
-    /// started the program.
-    virtual kota::task<> wait_started() noexcept;
+    /// Waits until the exit of each program the hook started that has ended is
+    /// told. The build sees a program end before catter does: the commands it
+    /// starts after, and its own end, wait for those exits to be told first.
+    kota::task<> ended();
 #endif
 
-protected:
+private:
+    class Client;
+
+#ifdef CATTER_WINDOWS
+    /// A program the hook started whose exit is not told yet.
+    struct Untold {
+        const OpenedProcess* program;
+
+        /// Set once its exit is told: shared with those waiting for it.
+        std::shared_ptr<kota::event> told;
+    };
+#endif
+
+    kota::task<> accept();
+
+    /// Answers the requests of client `id` until it goes.
+    kota::task<> answer(data::ipcid_t id, kota::pipe pipe);
+
+private:
     Session& session;
 
-    data::ipcid_t id;
+    std::string name;
 
-    data::ipcid_t parent_id = 0;
+    std::optional<kota::acceptor<kota::pipe>> acceptor;
+
+#ifdef CATTER_WINDOWS
+    std::list<Untold> untold;
+#endif
 };
-
-kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client);
 
 }  // namespace catter::ipc

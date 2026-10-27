@@ -24,7 +24,7 @@
 namespace {
 
 /// The session this process reports the programs it starts to.
-hook::Session session;
+catter::hook::Session session;
 
 namespace hooks {
 
@@ -125,16 +125,15 @@ private:
                                              (dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) != 0),
         };
         using catter::ipc::RequestType;
-        const auto created = connection->request<RequestType::CREATE>(session.id);
         const auto decision =
-            created ? connection->request<RequestType::MAKE_DECISION>(sent) : std::nullopt;
+            connection->request<RequestType::MAKE_DECISION>({.parent = session.id, .command = sent});
         if(!decision) {
             return unchanged();
         }
 
         // What a handler changed is written anew, the rest passed on as the
         // caller wrote it.
-        const auto& command = decision->cmd;
+        const auto& command = decision->action.cmd;
         auto application_name = lpApplicationName;
         auto command_line = lpCommandLine;
         auto environment = lpEnvironment;
@@ -168,8 +167,8 @@ private:
         if(!create_process(application_name, command_line, flags, environment, current_directory)) {
             const DWORD error = GetLastError();
             connection->request<RequestType::REPORT_ERROR>({
-                .parent_id = session.id,
-                .error_msg = std::format(
+                .parent = session.id,
+                .message = std::format(
                     "`{}` failed to start: {}",
                     std::ranges::to<std::string>(command.args | std::views::join_with(' ')),
                     std::system_category().message(static_cast<int>(error))),
@@ -275,7 +274,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, [[maybe_unused]] LPVOID res
     DetourRestoreAfterWith();
     // catter killed between adding the DLL and copying its session leaves
     // none: the process runs as it would without catter.
-    const void* found = DetourFindPayloadEx(hook::SESSION_GUID, nullptr);
+    const void* found = DetourFindPayloadEx(catter::hook::SESSION_GUID, nullptr);
     if(found == nullptr) {
         return TRUE;
     }

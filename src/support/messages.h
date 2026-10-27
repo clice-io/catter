@@ -2,13 +2,14 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 // The messages catter exchanges over its session's pipe with what reports
-// the build's commands: catter-proxy on Unix, the hook itself on Windows; and
-// the variables a program of the build finds that pipe in.
+// the build's commands: catter-proxy, and on Windows the hook itself; and the
+// variables a program of the build finds that pipe in.
 
 /// What the environment of a program of the build tells of the session it
 /// reports its commands to.
@@ -65,8 +66,9 @@ struct action {
 
 namespace catter::ipc {
 
+/// Each client of the pipe reports one command: what it is to do first, or that
+/// it cannot be captured; then how it ended.
 enum class RequestType : std::uint8_t {
-    CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
@@ -76,25 +78,30 @@ enum class RequestType : std::uint8_t {
 template <RequestType Type>
 struct Request;
 
-template <>
-struct Request<RequestType::CREATE> {
-    using Params = data::ipcid_t;
-    using Result = data::ipcid_t;
-    constexpr inline static std::string_view method = "create";
-};
-
+/// What catter decides for the command, which `parent` started, none for the
+/// build command: the id it gives the command, which those the command starts
+/// name as their parent, and what to do.
 template <>
 struct Request<RequestType::MAKE_DECISION> {
-    using Params = data::command;
-    using Result = data::action;
+    struct Params {
+        std::optional<data::ipcid_t> parent;
+        data::command command;
+    };
+
+    struct Result {
+        data::ipcid_t id;
+        data::action action;
+    };
+
     constexpr inline static std::string_view method = "make_decision";
 };
 
+/// catter cannot capture a command `parent` started: `message` says why.
 template <>
 struct Request<RequestType::REPORT_ERROR> {
     struct Params {
-        data::ipcid_t parent_id;
-        std::string error_msg;
+        std::optional<data::ipcid_t> parent;
+        std::string message;
     };
 
     using Result = std::nullptr_t;

@@ -362,7 +362,7 @@ public:
 
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
-        auto pipe = pipe_name();
+        ipc::Server server(session);
         // A build tool that writes the shims' paths down writes them as they are spelled.
         auto directory = data_path(std::format("shims-{}", kota::sys::pid()));
         kota::fs::path::normalize(directory);
@@ -370,17 +370,12 @@ public:
         kota::process::options launch{
             .program = shims.launcher(),
             .args = build.command,
-            .env = environment(shims, pipe),
+            .env = environment(shims, server.pipe()),
             .cwd = build.cwd,
         };
-        co_return co_await session.serve(
-            pipe,
-            [launch = std::move(launch)]() mutable {
-                return run_process(std::move(launch), {.stand_in = true});
-            },
-            [&](data::ipcid_t id, kota::pipe&& client) {
-                return ipc::accept(std::make_unique<ipc::Service>(session, id), std::move(client));
-            });
+        co_return co_await server.serve([launch = std::move(launch)]() mutable {
+            return run_process(std::move(launch), {.stand_in = true});
+        });
     }
 };
 

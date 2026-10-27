@@ -17,13 +17,9 @@ namespace catter {
 /// ended.
 class Session {
 public:
-    using Start = kota::function<kota::task<kota::process::exit_status>()>;
-    using Accept = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
-
     explicit Session(Handler& handler) : handler(handler) {}
 
-    /// The id of a new command: each client of the pipe takes one, and on
-    /// Windows the build command, which catter decides itself.
+    /// The id of a new command.
     data::ipcid_t new_id() noexcept;
 
     /// What the handlers decide for command `id`, which `parent` started, none
@@ -48,22 +44,10 @@ public:
     /// Throws what ended the session, if anything did.
     void rethrow() const;
 
-    /// Runs the build with `start` and, while it runs, serves each client that
-    /// connects to the pipe `pipe_name`, which the build reports its commands
-    /// to, with `accept`, as a new command: how the build ended.
-    kota::task<kota::process::exit_status> serve(std::string pipe_name, Start start, Accept accept);
-
-private:
-    kota::task<void> loop(Accept accept);
-
-    kota::task<kota::process::exit_status> start(Start start);
-
 private:
     Handler& handler;
 
     std::exception_ptr error;
-
-    std::unique_ptr<kota::acceptor<kota::pipe>> acc = nullptr;
 
     data::ipcid_t last_id = 0;
 };

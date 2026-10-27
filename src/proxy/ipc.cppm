@@ -37,12 +37,10 @@ struct Peer {
         return this->peer.close();
     }
 
-    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) {
-        co_return co_await this->send_request<Request<RequestType::CREATE>>(parent_id);
-    }
-
-    kota::task<data::action> make_decision(data::command cmd) {
-        co_return co_await this->send_request<Request<RequestType::MAKE_DECISION>>(cmd);
+    kota::task<Request<RequestType::MAKE_DECISION>::Result>
+        make_decision(std::optional<data::ipcid_t> parent, data::command cmd) {
+        co_return co_await this->send_request<Request<RequestType::MAKE_DECISION>>(
+            {.parent = parent, .command = std::move(cmd)});
     }
 
 #ifdef CATTER_MAC
@@ -59,9 +57,11 @@ struct Peer {
         co_return;
     }
 
-    kota::task<void> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept {
+    kota::task<void> report_error(std::optional<data::ipcid_t> parent,
+                                  std::string message) noexcept {
         try {
-            co_await this->send_request<Request<RequestType::REPORT_ERROR>>({parent_id, error_msg});
+            co_await this->send_request<Request<RequestType::REPORT_ERROR>>(
+                {.parent = parent, .message = std::move(message)});
         } catch(...) {
             // can't do anything if reporting error failed, just swallow the error
         }

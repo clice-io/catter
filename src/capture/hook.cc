@@ -27,165 +27,12 @@ namespace catter {
 namespace {
 
 #ifdef CATTER_WINDOWS
-/// The programs the hook starts: the pipe the hook in each reports to, and
-/// those whose exits are not told yet. The build sees a program end before
-/// catter does: the commands it starts after, and its own end, wait for the
-/// exits of the programs that have ended to be told first.
-class Programs {
-public:
-    /// A program whose exit is not told yet.
-    struct Untold {
-        const OpenedProcess* program;
-
-        /// Set once its exit is told: shared with those waiting for it.
-        std::shared_ptr<kota::event> told;
-    };
-
-    explicit Programs(std::string_view pipe_name) : pipe(pipe_name) {}
-
-    /// The pipe the hook in each program reports to.
-    std::string_view pipe_name() const noexcept {
-        return pipe;
-    }
-
-    /// Holds `program` among those whose exit is not told yet, until it goes.
-    class Hold {
-    public:
-        Hold(Programs& programs, const OpenedProcess& program) :
-            programs(programs),
-            entry(programs.untold.insert(
-                programs.untold.end(),
-                {.program = &program, .told = std::make_shared<kota::event>()})) {}
-
-        Hold(const Hold&) = delete;
-        Hold& operator= (const Hold&) = delete;
-
-        ~Hold() {
-            entry->told->set();
-            programs.untold.erase(entry);
-        }
-
-    private:
-        Programs& programs;
-
-        std::list<Untold>::iterator entry;
-    };
-
-    /// Waits until the exit of each program held that has ended is told.
-    kota::task<> ended() {
-        std::vector<std::shared_ptr<kota::event>> ended;
-        for(const auto& entry: untold) {
-            if(entry.program->exited()) {
-                ended.push_back(entry.told);
-            }
-        }
-        for(const auto& told: ended) {
-            co_await told->wait();
-        }
-    }
-
-private:
-    std::string_view pipe;
-
-    std::list<Untold> untold;
-};
-
-/// Serves the hook in a program of the build as it starts a program: the hook
-/// asks what the program is to do, starts it suspended and leaves it to
-/// catter, which makes it run as decided and waits for its exit.
-class Service final : public ipc::Service {
-public:
-    Service(Session& session, data::ipcid_t id, Programs& programs) :
-        ipc::Service(session, id), programs(programs) {}
-
-    kota::task<data::action> make_decision(data::command cmd) noexcept override {
-        co_await programs.ended();
-        auto decision = co_await ipc::Service::make_decision(std::move(cmd));
-        decided = decision.type;
-        executable = decision.cmd.executable;
-        co_return decision;
-    }
-
-    kota::task<bool> started(std::int64_t pid) noexcept override {
-        std::string error;
-        try {
-            program.emplace(pid);
-            began = std::chrono::steady_clock::now();
-            switch(decided) {
-                case data::action::RUN: {
-                    inject_hook(program->handle(), executable, id, programs.pipe_name());
-                    break;
-                }
-                case data::action::DROP: {
-                    end(0);
-                    break;
-                }
-                case data::action::FAIL: {
-                    end(1);
-                    break;
-                }
-            }
-            held.emplace(programs, *program);
-            co_return true;
-        } catch(const cpptrace::exception& ex) {
-            error = ex.message();
-            LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
-        }
-        program.reset();
-        co_await report_error(
-            parent_id,
-            std::format("`{}` cannot start with the hook: {}", executable, error));
-        co_return false;
-    }
-
-    kota::task<> wait_started() noexcept override {
-        if(!program) {
-            co_return;
-        }
-        kota::process::exit_status status;
-        try {
-            status = co_await program->wait();
-        } catch(...) {
-            session.fail(std::current_exception());
-            co_return;
-        }
-        co_await finish(result_of(status, began));
-        held.reset();
-        program.reset();
-    }
-
-private:
-    /// Ends the program started, which is not to run, with exit code `code`:
-    /// from within, once its caller resumes it, if it can have the hook.
-    void end(std::uint32_t code) {
-        if(!inject_end(program->handle(), executable, code)) {
-            program->terminate(code);
-        }
-    }
-
-private:
-    Programs& programs;
-
-    /// What was decided for the command, and its program.
-    decltype(data::action::type) decided = data::action::FAIL;
-
-    std::string executable;
-
-    /// The program the hook started, from its start until its exit is told.
-    std::optional<OpenedProcess> program;
-
-    /// When catter took the program the hook started.
-    std::chrono::steady_clock::time_point began;
-
-    std::optional<Programs::Hold> held;
-};
-
 /// Runs the build command as the hook runs each command it starts: decided by
 /// the handlers, started with the hook, and its end told to them once the
 /// exits of the programs that ended before it are.
 kota::task<kota::process::exit_status> run_build(Session& session,
                                                  data::command command,
-                                                 Programs& programs) {
+                                                 ipc::Server& server) {
     const auto id = session.new_id();
     const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
     auto decision = co_await session.decide(id, std::nullopt, std::move(command));
@@ -201,10 +48,10 @@ kota::task<kota::process::exit_status> run_build(Session& session,
         LOG_INFO("Starting the build command `{}` in {}", line, decision.cmd.cwd);
         const auto start = std::chrono::steady_clock::now();
         const auto status =
-            co_await run_process(hook_options(std::move(decision.cmd), id, programs.pipe_name()),
+            co_await run_process(hook_options(std::move(decision.cmd), id, server.pipe()),
                                  {.stand_in = true});
         const auto result = result_of(status, start);
-        co_await programs.ended();
+        co_await server.ended();
         co_await session.exited(id, result);
         co_return status;
     } catch(const cpptrace::exception& ex) {
@@ -240,9 +87,8 @@ public:
         }
 #endif
 
-        auto pipe = pipe_name();
+        ipc::Server server(session);
 #ifdef CATTER_WINDOWS
-        Programs programs(pipe);
         data::command command{
             .cwd = build.cwd,
             .executable = resolve_program(build.command.front(), build.cwd),
@@ -251,30 +97,19 @@ public:
         for(const auto& [name, value]: kota::sys::environment()) {
             command.env.push_back(std::format("{}={}", name, value));
         }
-        co_return co_await session.serve(
-            pipe,
-            [&, command = std::move(command)]() mutable {
-                return run_build(session, std::move(command), programs);
-            },
-            [&](data::ipcid_t id, kota::pipe&& client) {
-                return ipc::accept(std::make_unique<Service>(session, id, programs),
-                                   std::move(client));
-            });
+        co_return co_await server.serve([&, command = std::move(command)]() mutable {
+            return run_build(session, std::move(command), server);
+        });
 #else
         kota::process::options proxy{
             .program = program_path(PROXY),
-            .args = {"-p", "0", "--ipc", pipe, "--"},
+            .args = {"-p", "0", "--ipc", std::string(server.pipe()), "--"},
             .cwd = build.cwd,
         };
         proxy.args.append_range(build.command);
-        co_return co_await session.serve(
-            pipe,
-            [proxy = std::move(proxy)]() mutable {
-                return run_process(std::move(proxy), {.stand_in = true});
-            },
-            [&](data::ipcid_t id, kota::pipe&& client) {
-                return ipc::accept(std::make_unique<ipc::Service>(session, id), std::move(client));
-            });
+        co_return co_await server.serve([proxy = std::move(proxy)]() mutable {
+            return run_process(std::move(proxy), {.stand_in = true});
+        });
 #endif
     }
 };

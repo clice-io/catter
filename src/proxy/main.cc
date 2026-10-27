@@ -28,8 +28,8 @@ struct Proxied {
     /// The session's pipe.
     std::string pipe;
 
-    /// The command that started this one, 0 for the build command.
-    data::ipcid_t parent = 0;
+    /// The command that started this one, none for the build command.
+    std::optional<data::ipcid_t> parent;
 
     /// The command as it runs here. Its working directory is empty when it
     /// cannot be read, as when the build removed it: the program starts in it
@@ -90,12 +90,18 @@ std::string working_directory() {
     return cwd;
 }
 
+/// The command that started a command, by its id in the environment or on the
+/// command line: none for 0, which the build command has.
+std::optional<data::ipcid_t> parent_of(data::ipcid_t id) {
+    return id == 0 ? std::nullopt : std::optional(id);
+}
+
 #ifndef CATTER_WINDOWS
 /// The command the hook started the proxy for, which runs with the hook, or
 /// what the hook found wrong.
 Proxied hooked(const catter::proxy::ProxyOption& opt) {
     if(opt.error_msg.has_value() && !opt.args.has_value()) {
-        return {.pipe = *opt.ipc, .parent = *opt.parent_id, .error = *opt.error_msg};
+        return {.pipe = *opt.ipc, .parent = parent_of(*opt.parent_id), .error = *opt.error_msg};
     }
     if(!opt.args.has_value()) {
         throw cpptrace::runtime_error("missing command arguments after --");
@@ -109,7 +115,7 @@ Proxied hooked(const catter::proxy::ProxyOption& opt) {
     cmd.executable = opt.exec.has_value() ? *opt.exec : resolve_program(cmd.args.at(0));
     return {
         .pipe = *opt.ipc,
-        .parent = *opt.parent_id,
+        .parent = parent_of(*opt.parent_id),
         .command = std::move(cmd),
         .launch =
             [pipe = *opt.ipc](data::command command, data::ipcid_t id) {
@@ -209,9 +215,11 @@ Proxied wrapped(std::string_view self,
     std::string pipe(variable(cmd.env, env::IPC).value_or(""));
     std::string shims(
         variable(cmd.env, env::SHIMS).value_or(kota::fs::path::parent(self)));
-    data::ipcid_t parent = 0;
+    std::optional<data::ipcid_t> parent;
     if(auto id = variable(cmd.env, env::COMMAND_ID)) {
-        std::from_chars(id->data(), id->data() + id->size(), parent);
+        data::ipcid_t value = 0;
+        std::from_chars(id->data(), id->data() + id->size(), value);
+        parent = parent_of(value);
     }
     std::optional<std::string> path(variable(cmd.env, "PATH"));
 
@@ -236,7 +244,7 @@ Proxied wrapped(std::string_view self,
     if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
-    const bool build = launcher && parent == 0 && !pipe.empty();
+    const bool build = launcher && !parent && !pipe.empty();
     if(!build && path) {
         std::string without;
         // Entries PATH was split into join back.
@@ -299,9 +307,7 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
             co_return co_await run_process(process_options(cmd), {.stand_in = true});
         }
 
-        auto id = co_await peer.create(proxied.parent);
-
-        auto received_act = co_await peer.make_decision(cmd);
+        auto [id, received_act] = co_await peer.make_decision(proxied.parent, cmd);
 
         const auto start = std::chrono::steady_clock::now();
         auto status = co_await run(received_act, id, proxied, peer);
@@ -373,8 +379,7 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
     };
 
 #ifdef CATTER_MAC
-    // The build command's proxy is started with parent 0.
-    auto connection = run_connection(peer, proxied.parent == 0);
+    auto connection = run_connection(peer, !proxied.parent);
 #else
     auto connection = peer.run();
 #endif
