@@ -162,6 +162,7 @@ std::string_view name(Artifact artifact) {
     switch(artifact) {
         case Artifact::None: return "none";
         case Artifact::PreprocessedSource: return "preprocessed-source";
+        case Artifact::Dependencies: return "dependencies";
         case Artifact::Object: return "object";
         case Artifact::Executable: return "exe";
         case Artifact::SharedLibrary: return "shared";

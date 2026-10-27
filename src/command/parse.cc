@@ -44,6 +44,9 @@ struct Builder {
 
     bool preprocess = false;
 
+    /// Whether the preprocessor writes what the sources include in place of them.
+    bool dependencies = false;
+
     bool syntax_only = false;
 
     std::optional<Artifact> compiled;
@@ -119,9 +122,9 @@ struct Builder {
             case ID_c:
             case ID_emit_obj: compile_object(); break;
             case ID_S: compile_assembly_like(); break;
-            case ID_E:
+            case ID_E: preprocess = true; break;
             case ID_M:
-            case ID_MM: preprocess = true; break;
+            case ID_MM: dependencies = true; break;
             case ID_fsyntax_only: syntax_only = true; break;
             case ID_emit_llvm:
             case ID_emit_llvm_bc: compile_llvm_like(); break;
@@ -183,6 +186,12 @@ struct Builder {
                 break;
             case ID__SLASH_link: apply_linker_arguments(position); break;
             case ID_INPUT: candidate(position); break;
+            case ID_UNKNOWN:
+                if(argument.count == 2 && argument.spelling.substr(1) == "scanDependencies") {
+                    dependencies = true;
+                    output(position, OutputKind::PrimaryArtifact);
+                }
+                break;
             default:
                 if(selects_mode(argument)) {
                     return Error{
@@ -231,7 +240,10 @@ struct Builder {
     }
 
     void finish() {
-        if(preprocess) {
+        if(dependencies) {
+            command.phase = Phase::Preprocess;
+            command.artifact = Artifact::Dependencies;
+        } else if(preprocess) {
             command.phase = Phase::Preprocess;
             command.artifact = Artifact::PreprocessedSource;
         } else if(syntax_only) {

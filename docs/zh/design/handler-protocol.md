@@ -84,9 +84,9 @@ catter 对一条命令的分析，由其 `kind` 指明。catter 按可执行文�
 - `tool`：链接器或库管理工具的命令，catter 用它的选项表读取参数，`tool` 为 `lld-elf`、`lld-coff`、`lld-macho`、`lld-mingw`、`lld-wasm`、`llvm-lib` 或 `llvm-dlltool`；`lld-coff` 和 `llvm-lib` 与 `link.exe`、`lib.exe` 一样，选项不区分大小写。包含 `arguments`，其中的响应文件保持命令里的写法：catter 不读取工具的响应文件。
 - `unparsed`：上述程序中 catter 读不了参数的命令，目前包括 nvcc 的命令。包含 `of`（程序种类）、`name`、`error` 和 `message`。
 
-每个参数都有 `option`，即解析别名之后的选项，用带前缀的名字表示（`/I` 也写作 `-I`；输入是 `<input>`，选项表不认识的选项是 `<unknown>`，GCC 那些带值的选项连同其后的值一起算作一个：`-dumpbase`、`-wrapper` 等）；`spelling`，命令里的原始写法（例如实际是 `-G` 的 `-msmall-data-limit=`）；`index` 和 `count`，它占用命令的哪些参数；以及 `values`。
+每个参数都有 `option`，即解析别名之后的选项，用带前缀的名字表示（`/I` 也写作 `-I`；输入是 `<input>`，选项表不认识的选项是 `<unknown>`，GCC 和 cl 那些带值的选项连同其后的值一起算作一个：`-dumpbase`、`/ifcOutput` 等）；`spelling`，命令里的原始写法（例如实际是 `-G` 的 `-msmall-data-limit=`）；`index` 和 `count`，它占用命令的哪些参数；以及 `values`。
 
-源文件的语言按 `-x` 的叫法命名（`c`、`c++`、`c++-module`、`objective-c`、`assembler`、`cuda` 等）：`/Tc`、`/Tp` 指定它时用的语言，它前面最后一个 `-x` 设定的语言（`-x none` 会复位），`/TC`、`/TP` 为所有源文件设定的语言，否则由后缀决定，其中 `.C`、`.M`、`.S` 与小写时表示不同的语言（cl 除外），对 C++ 驱动（`g++`、`c++`、`clang++`、`--driver-mode=g++`）而言 `.c` 和 `.i` 也是 C++。`-x` 之后的输入无论后缀如何都是该语言的源文件，目标文件和库除外。
+源文件的语言按 `-x` 的叫法命名（`c`、`c++`、`c++-module`、`objective-c`、`assembler`、`cuda` 等）：`/Tc`、`/Tp` 指定它时用的语言，它前面最后一个 `-x` 设定的语言（`-x none` 会复位），`/TC`、`/TP` 设定的语言，否则由后缀决定，其中 `.C`、`.M`、`.S` 与小写时表示不同的语言（cl 除外），对 C++ 驱动（`g++`、`c++`、`clang++`、`--driver-mode=g++`）而言 `.c` 和 `.i` 也是 C++。`-x` 之后的输入，以及带 `/TC` 或 `/TP` 时的输入，无论后缀如何都是该语言的源文件，目标文件和库除外。
 
 ### 编辑
 

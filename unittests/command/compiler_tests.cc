@@ -27,6 +27,7 @@ constexpr std::string_view commands[] = {
     "clang-cl /c a.cc /link/out:a.exe",
     "gcc a.o b.o -o app -lm",
     "gcc -c a.c -dumpbase b.c -wrapper echo,c.c -o a.o",
+    "cl /TP -scanDependencies a.ddi -Foa.obj a.cc",
 };
 
 }  // namespace
@@ -125,10 +126,9 @@ ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     ZEXPECT(languages("gcc -c a.c -x c++ b.cc -x none c.c d.cpp") ==
             std::vector<std::string>{"a.c:c", "b.cc:c++", "c.c:c", "d.cpp:c++"});
     ZEXPECT(languages("cl /c a.c /TC b.c") == std::vector<std::string>{"a.c:c", "b.c:c"});
-    // `/TP` is for every source, before it too, not for a file of no source's suffix, which the
-    // value of an option the table does not know may be.
-    ZEXPECT(languages("cl a.c /TP b.cc c.obj /ifcOutput d.ifc") ==
-            std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none"});
+    // `/TP` is for every input but objects and libraries, before it too.
+    ZEXPECT(languages("cl a.c /TP b.cc c.obj noext /ifcOutput d.ifc") ==
+            std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none", "noext:c++"});
     ZEXPECT(languages("g++ -x c++ -c legacy.c -x c -c noext -x c++-header pch.hxx.cxx") ==
             std::vector<std::string>{"legacy.c:c++", "noext:c", "pch.hxx.cxx:c++-header"});
     ZEXPECT(languages("clang -c a.cppm b.ixx c.m d.mm e.M f.s g.S h.sx i.cu") ==

@@ -41,6 +41,9 @@ enum class Phase : std::uint8_t {
 enum class Artifact : std::uint8_t {
     None,
     PreprocessedSource,
+    /// What the sources include and import, written by `-M`, `-MM` and cl's
+    /// `/scanDependencies`.
+    Dependencies,
     Object,
     Executable,
     SharedLibrary,

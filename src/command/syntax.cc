@@ -12,6 +12,20 @@ namespace {
 constexpr auto gcc_separate =
     std::to_array<std::string_view>({"-aux-info", "-dumpbase", "-dumpbase-ext", "-wrapper"});
 
+/// Those of cl, its options of C++ modules, with either prefix.
+constexpr auto cl_separate = std::to_array<std::string_view>({
+    "/ifcMap",
+    "-ifcMap",
+    "/ifcOutput",
+    "-ifcOutput",
+    "/ifcSearchDir",
+    "-ifcSearchDir",
+    "/scanDependencies",
+    "-scanDependencies",
+    "/stdIfcDir",
+    "-stdIfcDir",
+});
+
 }  // namespace
 
 Syntax syntax_of(Dialect dialect) {
@@ -20,7 +34,10 @@ Syntax syntax_of(Dialect dialect) {
         case Dialect::Clang: return {.table = &table(), .visibility = DefaultVis};
         case Dialect::GCC:
             return {.table = &table(), .visibility = DefaultVis, .separate = gcc_separate};
-        case Dialect::MSVC: return {.table = &table(), .visibility = DefaultVis | CLOption};
+        case Dialect::MSVC:
+            return {.table = &table(),
+                    .visibility = DefaultVis | CLOption,
+                    .separate = cl_separate};
         // nvcc's arguments are not read yet.
         case Dialect::NVCC: break;
     }
