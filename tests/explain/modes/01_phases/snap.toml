@@ -1068,7 +1068,57 @@ stdout = '''
 '''
 exit = 0
 
+[test."$ catter explain -- gcc -MM a.c -o a.d".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.d"
+    ],
+    "edges": [
+        {
+            "output": "a.d",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-MM",
+                "a.c",
+                "-o",
+                "a.d"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
 [test."$ catter explain -- gcc -MM a.c -o a.d".win32]
+differs = "a command that names no target compiles for the host"
 stdout = '''
 {
     "analyzer": "compiler",
