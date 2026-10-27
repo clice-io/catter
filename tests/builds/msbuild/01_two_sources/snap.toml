@@ -111,7 +111,7 @@ entries = [
         directory = "${WS}/build",
         output = "${WS}/build/hello.dir/Debug/main.obj",
         arguments = [
-            "${MSVC}/bin/HostX64/x64/cl.exe",
+            "${MSVC}/bin/HostX64/x64/CL.exe",
             "/c",
             "/I${WS}/include",
             "/Zi",
@@ -148,7 +148,7 @@ entries = [
         directory = "${WS}/build",
         output = "${WS}/build/hello.dir/Debug/util.obj",
         arguments = [
-            "${MSVC}/bin/HostX64/x64/cl.exe",
+            "${MSVC}/bin/HostX64/x64/CL.exe",
             "/c",
             "/I${WS}/include",
             "/Zi",
