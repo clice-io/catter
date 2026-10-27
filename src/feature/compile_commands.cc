@@ -119,17 +119,16 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const Er
 /// Writes the compilation database of the compiler commands of a build: the entries of each
 /// command, each of the source and the arguments of that command, but of a source another
 /// compile writes, a preprocess's of a source another command compiles, and a probe's. A compile
-/// into an object of what a preprocess wrote gets an entry of the preprocess's source.
+/// into an object of what a preprocess wrote gets an entry of the preprocess's source, and so does
+/// a preprocess whose file the build removes, as a build cache keyed by it does.
 class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
 
     kota::task<std::optional<Build>> on_start(Build build) override {
         output_path = options.output.value_or("build/compile_commands.json");
-        // Without a temporary directory, no probe is told by where it writes.
-        if(kota::sys::temp_dir(temporary)) {
-            temporary.clear();
-        }
+        // Where it fails, no file is in it.
+        [[maybe_unused]] auto error = kota::sys::temp_dir(temporary);
         // A database catter cannot merge into ends the session before the build, not after.
         database.emplace(output_path, build.cwd, !*options.replace);
         verbose_log(std::format(
@@ -161,23 +160,33 @@ public:
         compiler_commands.insert(id);
 
         const bool preprocess = analysis->phase == Phase::Preprocess;
+        // The file a preprocess writes from its one source: a preprocess with `-o` has one.
+        std::string preprocessed_file;
+        if(analysis->artifact == Artifact::PreprocessedSource && analysis->writes.size() == 1 &&
+           analysis->writes.front().path != "-") {
+            const auto& write = analysis->writes.front();
+            preprocessed_file = absolute_path(command.cwd, write.path);
+            preprocessed.insert_or_assign(preprocessed_file,
+                                          Preprocessed{
+                                              .cwd = command.cwd,
+                                              .analysis = *analysis,
+                                              .read = write.reads.front(),
+                                          });
+        }
         for(auto& entry: entries_of(command.cwd, *analysis)) {
             const auto& object = entry.as_object();
             auto source = absolute_path(command.cwd, object.find("file")->as_string());
-            std::optional<std::string> output;
-            if(const auto* value = object.find("output")) {
-                output = value->as_string();
-            }
-            if(probes(command.cwd, source, output)) {
-                continue;
-            }
+            const auto* output = object.find("output");
             auto made = preprocessed.find(source);
             if(made != preprocessed.end() && analysis->artifact == Artifact::Object &&
-               output.has_value()) {
+               output != nullptr) {
                 const auto& by = made->second;
                 const auto& read = by.analysis.reads[by.read];
-                entry = entry_of(by.cwd, by.analysis, read, std::move(*output));
+                entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
                 source = absolute_path(by.cwd, read.path);
+            }
+            if(xmake_probe(source)) {
+                continue;
             }
             if(!preprocess) {
                 compiled.insert(source);
@@ -186,22 +195,13 @@ public:
             found.push_back({.entry = std::move(entry),
                              .source = std::move(source),
                              .preprocess = preprocess,
-                             .existed = existed});
+                             .existed = existed,
+                             .preprocessed_file = preprocessed_file});
         }
         for(const auto& write: analysis->writes) {
-            if(write.path == "-") {
-                continue;
+            if(write.path != "-") {
+                written.insert(absolute_path(command.cwd, write.path));
             }
-            auto path = absolute_path(command.cwd, write.path);
-            if(analysis->artifact == Artifact::PreprocessedSource && write.reads.size() == 1) {
-                preprocessed.insert_or_assign(path,
-                                              Preprocessed{
-                                                  .cwd = command.cwd,
-                                                  .analysis = *analysis,
-                                                  .read = write.reads.front(),
-                                              });
-            }
-            written.insert(std::move(path));
         }
         co_return Action{};
     }
@@ -252,8 +252,11 @@ private:
         bool preprocess;
 
         /// Whether the source was there when the command came: one the build then removes was
-        /// a probe's, as those of configure scripts and of CMake's try_compile are.
+        /// a probe's, as a configure script's is.
         bool existed;
+
+        /// The file a preprocess wrote from the source, or nothing.
+        std::string preprocessed_file;
     };
 
     /// A preprocess of the build's, run in `cwd`, of the file it writes: a compile of that file
@@ -266,16 +269,11 @@ private:
         std::uint32_t read;
     };
 
-    /// Whether the entry of a command run in `cwd` that compiles `source` into `output` is a
-    /// probe's, which compiles a file of its own in the temporary directory, as xmake's do.
-    bool probes(std::string_view cwd,
-                std::string_view source,
-                const std::optional<std::string>& output) const {
-        const auto temporary_file = [&](std::string_view path) {
-            return !temporary.empty() && kota::fs::path::is_within(path, temporary) &&
-                   !kota::fs::path::is_within(path, cwd);
-        };
-        return output.has_value() && temporary_file(source) && temporary_file(*output);
+    /// Whether `source` is one xmake compiles to probe the compiler, which it keeps in its own
+    /// directory of the temporary directory, `.xmake<uid>`.
+    bool xmake_probe(std::string_view source) const {
+        auto rest = kota::fs::path::strip_prefix(source, temporary);
+        return rest.has_value() && rest->starts_with(".xmake");
     }
 
     void log(std::string_view message) const {
@@ -294,10 +292,16 @@ private:
         std::size_t generated = 0;
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
-        for(const auto& [entry, source, preprocess, existed]: found) {
+        for(auto& [entry, source, preprocess, existed, preprocessed_file]: found) {
             if(written.contains(source) || (preprocess && compiled.contains(source)) ||
                (existed && !kota::fs::is_file(source))) {
                 continue;
+            }
+            // A build cache that looks objects up by the preprocessed source, xmake's, removes it
+            // once it has the object, from the cache or from a compile.
+            if(!preprocessed_file.empty() && !kota::fs::is_file(preprocessed_file)) {
+                const auto& by = preprocessed.at(preprocessed_file);
+                entry = entry_of(by.cwd, by.analysis, by.analysis.reads[by.read], std::nullopt);
             }
             const auto& object = entry.as_object();
             const auto file = object.find("file")->as_string();
@@ -334,7 +338,7 @@ private:
     /// The build's preprocesses, by the file each writes, absolute.
     std::unordered_map<std::string, Preprocessed> preprocessed;
 
-    /// The directory of temporary files, or nothing when it is unknown.
+    /// The directory of temporary files.
     std::string temporary;
 
     /// The files the build's compiles write, absolute.

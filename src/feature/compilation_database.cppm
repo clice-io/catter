@@ -14,14 +14,14 @@ namespace catter::feature {
 /// only preprocesses.
 std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analysis);
 
-/// The entry of a compile into the object `output` of the file the preprocess run in `cwd` that
-/// `preprocess` is of writes from `source`, as a build tool that caches objects by their
-/// preprocessed source runs one, xmake: the preprocess's arguments without the options of
-/// preprocessing, `-c` and its output, then `-c -o output`.
+/// The entry of the compile of `source` the preprocess run in `cwd` that `preprocess` is of
+/// stands for, into the object `output` when one is known, as for a build cache that looks
+/// objects up by their preprocessed source, xmake's: the preprocess's arguments without the
+/// options of preprocessing, `-c` and its output, then `-c` and `-o output`.
 JSON entry_of(std::string_view cwd,
               const CompilerAnalysis& preprocess,
               const Read& source,
-              std::string output);
+              std::optional<std::string> output);
 
 /// A JSON compilation database, `compile_commands.json`: the entries already in its file, when
 /// it inherits them, and those added, which replace the inherited entries of their source file

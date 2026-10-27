@@ -148,12 +148,16 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
 JSON entry_of(std::string_view cwd,
               const CompilerAnalysis& preprocess,
               const Read& source,
-              std::string output) {
+              std::optional<std::string> output) {
+    std::vector<std::string> mode{"-c"};
+    if(output.has_value()) {
+        mode.insert(mode.end(), {"-o", *output});
+    }
     const std::array<CommandEdit, 2> edits{
-        // The options xmake adds to a compile to preprocess its source instead.
+        // `-E` and the options xmake adds to it, then `-c` and `-o`, which come back after them.
         CommandEdit{.kind = CommandEdit::Kind::Remove,
                     .flags = {"-E", "-P", "-fdirectives-only", "-fpch-preprocess", "-c", "-o"}},
-        CommandEdit{.kind = CommandEdit::Kind::Append, .flags = {"-c", "-o", output}          },
+        CommandEdit{.kind = CommandEdit::Kind::Append, .flags = std::move(mode)               },
     };
     auto argv = apply_edits(preprocess.expansion.argv,
                             preprocess.arguments,
