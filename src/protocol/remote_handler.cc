@@ -135,8 +135,7 @@ std::string seconds(std::chrono::milliseconds time) {
 RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
                              kota::process process,
                              Options options) :
-    options(std::move(options)),
-    peer(kota::event_loop::current(), std::move(transport)),
+    options(std::move(options)), peer(kota::event_loop::current(), std::move(transport)),
     process(std::move(process)) {
     // A handler answers catter's requests, asks its own, and writes nothing
     // else: anything else ends the conversation, rather than leave catter

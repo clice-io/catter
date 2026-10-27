@@ -9,7 +9,6 @@ import std.compat;
 #include "std.macros.h"
 #include "libc.macros.h"
 
-#include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 #include <kota/async/io/loop.h>
 #include <kota/async/runtime/task.h>
@@ -44,4 +43,5 @@ import std.compat;
 #include <kota/sys/process.h>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <cpptrace/exceptions.hpp>
 #include <spdlog/spdlog.h>

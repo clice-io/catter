@@ -169,13 +169,15 @@ private:
 
         if(!create_process(application_name, command_line, flags, environment, current_directory)) {
             const DWORD error = GetLastError();
-            connection->send_request<ReportError::Result>(ReportError::method, ReportError::Params{
-                .parent = session.id,
-                .message = std::format(
-                    "`{}` failed to start: {}",
-                    std::ranges::to<std::string>(command.args | std::views::join_with(' ')),
-                    std::system_category().message(static_cast<int>(error))),
-            });
+            connection->send_request<ReportError::Result>(
+                ReportError::method,
+                ReportError::Params{
+                    .parent = session.id,
+                    .message = std::format(
+                        "`{}` failed to start: {}",
+                        std::ranges::to<std::string>(command.args | std::views::join_with(' ')),
+                        std::system_category().message(static_cast<int>(error))),
+                });
             SetLastError(error);
             return FALSE;
         }
