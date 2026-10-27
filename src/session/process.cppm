@@ -52,37 +52,4 @@ struct RunOptions {
 kota::task<kota::process::exit_status> run_process(kota::process::options opts,
                                                    RunOptions run = {});
 
-#ifdef CATTER_WINDOWS
-/// A process this one did not start, which it injects into, ends or waits
-/// for: the program of a command the hook started.
-class OpenedProcess {
-public:
-    /// Opens process `pid`; throws when it cannot.
-    explicit OpenedProcess(std::int64_t pid);
-
-    OpenedProcess(const OpenedProcess&) = delete;
-    OpenedProcess& operator= (const OpenedProcess&) = delete;
-
-    ~OpenedProcess();
-
-    void* handle() const noexcept {
-        return process;
-    }
-
-    /// Whether the process has exited.
-    bool exited() const noexcept;
-
-    /// Ends the process at once with exit code `code`.
-    void terminate(std::uint32_t code) noexcept;
-
-    /// Waits for the process to exit.
-    kota::task<kota::process::exit_status> wait();
-
-private:
-    kota::process waiter;
-
-    void* process = nullptr;
-};
-#endif
-
 }  // namespace catter

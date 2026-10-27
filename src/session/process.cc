@@ -236,49 +236,5 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
     co_return *exit;
 }
 
-#ifdef CATTER_WINDOWS
-
-OpenedProcess::OpenedProcess(std::int64_t pid) {
-    auto opened = kota::process::open(static_cast<int>(pid));
-    if(!opened) {
-        throw cpptrace::runtime_error(
-            std::format("Failed to open process {}: {}", pid, opened.error().message()));
-    }
-    waiter = std::move(*opened);
-    // What injecting into it takes, which waiting for it does not.
-    process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ |
-                              PROCESS_VM_WRITE | PROCESS_TERMINATE | SYNCHRONIZE,
-                          FALSE,
-                          static_cast<DWORD>(pid));
-    if(process == nullptr) {
-        throw cpptrace::runtime_error(
-            std::format("Failed to open process {}: {}",
-                        pid,
-                        std::system_category().message(static_cast<int>(GetLastError()))));
-    }
-}
-
-OpenedProcess::~OpenedProcess() {
-    CloseHandle(process);
-}
-
-bool OpenedProcess::exited() const noexcept {
-    return WaitForSingleObject(process, 0) == WAIT_OBJECT_0;
-}
-
-void OpenedProcess::terminate(std::uint32_t code) noexcept {
-    TerminateProcess(process, code);
-}
-
-kota::task<kota::process::exit_status> OpenedProcess::wait() {
-    auto exit = co_await waiter.wait();
-    if(!exit) {
-        throw cpptrace::runtime_error(
-            std::format("Process wait failed `{}`", exit.error().message()));
-    }
-    co_return *exit;
-}
-
-#endif
 
 }  // namespace catter

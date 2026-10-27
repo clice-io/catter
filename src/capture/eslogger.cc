@@ -2,7 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/guard.h"
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/output.h"
@@ -307,7 +306,7 @@ void Capture::stopped() const {
 }
 
 kota::task<kota::process::exit_status> Capture::run(const Build& build) {
-    auto stop = make_guard([&]() noexcept { [[maybe_unused]] auto error = process.kill(SIGTERM); });
+    kota::ScopeExit stop([&] { [[maybe_unused]] auto error = process.kill(SIGTERM); });
 
     co_await mark();
 
