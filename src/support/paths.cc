@@ -9,10 +9,6 @@
 #include <kota/sys/env.h>
 #include <kota/sys/process.h>
 
-#ifdef CATTER_WINDOWS
-#include <kota/sys/windows.h>
-#endif
-
 namespace catter {
 
 std::string data_path(std::string_view name) {
@@ -51,21 +47,6 @@ std::string program_path(std::string_view name) {
     }
     kota::fs::path::pop(path);
     kota::fs::path::push(path, name);
-    return path;
-}
-
-std::string resolve_program(std::string_view name) {
-    std::string path;
-#ifdef CATTER_WINDOWS
-    auto directories = kota::sys::windows::create_process_directories();
-    if(!directories || kota::sys::windows::find_create_process_program(path, name, *directories)) {
-        path = name;
-    }
-#else
-    if(kota::sys::find_program(path, name)) {
-        path = name;
-    }
-#endif
     return path;
 }
 

@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter:protocol.remote_handler;
 
 import :protocol.protocol;

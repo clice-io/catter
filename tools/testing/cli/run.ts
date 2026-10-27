@@ -16,7 +16,8 @@ import type { Table } from "../render/value.ts";
 let executable: string | undefined;
 
 /// The catter the tests run: CATTER_EXECUTABLE, with `.exe` supplied on
-/// Windows. catter-proxy and the hook library sit beside it.
+/// Windows. The hook libraries, and on Linux and macOS catter-proxy, sit
+/// beside it.
 export function catterExecutable(): string {
     executable ??= locateCatter();
     return executable;

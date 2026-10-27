@@ -62,7 +62,7 @@ sequenceDiagram
 "How to handle a command" is expressed at two layers in catter:
 
 1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` / `edit` -- semantic and independent of the mechanism.
-2. **Protocol layer** (what the proxy executes): `DROP` / `INJECT` / `WRAP` / `FAIL` -- the concrete execution mechanics.
+2. **Protocol layer** (what catter-proxy, or on Windows the hook, carries out): `DROP` / `INJECT` / `FAIL` -- the concrete execution mechanics.
 
 The runtime driver maps handler-layer actions to protocol-layer actions. The current `inject` runtime mapping:
 
@@ -83,10 +83,10 @@ Keep in mind:
 
 A single catter run involves several processes and components. They are all part of the runtime implementation, and handler authors usually do not need to know about them:
 
-| Component           | Role                                                                                                                                   |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                          |
-| `catter-proxy`      | Executes commands and relays IPC; has an injector mode (launching the build) and a wrapper mode (standing in for intercepted commands) |
-| hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation                                 |
+| Component           | Role                                                                                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                                                        |
+| `catter-proxy`      | On Linux and macOS: executes commands and relays IPC; has an injector mode (launching the build) and a wrapper mode (standing in for intercepted commands)           |
+| hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation; on Windows it asks the daemon itself and starts each program |
 
 They are **implementation details of the inject runtime**; the runtime abstraction itself is the center of the architecture. See [Runtime](runtime.md) and [Hook mechanism](hook-mechanism.md).

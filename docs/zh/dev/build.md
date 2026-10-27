@@ -51,7 +51,7 @@ startup --output_user_root=C:/b
 ### 构建目标
 
 - `bin/catter` -- 主 CLI 可执行文件（DECISION 守护进程）
-- `bin/catter-proxy` -- 代理进程管理器
+- `bin/catter-proxy` -- 代理进程管理器，用于 Linux 和 macOS
 - `hook_unix_payload` -- Unix 钩子共享库（Linux/macOS），即 `bin/libcatter-hook-unix.so` 或 `.dylib`
 - `hook_x64_payload`、`hook_arm64_payload` -- Windows 钩子 DLL，即 `bin/catter-hook-x64.dll` 和 `bin/catter-hook-arm64.dll`，每种架构一个，每次 Windows 构建都会同时生成两者
 - `support`、`command`、`session`、`capture`（以及 `capture_inject`）、`protocol`、`feature` -- 库，`src/` 下每个目录一个

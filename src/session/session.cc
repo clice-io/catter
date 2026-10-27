@@ -2,14 +2,12 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/catter-proxy.h"
-#include "support/config/ipc.h"
 #include "support/guard.h"
 #include "support/log.h"
+#include "support/messages.h"
 
 module catter;
 
-import :session.process;
 import :session.session;
 
 namespace catter {
@@ -32,20 +30,23 @@ kota::task<kota::process::exit_status> Session::run(RunPlan run_plan) {
     this->acc = std::make_unique<PipeAcceptor>(std::move(*acc_ret));
 
     auto loop_task = this->loop(std::move(run_plan.callback));
-    auto spawn_task = this->spawn(std::move(run_plan.launch_plan.executable),
-                                  std::move(run_plan.launch_plan.args),
-                                  std::move(run_plan.launch_plan.cwd));
+    auto start_task = this->start(std::move(run_plan.start));
 
-    auto [_, status] = co_await kota::when_all{std::move(loop_task), std::move(spawn_task)};
+    auto [_, status] = co_await kota::when_all{std::move(loop_task), std::move(start_task)};
 #ifndef CATTER_WINDOWS
     kota::fs::remove(run_plan.pipe_name);
 #endif
     co_return status;
 }
 
+data::ipcid_t Session::new_id() noexcept {
+    last_id += 1;
+    return last_id;
+}
+
 kota::task<void> Session::loop(ClientAcceptor acceptor) {
     std::list<kota::task<void>> linked_clients;
-    for(auto i: std::views::iota(data::ipcid_t(1))) {
+    while(true) {
         auto client = co_await this->acc->accept();
         if(!client) {
             assert(client.error() == kota::error::operation_aborted);
@@ -53,9 +54,10 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
             // expected
             break;
         }
-        linked_clients.push_back(acceptor(i, std::move(*client)));
+        const auto id = new_id();
+        linked_clients.push_back(acceptor(id, std::move(*client)));
         kota::event_loop::current().schedule(linked_clients.back());
-        LOG_INFO("Accepted new client with id: {}", i);
+        LOG_INFO("Accepted new client with id: {}", id);
     }
 
     std::string error_msg;
@@ -78,11 +80,9 @@ kota::task<void> Session::loop(ClientAcceptor acceptor) {
     co_return;
 }
 
-kota::task<kota::process::exit_status> Session::spawn(std::string executable,
-                                                      std::vector<std::string> args,
-                                                      std::string cwd) {
-    // for exception safety: ensure acceptor is stopped when spawn exits, since spawn failure should
-    // prevent the session from running
+kota::task<kota::process::exit_status> Session::start(Start start) {
+    // for exception safety: ensure acceptor is stopped when the build ends, since a build that
+    // fails to start should prevent the session from running
     auto guard = make_guard([&]() noexcept {
         if(this->acc) {
             auto err = this->acc->stop();
@@ -92,23 +92,7 @@ kota::task<kota::process::exit_status> Session::spawn(std::string executable,
             }
         }
     });
-
-    std::string args_str;
-    for(const auto& arg: args) {
-        args_str += std::format("{} ", arg);
-    }
-
-    LOG_INFO("Spawning process: \n    exe = {} \n    cwd = {} \n    args = {}",
-             executable,
-             cwd,
-             args_str);
-
-    kota::process::options opts{
-        .program = std::move(executable),
-        .args = std::move(args),
-        .cwd = std::move(cwd),
-    };
-    co_return co_await run_process(std::move(opts), {.stand_in = true});
+    co_return co_await start();
 }
 
 }  // namespace catter

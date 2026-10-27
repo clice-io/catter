@@ -1,7 +1,9 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <string>
+#include <vector>
 
 namespace catter::hook {
 
@@ -12,10 +14,22 @@ namespace catter::hook {
 std::optional<std::string> resolve_program(const wchar_t* application_name,
                                            const wchar_t* command_line);
 
-/// The command line that starts catter-proxy, as the hook's environment names
-/// it, in place of what CreateProcessW was asked to start; none when there is
-/// no program to start, which CreateProcessW then fails as it does.
-std::optional<std::wstring> proxy_command_line(const wchar_t* application_name,
-                                               const wchar_t* command_line);
+/// The arguments the program gets: those of `command_line`, or, when it is
+/// null, of `application_name`, which CreateProcessW passes as the command
+/// line then.
+std::vector<std::string> arguments_of(const wchar_t* application_name, const wchar_t* command_line);
+
+/// The variables of environment block `block`, as `NAME=value`: UTF-16 when
+/// `unicode`, else in the ANSI code page, as CreateProcessW reads it; this
+/// process's when it is null.
+std::vector<std::string> environment_of(const void* block, bool unicode);
+
+/// The environment block of `variables`, in UTF-16, sorted by name ignoring
+/// case, as CreateProcessW takes one.
+std::wstring environment_block(std::span<const std::string> variables);
+
+/// `directory` made absolute, as CreateProcessW takes it; this process's
+/// current directory when it is null.
+std::string directory_of(const wchar_t* directory);
 
 }  // namespace catter::hook

@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter:proxy.ipc;
 
 import :session.data;
@@ -51,7 +53,8 @@ struct Peer {
     void started(int64_t pid) {
         program = pid;
         // The program runs all the same.
-        (void)this->peer.send_notification(catter::ipc::Started::method, catter::ipc::Started{pid});
+        using Started = Request<RequestType::STARTED>;
+        (void)this->peer.send_notification(Started::method, Started::Params{pid});
     }
 #endif
 

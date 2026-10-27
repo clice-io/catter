@@ -2,9 +2,9 @@ module;
 
 #include "modules/prelude.h"
 
-module catter:feature.descendants;
+#include "support/messages.h"
 
-import :session.data;
+module catter:feature.descendants;
 
 namespace catter::feature {
 

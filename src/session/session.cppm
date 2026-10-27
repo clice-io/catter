@@ -2,9 +2,10 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter:session.session;
 
-import :session.data;
 import :session.handler;
 import :session.ipc;
 
@@ -29,33 +30,26 @@ class Session {
 public:
     using PipeAcceptor = kota::acceptor<kota::pipe>;
     using ClientAcceptor = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
-
-    struct ProcessLaunchPlan {
-        std::string cwd;
-        std::string executable;
-        /// The arguments after argv[0].
-        std::vector<std::string> args;
-    };
+    using Start = kota::function<kota::task<kota::process::exit_status>()>;
 
     struct RunPlan {
-        ProcessLaunchPlan launch_plan;
-        /// The pipe the session listens on, which the launched process reports to.
+        /// Starts the build and waits for its end.
+        Start start;
+        /// The pipe the session listens on, which the build reports its commands to.
         std::string pipe_name;
         ClientAcceptor callback;
     };
 
-    /// Create a run plan with the given launch plan and client accepted callback.
-    /// @param launch_plan The plan for launching the process.
-    /// @param pipe_name The pipe to listen on, which the launched process reports to.
+    /// Create a run plan with the given start and client accepted callback.
+    /// @param start Starts the build and waits for its end.
+    /// @param pipe_name The pipe to listen on, which the build reports its commands to.
     /// @param factory The factory for creating service instances when a client is accepted.
-    /// @return A run plan containing the launch plan and client accepted callback.
+    /// @return A run plan containing the start and client accepted callback.
     template <typename ServiceFactoryType>
         requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
-    static auto make_run_plan(ProcessLaunchPlan launch_plan,
-                              std::string pipe_name,
-                              ServiceFactoryType&& factory) {
+    static auto make_run_plan(Start start, std::string pipe_name, ServiceFactoryType&& factory) {
         return RunPlan{
-            .launch_plan = std::move(launch_plan),
+            .start = std::move(start),
             .pipe_name = std::move(pipe_name),
             .callback =
                 [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
@@ -66,18 +60,23 @@ public:
     }
 
     /// Run the session with the given run plan.
-    /// @param run_plan The run plan containing the launch plan and service factory.
-    /// @return How the launched process ended.
+    /// @param run_plan The run plan containing the start and service factory.
+    /// @return How the build ended.
     kota::task<kota::process::exit_status> run(RunPlan run_plan);
+
+    /// The id of a new command: each client that connects takes one, and on
+    /// Windows the build command, which catter starts itself.
+    data::ipcid_t new_id() noexcept;
 
 private:
     kota::task<void> loop(ClientAcceptor acceptor);
 
-    kota::task<kota::process::exit_status> spawn(std::string executable,
-                                                 std::vector<std::string> args,
-                                                 std::string cwd);
+    kota::task<kota::process::exit_status> start(Start start);
 
+private:
     std::unique_ptr<PipeAcceptor> acc = nullptr;
+
+    data::ipcid_t last_id = 0;
 };
 
 }  // namespace catter

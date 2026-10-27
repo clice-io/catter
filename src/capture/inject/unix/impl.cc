@@ -9,12 +9,12 @@ module;
 #include "support/config/catter-proxy.h"
 #include "support/config/hook_unix.h"
 #include "support/log.h"
+#include "support/messages.h"
 #include "support/paths.h"
 
 module catter;
 
 import :capture.inject.hook;
-import :session.data;
 import :session.process;
 
 namespace catter {

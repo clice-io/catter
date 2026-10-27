@@ -56,10 +56,14 @@ cc_library(
     copts = MODULE_UNIT_COPTS,
     features = ["cpp_modules"],
     module_interfaces = glob(["src/capture/*.cppm"]),
-    deps = [":session"],
+    deps = [":session"] + select({
+        "@platforms//os:windows": [":capture_inject"],
+        "//conditions:default": [],
+    }),
 )
 
-# Launching a command with the hook, which catter-proxy does.
+# Launching a command with the hook, which catter-proxy does on Unix, and
+# catter itself on Windows, where the hook asks catter what to start.
 cc_library(
     name = "capture_inject",
     srcs = select({
@@ -99,6 +103,13 @@ cc_library(
     deps = [":session"],
 )
 
+UNIX = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+WINDOWS = ["@platforms//os:windows"]
+
 # The programs are in bin/, side by side as catter finds them, with the hook
 # payloads: build/<type>/bin/bin.
 cc_binary(
@@ -128,6 +139,7 @@ cc_binary(
     ],
     linkopts = LINKOPTS,
     module_interfaces = glob(["src/proxy/*.cppm"]),
+    target_compatible_with = UNIX,
     deps = [":capture_inject"],
 )
 
@@ -144,13 +156,6 @@ cc_binary(
 # The hook payloads, loaded into every process of the build, keep their
 # symbols hidden and carry a C++ runtime of their own, xclang's libc++, so
 # that nothing they bring can clash with the host program's.
-
-UNIX = select({
-    "@platforms//os:windows": ["@platforms//:incompatible"],
-    "//conditions:default": [],
-})
-
-WINDOWS = ["@platforms//os:windows"]
 
 cc_library(
     name = "hook_unix",
@@ -211,19 +216,26 @@ payload(
 
 cc_library(
     name = "hook_windows",
-    srcs = ["src/hook/windows/util.cc"],
-    hdrs = ["src/hook/windows/util.h"],
+    srcs = [
+        "src/hook/windows/connection.cc",
+        "src/hook/windows/util.cc",
+    ],
+    hdrs = [
+        "src/hook/windows/connection.h",
+        "src/hook/windows/util.h",
+    ],
     copts = COPTS + ["-fno-rtti"],
     target_compatible_with = WINDOWS,
     deps = [
         ":support",
         "@kotatsu//:fs",
+        "@kotatsu//:ipc_codec",
         "@kotatsu//:sys",
     ],
 )
 
-# Exports the ordinal 1 of Detours' DLLs (exports.def), which catter-proxy
-# adds to a process's import table, and nothing else.
+# Exports the ordinal 1 of Detours' DLLs (exports.def), which catter adds to
+# a process's import table, and nothing else.
 cc_binary(
     name = "catter-hook-windows",
     srcs = ["src/hook/windows/main.cc"],
@@ -241,7 +253,7 @@ cc_binary(
 )
 
 # The DLL of every architecture a Windows build's processes have, built
-# by each Windows build: catter-proxy injects into a process the one of its
+# by each Windows build: catter injects into a process the one of its
 # machine (src/capture/inject/windows/inject.cc).
 [payload(
     name = "hook_%s_payload" % arch,
@@ -323,12 +335,14 @@ filegroup(
     name = "dist",
     srcs = [
         ":bin/catter",
-        ":bin/catter-proxy",
         ":bin/unittests",
         ":catter-protocol-schema",
     ] + PAYLOADS + select({
         "@platforms//os:windows": [":bin/unittests-hook-windows"],
-        "//conditions:default": [":bin/unittests-hook-unix"],
+        "//conditions:default": [
+            ":bin/catter-proxy",
+            ":bin/unittests-hook-unix",
+        ],
     }) + select({
         "//bazel:asan_macos": [":asan_runtime"],
         "//conditions:default": [],
@@ -343,8 +357,6 @@ release_packages(
         ],
         "//conditions:default": [":hook_unix_payload.stripped"],
     }),
-    programs = [
-        "bin/catter",
-        "bin/catter-proxy",
-    ],
+    programs = ["bin/catter"],
+    unix_programs = ["bin/catter-proxy"],
 )

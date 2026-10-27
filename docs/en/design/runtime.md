@@ -16,7 +16,7 @@ For these reasons catter abstracts capture mechanisms as runtimes: one runtime i
 
 ### inject (implemented, default)
 
-- **How it works**: a hook shared library is injected into the build system process. It intercepts process creation calls (the `execve` / `posix_spawn` family on Unix, `CreateProcess` on Windows) and rewrites commands so they run through `catter-proxy`.
+- **How it works**: a hook shared library is injected into the build system process. It intercepts process creation calls (the `execve` / `posix_spawn` family on Unix, `CreateProcess` on Windows). On Unix it rewrites commands so they run through `catter-proxy`; on Windows it asks catter itself and starts each program as catter decides, which the caller then holds as it would without catter.
 - **Platforms**: Linux, macOS, Windows.
 - **Capabilities**: every action (`skip`, `drop`, `abort`, `modify`); commands carry a parent command ID.
 - **Strengths**: recursive capture -- every descendant process is intercepted; captured commands carry the full environment and a parent command ID. The build and its commands run on catter's own stdin, stdout and stderr: they write straight to the terminal, with their colors and in the order they write.

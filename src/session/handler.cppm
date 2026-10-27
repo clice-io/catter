@@ -2,9 +2,9 @@ module;
 
 #include "modules/prelude.h"
 
-module catter:session.handler;
+#include "support/messages.h"
 
-import :session.data;
+module catter:session.handler;
 
 namespace catter {
 

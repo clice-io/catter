@@ -3,6 +3,7 @@ module;
 #include "modules/prelude.h"
 
 #include "support/log.h"
+#include "support/messages.h"
 
 module catter;
 
@@ -21,14 +22,10 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
     // The program the proxy started, until it tells how it ended: macOS has
     // nothing to end it with its proxy.
     std::optional<int64_t> running;
-    peer.on_notification(Started::method, [&](const Started& started) { running = started.pid; });
+    using Started = Request<RequestType::STARTED>;
+    peer.on_notification(Started::method,
+                         [&](const Started::Params& started) { running = started.pid; });
 #endif
-
-    peer.on_request(Request<RequestType::CHECK_MODE>::method,
-                    [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
-                        -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
-                        co_return params == data::ServiceMode::INJECT;
-                    });
 
     peer.on_request(Request<RequestType::CREATE>::method,
                     [&](const Context& ctx, Request<RequestType::CREATE>::Params params)
@@ -43,6 +40,27 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
             co_return co_await service->make_decision(params);
         });
 
+    peer.on_request(
+        Request<RequestType::REPORT_ERROR>::method,
+        [&](const Context& ctx, const Request<RequestType::REPORT_ERROR>::Params& params)
+            -> kota::ipc::RequestResult<Request<RequestType::REPORT_ERROR>> {
+            co_await service->report_error(params.parent_id, params.error_msg);
+            co_return nullptr;
+        });
+
+#ifdef CATTER_WINDOWS
+    peer.on_request(Request<RequestType::STARTED>::method,
+                    [&](const Context& ctx, const Request<RequestType::STARTED>::Params& params)
+                        -> kota::ipc::RequestResult<Request<RequestType::STARTED>> {
+                        co_return co_await service->started(params.pid);
+                    });
+#else
+    peer.on_request(Request<RequestType::CHECK_MODE>::method,
+                    [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
+                        -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
+                        co_return params == data::ServiceMode::INJECT;
+                    });
+
     peer.on_request(Request<RequestType::FINISH>::method,
                     [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
                         -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
@@ -52,17 +70,13 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
                         co_await service->finish(params);
                         co_return nullptr;
                     });
-
-    peer.on_request(
-        Request<RequestType::REPORT_ERROR>::method,
-        [&](const Context& ctx, const Request<RequestType::REPORT_ERROR>::Params& params)
-            -> kota::ipc::RequestResult<Request<RequestType::REPORT_ERROR>> {
-            co_await service->report_error(params.parent_id, params.error_msg);
-            co_return nullptr;
-        });
+#endif
 
     co_await peer.run();
     LOG_INFO("IPC peer disconnected");
+#ifdef CATTER_WINDOWS
+    co_await service->wait_started();
+#endif
 #ifdef CATTER_MAC
     if(running) {
         LOG_WARN("The proxy of program {} is gone: the program is killed", *running);

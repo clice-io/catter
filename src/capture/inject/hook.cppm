@@ -2,9 +2,9 @@ module;
 
 #include "modules/prelude.h"
 
-module catter:capture.inject.hook;
+#include "support/messages.h"
 
-import :session.data;
+module catter:capture.inject.hook;
 
 namespace catter {
 /// The options that start the command with the hook, which reports the

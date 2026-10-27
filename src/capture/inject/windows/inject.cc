@@ -8,6 +8,7 @@ module;
 #include <detours.h>
 // clang-format on
 
+#include "support/config/hook_windows.h"
 #include "support/exception.h"
 #include "support/log.h"
 #include "support/paths.h"
@@ -20,8 +21,7 @@ namespace catter {
 
 namespace {
 
-/// The machines catter has a hook for, catter-hook-<arch>.dll beside
-/// catter-proxy.
+/// The machines catter has a hook for, catter-hook-<arch>.dll beside catter.
 struct Hook {
     USHORT machine;
     std::string_view arch;
@@ -55,7 +55,7 @@ USHORT process_machine(HANDLE process) {
 }
 
 /// Detours makes the header of a 32-bit .NET executable that runs as a 64-bit
-/// process a 64-bit one of catter-proxy's own machine, and the CLR refuses to
+/// process a 64-bit one of catter's own machine, and the CLR refuses to
 /// run an x64 process whose header says arm64, or the other way round.
 #ifdef DETOURS_ARM64
 constexpr USHORT DETOURS_MACHINE = IMAGE_FILE_MACHINE_ARM64;
@@ -130,8 +130,8 @@ std::string temporary_copy(std::string_view dll) {
     }
 
     // Written whole under a name of its own, then renamed, over nothing: a
-    // process another catter-proxy starts meanwhile never loads half a DLL,
-    // nor finds the one it loads renamed over.
+    // process another catter starts meanwhile never loads half a DLL, nor
+    // finds the one it loads renamed over.
     const auto partial = std::format("{}.{}", copy, GetCurrentProcessId());
     std::string bytes;
     auto error = kota::fs::read_file(bytes, dll);
@@ -149,8 +149,8 @@ std::string temporary_copy(std::string_view dll) {
             kota::fs::remove(partial);
         }
     }
-    // Another catter-proxy renamed its copy first, which a process may have
-    // loaded already.
+    // Another catter renamed its copy first, which a process may have loaded
+    // already.
     if(error && !kota::fs::is_file(copy)) {
         throw catter::system_error(error, std::format("Failed to copy {} to {}", dll, copy));
     }
@@ -176,16 +176,14 @@ std::string import_name(std::string_view dll) {
                     copy));
 }
 
-}  // namespace
-
-void inject_hook(HANDLE process, std::string_view executable) {
+/// Adds the hook DLL of the suspended process's machine to its imports, and
+/// gives it `session`; false for a process of a machine catter has no hook
+/// for.
+bool add_hook(HANDLE process, std::string_view executable, const config::HookSession& session) {
     const USHORT machine = process_machine(process);
     const auto hook = std::ranges::find(HOOKS, machine, &Hook::machine);
     if(hook == std::ranges::end(HOOKS)) {
-        LOG_WARN("No hook for machine 0x{:04X}: {} runs, but what it starts is not captured",
-                 machine,
-                 executable);
-        return;
+        return false;
     }
 
     const auto dll = import_name(program_path(std::format("catter-hook-{}.dll", hook->arch)));
@@ -199,6 +197,32 @@ void inject_hook(HANDLE process, std::string_view executable) {
     if(machine != DETOURS_MACHINE) {
         fix_converted_header(process, machine);
     }
+    if(!DetourCopyPayloadToProcess(process, config::HOOK_SESSION_GUID, &session, sizeof(session))) {
+        throw catter::system_error(
+            GetLastError(),
+            std::system_category(),
+            std::format("Failed to give the hook in {} its session", executable));
+    }
+    return true;
+}
+
+}  // namespace
+
+void inject_hook(HANDLE process,
+                 std::string_view executable,
+                 std::int32_t id,
+                 std::string_view pipe) {
+    config::HookSession session{.id = id};
+    pipe.copy(session.pipe, sizeof(session.pipe) - 1);
+    if(!add_hook(process, executable, session)) {
+        LOG_WARN("No hook for machine 0x{:04X}: {} runs, but what it starts is not captured",
+                 process_machine(process),
+                 executable);
+    }
+}
+
+bool inject_end(HANDLE process, std::string_view executable, std::uint32_t code) {
+    return add_hook(process, executable, {.ends = true, .exit_code = code});
 }
 
 }  // namespace catter

@@ -4,7 +4,6 @@ module;
 
 module catter:capture.runtime_driver;
 
-import :session.data;
 import :session.handler;
 
 namespace catter {

@@ -2,7 +2,7 @@
 
 > This page describes the internals of the **inject runtime**. Handler authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations handlers care about, see [Runtime](runtime.md).
 
-The hook is the capture carrier of the inject runtime: a shared library loaded into every process spawned by the build system. Its sole job is to intercept process creation calls and rewrite them so that every child process goes through `catter-proxy` instead of executing directly.
+The hook is the capture carrier of the inject runtime: a shared library loaded into every process spawned by the build system. It intercepts process creation calls. On Linux and macOS it rewrites them so that every child process goes through `catter-proxy` instead of executing directly; on Windows it asks catter itself what to do with each one and starts the program as catter decides.
 
 The hook implementation is entirely platform-specific. Unix and Windows use fundamentally different interception techniques.
 
@@ -123,40 +123,38 @@ The Windows hook uses a fundamentally different approach because Windows has no 
 1. **DLL injection** -- to load the hook library into target processes
 2. **API hooking via [Microsoft Detours](https://github.com/microsoft/Detours)** -- to intercept `CreateProcess` calls within those processes
 
+There is no `catter-proxy` on Windows. The hook runs inside the caller's own `CreateProcess` call, where it can do what `catter-proxy` does on Unix: it speaks to catter over the session's pipe, and it starts the program itself. Windows gives catter the exit code of any process it holds a handle to, so catter needs no process of its own beside each program to learn how it ended.
+
 ### Hook DLLs
 
-A process loads only DLLs of its own architecture, so there is one hook DLL per architecture, each installed next to `catter-proxy.exe`:
+A process loads only DLLs of its own architecture, so there is one hook DLL per architecture, each installed next to `catter.exe`:
 
 | DLL                     | Loaded into                                                      |
 | ----------------------- | ---------------------------------------------------------------- |
 | `catter-hook-x64.dll`   | x64 processes, x64 processes emulated on ARM64, ARM64EC programs |
 | `catter-hook-arm64.dll` | native ARM64 processes                                           |
 
-Every Windows build of catter carries both: on Windows on ARM, a build mixes native ARM64 tools with emulated x64 ones. A 32-bit (x86) process has no hook DLL yet: it runs without one, as it would without catter, and the commands it starts are not captured. catter-proxy logs a warning naming the program.
+Every Windows build of catter carries both: on Windows on ARM, a build mixes native ARM64 tools with emulated x64 ones. A 32-bit (x86) process has no hook DLL yet: it runs without one, as it would without catter, and the commands it starts are not captured. catter logs a warning naming the program. A handler that drops a command of such a program has catter end it at once, before its caller resumes it.
 
 Each DLL is built without AddressSanitizer and with the C++ runtime linked in, importing only Windows' own DLLs, UCRT among them: it runs inside every process of the build, which may lack other runtime DLLs, and Detours' search of the address space reads ASan's shadow memory.
 
-### Environment Variables
+### The Session of a Process
 
-| Variable            | Purpose                                        |
-| ------------------- | ---------------------------------------------- |
-| `CATTER_IPC_ID`     | Session ID of the parent process               |
-| `CATTER_IPC_PIPE`   | The pipe of the catter session                 |
-| `CATTER_PROXY_PATH` | Absolute path to the `catter-proxy.exe` binary |
+The hook in a process learns the session it reports to from catter, not from the environment: catter copies a Detours payload into each process it injects the hook into, holding the session's pipe and the ID of the command the process runs, or, for a command that is not to run, the exit code the process ends with as soon as the hook loads. The build's environment stays as the build made it, and each program gets its own command ID though its caller passes it the environment it has.
 
 ### DLL Injection Process
 
-When `catter-proxy` (in injector mode) needs to start a build command with the hook attached:
+catter injects the hook into the build command, which it starts itself, and into every program the hook starts:
 
-1. **Create the target process suspended**. The proxy starts it with kotatsu's `kota::sys::spawn`, whose `windows_before_start` callback receives the process created, in a job object of its own, before its main thread runs.
+1. **The process is suspended**. catter starts the build command with kotatsu's `kota::sys::spawn`, whose `windows_before_start` callback receives the process created, in a job object of its own, before its main thread runs. A program the hook starts is created suspended by the hook, which sends catter its process ID; catter opens the process.
 
-2. **Set environment variables**. `CATTER_IPC_ID`, `CATTER_IPC_PIPE` and `CATTER_PROXY_PATH` are set in the target process environment before creation (passed via the environment block).
+2. **Find the process's architecture**. `GetProcessInformation(ProcessMachineTypeInfo)` gives the machine whose code the process runs: x64 for x64 processes emulated on ARM64 and for ARM64EC ones, which `IsWow64Process2` cannot tell from native ARM64 processes. On Windows 10, which has no `ProcessMachineTypeInfo` and emulates no x64, `IsWow64Process2` gives it.
 
-3. **Find the process's architecture**. `GetProcessInformation(ProcessMachineTypeInfo)` gives the machine whose code the process runs: x64 for x64 processes emulated on ARM64 and for ARM64EC ones, which `IsWow64Process2` cannot tell from native ARM64 processes. On Windows 10, which has no `ProcessMachineTypeInfo` and emulates no x64, `IsWow64Process2` gives it.
+3. **Add the hook DLL to the process's imports**. `DetourUpdateProcessWithDll()` adds the DLL of that architecture to the import table of the suspended executable, so the loader maps it before any of the program's own code runs. The loader reads the DLL's path there in the process's own ANSI code page, which a program can make UTF-8, so the path must be ASCII: a path that is not goes by its 8.3 short name, or, on a volume that keeps no short names, by a copy of the DLL in catter's data directory.
 
-4. **Add the hook DLL to the process's imports**. `DetourUpdateProcessWithDll()` adds the DLL of that architecture to the import table of the suspended executable, so the loader maps it before any of the program's own code runs. The loader reads the DLL's path there in the process's own ANSI code page, which a program can make UTF-8, so the path must be ASCII: a path that is not goes by its 8.3 short name, or, on a volume that keeps no short names, by a copy of the DLL in catter's data directory.
+4. **Give the hook its session**. `DetourCopyPayloadToProcess()` copies the session's pipe and the command's ID into the process.
 
-5. **Resume the main thread**. Once the callback returns, `spawn` resumes the main thread. The loader maps the hook DLL with the program's other imports, and its hooks are active before the program's entry point runs.
+5. **Resume the main thread**. `spawn` resumes the build command once the callback returns; the hook resumes a program once catter has answered. The loader maps the hook DLL with the program's other imports, and its hooks are active before the program's entry point runs.
 
 ### Hooked Windows APIs
 
@@ -165,7 +163,7 @@ The hook DLL attaches Detours hooks to these functions in one transaction during
 - **`CreateProcessA()`** -- ANSI version of process creation
 - **`CreateProcessW()`** -- Wide-character version of process creation
 
-A process a program starts under another account's token (`CreateProcessAsUser`, `CreateProcessWithTokenW`, `CreateProcessWithLogonW`) runs without the hook and is not captured: `catter-proxy` would have to run under that token too, and that account may be unable to start it or to reach the session's pipe.
+A process a program starts under another account's token (`CreateProcessAsUser`, `CreateProcessWithTokenW`, `CreateProcessWithLogonW`) runs without the hook and is not captured: that account may be unable to reach the session's pipe.
 
 Detours works by:
 
@@ -177,39 +175,33 @@ Detours works by:
 
 When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 
-1. **Extract the command line**. The hook reads `lpApplicationName` and `lpCommandLine`.
+1. **Resolve the program**. The hook resolves it with `resolve_program()`: `lpApplicationName` made absolute from the current directory, or else the first token of the command line, looked for as `CreateProcess` looks for it (kotatsu's `find_create_process_program`: the program's directory, the current directory, the system directories, the Windows directory, then `PATH`); a name without quotes is read up to each blank in turn, as `CreateProcess` reads `C:\Program Files\tool.exe a b`. When there is no such file, the call goes to the original `CreateProcess` unchanged, which fails as it does without catter.
 
-2. **Resolve the program**. The hook resolves it with `resolve_program()`: `lpApplicationName` made absolute from the current directory, or else the first token of the command line, looked for as `CreateProcess` looks for it (kotatsu's `find_create_process_program`: the program's directory, the current directory, the system directories, the Windows directory, then `PATH`); a name without quotes is read up to each blank in turn, as `CreateProcess` reads `C:\Program Files\tool.exe a b`. When there is no such file, the call goes to the original `CreateProcess` unchanged, which fails as it does without catter.
+2. **Connect to the session**. The hook opens the session's pipe. When it cannot, as for a build server an earlier session started, whose session is gone, the call goes to the original `CreateProcess` unchanged, and the program runs uncaptured.
 
-3. **Rewrite the command line**:
+3. **Ask catter**. The hook reads the command as `CreateProcess` would start it: the arguments of the command line, the environment block (or the caller's own environment), and the working directory. It sends `CREATE` and `MAKE_DECISION`, and waits for catter's answer, as `CreateProcess` itself waits for nothing else.
 
-   ```
-   {proxy_path} -p {ipc_id} --exec {resolved_path} --ipc {pipe} -- {original_cmdline}
-   ```
+4. **Start the program suspended**. The hook calls the original `CreateProcess` with the caller's own arguments, flags, handles and `STARTUPINFO`, adding only `CREATE_SUSPENDED`. What a handler changed of the command is written anew: its program, looked for as `CreateProcess` would look for it from the command's working directory; its command line, written from its arguments, only when it changed them; its environment; its working directory. The rest goes on as the caller wrote it, so `cmd.exe`, and any other program that reads its command line itself, reads what it would without catter. When the program cannot start, the hook reports it (`REPORT_ERROR`) and fails the call with the system's error.
 
-   The `lpApplicationName` is set to `nullptr` so that the command line is parsed by `CreateProcess` normally.
+5. **Let catter take it**. The hook sends the process ID (`started`). catter opens the process and makes it run as decided: it injects the hook, or, for a command that is not to run, injects it set to end the process with exit code 0 (dropped) or 1 (the session failed) as soon as it loads, before the program's own code runs. catter then waits for the process to exit, and tells the handlers its exit code. When catter cannot make the program run as decided, it reports the error, and the hook ends the program with exit code 1.
 
-4. **Call the original `CreateProcess`** via the Detours trampoline with the modified command line.
+6. **Resume it**. The hook resumes the main thread, unless the caller asked for the process suspended, and returns. The caller gets the program's own process and thread handles and IDs.
 
-catter-proxy starts the program with `{original_cmdline}` as the caller wrote it, unless a handler changed its arguments: `cmd.exe`, and any other program that reads its command line itself, reads what it would without catter.
+The caller holds the program itself, as it would without catter. What a caller does to the process it starts works as it does without catter: MSBuild's tracker, which starts each tool suspended and injects its file tracking into it before it runs, a debugger, or a build tool that keeps the process IDs of its jobs.
 
 ### Key Difference from Unix
 
 On Unix, `LD_PRELOAD` is an environment variable inherited automatically by all child processes. The hook is "viral" by default -- every subprocess gets it.
 
-On Windows, there is no such mechanism. The hook DLL must be explicitly injected into each new process. This happens because:
-
-1. The hook's `CreateProcess` detour intercepts every process creation
-2. It rewrites the command to go through `catter-proxy`
-3. When the proxy decides to execute with `INJECT` action, it performs DLL injection into the new process (create suspended, inject, resume)
-
-This means the proxy is responsible for re-injecting the hook into each generation of child processes, maintaining the recursive interception chain. Processes of different architectures can alternate along the chain: each gets the hook DLL of its own.
+On Windows, there is no such mechanism. The hook DLL must be explicitly injected into each new process: catter injects it into each program the hook starts, while the program is suspended. Processes of different architectures can alternate along the chain: each gets the hook DLL of its own.
 
 ### DLL Lifecycle
 
 ```
 DLL_PROCESS_ATTACH:
-  DetourRestoreAfterWith()   -- Restore the import table catter-proxy changed
+  DetourRestoreAfterWith()   -- Restore the import table catter changed
+  DetourFindPayloadEx()      -- Read the session catter copied into the process
+  TerminateProcess(...)      -- End a process whose command is not to run
   DetourTransactionBegin()
   DetourAttach(...)          -- Hook CreateProcessA and CreateProcessW
   DetourTransactionCommit()  -- Activate all hooks at once
@@ -226,4 +218,5 @@ DLL_PROCESS_ATTACH:
 | Interposition        | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` macro          | Detours trampoline hooking             |
 | Intercepted APIs     | `execve`, `execvp`, `posix_spawn`, etc.                    | Same as Linux                   | `CreateProcessA`, `CreateProcessW`     |
 | Recursive hooking    | Automatic (env inherited)                                  | Automatic (env inherited)       | Explicit (DLL re-injected per process) |
-| Env vars for session | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux                   | `CATTER_PROXY_PATH`, `CATTER_IPC_ID`   |
+| Session              | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux                   | A Detours payload in each process      |
+| Who starts a command | `catter-proxy`                                             | Same as Linux                   | The hook, in the caller's own call     |

@@ -2,9 +2,9 @@ module;
 
 #include "modules/prelude.h"
 
-module catter:protocol.protocol;
+#include "support/messages.h"
 
-import :session.data;
+module catter:protocol.protocol;
 
 /// The messages catter and a handler exchange (docs/en/design/handler-protocol.md):
 /// JSON-RPC 2.0, each message framed by a Content-Length header. Field names

@@ -62,7 +62,7 @@ sequenceDiagram
 "如何处理一条命令"在 catter 中分两层表达：
 
 1. **handler 层**（handler 决定的）：`skip` / `drop` / `abort` / `modify` / `edit`，语义化、与机制无关。
-2. **协议层**（proxy 执行的）：`DROP` / `INJECT` / `WRAP` / `FAIL`，是具体的执行机制。
+2. **协议层**（catter-proxy 执行的，Windows 上则是 hook）：`DROP` / `INJECT` / `FAIL`，是具体的执行机制。
 
 runtime 驱动负责把 handler 层动作映射到协议层动作。当前 `inject` runtime 的映射如下：
 
@@ -83,10 +83,10 @@ runtime 驱动负责把 handler 层动作映射到协议层动作。当前 `inje
 
 一次 catter 运行会涉及多个进程与组件，它们都属于 runtime 的实现，handler 作者通常无需关心：
 
-| 组件                 | 角色                                                                                  |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `catter`（守护进程） | 运行会话的各个 handler，通过 IPC 接收命令并返回决策                                   |
-| `catter-proxy`       | 命令执行与 IPC 中转的可执行文件，分注入模式（启动构建）与包装模式（代替被拦截的命令） |
-| hook 共享库          | inject runtime 的捕获载体，注入构建进程以拦截进程创建调用                             |
+| 组件                 | 角色                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `catter`（守护进程） | 运行会话的各个 handler，通过 IPC 接收命令并返回决策                                                          |
+| `catter-proxy`       | 在 Linux 和 macOS 上执行命令并中转 IPC 的可执行文件，分注入模式（启动构建）与包装模式（代替被拦截的命令）    |
+| hook 共享库          | inject runtime 的捕获载体，注入构建进程以拦截进程创建调用；在 Windows 上由它自己询问守护进程，并启动每个程序 |
 
 它们是 **inject runtime 的实现细节**，而 runtime 抽象本身才是架构的中心。详见[运行机制](runtime.md)与[钩子机制](hook-mechanism.md)。

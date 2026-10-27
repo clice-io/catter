@@ -2,7 +2,7 @@
 
 > 本文描述 **inject runtime** 的底层实现，handler 作者通常不需要阅读。它解答的是"命令是如何被捕获的"这一平台细节；handler 关心的能力与限制见[运行机制](runtime.md)。
 
-钩子是 inject runtime 的捕获载体：一个共享库，被加载到构建系统生成的每个进程中。它的唯一职责是拦截进程创建调用，并将其重写，使每个子进程都通过 `catter-proxy` 中转，而非直接执行。
+钩子是 inject runtime 的捕获载体：一个共享库，被加载到构建系统生成的每个进程中。它拦截进程创建调用。在 Linux 和 macOS 上，它将调用重写，使每个子进程都通过 `catter-proxy` 中转，而非直接执行；在 Windows 上，它自己向 catter 询问如何处理每次调用，并按 catter 的决定启动程序。
 
 钩子的实现完全依赖于平台特性。Unix 和 Windows 使用了截然不同的拦截技术。
 
@@ -123,40 +123,38 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 1. **DLL 注入** -- 将钩子库加载到目标进程中
 2. **基于 [Microsoft Detours](https://github.com/microsoft/Detours) 的 API 钩子** -- 在这些进程内拦截 `CreateProcess` 调用
 
+Windows 上没有 `catter-proxy`。钩子在调用方自己的 `CreateProcess` 调用中运行，在这里就能完成 `catter-proxy` 在 Unix 上做的事：通过会话的管道与 catter 通信，并亲自启动程序。catter 只要持有某个进程的句柄，Windows 就会把这个进程的退出码交给它，因此 catter 无需在每个程序旁边另起一个自己的进程来得知程序如何结束。
+
 ### 钩子 DLL
 
-进程只会加载与自身架构相同的 DLL，因此每种架构各有一个钩子 DLL，都安装在 `catter-proxy.exe` 所在的目录：
+进程只会加载与自身架构相同的 DLL，因此每种架构各有一个钩子 DLL，都安装在 `catter.exe` 所在的目录：
 
 | DLL                     | 加载到                                                 |
 | ----------------------- | ------------------------------------------------------ |
 | `catter-hook-x64.dll`   | x64 进程、在 ARM64 上模拟运行的 x64 进程、ARM64EC 程序 |
 | `catter-hook-arm64.dll` | 原生 ARM64 进程                                        |
 
-catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM 上，一次构建中既有原生 ARM64 工具，也有模拟运行的 x64 工具。32 位（x86）进程目前还没有对应的钩子 DLL：它不加载钩子直接运行，与没有 catter 时一样，它启动的命令也不会被捕获。catter-proxy 会记录一条警告，写明是哪个程序。
+catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM 上，一次构建中既有原生 ARM64 工具，也有模拟运行的 x64 工具。32 位（x86）进程目前还没有对应的钩子 DLL：它不加载钩子直接运行，与没有 catter 时一样，它启动的命令也不会被捕获。catter 会记录一条警告，写明是哪个程序。handler 丢弃这类程序的命令时，catter 会在调用方恢复该进程之前就立即结束它。
 
 两个 DLL 构建时都不启用 AddressSanitizer，并把 C++ 运行时链接进 DLL 本身，只导入 Windows 自带的 DLL（包括 UCRT）：它们运行在构建的每个进程中，这些进程未必带有其他运行时 DLL；而且 Detours 在地址空间中搜索时会读到 ASan 的影子内存（shadow memory）。
 
-### 环境变量
+### 进程的会话
 
-| 变量                | 用途                          |
-| ------------------- | ----------------------------- |
-| `CATTER_IPC_ID`     | 父进程的会话 ID               |
-| `CATTER_IPC_PIPE`   | catter 会话的管道             |
-| `CATTER_PROXY_PATH` | `catter-proxy.exe` 的绝对路径 |
+进程中的钩子从 catter 那里得知自己向哪个会话报告，而不是从环境变量中读取：catter 向它注入钩子的每个进程复制一份 Detours 载荷（payload），其中存有会话的管道和该进程所运行命令的 ID；对于不该运行的命令，存的则是钩子一加载就让进程结束时使用的退出码。构建的环境保持构建自己设置的样子；即使调用方把自己的环境原样传给程序，每个程序也会得到自己的命令 ID。
 
 ### DLL 注入过程
 
-当 `catter-proxy`（注入模式）需要启动挂载了钩子的构建命令时：
+catter 把钩子注入它自己启动的构建命令，以及钩子启动的每个程序：
 
-1. **以挂起状态创建目标进程**。代理用 kotatsu 的 `kota::sys::spawn` 启动它，其 `windows_before_start` 回调拿到已创建的进程：进程已在自己的 job 对象中，主线程尚未运行。
+1. **进程处于挂起状态**。catter 用 kotatsu 的 `kota::sys::spawn` 启动构建命令，其 `windows_before_start` 回调拿到已创建的进程：进程已在自己的 job 对象中，主线程尚未运行。钩子启动的程序由钩子以挂起状态创建，钩子把它的进程 ID 发给 catter，catter 随后打开该进程。
 
-2. **设置环境变量**。`CATTER_IPC_ID`、`CATTER_IPC_PIPE` 和 `CATTER_PROXY_PATH` 在创建进程前通过环境块传入目标进程。
+2. **确定进程的架构**。`GetProcessInformation(ProcessMachineTypeInfo)` 给出进程所运行代码的机器类型：在 ARM64 上模拟运行的 x64 进程和 ARM64EC 进程得到的都是 x64，而 `IsWow64Process2` 无法把它们与原生 ARM64 进程区分开。Windows 10 没有 `ProcessMachineTypeInfo`，也不支持模拟 x64，在那里由 `IsWow64Process2` 给出架构。
 
-3. **确定进程的架构**。`GetProcessInformation(ProcessMachineTypeInfo)` 给出进程所运行代码的机器类型：在 ARM64 上模拟运行的 x64 进程和 ARM64EC 进程得到的都是 x64，而 `IsWow64Process2` 无法把它们与原生 ARM64 进程区分开。Windows 10 没有 `ProcessMachineTypeInfo`，也不支持模拟 x64，在那里由 `IsWow64Process2` 给出架构。
+3. **把钩子 DLL 加入进程的导入表**。`DetourUpdateProcessWithDll()` 把对应架构的 DLL 加入挂起的可执行文件的导入表，这样加载器会在程序自身的任何代码运行之前映射它。加载器按进程自己的 ANSI 代码页读取导入表里的 DLL 路径，而程序可以把这个代码页设为 UTF-8，所以路径必须是纯 ASCII：含非 ASCII 字符的路径改用它的 8.3 短文件名；在不保留短文件名的卷上，则改用复制到 catter 数据目录中的那份 DLL。
 
-4. **把钩子 DLL 加入进程的导入表**。`DetourUpdateProcessWithDll()` 把对应架构的 DLL 加入挂起的可执行文件的导入表，这样加载器会在程序自身的任何代码运行之前映射它。加载器按进程自己的 ANSI 代码页读取导入表里的 DLL 路径，而程序可以把这个代码页设为 UTF-8，所以路径必须是纯 ASCII：含非 ASCII 字符的路径改用它的 8.3 短文件名；在不保留短文件名的卷上，则改用复制到 catter 数据目录中的那份 DLL。
+4. **把会话交给钩子**。`DetourCopyPayloadToProcess()` 把会话的管道和命令的 ID 复制到进程中。
 
-5. **恢复主线程**。回调返回后，`spawn` 恢复主线程。加载器把钩子 DLL 与程序的其他导入项一同映射，钩子在程序入口点运行之前就已激活。
+5. **恢复主线程**。构建命令在回调返回后由 `spawn` 恢复；钩子启动的程序在 catter 答复后由钩子恢复。加载器把钩子 DLL 与程序的其他导入项一同映射，钩子在程序入口点运行之前就已激活。
 
 ### 被钩住的 Windows API
 
@@ -165,7 +163,7 @@ catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM
 - **`CreateProcessA()`** -- ANSI 版本的进程创建函数
 - **`CreateProcessW()`** -- 宽字符版本的进程创建函数
 
-程序以其他账户的令牌（token）启动的进程（`CreateProcessAsUser`、`CreateProcessWithTokenW`、`CreateProcessWithLogonW`）不带钩子运行，也不会被捕获：要捕获它，`catter-proxy` 也得以该令牌运行，而那个账户可能无法启动它，也可能访问不到会话的管道。
+程序以其他账户的令牌（token）启动的进程（`CreateProcessAsUser`、`CreateProcessWithTokenW`、`CreateProcessWithLogonW`）不带钩子运行，也不会被捕获：那个账户可能访问不到会话的管道。
 
 Detours 的工作原理：
 
@@ -177,39 +175,33 @@ Detours 的工作原理：
 
 当被钩住的进程调用 `CreateProcessA` 或 `CreateProcessW` 时：
 
-1. **提取命令行**。钩子读取 `lpApplicationName` 和 `lpCommandLine`。
+1. **解析程序**。钩子用 `resolve_program()` 解析：`lpApplicationName` 从当前目录补全为绝对路径；没有它时，取命令行的第一个词，按 `CreateProcess` 的方式查找（kotatsu 的 `find_create_process_program`：程序所在目录、当前目录、系统目录、Windows 目录，最后是 `PATH`）；不带引号的名字会依次读到每个空白处，和 `CreateProcess` 读 `C:\Program Files\tool.exe a b` 的方式一样。找不到这样的文件时，这次调用原样交给原始的 `CreateProcess`，失败方式和没有 catter 时相同。
 
-2. **解析程序**。钩子用 `resolve_program()` 解析：`lpApplicationName` 从当前目录补全为绝对路径；没有它时，取命令行的第一个词，按 `CreateProcess` 的方式查找（kotatsu 的 `find_create_process_program`：程序所在目录、当前目录、系统目录、Windows 目录，最后是 `PATH`）；不带引号的名字会依次读到每个空白处，和 `CreateProcess` 读 `C:\Program Files\tool.exe a b` 的方式一样。找不到这样的文件时，这次调用原样交给原始的 `CreateProcess`，失败方式和没有 catter 时相同。
+2. **连接会话**。钩子打开会话的管道。打不开时（例如早先的会话启动的构建服务器，而那个会话已经结束），这次调用原样交给原始的 `CreateProcess`，程序运行但不被捕获。
 
-3. **重写命令行**：
+3. **询问 catter**。钩子按 `CreateProcess` 将要启动的样子读取命令：命令行中的参数、环境块（没有时取调用方自己的环境）和工作目录。它发送 `CREATE` 和 `MAKE_DECISION`，然后等待 catter 的答复；除此之外，`CreateProcess` 本身不等待任何别的东西。
 
-   ```
-   {proxy_path} -p {ipc_id} --exec {resolved_path} --ipc {pipe} -- {original_cmdline}
-   ```
+4. **以挂起状态启动程序**。钩子用调用方自己的参数、标志、句柄和 `STARTUPINFO` 调用原始的 `CreateProcess`，只额外加上 `CREATE_SUSPENDED`。handler 改动过的部分会重新写入：程序，以命令的工作目录为当前目录，按 `CreateProcess` 的方式查找；命令行，仅当 handler 改了参数时才由参数重新拼出；环境；工作目录。其余部分保持调用方写下的样子，因此 `cmd.exe` 以及其他自己读取命令行的程序，读到的和没有 catter 时一样。程序无法启动时，钩子报告这一错误（`REPORT_ERROR`），并让这次调用以系统给出的错误失败。
 
-   `lpApplicationName` 被设为 `nullptr`，使 `CreateProcess` 正常解析命令行。
+5. **交给 catter 接管**。钩子发送进程 ID（`started`）。catter 打开该进程，让它按决定的方式运行：注入钩子；对于不该运行的命令，注入的钩子会在加载后立即以退出码 0（已丢弃）或 1（会话已失败）结束进程，赶在程序自身的代码运行之前。随后 catter 等待进程退出，并把它的退出码告诉各个 handler。catter 无法让程序按决定的方式运行时，会报告错误，钩子则以退出码 1 结束该程序。
 
-4. **通过 Detours trampoline 调用原始 `CreateProcess`**，传入修改后的命令行。
+6. **恢复程序**。除非调用方要求以挂起状态创建进程，钩子会恢复主线程，然后返回。调用方拿到的是程序自己的进程和线程句柄及 ID。
 
-catter-proxy 用调用方写下的 `{original_cmdline}` 原样启动程序，除非 handler 改了它的参数：`cmd.exe` 以及其他自己读取命令行的程序，读到的和没有 catter 时一样。
+调用方持有的就是程序本身，与没有 catter 时一样。调用方对自己启动的进程所做的事，也都和没有 catter 时一样有效：例如 MSBuild 的 tracker，它以挂起状态启动每个工具，在工具运行前注入文件追踪；又如调试器，或记下各个任务进程 ID 的构建工具。
 
 ### 与 Unix 的关键区别
 
 在 Unix 上，`LD_PRELOAD` 是一个由所有子进程自动继承的环境变量。钩子默认具有"传染性" -- 每个子进程都会被钩住。
 
-在 Windows 上没有这样的机制。钩子 DLL 必须显式注入到每个新进程中。这通过以下方式实现：
-
-1. 钩子的 `CreateProcess` 替代函数拦截每次进程创建
-2. 将命令重写为通过 `catter-proxy` 中转
-3. 当代理决定以 `INJECT` 动作执行时，它对新进程执行 DLL 注入（创建挂起、注入、恢复）
-
-这意味着代理负责在每一代子进程中重新注入钩子，维持递归拦截链。链上可以交替出现不同架构的进程：每个进程都会得到与自身架构对应的钩子 DLL。
+在 Windows 上没有这样的机制。钩子 DLL 必须显式注入到每个新进程中：钩子启动的每个程序还处于挂起状态时，catter 就把钩子注入其中。链上可以交替出现不同架构的进程：每个进程都会得到与自身架构对应的钩子 DLL。
 
 ### DLL 生命周期
 
 ```
 DLL_PROCESS_ATTACH:
-  DetourRestoreAfterWith()   -- Restore the import table catter-proxy changed
+  DetourRestoreAfterWith()   -- Restore the import table catter changed
+  DetourFindPayloadEx()      -- Read the session catter copied into the process
+  TerminateProcess(...)      -- End a process whose command is not to run
   DetourTransactionBegin()
   DetourAttach(...)          -- Hook CreateProcessA and CreateProcessW
   DetourTransactionCommit()  -- Activate all hooks at once
@@ -219,11 +211,12 @@ DLL_PROCESS_ATTACH:
 
 ## 平台对比
 
-| 方面         | Linux                                                      | macOS                            | Windows                              |
-| ------------ | ---------------------------------------------------------- | -------------------------------- | ------------------------------------ |
-| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-{x64,arm64}.dll`        |
-| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `DetourUpdateProcessWithDll`         |
-| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | Detours trampoline 钩子              |
-| 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                       | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW`   |
-| 递归钩子     | 自动（环境变量继承）                                       | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）         |
-| 会话环境变量 | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同                    | `CATTER_PROXY_PATH`、`CATTER_IPC_ID` |
+| 方面         | Linux                                                      | macOS                            | Windows                            |
+| ------------ | ---------------------------------------------------------- | -------------------------------- | ---------------------------------- |
+| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-{x64,arm64}.dll`      |
+| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `DetourUpdateProcessWithDll`       |
+| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | Detours trampoline 钩子            |
+| 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                       | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW` |
+| 递归钩子     | 自动（环境变量继承）                                       | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）       |
+| 会话         | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同                    | 每个进程中的一份 Detours 载荷      |
+| 由谁启动命令 | `catter-proxy`                                             | 与 Linux 相同                    | 钩子，在调用方自己的调用中         |

@@ -1,0 +1,30 @@
+[run."$ suspended.exe"]
+stdout = '''
+suspended: suspended.exe
+suspend count: 1
+written into: yes
+child runs
+child exit 7
+'''
+exit = 0
+
+[run."$ catter tree -a 0 -- suspended.exe"]
+stdout = '''
+suspended: suspended.exe
+suspend count: 1
+written into: yes
+child runs
+child exit 7
+sus....exe
+└── "C:\\....exe" ...
+'''
+exit = 0
+
+[dropped."$ catter run --handler \"python handler.py\" -- suspended.exe"]
+stdout = '''
+suspended: suspended.exe
+suspend count: 1
+written into: yes
+child exit 0
+'''
+exit = 0

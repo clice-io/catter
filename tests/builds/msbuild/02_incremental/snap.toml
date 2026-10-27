@@ -11,14 +11,26 @@ stdout = '''
 '''
 exit = 0
 
+[test."hello.tlog/"]
+value = [
+    "build/hello.dir/Debug/hello.tlog/CL.command.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/CL.read.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/CL.write.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/Cl.items.tlog",
+    "build/hello.dir/Debug/hello.tlog/CustomBuild.command.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/CustomBuild.read.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/CustomBuild.write.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/hello.lastbuildstate",
+    "build/hello.dir/Debug/hello.tlog/link.command.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/link.read.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/link.secondary.1.tlog",
+    "build/hello.dir/Debug/hello.tlog/link.write.1.tlog",
+]
+
 [test."$ cmake --build build --config Debug -- -m:1 -nologo"]
-wrong = "MSBuild rebuilds everything after a build under catter (catter#141)"
 stdout = '''
 
   1>Checking Build System
-  main.cc
-  util.cc
-  Generating Code...
   hello.vcxproj -> ${WS}/build/Debug/hello.exe
 '''
 exit = 0
