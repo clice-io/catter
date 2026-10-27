@@ -22,7 +22,8 @@ public:
 
     explicit Session(Handler& handler) : handler(handler) {}
 
-    /// The id of a new command.
+    /// The id of a new command: each client of the pipe takes one, and on
+    /// Windows the build command, which catter decides itself.
     data::ipcid_t new_id() noexcept;
 
     /// What the handlers decide for command `id`, which `parent` started, none
@@ -37,7 +38,9 @@ public:
 
     /// Tells the handlers that catter could not capture command `id`:
     /// `message` says why.
-    kota::task<> failed(data::ipcid_t id, std::optional<data::ipcid_t> parent, std::string message);
+    kota::task<> uncaptured(data::ipcid_t id,
+                            std::optional<data::ipcid_t> parent,
+                            std::string message);
 
     /// Ends the session with `error`, unless it has ended already.
     void fail(std::exception_ptr error) noexcept;

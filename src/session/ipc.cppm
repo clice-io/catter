@@ -10,9 +10,9 @@ import :session.session;
 
 namespace catter::ipc {
 
-/// A client of the session's pipe, which reports a command of the build to
-/// the session and asks what it is to do: catter-proxy on Unix, the hook on
-/// Windows. A client reports one command, `id`.
+/// Serves a client of the session's pipe, which reports one command of the
+/// build, `id`, and asks what it is to do: catter-proxy on Unix, the hook on
+/// Windows.
 class Service {
 public:
     Service(Session& session, data::ipcid_t id) noexcept : session(session), id(id) {}

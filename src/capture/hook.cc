@@ -93,9 +93,9 @@ private:
     std::list<Untold> untold;
 };
 
-/// The hook in a program of the build, as it starts a program: it asks catter
-/// what the program is to do, starts it suspended and leaves it to catter,
-/// which makes it run as decided and waits for its exit.
+/// Serves the hook in a program of the build as it starts a program: the hook
+/// asks what the program is to do, starts it suspended and leaves it to
+/// catter, which makes it run as decided and waits for its exit.
 class Service final : public ipc::Service {
 public:
     Service(Session& session, data::ipcid_t id, Programs& programs) :
@@ -208,7 +208,7 @@ kota::task<kota::process::exit_status> run_build(Session& session,
         error = ex.message();
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
     }
-    co_await session.failed(id, std::nullopt, std::format("Run `{}` failed:\n{}", line, error));
+    co_await session.uncaptured(id, std::nullopt, std::format("Run `{}` failed:\n{}", line, error));
     co_return kota::process::exit_status{.code = -1};
 }
 #endif

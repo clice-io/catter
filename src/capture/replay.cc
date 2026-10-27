@@ -99,40 +99,10 @@ ReplayFile parse_replay_file(std::string_view path) {
     return std::move(*replay);
 }
 
-/// Plays the build the replay file `path` recorded to the session, as the hook
-/// reports a real one: each command to decide, or as a failure when the event
-/// has an error, and its result, when the event has one, as its exit.
-///
-/// @return how the build ended: the file's `finish`, else exit 0
-kota::task<kota::process::exit_status> replay_build(std::string_view path, Session& session) {
-    const auto replay = parse_replay_file(path);
-    std::string base(kota::fs::path::parent(path));
-    kota::fs::path::push(base, replay.cwd.value_or("."));
-    kota::fs::path::normalize(base);
-    for(const auto& event: replay.events) {
-        if(event.error.has_value()) {
-            co_await session.failed(event.id, parent_of(event.error->parent), event.error->message);
-            continue;
-        }
-        auto cwd = base;
-        kota::fs::path::push(cwd, event.cwd.value_or("."));
-        kota::fs::path::normalize(cwd);
-        co_await session.decide(event.id,
-                                parent_of(event.parent),
-                                data::command{
-                                    .cwd = std::move(cwd),
-                                    .executable = event.exe,
-                                    .args = event.argv,
-                                    .env = event.env.value_or(std::vector<std::string>{}),
-                                });
-        if(event.execution.has_value()) {
-            co_await session.exited(event.id, to_process_result(*event.execution));
-        }
-    }
-
-    co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
-}
-
+/// Plays the build a replay file recorded to the session, as the hook reports
+/// a real one: each command to decide, or as one catter could not capture
+/// when the event has an error, and its result, when the event has one, as its
+/// exit. The build ends as the file's `finish` says, else with exit 0.
 class ReplayBackend final : public Backend {
 public:
     std::string_view name() const noexcept override {
@@ -142,10 +112,37 @@ public:
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
         assert(build.command.size() == 1);
-        auto file = build.cwd;
-        kota::fs::path::push(file, build.command.front());
-        kota::fs::path::normalize(file);
-        co_return co_await replay_build(file, session);
+        auto path = build.cwd;
+        kota::fs::path::push(path, build.command.front());
+        kota::fs::path::normalize(path);
+        const auto replay = parse_replay_file(path);
+        std::string base(kota::fs::path::parent(path));
+        kota::fs::path::push(base, replay.cwd.value_or("."));
+        kota::fs::path::normalize(base);
+        for(const auto& event: replay.events) {
+            if(event.error.has_value()) {
+                co_await session.uncaptured(event.id,
+                                            parent_of(event.error->parent),
+                                            event.error->message);
+                continue;
+            }
+            auto cwd = base;
+            kota::fs::path::push(cwd, event.cwd.value_or("."));
+            kota::fs::path::normalize(cwd);
+            co_await session.decide(event.id,
+                                    parent_of(event.parent),
+                                    data::command{
+                                        .cwd = std::move(cwd),
+                                        .executable = event.exe,
+                                        .args = event.argv,
+                                        .env = event.env.value_or(std::vector<std::string>{}),
+                                    });
+            if(event.execution.has_value()) {
+                co_await session.exited(event.id, to_process_result(*event.execution));
+            }
+        }
+
+        co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
     }
 };
 

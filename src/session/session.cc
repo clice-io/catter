@@ -57,9 +57,9 @@ kota::task<> Session::exited(data::ipcid_t id, data::process_result result) {
     }
 }
 
-kota::task<> Session::failed(data::ipcid_t id,
-                             std::optional<data::ipcid_t> parent,
-                             std::string message) {
+kota::task<> Session::uncaptured(data::ipcid_t id,
+                                 std::optional<data::ipcid_t> parent,
+                                 std::string message) {
     if(error) {
         co_return;
     }

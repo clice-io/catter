@@ -36,7 +36,7 @@ kota::task<> Service::finish(process_result result) noexcept {
 }
 
 kota::task<> Service::report_error(ipcid_t parent_id, std::string error_msg) noexcept {
-    co_await session.failed(id, parent_of(parent_id), std::move(error_msg));
+    co_await session.uncaptured(id, parent_of(parent_id), std::move(error_msg));
 }
 
 kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client) {
