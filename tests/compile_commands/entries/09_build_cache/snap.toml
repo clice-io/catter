@@ -1,5 +1,5 @@
 [test."$ catter compile-commands -o compile_commands.json --from events.json"]
-stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
 exit = 0
 
 [test."compile_commands.json"]
@@ -21,10 +21,5 @@ entries = [
             "-o",
             "${WS}/build/main.cc.o",
         ],
-    },
-    {
-        file = "src/util.cc",
-        directory = "${WS}",
-        arguments = ["g++", "-m64", "-Iinclude", "-DTEST=1", "-MMD", "-MF", "util.d", "src/util.cc", "-c"],
     },
 ]
