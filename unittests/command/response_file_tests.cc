@@ -138,4 +138,18 @@ ZEST_CASE(a_compiler_reads_its_arguments_from_its_files) {
     ZEXPECT(unread.location->index == 6);
 };
 
+ZEST_CASE(a_file_that_cannot_be_read_is_found_as_a_value_too) {
+    ResponseFiles files;
+    const Strings argv = {"gcc", "-I", "@gone.rsp", "-c", "a.c"};
+    auto analysis = analyze_compiler(argv[0], argv, "/work", files);
+    ZASSERT(analysis.has_value());
+    ZEXPECT(analysis->expansion.unread == std::vector<std::uint32_t>{2});
+    ZASSERT(analysis->diagnostics.size() == 1);
+    const auto& unread = analysis->diagnostics[0];
+    ZEXPECT(unread.code == Diagnostic::Code::ResponseFileUnread);
+    ZEXPECT(unread.path == "gone.rsp");
+    ZEXPECT(unread.location->argument == 0);
+    ZEXPECT(unread.location->index == 2);
+};
+
 };  // ZEST_SUITE(cmd_response_file_tests)

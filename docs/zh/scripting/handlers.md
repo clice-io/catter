@@ -2,6 +2,8 @@
 
 handler 是一个程序，catter 会把构建启动的命令告诉它。**做决定**的 handler 在每条命令运行前给出答复：原样运行、换成另一条命令运行、丢弃，或中止构建。不做决定的 handler **只观察**：它只接收通知，构建从不等它。
 
+在只观察构建的[捕获后端](../design/capture-backends.md) `eslogger` 下，每条命令都在 catter 得知它之前就已运行，catter 会在构建开始前拒绝做决定的 handler。会话开始时会告知这一点（`decisions`）：不做决定也能工作的 handler 在这时设置 `decides`。
+
 catter 通过一个简单的协议与 handler 通信（见 [Handler 协议](../design/handler-protocol.md)），所以 handler 可以用任何语言编写。Python 和 TypeScript 的 SDK 替你处理协议。
 
 ## 运行 handler
@@ -59,13 +61,13 @@ class Handler(catter.Handler):
 catter.serve(Handler())
 ```
 
-| 回调                  | 时机                                                   |
-| --------------------- | ------------------------------------------------------ |
-| `on_start(session)`   | 会话开始：它的构建命令和工作目录，以及命令的捕获方式。 |
-| `on_command(command)` | 一条命令即将运行。做决定的 handler 返回对它的动作。    |
-| `on_error(error)`     | catter 未能捕获一条命令。                              |
-| `on_exit(exit)`       | 一条命令已运行完毕：它的退出码和耗时。                 |
-| `on_finish(finish)`   | 构建已结束，附带它的退出码。                           |
+| 回调                  | 时机                                                                            |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `on_start(session)`   | 会话开始：它的构建命令和工作目录，以及命令的捕获方式。                          |
+| `on_command(command)` | 一条命令即将运行，或在 `eslogger` 下已经启动。做决定的 handler 返回对它的动作。 |
+| `on_error(error)`     | catter 未能捕获一条命令。                                                       |
+| `on_exit(exit)`       | 一条命令已运行完毕：它的退出码和耗时。                                          |
+| `on_finish(finish)`   | 构建已结束，附带它的退出码。                                                    |
 
 handler 只会收到它重写了回调的那些事件。设置 `env = True` 后，命令会携带它的环境变量。
 
@@ -149,7 +151,7 @@ handler 按固定顺序组成一条链：内置功能在最前，其后是按命
 
 ## handler 失败时
 
-handler 中止构建、在回调中抛出异常、退出、写出协议不允许的内容，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。构建结束后，catter 不发送 `finish`（`on_finish` 不会运行）就结束各个 handler 的输入，打印发生了什么，并以退出码 1 退出：
+handler 中止构建、在回调中抛出异常、退出、写出协议不允许的内容，或没有在 `--handler-timeout` 内应答，都会结束会话：它正在做决定的那条命令，以及构建在其后启动的每条命令，都不运行、直接失败（退出码 1）。已经启动的命令会继续运行：在只观察构建的后端（`eslogger`）下，catter 得知每条命令时它都已启动，构建会一直运行到结束。构建结束后，catter 不发送 `finish`（`on_finish` 不会运行）就结束各个 handler 的输入，打印发生了什么，并以退出码 1 退出：
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s

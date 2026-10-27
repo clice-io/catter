@@ -6,6 +6,11 @@ exit = 0
 stdout = "`nope` is not a capture backend: give hook or wrapper"
 exit = 1
 
+[test."$ catter tree --capture nope -- node -e 0".darwin]
+differs = "macOS has the eslogger backend too"
+stdout = "`nope` is not a capture backend: give hook or wrapper or eslogger"
+exit = 1
+
 [test."$ catter tree --capture hook --from events.json"]
 stdout = "--from replays a recorded build, which nothing captures: give --capture with a build command after --"
 exit = 1

@@ -1,0 +1,13 @@
+[test."$ catter tree --capture eslogger -w 1000 -- make"]
+stdout = '''
+built
+checked one two
+make
+└── ${XCODE}/usr/bin/make
+    ├── echo built
+    └── /bin/sh -c "cd src && ./check.sh one two"
+        └── /bin/sh -c "cd src && ./check.sh one two"
+            └── /bin/sh ./check.sh one two
+                └── /bin/sh ./check.sh one two
+'''
+exit = 0

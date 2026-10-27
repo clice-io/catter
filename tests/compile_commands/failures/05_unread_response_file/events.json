@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    {
+      "id": 1,
+      "exe": "clang++",
+      "argv": ["clang++", "-c", "src/main.cc", "@flags.rsp", "-o", "obj/main.o"],
+      "execution": { "code": 0 }
+    },
+    { "id": 2, "exe": "clang++", "argv": ["clang++", "-c", "src/util.cc", "-o", "obj/util.o"] }
+  ],
+  "finish": { "code": 0 }
+}

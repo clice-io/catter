@@ -1,0 +1,29 @@
+[reported."$ catter compile-commands -o compile_commands.json --from events.json"]
+stdout = '''
+Command 1 names the response file `flags.rsp`, which catter could not read: the database lacks the arguments it holds
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[reported."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/obj/main.o",
+        arguments = ["clang++", "-c", "src/main.cc", "@flags.rsp", "-o", "obj/main.o"],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/obj/util.o",
+        arguments = ["clang++", "-c", "src/util.cc", "-o", "obj/util.o"],
+    },
+]
+
+[aborts."$ catter compile-commands --abort-on-capture-error -o compile_commands.json --from events.json"]
+stdout = "Command 1 names the response file `flags.rsp`, which catter could not read: the database lacks the arguments it holds"
+exit = 1
+
+[aborts."compile_commands.json"]
+absent = true

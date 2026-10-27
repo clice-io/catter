@@ -32,6 +32,9 @@ struct Expansion {
 
     /// The response files read, as named, nested ones too, in the order they are read.
     std::vector<std::string> files;
+
+    /// The elements of `argv` that name a response file that cannot be read.
+    std::vector<std::uint32_t> unread;
 };
 
 /// `argv`, argv[0] included, with its response files read in and split as `quoting` says. A

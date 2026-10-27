@@ -158,6 +158,16 @@ public:
             co_return Action{};
         }
         verbose_log(success_log(id, command, *analysis));
+        // A backend that only observes the build hears of a command once it runs: a build that
+        // removes its response files when it has run may have removed them by then.
+        for(const auto& diagnostic: analysis->diagnostics) {
+            if(diagnostic.code == Diagnostic::Code::ResponseFileUnread) {
+                uncaptured(std::format(
+                    "Command {} names the response file `{}`, which catter could not read: the database lacks the arguments it holds",
+                    id,
+                    *diagnostic.path));
+            }
+        }
         compiler_commands.insert(id);
 
         const bool preprocess = analysis->phase == Phase::Preprocess;
@@ -215,10 +225,7 @@ public:
                           [[maybe_unused]] std::optional<data::ipcid_t> parent,
                           std::string message) override {
         descendants.add(id, std::nullopt);
-        if(*options.abort_on_capture_error) {
-            throw cpptrace::runtime_error(std::move(message));
-        }
-        log(message);
+        uncaptured(std::move(message));
         co_return;
     }
 
@@ -309,6 +316,15 @@ private:
     bool xmake_probe(std::string_view source) const {
         auto rest = kota::fs::path::strip_prefix(source, temporary);
         return rest.has_value() && rest->starts_with(".xmake");
+    }
+
+    /// Reports what catter could not capture of a command, which ends the session with
+    /// --abort-on-capture-error.
+    void uncaptured(std::string message) const {
+        if(*options.abort_on_capture_error) {
+            throw cpptrace::runtime_error(std::move(message));
+        }
+        log(message);
     }
 
     void log(std::string_view message) const {

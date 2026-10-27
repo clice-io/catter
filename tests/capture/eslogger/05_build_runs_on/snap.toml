@@ -1,0 +1,18 @@
+[test."$ catter compile-commands --capture eslogger --abort-on-command-failure -o compile_commands.json -- make -k"]
+stdout = '''
+cc -c broken.c -o broken.o
+cc -c fine.c -o fine.o
+CDB aborting after compiler command 3 exited with code 1.
+'''
+stderr = '''
+broken.c:1:2: error: broken
+    1 | #error broken
+      |  ^
+1 error generated.
+make: *** [broken.o] Error 1
+make: Target `all' not remade because of errors.
+'''
+exit = 1
+
+[test."fine.o"]
+value = true

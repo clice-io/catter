@@ -10,7 +10,8 @@ class Handler(catter.Handler):
         cwd = os.path.relpath(session.build.cwd)
         print(
             f"start: version {session.version}, mode {session.mode}, "
-            f"build {session.build.command} in {cwd}, session of {len(session.session)} characters"
+            f"decisions {session.decisions}, build {session.build.command} in {cwd}, "
+            f"session of {len(session.session)} characters"
         )
 
     def on_command(self, command):

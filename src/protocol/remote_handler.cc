@@ -302,12 +302,19 @@ kota::task<std::optional<Build>> RemoteHandler::on_start(Build build) {
             .version = protocol::version,
             .session = options.session,
             .mode = options.mode,
+            .decisions = options.decisions,
             .build =
                 {
                         .command = protocol::to_os_string(build.command),
                         .cwd = protocol::to_os_string(build.cwd),
                         },
     });
+    if(subscription.decides && !options.decisions) {
+        throw cpptrace::runtime_error(std::format(
+            "Handler `{}` decides on the build's commands, which the {} backend only observes: each runs before catter hears of it. Give a handler that observes, or another --capture",
+            options.name,
+            options.mode));
+    }
     if(subscription.filter) {
         if(auto wrong = check_filter(*subscription.filter)) {
             throw cpptrace::runtime_error(

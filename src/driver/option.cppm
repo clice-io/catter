@@ -42,10 +42,18 @@ struct SessionOptions {
 
     DECO_CFG_START(required = false)
 
+#ifdef CATTER_MAC
+    DecoKV(
+        names = {"--capture"},
+        meta_var = "<backend>",
+        help = "How the build's commands are captured: hook, wrapper or eslogger. [default: hook]")
+    <std::string> capture;
+#else
     DecoKV(names = {"--capture"},
            meta_var = "<backend>",
            help = "How the build's commands are captured: hook or wrapper. [default: hook]")
     <std::string> capture;
+#endif
 
     DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"--from", "--from="},

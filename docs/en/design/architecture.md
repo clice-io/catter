@@ -1,6 +1,6 @@
 # System Architecture
 
-Catter is a build-process interception and analysis tool organized around **capture backends**. A capture backend is how catter gets a build's commands: every command the build starts becomes an event catter can handle, and is executed according to the decision of the session's handlers -- run as-is, modified, dropped, or aborted.
+Catter is a build-process interception and analysis tool organized around **capture backends**. A capture backend is how catter gets a build's commands: every command the build starts becomes an event catter can handle, and, under a backend that follows the decisions of the session's handlers, is executed as they decide -- run as-is, modified, dropped, or aborted.
 
 Handler authors only need to understand two things:
 
@@ -11,7 +11,7 @@ Handler authors only need to understand two things:
 
 "Intercepting process creation" differs greatly in feasibility across platforms: a hook in every process of the build is the most general, but some programs keep it out (on macOS, Apple's own tools). Catter therefore separates how a build's commands are captured, a backend, from what is done with them, the session. Each backend starts the build and reports its commands to the session, which has the handlers decide each and tells them how each ended: the handlers see the same events whichever backend reports them.
 
-catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
+catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach, or `eslogger`, on macOS, which only observes the build. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
 
 ## Handlers
 
@@ -43,13 +43,13 @@ sequenceDiagram
 
 ### Build level: initialize / finish
 
-**`initialize`** starts the session, before the build: it carries the build command, its working directory and the capture backend. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
+**`initialize`** starts the session, before the build: it carries the build command, its working directory, the capture backend and whether the commands follow the handlers' decisions. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
 
 **`finish`** comes once the build has ended, with the build's exit code. A handler writes its final output here.
 
 ### Command level: command / error / exit
 
-**`command`** comes for each captured command before it runs: its working directory, executable, full argument vector, the parent command that started it, and, if the handler asked, its environment and what catter makes of it: the compiler, archiver or tool it runs, and what its arguments say. A handler that decides answers with an action; one that does not is only told, and the build never waits for it.
+**`command`** comes for each captured command, before it runs under a backend that follows decisions: its working directory, executable, full argument vector, the parent command that started it, and, if the handler asked, its environment and what catter makes of it: the compiler, archiver or tool it runs, and what its arguments say. A handler that decides answers with an action; one that does not is only told, and the build never waits for it.
 
 **`error`** comes instead when catter could not capture a command: the message says why.
 
@@ -75,7 +75,7 @@ The session maps handler-layer actions to protocol-layer actions, whichever back
 Keep in mind:
 
 - **`skip` is not "ignore the whole subtree"**. `skip` only lets this command run as-is; its descendants are still captured and still reach the handlers.
-- **`abort` ends the session**, as a handler that fails does: the command, and every command the build starts after it, fail without running, and once the build has ended catter prints the reason and exits 1.
+- **`abort` ends the session**, as a handler that fails does: the command, and every command the build starts after it, fail without running, and once the build has ended catter prints the reason and exits 1. A handler that fails under a backend that only observes the build ends the session too, but every command has started by the time catter hears of it: the build runs on to its end.
 
 ## Components and processes
 

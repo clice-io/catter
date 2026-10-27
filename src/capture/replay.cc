@@ -109,6 +109,10 @@ public:
         return "replay";
     }
 
+    bool follows_decisions() const noexcept override {
+        return true;
+    }
+
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
         assert(build.command.size() == 1);

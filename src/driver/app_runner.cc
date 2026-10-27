@@ -138,6 +138,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
             .name = std::string(name),
             .session = session,
             .mode = std::string(backend.name()),
+            .decisions = backend.follows_decisions(),
             .timeout = std::chrono::seconds(*options.handler_timeout),
         };
     };

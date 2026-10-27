@@ -266,6 +266,8 @@ std::expected<Input, std::string_view> input_of(const Candidate& candidate,
 
 /// Builds the analysis from a parsed command: its reads first, then the writes made from them.
 struct Builder {
+    const Expansion& expansion;
+
     const ParsedCommand& parsed;
 
     Convention convention;
@@ -289,6 +291,21 @@ struct Builder {
     }
 
     void resolve_reads() {
+        // An option may take one as its value, as `-I @flags.rsp` does.
+        for(auto index: expansion.unread) {
+            const auto argument = std::ranges::find_if(parsed.arguments, [&](const Argument& each) {
+                return each.index <= index && index < each.index + each.count;
+            });
+            assert(argument != parsed.arguments.end());
+            diagnose(
+                Diagnostic::Code::ResponseFileUnread,
+                "response file cannot be read",
+                expansion.argv[index].substr(1),
+                Location{
+                    .argument = static_cast<std::uint32_t>(argument - parsed.arguments.begin()),
+                    .index = index,
+                });
+        }
         for(const auto& input: parsed.inputs) {
             if(is_stream(input.path)) {
                 diagnose(Diagnostic::Code::StreamInputIgnored,
@@ -300,11 +317,8 @@ struct Builder {
             reads.push_back(input);
         }
         for(const auto& candidate: parsed.candidates) {
+            // A response file that cannot be read, which the program takes as it is.
             if(candidate.path.starts_with('@')) {
-                diagnose(Diagnostic::Code::ResponseFileUnread,
-                         "response file cannot be read",
-                         candidate.path.substr(1),
-                         candidate.location);
                 continue;
             }
             auto input = input_of(candidate, convention, parsed);
@@ -507,7 +521,11 @@ struct Builder {
 
 CompilerAnalysis resolve(Identity identity, Expansion expansion, ParsedCommand parsed) {
     auto target = select_target(identity, parsed);
-    Builder builder{.parsed = parsed, .convention = convention_of(target.model)};
+    Builder builder{
+        .expansion = expansion,
+        .parsed = parsed,
+        .convention = convention_of(target.model),
+    };
     builder.resolve_reads();
     builder.resolve_primary();
     builder.resolve_listing();

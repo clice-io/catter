@@ -437,6 +437,9 @@
                 "mode": {
                     "type": "string"
                 },
+                "decisions": {
+                    "type": "boolean"
+                },
                 "build": {
                     "$ref": "#/$defs/Build"
                 }
@@ -445,6 +448,7 @@
                 "version",
                 "session",
                 "mode",
+                "decisions",
                 "build"
             ]
         },
