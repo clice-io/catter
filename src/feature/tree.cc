@@ -7,7 +7,7 @@ module;
 module catter;
 
 import :feature.flat_tree;
-import :feature.text;
+import :feature.json;
 import :feature.tree;
 import :session.handler;
 

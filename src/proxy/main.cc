@@ -15,7 +15,7 @@ module;
 module catter;
 
 #ifndef CATTER_WINDOWS
-import :capture.inject.hook;
+import :capture.inject;
 #endif
 import :proxy.ipc;
 import :proxy.option;

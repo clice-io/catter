@@ -17,13 +17,12 @@ module;
 module catter;
 
 import :capture.backend;
-import :session.ipc;
+import :capture.ipc;
 import :session.process;
 import :session.session;
 
 #ifdef CATTER_WINDOWS
-import :capture.inject.hook;
-import :capture.inject.windows.inject;
+import :capture.inject;
 #endif
 
 namespace catter {

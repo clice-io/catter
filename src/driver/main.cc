@@ -13,7 +13,6 @@ module;
 module catter;
 
 import :driver.cli;
-import :driver.driver;
 import :session.process;
 
 using namespace catter;

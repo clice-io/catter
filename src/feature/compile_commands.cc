@@ -12,7 +12,6 @@ import :feature.compile_commands;
 import :feature.descendants;
 import :feature.json;
 import :feature.path;
-import :feature.text;
 import :session.handler;
 
 namespace catter::feature {

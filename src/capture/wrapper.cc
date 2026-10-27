@@ -12,7 +12,7 @@ module catter;
 
 import catter.command;
 import :capture.backend;
-import :session.ipc;
+import :capture.ipc;
 import :session.process;
 import :session.session;
 

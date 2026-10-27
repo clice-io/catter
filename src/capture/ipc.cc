@@ -7,8 +7,7 @@ module;
 
 module catter;
 
-import :session.data;
-import :session.ipc;
+import :capture.ipc;
 import :session.session;
 
 namespace catter::ipc {

@@ -11,11 +11,13 @@ module;
 #include "support/config/hook_windows.h"
 #include "support/exception.h"
 #include "support/log.h"
+#include "support/messages.h"
 #include "support/paths.h"
 
 module catter;
 
-import :capture.inject.windows.inject;
+import :capture.inject;
+import :session.process;
 
 namespace catter {
 
@@ -223,6 +225,19 @@ void inject_hook(HANDLE process,
 
 bool inject_end(HANDLE process, std::string_view executable, std::uint32_t code) {
     return add_hook(process, executable, {.ends = true, .exit_code = code});
+}
+
+kota::process::options hook_options(data::command command,
+                                    data::ipcid_t id,
+                                    std::string_view pipe_name) {
+    auto opts = process_options(command);
+    opts.windows_before_start = [executable = std::move(command.executable),
+                                 id,
+                                 pipe = std::string(pipe_name)](void* process, void*) {
+        inject_hook(static_cast<HANDLE>(process), executable, id, pipe);
+        return std::error_code();
+    };
+    return opts;
 }
 
 }  // namespace catter

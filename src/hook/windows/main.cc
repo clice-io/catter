@@ -15,7 +15,7 @@
 // clang-format on
 
 #include "hook/windows/connection.h"
-#include "hook/windows/util.h"
+#include "hook/windows/create_process.h"
 #include "support/config/hook_windows.h"
 #include "support/messages.h"
 #include "support/program.h"

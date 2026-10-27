@@ -6,7 +6,6 @@ module catter;
 
 import :driver.app_runner;
 import :driver.cli;
-import :driver.driver;
 import :driver.option;
 import :session.process;
 

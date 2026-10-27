@@ -5,7 +5,6 @@ module;
 module catter;
 
 import :driver.cli;
-import :driver.driver;
 import :driver.option;
 import :feature.explain;
 

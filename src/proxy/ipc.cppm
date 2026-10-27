@@ -6,7 +6,7 @@ module;
 
 module catter:proxy.ipc;
 
-import :session.data;
+import :capture.ipc;
 
 namespace catter::proxy {
 

@@ -12,7 +12,7 @@
 #include <kota/fs/resolve.h>
 #include <kota/sys/env.h>
 
-#include "hook/windows/util.h"
+#include "hook/windows/create_process.h"
 
 namespace ct = catter::hook;
 
@@ -42,7 +42,7 @@ std::wstring wide(std::string_view text) {
     return out;
 }
 
-ZEST_SUITE(win_payload_util) {
+ZEST_SUITE(create_process) {
 ZEST_CASE(application_name_is_taken_from_the_current_directory) {
     ScopedFile tool("catter-application-name", "tool.exe");
 
@@ -141,6 +141,6 @@ ZEST_CASE(directory_is_made_absolute_from_the_current_one) {
     ZEXPECT(ct::directory_of(L"sub") == expected);
     ZEXPECT(ct::directory_of(nullptr) == current);
 };
-};  // ZEST_SUITE(win_payload_util)
+};  // ZEST_SUITE(create_process)
 
 }  // namespace

@@ -14,7 +14,7 @@ module;
 
 module catter;
 
-import :capture.inject.hook;
+import :capture.inject;
 import :session.process;
 
 namespace catter {

@@ -52,30 +52,13 @@ cc_library(
 
 cc_library(
     name = "capture",
-    srcs = glob(["src/capture/*.cc"]),
+    srcs = glob(["src/capture/*.cc"]) + select({
+        "@platforms//os:windows": ["src/capture/inject/windows.cc"],
+        "//conditions:default": ["src/capture/inject/unix.cc"],
+    }),
     copts = MODULE_UNIT_COPTS,
     features = ["cpp_modules"],
     module_interfaces = glob(["src/capture/*.cppm"]),
-    deps = [":session"] + select({
-        "@platforms//os:windows": [":capture_inject"],
-        "//conditions:default": [],
-    }),
-)
-
-# Launching a command with the hook, which catter-proxy does on Unix, and
-# catter itself on Windows, where the hook asks catter what to start.
-cc_library(
-    name = "capture_inject",
-    srcs = select({
-        "@platforms//os:windows": glob(["src/capture/inject/windows/*.cc"]),
-        "//conditions:default": glob(["src/capture/inject/unix/*.cc"]),
-    }),
-    copts = MODULE_UNIT_COPTS,
-    features = ["cpp_modules"],
-    module_interfaces = ["src/capture/inject/hook.cppm"] + select({
-        "@platforms//os:windows": glob(["src/capture/inject/windows/*.cppm"]),
-        "//conditions:default": [],
-    }),
     deps = [":session"] + select({
         "@platforms//os:windows": ["@detours"],
         "//conditions:default": [],
@@ -139,10 +122,7 @@ cc_binary(
     ],
     linkopts = LINKOPTS,
     module_interfaces = glob(["src/proxy/*.cppm"]),
-    deps = select({
-        "@platforms//os:windows": [":session"],
-        "//conditions:default": [":capture_inject"],
-    }),
+    deps = [":capture"],
 )
 
 # Prints the schema the SDKs' protocol types are generated from
@@ -161,7 +141,10 @@ cc_binary(
 
 cc_library(
     name = "hook_unix",
-    srcs = glob(["src/hook/unix/*.cc"]),
+    srcs = glob(
+        ["src/hook/unix/*.cc"],
+        exclude = ["src/hook/unix/lib.cc"],
+    ),
     hdrs = glob(["src/hook/unix/*.h"]),
     copts = COPTS + [
         "-fvisibility=hidden",
@@ -184,8 +167,8 @@ cc_library(
 # nothing on macOS, where it interposes them.
 cc_binary(
     name = "catter-hook-unix",
-    srcs = ["src/hook/unix/inject/lib.cc"],
-    additional_linker_inputs = ["src/hook/unix/inject/exports.map"],
+    srcs = ["src/hook/unix/lib.cc"],
+    additional_linker_inputs = ["src/hook/unix/exports.map"],
     copts = COPTS + [
         "-fvisibility=hidden",
         "-fvisibility-inlines-hidden",
@@ -196,7 +179,7 @@ cc_binary(
             "-Wl,-dead_strip",
         ],
         "//conditions:default": [
-            "-Wl,--version-script=$(location src/hook/unix/inject/exports.map)",
+            "-Wl,--version-script=$(location src/hook/unix/exports.map)",
             "-Wl,--gc-sections",
         ],
     }),
@@ -220,11 +203,11 @@ cc_library(
     name = "hook_windows",
     srcs = [
         "src/hook/windows/connection.cc",
-        "src/hook/windows/util.cc",
+        "src/hook/windows/create_process.cc",
     ],
     hdrs = [
         "src/hook/windows/connection.h",
-        "src/hook/windows/util.h",
+        "src/hook/windows/create_process.h",
     ],
     copts = COPTS + ["-fno-rtti"],
     target_compatible_with = WINDOWS,
@@ -256,7 +239,7 @@ cc_binary(
 
 # The DLL of every architecture a Windows build's processes have, built
 # by each Windows build: catter injects into a process the one of its
-# machine (src/capture/inject/windows/inject.cc).
+# machine (src/capture/inject/windows.cc).
 [payload(
     name = "hook_%s_payload" % arch,
     binary = ":catter-hook-windows",
