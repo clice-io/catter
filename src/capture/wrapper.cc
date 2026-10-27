@@ -234,14 +234,13 @@ std::vector<kota::process::env_var> environment(Shims& shims,
         throw cpptrace::runtime_error(
             "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
     }
-    // The shims of a session this one runs under, which would tell its commands to that session.
-    auto outer =
-        std::ranges::find_if(variables, named(config::KEY_CATTER_SHIMS), &kota::sys::EnvVar::name);
+    if(std::ranges::any_of(variables, named(config::KEY_CATTER_SHIMS), &kota::sys::EnvVar::name)) {
+        throw cpptrace::runtime_error(
+            "catter runs in a build under the wrapper backend, whose shims would stand in for this session's: run it outside that build, or with --capture hook");
+    }
     std::vector<std::string> directories = {std::string(shims.directory())};
     for(auto directory: kota::sys::split_paths(path->value)) {
-        if(outer == variables.end() || directory != outer->value) {
-            directories.emplace_back(directory);
-        }
+        directories.emplace_back(directory);
     }
     std::string path_list;
     if(auto error = kota::sys::join_paths(path_list, directories)) {
