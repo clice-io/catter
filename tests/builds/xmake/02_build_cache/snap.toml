@@ -46,3 +46,52 @@ entries = [
         ],
     },
 ]
+
+[test."compile_commands.json".darwin]
+differs = "xmake compiles with Apple clang, for its target and with its SDK"
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/macosx/arm64/release/src/main.cc.o",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-Qunused-arguments",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/main.cc",
+            "-c",
+            "-o",
+            "${WS}/build/.objs/hello/macosx/arm64/release/src/main.cc.o",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/macosx/arm64/release/src/util.cc.o",
+        arguments = [
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++",
+            "-Qunused-arguments",
+            "-target",
+            "arm64-apple-macos#",
+            "-isysroot",
+            "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX#.sdk",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/util.cc",
+            "-c",
+            "-o",
+            "${WS}/build/.objs/hello/macosx/arm64/release/src/util.cc.o",
+        ],
+    },
+]
