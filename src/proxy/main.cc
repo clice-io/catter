@@ -172,10 +172,10 @@ std::vector<std::string> past_shims(std::string_view path_list, std::string_view
 }
 
 /// The file the system starts for `program`, a name or a path, from a PATH of
-/// `path_list`, as it would had catter put no shims in the way: for a shim,
-/// the program the file beside it names, as one a variable such as CC named
-/// by its path, else the first of the shim's name on PATH past the shims.
-/// None when there is none.
+/// `path_list`, as it would had catter put no shims in the way: for a shim in
+/// a directory that stands for another, the program of its name there, else
+/// the first of the shim's name on PATH past the shims. None when there is
+/// none.
 std::optional<std::string> resolve_past(std::string_view program,
                                         std::string_view shims,
                                         std::string_view path_list) {
@@ -184,12 +184,13 @@ std::optional<std::string> resolve_past(std::string_view program,
         if(!is_shim(program, shims)) {
             return std::string(program);
         }
-        std::string pinned(kota::fs::path::parent(program));
-        kota::fs::path::push(pinned, config::SHIM_PROGRAM_FILE);
-        if(std::string named; !kota::fs::read_file(named, pinned)) {
-            return named;
-        }
         name = kota::fs::path::filename(program);
+        std::string named(kota::fs::path::parent(program));
+        kota::fs::path::push(named, config::SHIM_DIRECTORY_FILE);
+        if(std::string directory; !kota::fs::read_file(directory, named)) {
+            kota::fs::path::push(directory, name);
+            return directory;
+        }
     }
     kota::sys::ProgramSearch search{.directories = past_shims(path_list, shims)};
     std::string found;
@@ -200,13 +201,16 @@ std::optional<std::string> resolve_past(std::string_view program,
     return found;
 }
 
-/// The command a shim, or the launcher, stands in for: `args` as the build
+/// The command a shim, or the `launcher`, stands in for: `args` as the build
 /// started it, which runs `program`, the shim itself for a shim. The build
 /// command, which catter starts through the launcher, runs with the shims on
 /// its PATH; the commands under it run without them, captured or not, so that
 /// the compilers a build tool runs do not find the shims again, nor a build
 /// cache's compiler in their place.
-Proxied wrapped(std::string_view self, std::string_view program, std::vector<std::string> args) {
+Proxied wrapped(std::string_view self,
+                std::string_view program,
+                std::vector<std::string> args,
+                bool launcher) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
     std::string pipe(variable(cmd.env, config::KEY_CATTER_IPC).value_or(""));
     std::string shims(
@@ -218,6 +222,14 @@ Proxied wrapped(std::string_view self, std::string_view program, std::vector<std
     std::optional<std::string> path(variable(cmd.env, "PATH"));
 
     auto real = resolve_past(program, shims, path.value_or(""));
+    // A path the build spelled otherwise than catter, which names a shim all
+    // the same, would run it again and again.
+    std::string executable;
+    if(real && !kota::sys::executable_path(executable)) {
+        if(auto same = kota::fs::equivalent(*real, executable); same && *same) {
+            real.reset();
+        }
+    }
     if(!real) {
         return {
             .pipe = std::move(pipe),
@@ -230,7 +242,8 @@ Proxied wrapped(std::string_view self, std::string_view program, std::vector<std
     if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
-    if(parent != 0 && path) {
+    const bool build = launcher && parent == 0 && !pipe.empty();
+    if(!build && path) {
         std::string without;
         // Entries PATH was split into join back.
         [[maybe_unused]] auto error = kota::sys::join_paths(without, past_shims(*path, shims));
@@ -425,11 +438,12 @@ int run(std::span<const std::string> argv) {
     if(name == config::LAUNCHER_NAME) {
         std::vector<std::string> args(argv.begin() + 1, argv.end());
         std::string program = args.front();
-        return run_proxied(argv, wrapped(self, program, std::move(args)));
+        return run_proxied(argv, wrapped(self, program, std::move(args), true));
     }
     if(name != config::PROXY_EXE_NAME) {
-        return run_proxied(argv,
-                           wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end())));
+        return run_proxied(
+            argv,
+            wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end()), false));
     }
 
     kota::deco::cli::Command<catter::proxy::Option> cli(

@@ -89,59 +89,103 @@ public:
                 }
                 std::string program(directory);
                 kota::fs::path::push(program, entry->name);
-                if(auto status = kota::fs::status(program);
-                   !status || status->type != kota::fs::FileType::Regular ||
-                   (status->permissions & 0111) == 0) {
+                if(!runs(program)) {
                     continue;
                 }
                 link(entry->name, dir);
+                names.emplace(entry->name, std::move(program));
             }
         }
     }
 
-    /// The shim of `program`, a path, which runs that program wherever another of its name is:
-    /// in a directory of its own, beside the file that names the program.
-    std::string pin(std::string_view program) {
-        pins += 1;
-        std::string directory = dir;
-        kota::fs::path::push(directory, std::to_string(pins));
-        std::string named = directory;
-        kota::fs::path::push(named, config::SHIM_PROGRAM_FILE);
-        std::error_code error;
-        if(auto created = kota::fs::create_directory(directory); !created) {
-            error = created.error();
-        } else {
-            error = kota::fs::write_file(named, program);
+    /// The shim of `program`, a path: the one of its name when PATH finds that program first,
+    /// else the one in the directory that stands for the program's, where each program of the
+    /// program's directory is too, a shim of each one catter knows and a link to each other, as a
+    /// build tool looks for the tools that go with a compiler beside it.
+    std::string shim_of(std::string_view program) {
+        const auto name = kota::fs::path::filename(program);
+        if(auto found = names.find(name); found != names.end()) {
+            if(auto same = kota::fs::equivalent(found->second, program); same && *same) {
+                std::string shim = dir;
+                kota::fs::path::push(shim, name);
+                return shim;
+            }
         }
-        if(error) {
-            throw cpptrace::runtime_error(
-                std::format("Failed to make a shim of {}: {}", program, error.message()));
-        }
-        return link(kota::fs::path::filename(program), directory);
+        std::string shim = mirror(kota::fs::path::parent(program));
+        kota::fs::path::push(shim, name);
+        return shim;
     }
 
 private:
-    /// Links catter-proxy as `name` in `directory`: the path of the shim.
-    std::string link(std::string_view name, std::string_view directory) {
-        std::string shim(directory);
-        kota::fs::path::push(shim, name);
-        if(auto error = kota::fs::create_symlink(program_path(config::PROXY_EXE_NAME), shim)) {
+    /// Whether `program` is a file the system can run.
+    static bool runs(std::string_view program) {
+        auto status = kota::fs::status(program);
+        return status && status->type == kota::fs::FileType::Regular &&
+               (status->permissions & 0111) != 0;
+    }
+
+    /// Links `target` as `name` in `directory`.
+    static void link(std::string_view target, std::string_view name, std::string_view directory) {
+        std::string path(directory);
+        kota::fs::path::push(path, name);
+        if(auto error = kota::fs::create_symlink(target, path)) {
             throw cpptrace::runtime_error(
-                std::format("Failed to make the shim {}: {}", shim, error.message()));
+                std::format("Failed to make the shim {}: {}", path, error.message()));
         }
-        if(directory == dir) {
-            names.emplace(name);
+    }
+
+    /// Links catter-proxy as `name` in `directory`.
+    static void link(std::string_view name, std::string_view directory) {
+        link(program_path(config::PROXY_EXE_NAME), name, directory);
+    }
+
+    /// The directory that stands for `directory` among the shims, made the first time.
+    std::string mirror(std::string_view directory) {
+        if(auto found = mirrors.find(directory); found != mirrors.end()) {
+            return found->second;
         }
-        return shim;
+        std::string mirror = dir;
+        kota::fs::path::push(mirror, std::to_string(mirrors.size() + 1));
+        std::string named = mirror;
+        kota::fs::path::push(named, config::SHIM_DIRECTORY_FILE);
+        std::error_code error;
+        if(auto created = kota::fs::create_directory(mirror); !created) {
+            error = created.error();
+        } else {
+            error = kota::fs::write_file(named, directory);
+        }
+        if(error) {
+            throw cpptrace::runtime_error(
+                std::format("Failed to make the shims of {}: {}", directory, error.message()));
+        }
+        if(auto entries = kota::fs::read_dir(directory)) {
+            for(const auto& entry: *entries) {
+                if(!entry) {
+                    break;
+                }
+                std::string program(directory);
+                kota::fs::path::push(program, entry->name);
+                if(!runs(program)) {
+                    continue;
+                }
+                if(known(entry->name)) {
+                    link(entry->name, mirror);
+                } else {
+                    link(program, entry->name, mirror);
+                }
+            }
+        }
+        return mirrors.emplace(directory, std::move(mirror)).first->second;
     }
 
 private:
     std::string dir;
 
-    /// The names of the shims in the directory.
-    std::set<std::string, std::less<>> names;
+    /// The program each shim in the directory runs, by its name: the first of the name on PATH.
+    std::map<std::string, std::string, std::less<>> names;
 
-    std::size_t pins = 0;
+    /// The directory that stands for each directory of a program a variable names by its path.
+    std::map<std::string, std::string, std::less<>> mirrors;
 };
 
 /// `value` of a variable that names a program to run, perhaps with arguments after it, which
@@ -151,10 +195,11 @@ private:
 std::string through_shim(std::string_view value, Shims& shims) {
     const auto end = value.find_first_of(" \t");
     const auto program = value.substr(0, end);
-    if(!kota::fs::path::is_absolute(program) || !known(kota::fs::path::filename(program))) {
+    if(!kota::fs::path::is_absolute(program) || !known(kota::fs::path::filename(program)) ||
+       !kota::fs::is_file(program)) {
         return std::string(value);
     }
-    auto shim = shims.pin(program);
+    auto shim = shims.shim_of(program);
     // Build tools split the variable at blanks, and run what comes before the first.
     if(shim.find_first_of(" \t") != std::string::npos) {
         throw cpptrace::runtime_error(std::format(
@@ -174,20 +219,24 @@ std::string through_shim(std::string_view value, Shims& shims) {
 std::vector<kota::process::env_var> environment(Shims& shims,
                                                 std::string_view pipe,
                                                 std::string_view cwd) {
-    std::vector<kota::process::env_var> env;
-    std::optional<std::string> path;
     auto named = [](std::string_view name) {
         return [name](std::string_view other) {
             return kota::sys::env_name_equal(name, other);
         };
     };
-    for(auto& [name, value]: kota::sys::environment()) {
-        // The build command has no parent.
-        if(kota::sys::env_name_equal(name, config::KEY_CATTER_COMMAND_ID)) {
-            continue;
-        }
-        if(kota::sys::env_name_equal(name, "PATH")) {
-            path = std::move(value);
+    auto variables = kota::sys::environment();
+    auto path = std::ranges::find_if(variables, named("PATH"), &kota::sys::EnvVar::name);
+    if(path == variables.end()) {
+        throw cpptrace::runtime_error(
+            "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
+    }
+    shims.add_found(path->value, cwd);
+
+    std::vector<kota::process::env_var> env;
+    for(auto& [name, value]: variables) {
+        // The build command has no parent; its PATH comes last.
+        if(kota::sys::env_name_equal(name, config::KEY_CATTER_COMMAND_ID) ||
+           kota::sys::env_name_equal(name, "PATH")) {
             continue;
         }
         if(std::ranges::any_of(PROGRAM_VARIABLES, named(name))) {
@@ -196,14 +245,9 @@ std::vector<kota::process::env_var> environment(Shims& shims,
         env.push_back({.name = std::move(name), .value = std::move(value)});
     }
 
-    if(!path) {
-        throw cpptrace::runtime_error(
-            "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
-    }
-    shims.add_found(*path, cwd);
     std::string shims_path;
     std::vector<std::string> directories = {std::string(shims.directory())};
-    for(auto directory: kota::sys::split_paths(*path)) {
+    for(auto directory: kota::sys::split_paths(path->value)) {
         directories.emplace_back(directory);
     }
     if(auto error = kota::sys::join_paths(shims_path, directories)) {
@@ -235,7 +279,10 @@ public:
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
         auto pipe_name = config::session_pipe_name();
-        Shims shims(data_path(std::format("shims-{}", kota::sys::pid())));
+        // A build tool that writes the shims' paths down writes them as they are spelled.
+        auto directory = data_path(std::format("shims-{}", kota::sys::pid()));
+        kota::fs::path::normalize(directory);
+        Shims shims(std::move(directory));
         kota::process::options launch{
             .program = shims.launcher(),
             .args = build.command,

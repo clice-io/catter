@@ -4,6 +4,8 @@ tools/cc -c a.c
 tools/c++ -c b.cc
 tools/ar rcs lib.a a.o
 other/cc -c c.c
+tools/c++ -c f.cc
+other/objcopy a.o
 other/cc -c d.c
 tools/cc -c e.c
 '''
@@ -15,6 +17,8 @@ tools/cc -c a.c
 tools/c++ -c b.cc
 tools/ar rcs lib.a a.o
 other/cc -c c.c
+tools/c++ -c f.cc
+other/objcopy a.o
 other/cc -c d.c
 tools/cc -c e.c
 node build.mjs
@@ -22,6 +26,7 @@ node build.mjs
 ├── c++ -c b.cc
 ├── ar rcs lib.a a.o
 ├── ${WS}/other/cc -c c.c
+├── ${WS}/tools/c++ -c f.cc
 ├── ${WS}/other/cc -c d.c
 └── cc -c e.c
 '''
