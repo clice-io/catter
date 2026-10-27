@@ -84,7 +84,8 @@ private:
     template <typename Params>
     void notify(std::string_view method, const Params& params);
 
-    /// What catter reports of a handler whose output has ended, `before` what.
+    /// What catter reports of a handler whose conversation has ended, `before`
+    /// what.
     std::string stopped_message(std::string_view before) const;
 
     /// Why the handler left `what` without an answer.
@@ -92,9 +93,6 @@ private:
 
 private:
     Options options;
-
-    /// How the handler's output ended, once it has.
-    std::optional<kota::ipc::ReadError> output_end;
 
     kota::ipc::JSONPeer peer;
 

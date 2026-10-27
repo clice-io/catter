@@ -78,14 +78,17 @@ ZEST_CASE(request_gets_its_result) {
         asked = answer(server, true);
     });
 
-    auto connection = ct::Connection::open(name);
+    auto connection = ct::connect(name);
     ZASSERT(connection.has_value());
-    auto result = connection->request<catter::ipc::RequestType::STARTED>({.pid = 7});
+    using Started = catter::ipc::Request<catter::ipc::RequestType::STARTED>;
+    auto result =
+        connection->send_request<Started::Result>(Started::method, Started::Params{.pid = 7});
     session.join();
     CloseHandle(server);
 
     ZEXPECT(asked == 7);
-    ZEXPECT(result == true);
+    ZASSERT(result.has_value());
+    ZEXPECT(*result);
 };
 
 ZEST_CASE(busy_pipe_is_waited_for) {
@@ -104,7 +107,7 @@ ZEST_CASE(busy_pipe_is_waited_for) {
     ZASSERT(first != INVALID_HANDLE_VALUE);
 
     bool second = false;
-    std::thread waiting([&] { second = ct::Connection::open(name).has_value(); });
+    std::thread waiting([&] { second = ct::connect(name).has_value(); });
     // The only instance is taken until the first client goes.
     ConnectNamedPipe(server, nullptr);
     CloseHandle(first);
@@ -117,7 +120,7 @@ ZEST_CASE(busy_pipe_is_waited_for) {
 };
 
 ZEST_CASE(no_session_is_no_connection) {
-    ZEXPECT(!ct::Connection::open(pipe_name("none")).has_value());
+    ZEXPECT(!ct::connect(pipe_name("none")).has_value());
 };
 };  // ZEST_SUITE(win_payload_connection)
 

@@ -2,7 +2,10 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/guard.h"
+#ifdef CATTER_WINDOWS
+#include <windows.h>
+#endif
+
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/paths.h"
@@ -79,7 +82,7 @@ private:
     std::string executable;
 
     /// The program the hook started, from its start until its exit is told.
-    std::optional<OpenedProcess> program;
+    std::optional<kota::process> program;
 
     /// When catter took the program the hook started.
     std::chrono::steady_clock::time_point began;
@@ -159,11 +162,19 @@ kota::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params par
 kota::task<bool> Server::Client::started(std::int64_t pid) {
     std::string error;
     try {
-        program.emplace(pid);
+        // What injecting into it takes, besides waiting for it and ending it.
+        auto opened = kota::process::open(static_cast<int>(pid),
+                                          PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
+                                              PROCESS_VM_READ | PROCESS_VM_WRITE);
+        if(!opened) {
+            throw cpptrace::runtime_error(
+                std::format("Failed to open process {}: {}", pid, opened.error().message()));
+        }
+        program.emplace(std::move(*opened));
         began = std::chrono::steady_clock::now();
         switch(decided) {
             case data::action::RUN:
-                inject_hook(program->handle(), executable, id, server.name);
+                inject_hook(program->native_handle(), executable, id, server.name);
                 break;
             case data::action::DROP: end(0); break;
             case data::action::FAIL: end(1); break;
@@ -185,8 +196,8 @@ kota::task<bool> Server::Client::started(std::int64_t pid) {
 }
 
 void Server::Client::end(std::uint32_t code) {
-    if(!inject_end(program->handle(), executable, code)) {
-        program->terminate(code);
+    if(!inject_end(program->native_handle(), executable, code)) {
+        TerminateProcess(program->native_handle(), code);
     }
 }
 
@@ -194,14 +205,13 @@ kota::task<> Server::Client::wait_started() {
     if(!program) {
         co_return;
     }
-    kota::process::exit_status status;
-    try {
-        status = co_await program->wait();
-    } catch(...) {
-        server.session.fail(std::current_exception());
+    auto status = co_await program->wait();
+    if(!status) {
+        server.session.fail(std::make_exception_ptr(cpptrace::runtime_error(
+            std::format("Failed to wait for `{}`: {}", executable, status.error().message()))));
         co_return;
     }
-    co_await server.session.exited(id, result_of(status, began));
+    co_await server.session.exited(id, result_of(*status, began));
     release();
     program.reset();
 }
@@ -217,7 +227,7 @@ void Server::Client::release() {
 kota::task<> Server::ended() {
     std::vector<std::shared_ptr<kota::event>> ended;
     for(const auto& entry: untold) {
-        if(entry.program->exited()) {
+        if(WaitForSingleObject(entry.program->native_handle(), 0) == WAIT_OBJECT_0) {
             ended.push_back(entry.told);
         }
     }
@@ -254,7 +264,7 @@ kota::task<kota::process::exit_status> Server::serve(Start start) {
 
     auto build = [](Server& self, Start start) -> kota::task<kota::process::exit_status> {
         // Once the build has ended, or failed to start, no command comes.
-        auto stop = make_guard([&]() noexcept {
+        kota::ScopeExit stop([&] {
             if(auto error = self.acceptor->stop()) {
                 LOG_ERROR("Failed to stop accepting clients: {}", error.message());
             }

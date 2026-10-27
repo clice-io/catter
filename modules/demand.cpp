@@ -74,6 +74,7 @@
 #include <kota/meta/annotation.h>
 #include <kota/meta/enum.h>
 #include <kota/support/functional.h>
+#include <kota/support/scope_exit.h>
 #include <kota/support/type_traits.h>
 #include <kota/support/utf16.h>
 #include <kota/support/utf8.h>

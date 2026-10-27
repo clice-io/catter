@@ -112,7 +112,7 @@ private:
         }
         // A program that outlives its session, as a build server does, starts
         // what it starts as it would without catter.
-        auto connection = catter::hook::Connection::open(session.pipe);
+        auto connection = catter::hook::connect(session.pipe);
         if(!connection) {
             return unchanged();
         }
@@ -124,9 +124,12 @@ private:
                 catter::hook::environment_of(lpEnvironment,
                                              (dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) != 0),
         };
-        using catter::ipc::RequestType;
-        const auto decision = connection->request<RequestType::MAKE_DECISION>(
-            {.parent = session.id, .command = sent});
+        using MakeDecision = catter::ipc::Request<catter::ipc::RequestType::MAKE_DECISION>;
+        using ReportError = catter::ipc::Request<catter::ipc::RequestType::REPORT_ERROR>;
+        using Started = catter::ipc::Request<catter::ipc::RequestType::STARTED>;
+        const auto decision = connection->send_request<MakeDecision::Result>(
+            MakeDecision::method,
+            MakeDecision::Params{.parent = session.id, .command = sent});
         if(!decision) {
             return unchanged();
         }
@@ -166,18 +169,21 @@ private:
 
         if(!create_process(application_name, command_line, flags, environment, current_directory)) {
             const DWORD error = GetLastError();
-            connection->request<RequestType::REPORT_ERROR>({
-                .parent = session.id,
-                .message = std::format(
-                    "`{}` failed to start: {}",
-                    std::ranges::to<std::string>(command.args | std::views::join_with(' ')),
-                    std::system_category().message(static_cast<int>(error))),
-            });
+            connection->send_request<ReportError::Result>(
+                ReportError::method,
+                ReportError::Params{
+                    .parent = session.id,
+                    .message = std::format(
+                        "`{}` failed to start: {}",
+                        std::ranges::to<std::string>(command.args | std::views::join_with(' ')),
+                        std::system_category().message(static_cast<int>(error))),
+                });
             SetLastError(error);
             return FALSE;
         }
-        const auto runs =
-            connection->request<RequestType::STARTED>({.pid = lpProcessInformation->dwProcessId});
+        const auto runs = connection->send_request<Started::Result>(
+            Started::method,
+            Started::Params{.pid = lpProcessInformation->dwProcessId});
         if(runs.has_value() && !*runs) {
             TerminateProcess(lpProcessInformation->hProcess, 1);
         } else if(!(dwCreationFlags & CREATE_SUSPENDED)) {

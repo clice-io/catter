@@ -25,7 +25,7 @@ The hook on Windows runs no proxy: the daemon decides the build command itself a
 
 ## Serialization
 
-All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format, each framed by a `Content-Length` header. The daemon and `catter-proxy` use `kota::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kota::ipc::StreamTransport`); the Windows hook, which runs inside the build's processes and has no event loop, writes and reads the same frames itself, with kotatsu's framing and Bincode codec, waiting for each answer.
+All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format, each framed by a `Content-Length` header. The daemon and `catter-proxy` use `kota::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kota::ipc::StreamTransport`); the Windows hook, which runs inside the build's processes and has no event loop, sends the same frames through `kota::ipc::BlockingClient`, which waits for each answer.
 
 Bincode was chosen for its efficiency -- messages are small and fast to encode/decode, which matters because every intercepted build command results in multiple IPC round-trips.
 

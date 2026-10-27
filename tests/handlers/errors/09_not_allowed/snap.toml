@@ -3,5 +3,5 @@ stdout = "Handler `python not_json.py` wrote what the protocol does not allow: i
 exit = 1
 
 ["a notification"."$ catter run --handler \"python notification.py\" --handler-timeout 0 -- node -e 0"]
-stdout = "Handler `python notification.py` wrote what the protocol does not allow: a notification `hello`"
+stdout = "Handler `python notification.py` wrote what the protocol does not allow: unhandled notification: hello"
 exit = 1

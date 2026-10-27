@@ -56,7 +56,7 @@ private:
 #ifdef CATTER_WINDOWS
     /// A program the hook started whose exit is not told yet.
     struct Untold {
-        const OpenedProcess* program;
+        const kota::process* program;
 
         /// Set once its exit is told: shared with those waiting for it.
         std::shared_ptr<kota::event> told;

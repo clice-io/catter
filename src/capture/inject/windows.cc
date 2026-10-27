@@ -134,19 +134,11 @@ std::string temporary_copy(std::string_view dll) {
     // process another catter starts meanwhile never loads half a DLL, nor
     // finds the one it loads renamed over.
     const auto partial = std::format("{}.{}", copy, GetCurrentProcessId());
-    std::string bytes;
-    auto error = kota::fs::read_file(bytes, dll);
+    auto created = kota::fs::create_directories(kota::fs::path::parent(copy));
+    auto error = created ? kota::fs::copy_file(dll, partial) : created.error();
     if(!error) {
-        auto created = kota::fs::create_directories(kota::fs::path::parent(copy));
-        error = created ? kota::fs::write_file(partial, bytes) : created.error();
-    }
-    if(!error) {
-        std::wstring from;
-        std::wstring to;
-        kota::to_utf16(from, partial);
-        kota::to_utf16(to, copy);
-        if(!MoveFileExW(from.c_str(), to.c_str(), 0)) {
-            error = std::error_code(static_cast<int>(GetLastError()), std::system_category());
+        error = kota::fs::rename_noreplace(partial, copy);
+        if(error) {
             kota::fs::remove(partial);
         }
     }

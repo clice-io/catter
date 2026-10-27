@@ -69,6 +69,7 @@ using ::cpptrace::detail::lazy_trace_holder;
 }
 
 export namespace kota {
+using ::kota::ScopeExit;
 using ::kota::UTF8Sequence;
 using ::kota::acceptor;
 using ::kota::aggregate_op;
@@ -752,6 +753,7 @@ using ::kota::fs::Status;
 using ::kota::fs::Volume;
 using ::kota::fs::absolute;
 using ::kota::fs::canonical;
+using ::kota::fs::copy_file;
 using ::kota::fs::create_directories;
 using ::kota::fs::create_directory;
 using ::kota::fs::create_directory_symlink;
@@ -771,6 +773,7 @@ using ::kota::fs::read_symlink;
 using ::kota::fs::remove;
 using ::kota::fs::remove_all;
 using ::kota::fs::rename;
+using ::kota::fs::rename_noreplace;
 using ::kota::fs::set_permissions;
 using ::kota::fs::set_times;
 using ::kota::fs::status;
@@ -863,6 +866,7 @@ using ::kota::fs::path::to_slash;
 export namespace kota::ipc {
 using ::kota::ipc::BincodeCodec;
 using ::kota::ipc::BincodePeer;
+using ::kota::ipc::ConversationEnd;
 using ::kota::ipc::Error;
 using ::kota::ipc::FrameParser;
 using ::kota::ipc::IncomingErrorResponse;
@@ -884,6 +888,7 @@ using ::kota::ipc::Result;
 using ::kota::ipc::StreamTransport;
 using ::kota::ipc::Transport;
 using ::kota::ipc::UnansweredRequest;
+using ::kota::ipc::ViolationPolicy;
 using ::kota::ipc::basic_request_context;
 using ::kota::ipc::frame_header;
 using ::kota::ipc::lsp_config;

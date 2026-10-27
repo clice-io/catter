@@ -2,7 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/guard.h"
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/paths.h"
@@ -286,7 +285,7 @@ kota::task<exit_status> run(data::action action,
         [[maybe_unused]] auto sent =
             connection.peer.send_notification(Started::method, Started::Params{pid});
     };
-    auto exited = make_guard([&]() noexcept { connection.program.reset(); });
+    kota::ScopeExit exited([&] { connection.program.reset(); });
 #endif
     switch(action.type) {
         case data::action::RUN: {
@@ -305,7 +304,7 @@ kota::task<exit_status> run(data::action action,
 
 /// Reports the command of `proxied` to its session, and runs it as decided.
 kota::task<exit_status> report(const Proxied& proxied, Connection& connection) noexcept {
-    auto close = make_guard([&]() noexcept {
+    kota::ScopeExit close([&] {
         if(auto closed = connection.peer.close(); !closed) {
             LOG_ERROR("Failed to close the connection to the session: {}", closed.error().message);
         }
