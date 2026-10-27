@@ -1,0 +1,48 @@
+[test."$ catter compile-commands -q -o compile_commands.json -- xmake build -P . -j 1"]
+stdout = '''
+[ 19%]: <hello> cache compiling.release src/main.cc
+[ 38%]: <hello> cache compiling.release src/util.cc
+[ 56%]: <hello> linking.release hello
+[100%]: build ok, spent #s
+'''
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/linux/x86_64/release/src/main.cc.o",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/main.cc",
+            "-c",
+            "-o",
+            "${WS}/build/.objs/hello/linux/x86_64/release/src/main.cc.o",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        output = "${WS}/build/.objs/hello/linux/x86_64/release/src/util.cc.o",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/util.cc",
+            "-c",
+            "-o",
+            "${WS}/build/.objs/hello/linux/x86_64/release/src/util.cc.o",
+        ],
+    },
+]

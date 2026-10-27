@@ -11,5 +11,5 @@ entries = [
         arguments = ["gcc", "-S", "../c.c", "-o", "c.s"],
     },
     { file = "a.c", directory = "${WS}", output = "${WS}/a.o", arguments = ["gcc", "-c", "a.c", "-o", "a.o"] },
-    { file = "b.c", directory = "${WS}", arguments = ["gcc", "-E", "b.c", "-o", "b.i"] },
+    { file = "b.c", directory = "${WS}", output = "${WS}/b.o", arguments = ["gcc", "b.c", "-c", "-o", "${WS}/b.o"] },
 ]

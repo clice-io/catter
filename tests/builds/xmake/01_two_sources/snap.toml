@@ -8,36 +8,7 @@ stdout = '''
 exit = 0
 
 [test."compile_commands.json"]
-wrong = "the sources xmake compiles to probe the compiler get entries (catter#117)"
 entries = [
-    {
-        file = "${TMP}/.xmake#/#/_#.cpp",
-        directory = "${WS}",
-        output = "${TMP}/.xmake#/#/_#",
-        arguments = [
-            "${ENV}/bin/g++",
-            "-MMD",
-            "-MF",
-            "/dev/null",
-            "-m64",
-            "-S",
-            "-o",
-            "${TMP}/.xmake#/#/_#",
-            "${TMP}/.xmake#/#/_#.cpp",
-        ],
-    },
-    {
-        file = "${TMP}/.xmake#/#/_#.cpp",
-        directory = "${WS}",
-        output = "${TMP}/.xmake#/#/_#",
-        arguments = ["${ENV}/bin/g++", "-fPIC", "-m64", "-S", "-o", "${TMP}/.xmake#/#/_#", "${TMP}/.xmake#/#/_#.cpp"],
-    },
-    {
-        file = "${TMP}/.xmake#/#/_#.cpp",
-        directory = "${WS}",
-        output = "${TMP}/.xmake#/#/_#",
-        arguments = ["${ENV}/bin/g++", "-fPIC", "-m64", "-m64", "-o", "${TMP}/.xmake#/#/_#", "${TMP}/.xmake#/#/_#.cpp"],
-    },
     {
         file = "src/main.cc",
         directory = "${WS}",
@@ -77,7 +48,7 @@ entries = [
 ]
 
 [test."compile_commands.json".darwin]
-wrong = "the sources xmake compiles to probe the compiler get entries (catter#117); xmake compiles with Apple clang and probes it with other files"
+differs = "xmake compiles with Apple clang, for its target and with its SDK"
 entries = [
     {
         file = "${TMP}/.xmake#/#/_#.cpp",
