@@ -19,9 +19,15 @@ void hold_closed_streams();
 /// from its arguments, as CreateProcess takes it, which runs a batch file too.
 kota::process::options process_options(const data::command& command);
 
-/// How a program ended, as catter and its handlers are told it: a signal that
-/// ended it as 128 and the signal's number, as a shell reports it.
-data::process_result result_of(const kota::process::exit_status& status);
+/// How a program that ran for `ran` ended, as catter and its handlers are told
+/// it: a signal that ended it as 128 and the signal's number, as a shell
+/// reports it.
+data::process_result result_of(const kota::process::exit_status& status,
+                               std::chrono::microseconds ran);
+
+/// How a program that started at `started` ended, now.
+data::process_result result_of(const kota::process::exit_status& status,
+                               std::chrono::steady_clock::time_point started);
 
 /// Ends this process as `status` says a program ended: by the same signal, or
 /// with the same exit code, which it returns for main to return.

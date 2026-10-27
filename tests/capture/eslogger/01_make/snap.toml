@@ -1,0 +1,24 @@
+[test."$ catter compile-commands --capture eslogger -o compile_commands.json -- make"]
+stdout = '''
+c++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
+cd src && c++ -DCATTER_TEST=1 -I../include -c util.cc -o ../util.o
+c++ main.o util.o -o hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "-c", "src/main.cc", "-o", "main.o"],
+    },
+    {
+        file = "util.cc",
+        directory = "${WS}/src",
+        output = "${WS}/util.o",
+        arguments = ["c++", "-DCATTER_TEST=1", "-I../include", "-c", "util.cc", "-o", "../util.o"],
+    },
+]

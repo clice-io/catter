@@ -22,6 +22,9 @@ struct command {
 
 struct process_result {
     std::int64_t code = -1;
+
+    /// How long the program ran, in microseconds.
+    std::int64_t duration = 0;
 };
 
 /// What catter decides for a command; `cmd` is the command to start, the one

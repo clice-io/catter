@@ -23,13 +23,14 @@ Commands of a parallel build overlap: `command` requests can be in flight togeth
 
 ### `initialize`
 
-| Field           | Type            | Description                                           |
-| --------------- | --------------- | ----------------------------------------------------- |
-| `version`       | integer         | The protocol's version: `1`.                          |
-| `session`       | string          | Tells apart the sessions one handler serves over TCP. |
-| `mode`          | string          | The capture backend: `hook`, `wrapper`, or `replay`.  |
-| `build.command` | OS string array | The build command.                                    |
-| `build.cwd`     | OS string       | Its working directory.                                |
+| Field           | Type            | Description                                                                                                                                                                                                       |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`       | integer         | The protocol's version: `1`.                                                                                                                                                                                      |
+| `session`       | string          | Tells apart the sessions one handler serves over TCP.                                                                                                                                                             |
+| `mode`          | string          | The capture backend: `hook`, `wrapper`, `eslogger`, or `replay`.                                                                                                                                                  |
+| `decisions`     | boolean         | Each command waits for the answer of a handler that decides: false under a backend that only observes them, `eslogger`, which refuses such a handler. Under `replay` the answers change nothing, as nothing runs. |
+| `build.command` | OS string array | The build command.                                                                                                                                                                                                |
+| `build.cwd`     | OS string       | Its working directory.                                                                                                                                                                                            |
 
 The result:
 
@@ -106,11 +107,11 @@ A request a handler sends catter, for what catter makes of commands of its own: 
 
 ### `error`, `exit` and `finish`
 
-| Message  | Fields                                                                                                                                                                                                                                                   |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                                                                                                                                                                          |
-| `exit`   | `id`, `code`: its exit code, 128 and the signal's number for one a signal ended, `duration`: microseconds from the handler's decision on the command (its notification, to an observer) to its exit, in which the handlers after it in the chain decide. |
-| `finish` | `code`: the build's exit code, as `exit`'s. The result is `null`.                                                                                                                                                                                        |
+| Message  | Fields                                                                                                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `error`  | `id`, `parent` (optional), `message`: why catter could not capture the command.                                                                                                                  |
+| `exit`   | `id`, `code`: its exit code, 128 and the signal's number for one a signal ended, `duration`: how long the command ran, in microseconds, as the capture backend measures it (`0` under `replay`). |
+| `finish` | `code`: the build's exit code, as `exit`'s. The result is `null`.                                                                                                                                |
 
 ## Strings and numbers
 
@@ -121,6 +122,6 @@ A request a handler sends catter, for what catter makes of commands of its own: 
 
 ## Errors
 
-A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error, with `abort` or with an action catter cannot take, stops (its output ends), writes what the protocol does not allow, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running; once the build has ended, catter ends the handlers' input without a `finish`, prints the reason and exits 1.
+A handler that cannot answer a request answers with a JSON-RPC error; its `message` is what catter reports. catter ends the session when a handler answers with an error, with `abort` or with an action catter cannot take, stops (its output ends), writes what the protocol does not allow, or does not answer within `--handler-timeout`: the command being decided, and every command the build starts after it, fail without running, but under a backend that only observes the build, where every command has started by the time catter hears of it and the build runs on to its end; once the build has ended, catter ends the handlers' input without a `finish`, prints the reason and exits 1.
 
 An observer cannot answer a notification: one that fails exits, which catter reports when it next writes to it.

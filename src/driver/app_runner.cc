@@ -24,9 +24,10 @@ kota::task<kota::process::exit_status> run(Handler& handler, const Backend& back
         co_return kota::process::exit_status{};
     }
     Session session(handler);
+    const auto start = std::chrono::steady_clock::now();
     auto status = co_await backend.run(*started, session);
     session.rethrow();
-    co_await handler.on_finish(result_of(status));
+    co_await handler.on_finish(result_of(status, start));
     co_return status;
 }
 
@@ -138,6 +139,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
             .name = std::string(name),
             .session = session,
             .mode = std::string(backend.name()),
+            .decisions = backend.follows_decisions(),
             .timeout = std::chrono::seconds(*options.handler_timeout),
         };
     };

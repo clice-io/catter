@@ -251,6 +251,10 @@ export interface Places {
     root: string;
     /// catter's data directory, `${CATTER_HOME}`.
     home: string;
+    /// The temporary directory of the programs the test runs, `${TMP}`: tests
+    /// that run side by side share none, as two xmake runs racing on the one
+    /// it cleans once a day would.
+    temp: string;
 }
 
 /// The developer directory of the Xcode the build tools use on macOS.
@@ -288,6 +292,11 @@ function findOuterPlaces(): [string, string][] {
             encoding: "utf8",
         }).stdout.trim();
         out.push(["${XCODE}", xcode]);
+        // Where Xcode keeps the caches of the user, as its SDK stat caches.
+        const caches = spawnSync("getconf", ["DARWIN_USER_CACHE_DIR"], {
+            encoding: "utf8",
+        }).stdout.trim();
+        out.push(["${DARWIN_CACHE}", caches]);
     }
     return out;
 }
@@ -314,6 +323,7 @@ export function portable(text: string, places: Places): string {
     const named: [string, string][] = [
         ["${WS}", places.root],
         ["${CATTER_HOME}", places.home],
+        ["${TMP}", places.temp],
         ...outerPlaces(),
     ];
     const forms = named
@@ -352,6 +362,11 @@ const XMAKE_PROBE = /\$\{TMP\}\/\.xmake#\/#\/_[0-9a-f]{32}/g;
 /// `arm64-apple-macos15.5`.
 const MACOS_VERSION = /\b(MacOSX|apple-macos)\d+(?:\.\d+)*/g;
 
+/// Xcode's stat cache of an SDK, named by the versions of Xcode and the SDK:
+/// `${DARWIN_CACHE}/com.apple.DeveloperTools/16.4-16F6/Xcode/SDKStatCaches.noindex/macosx15.5-24F74-a403….sdkstatcache`.
+const SDK_STAT_CACHE =
+    /(\$\{DARWIN_CACHE\}\/com\.apple\.DeveloperTools\/)[^/]+(\/Xcode\/SDKStatCaches\.noindex\/)[^/\s"']+(\.sdkstatcache)/g;
+
 /// The pipe a session listens on, named by catter's process id:
 /// `\\.\pipe\catter-ipc-9420`, `${CATTER_HOME}/ipc-9420.sock`.
 const SESSION_PIPE = /\b((?:catter-)?ipc-)\d+\b/g;
@@ -363,6 +378,7 @@ export function normalize(text: string, places: Places): string {
     return portable(text, places)
         .replace(NATIVE_FRAMES, "#… native frames\n")
         .replace(SESSION_PIPE, "$1#")
+        .replace(SDK_STAT_CACHE, "$1#$2#$3")
         .replace(MACOS_VERSION, "$1#")
         .replace(XMAKE_PROBE_DIR, "${TMP}/.xmake#/#")
         .replace(XMAKE_PROBE, "${TMP}/.xmake#/#/_#")
@@ -449,7 +465,14 @@ export async function runCommand(
 ): Promise<ProcessResult> {
     const result = await runProcess(program, args, {
         cwd: path.join(places.root, options.cwd ?? "."),
-        env: { ...testEnvironment(), CATTER_HOME: places.home, ...options.env },
+        env: {
+            ...testEnvironment(),
+            CATTER_HOME: places.home,
+            TMPDIR: places.temp,
+            TMP: places.temp,
+            TEMP: places.temp,
+            ...options.env,
+        },
         timeout: COMMAND_TIMEOUT_MS,
         ...(options.input === undefined ? {} : { input: options.input }),
     });

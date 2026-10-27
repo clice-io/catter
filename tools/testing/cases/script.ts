@@ -4,6 +4,7 @@
 
 import { pathToFileURL } from "node:url";
 import type { TestContext } from "./context.ts";
+import type { Need } from "./needs.ts";
 import type { Platform } from "./output.ts";
 
 /// Platforms a test has no meaning on, each with the reason: elsewhere it
@@ -12,6 +13,8 @@ export type Except = Partial<Record<Platform, string>>;
 
 export interface TestOptions {
     except?: Except;
+    /// What the test needs of the machine beside catter.
+    needs?: Need[];
     /// Error-level log lines the test provokes, as regular expressions.
     errors?: string[];
 }

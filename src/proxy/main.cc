@@ -307,12 +307,13 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
 
         auto received_act = co_await peer.make_decision(cmd);
 
+        const auto start = std::chrono::steady_clock::now();
         auto status = co_await run(received_act, id, proxied, peer);
 
         // A command can outlive its session (a build server): its result
         // stands, though catter is gone.
         try {
-            co_await peer.finish(result_of(status));
+            co_await peer.finish(result_of(status, start));
         } catch(const std::exception& ex) {
             LOG_WARN("Command {} ended after its session: {}", id, ex.what());
         }

@@ -1,0 +1,7 @@
+[test."$ catter run --capture eslogger --handler \"python handler.py\" -- node -e \"require('node:fs').writeFileSync('built', '')\""]
+stdout = "Handler `python handler.py` decides on the build's commands, which the eslogger backend only observes: each runs before catter hears of it. Give a handler that observes, or another --capture"
+stderr = "start: mode eslogger, decisions False"
+exit = 1
+
+[test.built]
+value = false

@@ -13,6 +13,7 @@ import {
     type Blocks,
     type TestResult,
 } from "../cases/output.ts";
+import { has, onCI } from "../cases/needs.ts";
 import { CASES_DIR } from "../cases/project.ts";
 import { loadScript, nameOf } from "../cases/script.ts";
 
@@ -23,6 +24,7 @@ const cases = spec === undefined ? under : shard(under, spec);
 const platform = hostPlatform();
 
 const notApplicable: string[] = [];
+const unmet: string[] = [];
 
 for (const c of cases) {
     const registered = await loadScript(c.script);
@@ -30,8 +32,14 @@ for (const c of cases) {
         const why = entry.options.except?.[platform];
         if (why !== undefined) {
             notApplicable.push(`${c.id} > ${nameOf(entry)}: ${why}`);
+            return false;
         }
-        return why === undefined;
+        const missing = (entry.options.needs ?? []).filter((need) => !has(need));
+        if (missing.length > 0 && !onCI()) {
+            unmet.push(`${c.id} > ${nameOf(entry)}: needs ${missing.join(", ")}`);
+            return false;
+        }
+        return true;
     });
     // A suite with no test fails in vitest.
     if (ran.length === 0) {
@@ -67,5 +75,8 @@ for (const c of cases) {
 afterAll(() => {
     if (notApplicable.length > 0) {
         console.log(`not applicable on ${platform}:\n  ${notApplicable.join("\n  ")}`);
+    }
+    if (unmet.length > 0) {
+        console.log(`not run, this machine lacks what they need:\n  ${unmet.join("\n  ")}`);
     }
 });

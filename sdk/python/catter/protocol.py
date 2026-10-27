@@ -50,6 +50,7 @@ class InitializeParams:
     version: int
     session: str
     mode: str
+    decisions: bool
     build: Build
 
     @staticmethod
@@ -58,6 +59,7 @@ class InitializeParams:
             version=data["version"],
             session=data["session"],
             mode=data["mode"],
+            decisions=data["decisions"],
             build=Build.from_json(data["build"]),
         )
 
@@ -66,6 +68,7 @@ class InitializeParams:
         data["version"] = self.version
         data["session"] = self.session
         data["mode"] = self.mode
+        data["decisions"] = self.decisions
         data["build"] = self.build.to_json()
         return data
 

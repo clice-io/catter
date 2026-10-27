@@ -4,15 +4,16 @@ A capture backend is how catter gets a build's commands: it starts the build, an
 
 ## Choosing one
 
-`--capture <backend>` names the backend that captures the build: `hook`, the default, or `wrapper`. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
+`--capture <backend>` names the backend that captures the build: `hook`, the default, `wrapper`, or `eslogger`, on macOS. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
 
-A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build.
+A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build, and whose `decisions` says whether the build's commands wait for the handlers' decisions.
 
 ## What a backend does
 
-- **It starts the build**, and catter ends as the build did. catter stands in for the build command: a SIGTERM, SIGINT or SIGHUP sent to catter goes on to it, and the build command ends when catter is killed.
-- **It reports each command before it runs**: its working directory, program, arguments and environment, and the command that started it. The commands of a parallel build come at once. A command catter could not capture comes as an `error` instead.
-- **It runs each command as the handlers decide**: as it is (`skip`), changed (`modify`, `edit`), or not at all (`drop`, which ends it with exit code 0). Once a handler aborts the build or fails, the command and every command the build starts after it end with exit code 1 without running.
+- **It starts the build**, and catter ends as the build did. catter stands in for the build command: a SIGTERM, SIGINT or SIGHUP sent to catter goes on to it, and the build command ends when catter is killed, but under `eslogger`.
+- **It reports each command**: its working directory, program, arguments and environment, and the command that started it. The commands of a parallel build come at once. A command catter could not capture comes as an `error` instead.
+- **It follows the handlers' decisions, or only observes.** A backend that follows them reports each command before it runs, and runs it as the handlers decide: as it is (`skip`), changed (`modify`, `edit`), or not at all (`drop`, which ends it with exit code 0). A backend that only observes hears of each command once it runs, which no decision changes then: catter refuses a handler that decides (`decides` in its answer to `initialize`) before the build starts, and names it.
+- **A handler that aborts the build or fails ends the session**: no handler is told anything after it. A command that has started runs on. Under a backend that follows decisions, the command being decided and every command the build starts after it end with exit code 1 without running; under one that only observes, every command has started by the time catter hears of it, and the build runs on to its end. catter then exits 1.
 - **It reports how each command ended**, before any command the build starts once that command has ended, and before the build's own end.
 
 ## Backends
@@ -23,6 +24,18 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 - **Platforms**: Linux, macOS, Windows.
 - **What it sees**: every process of the build, each with the command that started it, but for what a program the hook cannot be loaded into starts: the program is reported and runs as decided, without the hook. On macOS those are Apple's own tools (`/bin/sh`, `/usr/bin/make`), which run as arm64e and from which System Integrity Protection drops the hook, and Intel programs under Rosetta; on Windows, 32-bit (x86) programs. A program a Windows program starts under another account is not seen at all.
 - The build and its commands run on catter's own stdin, stdout and stderr: they write straight to the terminal, with their colors and in the order they write.
+
+### eslogger (macOS)
+
+- **How it works**: catter runs the build as it is, and Endpoint Security, the macOS interface for observing processes, reports every process the build starts through `eslogger`, the program macOS has for it (`eslogger exec fork exit`). catter follows the build's processes from the build command's: each program a process of the build runs is a command, whose parent is the program its process ran before it, or the command whose process forked its own. catter reads a command once it runs, and the build never waits for catter.
+- **Platforms**: macOS.
+- **What it needs**: root, through `sudo`, for eslogger: sudo asks for the password on the terminal before the build starts, and catter refuses to run where it cannot, unless sudo runs `/usr/bin/eslogger` without a password. Endpoint Security takes no program without Full Disk Access for the app catter runs in: Terminal, or another terminal app, in System Settings > Privacy & Security > Full Disk Access; over SSH, "Allow full disk access for remote users" in the settings of Remote Login.
+- **What it sees**: every program the build's processes run, Apple's own tools (`/bin/sh`, `/usr/bin/make`, `xcodebuild`) and what they start included. A program that `/usr/bin/cc` or `/bin/sh` runs in its place (Xcode's `clang`, `bash`) is a command of its own, a child of the one it replaced. A process the build does not start itself, as a service started by `launchd` on the build's behalf or a server started before the build, is not seen, and neither is a program that fails to start.
+- **Actions**: none; a handler that decides is refused.
+- **Costs**: catter waits for eslogger to report before it starts the build, and for its last events once the build has ended: about a second in all. eslogger may fall behind a build that starts many processes at once: catter takes every event, which can take seconds after the build has ended. Endpoint Security may drop events eslogger falls far behind on: catter warns how many of the system's it dropped while the build ran, and commands of the build may be missing, with every command a lost process started.
+- **Limitations**:
+  - macOS ends no program with the one that started it: a build catter stands in for ends on SIGTERM, SIGINT and SIGHUP, which catter passes on, but not when catter is killed.
+  - What catter reads of a command's files, such as its response files (`@file`), it reads once the command has run, or is running: a file the build removes once the command has run, as Ninja does a response file, may be gone.
 
 ### replay (`--from`)
 
@@ -38,13 +51,14 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 
 ## Capability matrix
 
-| Backend | Platforms               | How it captures                        | Actions                               | Parent command              | Status                |
-| ------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
-| hook    | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
-| replay  | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
-| wrapper | Linux / macOS / Windows | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
+| Backend  | Platforms               | How it captures                        | Actions                               | Parent command              | Status                |
+| -------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
+| hook     | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
+| eslogger | macOS                   | Endpoint Security, through `eslogger`  | none: it only observes                | the process that started it | implemented           |
+| replay   | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
+| wrapper  | Linux / macOS / Windows | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
 
 ## Writing handlers for any backend
 
-- Do not assume one: `initialize` names it (`mode`).
+- Do not assume one: `initialize` names it (`mode`), and says whether the commands wait for decisions (`decisions`). A handler that can do without deciding answers `decides` as `decisions` says.
 - A command's parent is the command that started it as far as the backend sees: features that rely on the process tree (command trees, target trees) should not assume every process in between is there.

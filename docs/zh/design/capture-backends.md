@@ -4,15 +4,16 @@
 
 ## 选择后端
 
-`--capture <backend>` 指定捕获构建的后端：默认的 `hook`，或者 `wrapper`。`--from <file>` 回放一次录制的构建，而不运行构建：回放录制的构建不涉及捕获，因此使用 `--from` 时不能同时使用 `--capture`；指定不存在的后端名称也会报错。这两种错误都会在任何程序运行之前报告。
+`--capture <backend>` 指定捕获构建的后端：`hook`（默认）、`wrapper`，或者 macOS 上的 `eslogger`。`--from <file>` 回放一次录制的构建，而不运行构建：回放录制的构建不涉及捕获，因此使用 `--from` 时不能同时使用 `--capture`；指定不存在的后端名称也会报错。这两种错误都会在任何程序运行之前报告。
 
-handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后端的名字，回放录制的构建时则为 `replay`。
+handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后端的名字，回放录制的构建时则为 `replay`；其中的 `decisions` 说明构建的命令是否等待 handler 的决定。
 
 ## 后端做什么
 
-- **启动构建**，构建怎样结束，catter 就怎样结束。catter 代替构建命令运行：发给 catter 的 SIGTERM、SIGINT 或 SIGHUP 会转给构建命令，catter 被杀死时构建命令也随之结束。
-- **在每条命令运行前上报命令信息**：工作目录、程序、参数和环境变量，以及启动它的命令。并行构建的命令会同时上报。catter 未能捕获的命令则以 `error` 的形式上报。
-- **按 handler 的决定运行每条命令**：原样运行（`skip`）、修改后运行（`modify`、`edit`），或者不运行（`drop`，命令以退出码 0 结束）。一旦某个 handler 中止构建或出错，这条命令以及构建在它之后启动的每条命令都不运行，直接以退出码 1 结束。
+- **启动构建**，构建怎样结束，catter 就怎样结束。catter 代替构建命令运行：发给 catter 的 SIGTERM、SIGINT 或 SIGHUP 会转给构建命令，catter 被杀死时构建命令也随之结束，`eslogger` 下除外。
+- **上报每条命令**：工作目录、程序、参数和环境变量，以及启动它的命令。并行构建的命令会同时上报。catter 未能捕获的命令则以 `error` 的形式上报。
+- **遵从 handler 的决定，或者只观察**。遵从决定的后端在每条命令运行前上报它，并按 handler 的决定运行：原样运行（`skip`）、修改后运行（`modify`、`edit`），或者不运行（`drop`，命令以退出码 0 结束）。只观察的后端在命令运行之后才得知它，此时任何决定都已无法改变它：对于做决定的 handler（它对 `initialize` 的应答中的 `decides`），catter 会在构建开始前拒绝它，并指出是哪一个。
+- **中止构建或出错的 handler 会结束会话**：此后任何 handler 都不再收到通知。已经启动的命令会继续运行。在遵从决定的后端下，正在决定的那条命令以及构建在它之后启动的每条命令都不运行，直接以退出码 1 结束；在只观察的后端下，catter 得知每条命令时它都已启动，构建会一直运行到结束。随后 catter 以 1 退出。
 - **上报每条命令的结束情况**，先于构建在这条命令结束之后启动的任何命令，也先于构建本身的结束。
 
 ## 后端一览
@@ -23,6 +24,18 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 - **平台**：Linux、macOS、Windows。
 - **捕获范围**：构建的每个进程及启动该进程的命令，但无法加载钩子的程序所启动的进程除外：这样的程序本身仍会上报，并按决定运行，只是不带钩子。在 macOS 上，这类程序是 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`），以及在 Rosetta 下运行的 Intel 程序；Apple 自带的工具以 arm64e 运行，系统完整性保护（System Integrity Protection）会移除其中的钩子。在 Windows 上，这类程序是 32 位（x86）程序。Windows 程序以其他账户启动的程序则完全看不到。
 - 构建及其命令直接使用 catter 自己的标准输入、标准输出和标准错误：它们直接写到终端，颜色不丢，输出顺序也和写入时一致。
+
+### eslogger（macOS）
+
+- **原理**：catter 原样运行构建，由 Endpoint Security（macOS 用于观察进程的接口）通过 macOS 为此提供的程序 `eslogger`（`eslogger exec fork exit`）上报构建启动的每个进程。catter 从构建命令的进程开始跟踪构建的进程：构建的进程运行的每个程序都是一条命令，它的父命令是同一进程在它之前运行的程序，或者 fork 出该进程的那个进程所属的命令。catter 在命令运行之后才读到它，构建从不等待 catter。
+- **平台**：macOS。
+- **前提条件**：eslogger 需要通过 `sudo` 获得的 root 权限：sudo 会在构建开始前在终端上询问密码；无法询问时 catter 拒绝运行，除非 sudo 无需密码即可运行 `/usr/bin/eslogger`。运行 catter 的应用没有完全磁盘访问权限（Full Disk Access）时，Endpoint Security 不接受任何程序：需要在 System Settings > Privacy & Security > Full Disk Access 中为终端（或其他终端应用）授权；通过 SSH 运行时，需要在远程登录（Remote Login）的设置中打开 "Allow full disk access for remote users"。
+- **捕获范围**：构建的进程运行的每个程序，包括 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`、`xcodebuild`）以及它们启动的程序。`/usr/bin/cc` 或 `/bin/sh` 用来代替自己运行的程序（Xcode 的 `clang`、`bash`）是一条独立的命令，是被它代替的那条命令的子命令。不是由构建自己启动的进程看不到，例如 `launchd` 代表构建启动的服务，或者构建之前就已启动的服务器；启动失败的程序也看不到。
+- **动作**：不支持任何动作；做决定的 handler 会被拒绝。
+- **代价**：catter 要等 eslogger 开始上报才启动构建，构建结束后还要等它最后的事件：总共大约一秒。构建同时启动大量进程时，eslogger 可能跟不上：catter 会取完每个事件，这在构建结束后可能还要花几秒。eslogger 落后太多时，Endpoint Security 可能丢弃事件：catter 会警告构建运行期间 Endpoint Security 在整个系统中丢弃了多少事件；构建的命令可能缺失，丢失的进程启动的每条命令也随之缺失。
+- **限制**：
+  - 在 macOS 上，程序不会随启动它的程序一起结束：catter 代替构建命令运行时，构建会因 catter 转发的 SIGTERM、SIGINT 和 SIGHUP 而结束，但 catter 被杀死时不会。
+  - catter 读取命令的文件（例如它的响应文件 `@file`）时，命令已经运行完毕或正在运行：构建在命令运行完毕后删除的文件（Ninja 对响应文件就是这样）可能已经不在了。
 
 ### replay（`--from`）
 
@@ -38,13 +51,14 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 
 ## 能力矩阵
 
-| 后端    | 平台                    | 捕获方式                             | 动作                                  | 父命令               | 状态           |
-| ------- | ----------------------- | ------------------------------------ | ------------------------------------- | -------------------- | -------------- |
-| hook    | Linux / macOS / Windows | 构建的每个进程中的钩子               | `skip` `drop` `abort` `modify` `edit` | 启动它的进程         | 已实现（默认） |
-| replay  | 任意                    | 录制的构建（`--from`）               | 仅 `abort` 生效                       | 按录制内容           | 已实现         |
-| wrapper | Linux / macOS / Windows | `PATH` 上的编译器 shim，`CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | 离它最近的被包装程序 | 已实现         |
+| 后端     | 平台                    | 捕获方式                             | 动作                                  | 父命令               | 状态           |
+| -------- | ----------------------- | ------------------------------------ | ------------------------------------- | -------------------- | -------------- |
+| hook     | Linux / macOS / Windows | 构建的每个进程中的钩子               | `skip` `drop` `abort` `modify` `edit` | 启动它的进程         | 已实现（默认） |
+| eslogger | macOS                   | Endpoint Security，通过 `eslogger`   | 无：只观察                            | 启动它的进程         | 已实现         |
+| replay   | 任意                    | 录制的构建（`--from`）               | 仅 `abort` 生效                       | 按录制内容           | 已实现         |
+| wrapper  | Linux / macOS / Windows | `PATH` 上的编译器 shim，`CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | 离它最近的被包装程序 | 已实现         |
 
 ## 为任意后端编写 handler
 
-- 不要假定使用某个特定后端：`initialize` 会指明所用后端（`mode`）。
+- 不要假定使用某个特定后端：`initialize` 会指明所用后端（`mode`），并说明命令是否等待决定（`decisions`）。不做决定也能工作的 handler，按 `decisions` 的值应答 `decides`。
 - 命令的父命令是后端所能看到的、启动它的命令：依赖进程树的功能（命令树、目标树）不应假设两者之间的每个进程都会出现。

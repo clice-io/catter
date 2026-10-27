@@ -44,9 +44,13 @@ struct InitializeParams {
     int version;
     /// Tells the sessions apart that one handler over TCP serves.
     std::string session;
-    /// The backend that captures the commands: `hook`, or `replay` of a
-    /// recorded build.
+    /// The backend that captures the commands: `hook`, `wrapper`, `eslogger`,
+    /// or `replay` of a recorded build.
     std::string mode;
+    /// The commands wait for the handlers' decisions and run as they decide:
+    /// false under a backend that only observes them, which takes no handler
+    /// that decides.
+    bool decisions;
     Build build;
 };
 
@@ -270,7 +274,7 @@ struct CaptureError {
 struct Exit {
     data::ipcid_t id;
     std::int64_t code;
-    /// From the decision on the command to its exit, in microseconds.
+    /// How long the command ran, in microseconds.
     std::int64_t duration;
 };
 

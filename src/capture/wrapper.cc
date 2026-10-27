@@ -359,6 +359,10 @@ public:
         return "wrapper";
     }
 
+    bool follows_decisions() const noexcept override {
+        return true;
+    }
+
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
         auto pipe_name = config::session_pipe_name();

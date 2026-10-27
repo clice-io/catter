@@ -136,6 +136,7 @@ struct Builder {
                 }
                 return;
             }
+            expansion.unread.push_back(static_cast<std::uint32_t>(expansion.argv.size()));
         }
         expansion.argv.emplace_back(argument);
         expansion.origins.push_back(origin);

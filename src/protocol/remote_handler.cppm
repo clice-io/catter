@@ -27,6 +27,10 @@ public:
 
         std::string mode;
 
+        /// Whether the build's commands follow the handlers' decisions: a
+        /// handler that decides is refused when they do not.
+        bool decisions;
+
         /// How long catter waits for an answer, and for a handler it started
         /// to exit once the session is over; zero waits as long as it takes.
         std::chrono::milliseconds timeout;
@@ -101,8 +105,8 @@ private:
 
     protocol::InitializeResult subscription{};
 
-    /// When each command was decided, which its exit is measured from.
-    std::unordered_map<data::ipcid_t, std::chrono::steady_clock::time_point> decided;
+    /// The commands the handler was told of, whose exits it is told.
+    std::unordered_set<data::ipcid_t> told;
 };
 
 }  // namespace catter

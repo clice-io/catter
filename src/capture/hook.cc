@@ -113,6 +113,7 @@ public:
         std::string error;
         try {
             program.emplace(pid);
+            began = std::chrono::steady_clock::now();
             switch(decided) {
                 case data::action::RUN: {
                     inject_hook(program->handle(), executable, id, programs.pipe_name());
@@ -151,7 +152,7 @@ public:
             session.fail(std::current_exception());
             co_return;
         }
-        co_await finish(result_of(status));
+        co_await finish(result_of(status, began));
         held.reset();
         program.reset();
     }
@@ -176,6 +177,9 @@ private:
     /// The program the hook started, from its start until its exit is told.
     std::optional<OpenedProcess> program;
 
+    /// When catter took the program the hook started.
+    std::chrono::steady_clock::time_point began;
+
     std::optional<Programs::Hold> held;
 };
 
@@ -191,18 +195,20 @@ kota::task<kota::process::exit_status> run_build(Session& session,
     if(decision.type != data::action::RUN) {
         const kota::process::exit_status status{.code =
                                                     decision.type == data::action::DROP ? 0 : 1};
-        co_await session.exited(id, result_of(status));
+        co_await session.exited(id, result_of(status, std::chrono::microseconds{}));
         co_return status;
     }
 
     std::string error;
     try {
         LOG_INFO("Starting the build command `{}` in {}", line, decision.cmd.cwd);
+        const auto start = std::chrono::steady_clock::now();
         const auto status =
             co_await run_process(hook_options(std::move(decision.cmd), id, programs.pipe_name()),
                                  {.stand_in = true});
+        const auto result = result_of(status, start);
         co_await programs.ended();
-        co_await session.exited(id, result_of(status));
+        co_await session.exited(id, result);
         co_return status;
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
@@ -217,6 +223,10 @@ class HookBackend final : public Backend {
 public:
     std::string_view name() const noexcept override {
         return "hook";
+    }
+
+    bool follows_decisions() const noexcept override {
+        return true;
     }
 
     kota::task<kota::process::exit_status> run(const Build& build,

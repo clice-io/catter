@@ -18,6 +18,7 @@ export interface InitializeParams {
     version: number;
     session: string;
     mode: string;
+    decisions: boolean;
     build: Build;
 }
 
