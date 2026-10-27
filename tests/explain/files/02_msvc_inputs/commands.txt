@@ -1,3 +1,4 @@
 cl /nologo /c /Tc a.txt /Tp b.txt
 cl /nologo /c /TP a.c
 cl /nologo a.obj b.obj /link /OUT:x.exe
+cl /nologo /c /TP a.inl -interface -ifcOutput a.ifc

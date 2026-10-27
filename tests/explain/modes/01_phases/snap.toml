@@ -1027,7 +1027,7 @@ stdout = '''
     "compiler": "builtin:gcc",
     "dialect": "gcc",
     "phase": "preprocess",
-    "artifact": "preprocessed-source",
+    "artifact": "dependencies",
     "target": {
         "os": "linux",
         "objectFormat": "elf",
