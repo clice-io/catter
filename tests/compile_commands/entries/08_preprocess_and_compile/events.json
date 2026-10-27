@@ -11,7 +11,7 @@
     { "id": 7, "exe": "gcc", "argv": ["gcc", "-c", "-x", "c", "/dev/null", "-o", "probe.o"] },
     { "id": 8, "exe": "nvcc", "argv": ["nvcc", "-c", "d.cu", "-o", "d.o"] },
     { "id": 9, "parent": 8, "exe": "gcc", "argv": ["gcc", "-E", "-x", "c++", "d.cu", "-o", "d.cpp1.ii"] },
-    { "id": 10, "exe": "clang-cl", "argv": ["clang-cl", "/P", "/Fie.i", "e.cc"] },
+    { "id": 10, "exe": "clang-cl", "argv": ["clang-cl", "/P", "/o", "e.i", "e.cc"] },
     { "id": 11, "exe": "clang-cl", "argv": ["clang-cl", "/c", "/Foe.obj", "/Tpe.i"] }
   ],
   "finish": { "code": 0 }
