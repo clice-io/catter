@@ -44,8 +44,8 @@ struct InitializeParams {
     int version;
     /// Tells the sessions apart that one handler over TCP serves.
     std::string session;
-    /// The backend that captures the commands: `hook`, `eslogger`, or
-    /// `replay` of a recorded build.
+    /// The backend that captures the commands: `hook`, `wrapper`, `eslogger`,
+    /// or `replay` of a recorded build.
     std::string mode;
     /// The commands wait for the handlers' decisions and run as they decide:
     /// false under a backend that only observes them, which takes no handler
