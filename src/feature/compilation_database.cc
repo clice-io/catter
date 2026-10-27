@@ -99,24 +99,31 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
     return entries;
 }
 
+JSON entry(std::string_view cwd,
+           std::string_view file,
+           std::span<const std::string> argv,
+           std::optional<std::string> output) {
+    dyn::Array arguments;
+    for(const auto& argument: argv) {
+        arguments.push_back(JSON(std::string_view(argument)));
+    }
+    dyn::Object entry{
+        {"directory", cwd                 },
+        {"file",      file                },
+        {"arguments", std::move(arguments)},
+    };
+    if(output.has_value()) {
+        entry.insert("output", std::move(*output));
+    }
+    return entry;
+}
+
 }  // namespace
 
 std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analysis) {
-    dyn::Array arguments;
-    for(const auto& argument: analysis.expansion.argv) {
-        arguments.push_back(JSON(std::string_view(argument)));
-    }
     std::vector<JSON> entries;
     auto add = [&](const Read& source, std::optional<std::string> output) {
-        dyn::Object entry{
-            {"directory", cwd        },
-            {"file",      source.path},
-            {"arguments", arguments  },
-        };
-        if(output.has_value()) {
-            entry.insert("output", std::move(*output));
-        }
-        entries.push_back(std::move(entry));
+        entries.push_back(entry(cwd, source.path, analysis.expansion.argv, std::move(output)));
     };
     std::vector<bool> written(analysis.reads.size());
     for(const auto& write: analysis.writes) {
@@ -136,6 +143,29 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
         }
     }
     return entries;
+}
+
+JSON entry_of(std::string_view cwd,
+              const CompilerAnalysis& preprocess,
+              const Read& source,
+              std::optional<std::string> output) {
+    std::vector<std::string> mode{"-c"};
+    if(output.has_value()) {
+        mode.insert(mode.end(), {"-o", *output});
+    }
+    const std::array<CommandEdit, 2> edits{
+        // `-E` and the options xmake adds to it, then `-c` and `-o`, which come back after them.
+        CommandEdit{.kind = CommandEdit::Kind::Remove,
+                    .flags = {"-E", "-P", "-fdirectives-only", "-fpch-preprocess", "-c", "-o"}},
+        CommandEdit{.kind = CommandEdit::Kind::Append, .flags = std::move(mode)               },
+    };
+    auto argv = apply_edits(preprocess.expansion.argv,
+                            preprocess.arguments,
+                            syntax_of(preprocess.identity.compiler, preprocess.dialect),
+                            edits);
+    // The edits are of options every syntax of a compiler reads.
+    assert(argv.has_value());
+    return entry(cwd, source.path, *argv, std::move(output));
 }
 
 void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {

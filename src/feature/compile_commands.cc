@@ -119,13 +119,17 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const Er
 
 /// Writes the compilation database of the compiler commands of a build: the entries of each
 /// command, each of the source and the arguments of that command, but of a source another
-/// compile writes, and a preprocess's of a source another command compiles.
+/// compile writes, a preprocess's of a source another command compiles, and a probe's. A compile
+/// into an object of what a preprocess wrote gets an entry of the preprocess's source, and so does
+/// a preprocess whose file the build removes, as a build cache keyed by it does.
 class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
 
     kota::task<std::optional<Build>> on_start(Build build) override {
         output_path = options.output.value_or("build/compile_commands.json");
+        // Where it fails, no file is in it.
+        [[maybe_unused]] auto error = kota::sys::temp_dir(temporary);
         // A database catter cannot merge into ends the session before the build, not after.
         database.emplace(output_path, build.cwd, !*options.replace);
         verbose_log(std::format(
@@ -157,13 +161,47 @@ public:
         compiler_commands.insert(id);
 
         const bool preprocess = analysis->phase == Phase::Preprocess;
+        // What a preprocess writes from its one source to a file, as one with `-o` does, but cl's,
+        // which no build tool compiles in two steps.
+        std::optional<Preprocessed> made;
+        if(analysis->artifact == Artifact::PreprocessedSource &&
+           analysis->dialect != Dialect::MSVC && analysis->writes.size() == 1 &&
+           analysis->writes.front().path != "-" && analysis->writes.front().reads.size() == 1) {
+            const auto& write = analysis->writes.front();
+            made = Preprocessed{
+                .id = id,
+                .cwd = command.cwd,
+                .analysis = *analysis,
+                .read = write.reads.front(),
+                .file = absolute_path(command.cwd, write.path),
+            };
+            preprocessed.insert_or_assign(made->file, *made);
+            preprocesses.emplace(id, made->file);
+        }
         for(auto& entry: entries_of(command.cwd, *analysis)) {
-            auto source = absolute_path(command.cwd, entry.as_object().find("file")->as_string());
-            if(!preprocess) {
+            const auto& object = entry.as_object();
+            auto source = absolute_path(command.cwd, object.find("file")->as_string());
+            const auto* output = object.find("output");
+            auto from = preprocessed.find(source);
+            if(from != preprocessed.end() && analysis->artifact == Artifact::Object &&
+               output != nullptr) {
+                const auto& by = from->second;
+                const auto& read = by.analysis.reads[by.read];
+                entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
+                consumed.insert(by.id);
+                source = absolute_path(by.cwd, read.path);
+            } else if(!preprocess) {
                 compiled.insert(source);
             }
-            found.push_back(
-                {.entry = std::move(entry), .source = std::move(source), .preprocess = preprocess});
+            if(xmake_probe(source)) {
+                continue;
+            }
+            const bool existed = kota::fs::is_file(source);
+            found.push_back({.entry = std::move(entry),
+                             .source = std::move(source),
+                             .preprocess = preprocess,
+                             .existed = existed,
+                             .made = made});
         }
         for(const auto& write: analysis->writes) {
             if(write.path != "-") {
@@ -185,6 +223,10 @@ public:
     }
 
     kota::task<> on_exit(data::ipcid_t id, data::process_result result) override {
+        if(auto preprocess = preprocesses.extract(id);
+           !preprocess.empty() && kota::fs::is_file(preprocess.mapped())) {
+            kept_files.insert(std::move(preprocess.mapped()));
+        }
         if(descendants.left_out(id) || !*options.abort_on_command_failure || result.code == 0) {
             co_return;
         }
@@ -208,6 +250,20 @@ public:
     }
 
 private:
+    /// The preprocess `id` of the build's, run in `cwd`, that writes `file` from `read` of
+    /// `analysis`.
+    struct Preprocessed {
+        data::ipcid_t id;
+
+        std::string cwd;
+
+        CompilerAnalysis analysis;
+
+        std::uint32_t read;
+
+        std::string file;
+    };
+
     /// An entry of the build's, of the source it names, absolute.
     struct Found {
         JSON entry;
@@ -217,7 +273,21 @@ private:
         /// Whether a preprocess made it, which describes the source only when no other command
         /// compiles it.
         bool preprocess;
+
+        /// Whether the source was there when the command came: one the build then removes was
+        /// a probe's, as a configure script's is.
+        bool existed;
+
+        /// The preprocess that made it, when it writes a file from the source.
+        std::optional<Preprocessed> made;
     };
+
+    /// Whether `source` is one xmake compiles to probe the compiler, which it keeps in its own
+    /// directory of the temporary directory, `.xmake<uid>`.
+    bool xmake_probe(std::string_view source) const {
+        auto rest = kota::fs::path::strip_prefix(source, temporary);
+        return rest.has_value() && rest->starts_with(".xmake");
+    }
 
     void log(std::string_view message) const {
         if(!*options.quiet) {
@@ -235,9 +305,24 @@ private:
         std::size_t generated = 0;
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
-        for(const auto& [entry, source, preprocess]: found) {
-            if(written.contains(source) || (preprocess && compiled.contains(source))) {
+        for(auto& [entry, source, preprocess, existed, made]: found) {
+            if(written.contains(source) || (existed && !kota::fs::is_file(source))) {
                 continue;
+            }
+            // A compile of the source stands for every preprocess of it; a compile of what a
+            // preprocess wrote, for that one alone.
+            if(preprocess &&
+               (compiled.contains(source) || (made.has_value() && consumed.contains(made->id)))) {
+                continue;
+            }
+            // A build cache that looks objects up by the preprocessed source, xmake's, removes it
+            // once it has the object, from the cache or from a compile.
+            if(made.has_value() && kept_files.contains(made->file) &&
+               !kota::fs::is_file(made->file)) {
+                entry = entry_of(made->cwd,
+                                 made->analysis,
+                                 made->analysis.reads[made->read],
+                                 std::nullopt);
             }
             const auto& object = entry.as_object();
             const auto file = object.find("file")->as_string();
@@ -268,8 +353,23 @@ private:
     /// The entries of the build's commands, in the order the commands came.
     std::vector<Found> found;
 
-    /// The sources the build's commands but preprocesses read, absolute.
+    /// The sources the build's commands but preprocesses compile, absolute.
     std::unordered_set<std::string> compiled;
+
+    /// The preprocesses whose file a compile of the build read.
+    std::unordered_set<data::ipcid_t> consumed;
+
+    /// The build's preprocesses, by the file each writes, absolute.
+    std::unordered_map<std::string, Preprocessed> preprocessed;
+
+    /// The preprocesses that have not exited, and the file each writes.
+    std::unordered_map<data::ipcid_t, std::string> preprocesses;
+
+    /// The files preprocesses wrote, there when they exited: a replayed build writes none.
+    std::unordered_set<std::string> kept_files;
+
+    /// The directory of temporary files.
+    std::string temporary;
 
     /// The files the build's compiles write, absolute.
     std::unordered_set<std::string> written;

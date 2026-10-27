@@ -1,5 +1,5 @@
 [test."$ catter compile-commands -o compile_commands.json --from events.json"]
-stdout = "CDB saved to ${WS}/compile_commands.json with 3 entries."
+stdout = "CDB saved to ${WS}/compile_commands.json with 4 entries."
 exit = 0
 
 [test."compile_commands.json"]
@@ -11,5 +11,6 @@ entries = [
         arguments = ["gcc", "-S", "../c.c", "-o", "c.s"],
     },
     { file = "a.c", directory = "${WS}", output = "${WS}/a.o", arguments = ["gcc", "-c", "a.c", "-o", "a.o"] },
-    { file = "b.c", directory = "${WS}", arguments = ["gcc", "-E", "b.c", "-o", "b.i"] },
+    { file = "b.c", directory = "${WS}", output = "${WS}/b.o", arguments = ["gcc", "b.c", "-c", "-o", "${WS}/b.o"] },
+    { file = "e.cc", directory = "${WS}", arguments = ["clang-cl", "/P", "/o", "e.i", "e.cc"] },
 ]

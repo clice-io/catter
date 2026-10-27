@@ -1,9 +1,8 @@
 import { test } from "@catter/tools/testing";
 
-// xmake's build cache compiles in two steps, preprocessing each source
-// first (-E) and then compiling the preprocessed file: it is off here so
-// the entries come from the plain compile. xmake also compiles temporary
-// files to probe the compiler's flags; those are entries too.
+// xmake's build cache is off here (02_build_cache has it on), so each source
+// is compiled in one step. xmake also compiles files of its own in the
+// temporary directory to probe the compiler's flags: they get no entries.
 test(
     {
         except: {

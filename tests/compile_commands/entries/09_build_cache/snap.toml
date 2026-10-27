@@ -1,0 +1,46 @@
+[test."$ catter compile-commands -o compile_commands.json --from events.json"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 3 entries."
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/build/main.cc.o",
+        arguments = [
+            "g++",
+            "-m64",
+            "-Iinclude",
+            "-DTEST=1",
+            "-MMD",
+            "-MF",
+            "main.d",
+            "src/main.cc",
+            "-c",
+            "-o",
+            "${WS}/build/main.cc.o",
+        ],
+    },
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        arguments = [
+            "g++",
+            "-c",
+            "-m64",
+            "-Iinclude",
+            "-DTEST=2",
+            "-E",
+            "-fpch-preprocess",
+            "-o",
+            "build/test2/__cpp_main.cc.cc",
+            "src/main.cc",
+        ],
+    },
+    {
+        file = "src/other.cc",
+        directory = "${WS}",
+        arguments = ["g++", "-c", "-m64", "-Iinclude", "-E", "-o", "build/__cpp_main.cc.cc", "src/other.cc"],
+    },
+]
