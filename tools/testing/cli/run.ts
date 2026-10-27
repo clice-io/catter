@@ -251,6 +251,10 @@ export interface Places {
     root: string;
     /// catter's data directory, `${CATTER_HOME}`.
     home: string;
+    /// The temporary directory of the programs the test runs, `${TMP}`: tests
+    /// that run side by side share none, as two xmake runs racing on the one
+    /// it cleans once a day would.
+    temp: string;
 }
 
 /// The developer directory of the Xcode the build tools use on macOS.
@@ -319,6 +323,7 @@ export function portable(text: string, places: Places): string {
     const named: [string, string][] = [
         ["${WS}", places.root],
         ["${CATTER_HOME}", places.home],
+        ["${TMP}", places.temp],
         ...outerPlaces(),
     ];
     const forms = named
@@ -460,7 +465,14 @@ export async function runCommand(
 ): Promise<ProcessResult> {
     const result = await runProcess(program, args, {
         cwd: path.join(places.root, options.cwd ?? "."),
-        env: { ...testEnvironment(), CATTER_HOME: places.home, ...options.env },
+        env: {
+            ...testEnvironment(),
+            CATTER_HOME: places.home,
+            TMPDIR: places.temp,
+            TMP: places.temp,
+            TEMP: places.temp,
+            ...options.env,
+        },
         timeout: COMMAND_TIMEOUT_MS,
         ...(options.input === undefined ? {} : { input: options.input }),
     });

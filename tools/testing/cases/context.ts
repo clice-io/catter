@@ -2,6 +2,7 @@
 /// leaves its output.
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { withTimeout } from "../../promise.ts";
 import {
@@ -70,8 +71,11 @@ class TestRun implements TestContext {
         // catter's data directory sits beside the copy, not in it: a build
         // never sees catter's logs.
         const home = freshDir("catter-home-");
-        this.dirs = [this.root, home];
-        this.places = { root: this.root, home };
+        // Named in ASCII, as the system's own is: the copy's root is what
+        // tests paths past ASCII.
+        const temp = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "catter-temp-")));
+        this.dirs = [this.root, home, temp];
+        this.places = { root: this.root, home, temp };
         this.disk = new Disk(this.root, this.steps, (text) => normalize(text, this.places));
         this.errors = (registered.options.errors ?? []).map((source) => new RegExp(source));
         materialize(c.dir, this.root);
