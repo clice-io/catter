@@ -106,34 +106,6 @@ private:
 /// reach a program it starts as that stream.
 std::array<bool, 3> held = {};
 
-void hold(int fd) {
-    // The lowest number free is `fd`: the streams below it are open.
-    held[fd] = ::open("/dev/null", O_RDWR | O_CLOEXEC) == fd;
-}
-
-/// While it lives, the streams held are closed: a program started then gets
-/// them closed, as this process got them.
-struct Released {
-    Released() {
-        for(int fd = 0; fd < 3; fd += 1) {
-            if(held[fd]) {
-                ::close(fd);
-            }
-        }
-    }
-
-    Released(const Released&) = delete;
-    Released& operator= (const Released&) = delete;
-
-    ~Released() {
-        for(int fd = 0; fd < 3; fd += 1) {
-            if(held[fd]) {
-                hold(fd);
-            }
-        }
-    }
-};
-
 #endif
 
 }  // namespace
@@ -142,7 +114,8 @@ void hold_closed_streams() {
 #ifndef CATTER_WINDOWS
     for(int fd = 0; fd < 3; fd += 1) {
         if(::fcntl(fd, F_GETFD) < 0) {
-            hold(fd);
+            // The lowest number free is `fd`: the streams below it are open.
+            held[fd] = ::open("/dev/null", O_RDWR | O_CLOEXEC) == fd;
         }
     }
 #endif
@@ -214,15 +187,15 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
         }
     }
 #else
-    std::optional<Released> released;
     if(run.stand_in) {
-        released.emplace();
+        for(int fd = 0; fd < 3; fd += 1) {
+            if(held[fd]) {
+                opts.streams[fd] = kota::process::stdio::closed();
+            }
+        }
     }
 #endif
     auto spawned = kota::process::spawn(opts);
-#ifndef CATTER_WINDOWS
-    released.reset();
-#endif
     if(!spawned) {
         throw cpptrace::runtime_error(std::format("Process `{}` spawn failed, because `{}`",
                                                   opts.program,
