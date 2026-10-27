@@ -1,19 +1,19 @@
 # System Architecture
 
-Catter is a build-process interception and analysis tool organized around **runtimes**. A runtime is the mechanism that actually captures process creation: every command invocation made by the build system becomes an event catter can handle, and is executed according to the decision of the session's handlers -- run as-is, modified, dropped, or aborted.
+Catter is a build-process interception and analysis tool organized around **capture backends**. A capture backend is how catter gets a build's commands: every command the build starts becomes an event catter can handle, and is executed according to the decision of the session's handlers -- run as-is, modified, dropped, or aborted.
 
 Handler authors only need to understand two things:
 
-1. **What a runtime is, and which one the current session uses** -- covered here and in [Runtime](runtime.md).
+1. **What a capture backend is, and which one the current session uses** -- covered here and in [Capture backends](capture-backends.md).
 2. **The lifecycle of a session** -- its start and end at the build level, and each command before and after it runs.
 
-## The runtime abstraction
+## Capture backends
 
-"Intercepting process creation" differs greatly in feasibility across platforms: hooks are the most general, but are restricted on some platforms (for example, macOS requires special development entitlements). Catter therefore abstracts capture mechanisms as runtimes. One runtime is one capture implementation; the handlers see the commands it captures, whichever it is.
+"Intercepting process creation" differs greatly in feasibility across platforms: a hook in every process of the build is the most general, but some programs keep it out (on macOS, Apple's own tools). Catter therefore separates how a build's commands are captured, a backend, from what is done with them, the session. Each backend starts the build and reports its commands to the session, which has the handlers decide each and tells them how each ended: the handlers see the same events whichever backend reports them.
 
-catter captures a build with `inject`; given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is `inject`, or `replay` for a recorded build.
+catter captures a build with the `hook` backend, which `--capture` names; given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is `hook`, or `replay` for a recorded build.
 
-Today `inject` (based on hooks) is the only capture mechanism; `env` and `eslogger` are planned. The principles, platform limitations, and capability differences of each mechanism are covered in [Runtime](runtime.md).
+Today `hook` is the only backend that captures a build; `wrapper`, compiler shims for where the hook cannot reach, is planned. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
 
 ## Handlers
 
@@ -25,27 +25,27 @@ A session's handlers decide on its commands and are told of its events. They are
 sequenceDiagram
     participant Handler
     participant Catter as catter daemon
-    participant Runtime as Runtime (capture mechanism)
+    participant Backend as Capture backend
     participant Build as Build system
 
     Catter->>Handler: initialize (the build, the mode)
     Handler-->>Catter: What it wants to be told
-    Catter->>Runtime: Start the build
+    Catter->>Backend: Start the build
     loop For each captured command
-        Runtime->>Catter: Command event
+        Backend->>Catter: Command event
         Catter->>Handler: command
         Handler-->>Catter: Action (skip / drop / abort / modify / edit)
-        Catter->>Runtime: Execute according to action
-        Runtime->>Catter: Execution result
+        Catter->>Backend: Execute according to action
+        Backend->>Catter: Execution result
         Catter->>Handler: exit
     end
-    Runtime-->>Catter: Build process finished
+    Backend-->>Catter: Build process finished
     Catter->>Handler: finish
 ```
 
 ### Build level: initialize / finish
 
-**`initialize`** starts the session, before the build: it carries the build command, its working directory and the runtime. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
+**`initialize`** starts the session, before the build: it carries the build command, its working directory and the capture backend. The handler answers with whether it decides on each command, which events it wants to be told, which commands it wants to hear of, and whether commands carry their environment and what catter makes of them.
 
 **`finish`** comes once the build has ended, with the build's exit code. A handler writes its final output here.
 
@@ -64,7 +64,7 @@ sequenceDiagram
 1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` / `edit` -- semantic and independent of the mechanism.
 2. **Protocol layer** (what catter-proxy, or on Windows the hook, carries out): `DROP` / `RUN` / `FAIL` -- the concrete execution mechanics.
 
-The session maps handler-layer actions to protocol-layer actions, whichever runtime reports the commands:
+The session maps handler-layer actions to protocol-layer actions, whichever backend reports the commands:
 
 | Handler action | Semantics                                 | Protocol mapping                                                  |
 | -------------- | ----------------------------------------- | ----------------------------------------------------------------- |
@@ -81,12 +81,12 @@ Keep in mind:
 
 ## Components and processes
 
-A single catter run involves several processes and components. They are all part of the runtime implementation, and handler authors usually do not need to know about them:
+A single catter run involves several processes and components. They are all part of the hook backend, and handler authors usually do not need to know about them:
 
-| Component           | Role                                                                                                                                                                 |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                                                        |
-| `catter-proxy`      | On Linux and macOS: stands in for each command the hook intercepted, and for the build command, which catter starts through it; relays IPC                           |
-| hook shared library | The capture carrier of the inject runtime; injected into build processes to intercept process creation; on Windows it asks the daemon itself and starts each program |
+| Component           | Role                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                                          |
+| `catter-proxy`      | On Linux and macOS: stands in for each command the hook intercepted, and for the build command, which catter starts through it; relays IPC             |
+| hook shared library | Loaded by the hook backend into every process of the build to intercept process creation; on Windows it asks the daemon itself and starts each program |
 
-They are **implementation details of the inject runtime**; the runtime abstraction itself is the center of the architecture. See [Runtime](runtime.md) and [Hook mechanism](hook-mechanism.md).
+They are **implementation details of the hook backend**; the separation of backends from the session is the center of the architecture. See [Capture backends](capture-backends.md) and [Hook mechanism](hook-mechanism.md).

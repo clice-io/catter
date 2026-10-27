@@ -1,6 +1,6 @@
-# IPC Protocol (inject runtime implementation)
+# IPC Protocol (hook backend implementation)
 
-> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy` on Linux and macOS, the hook itself on Windows. It is the shared transport layer for all runtimes and is currently used by the inject runtime; handler authors usually do not need to read it.
+> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy` on Linux and macOS, the hook itself on Windows. The protocol names no backend: it is what every backend that runs a build reports its commands over, today the hook backend; handler authors usually do not need to read it.
 
 Catter uses inter-process communication between the daemon (`catter`) and its clients: on Linux and macOS each `catter-proxy` instance, which stands in for one command; on Windows the hook, from inside the `CreateProcess` call that starts one command. The daemon acts as a server, and each client connects once per command.
 

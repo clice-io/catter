@@ -26,7 +26,7 @@ docs skill.
 | Home page frontmatter             | `text`, `tagline`, the feature cards' `title` and `details`, the actions' `text` are translated; `link`, `src`, `theme` stay.                                                                                              |
 | Callouts                          | The `> [!WARNING]` marker stays; its text is translated (此功能尚在计划中，尚未实现。).                                                                                                                                    |
 | Table headers                     | Field → 字段, Type → 类型, Description → 说明, Meaning → 含义, Option → 选项, Default → 默认值, Variable → 变量, Purpose → 用途.                                                                                           |
-| Built-in and command names        | `compile-commands`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and runtime names (`inject`, `env`, `eslogger`) are code, never translated.                                        |
+| Built-in and command names        | `compile-commands`, `catter`, `catter-proxy`, callback names (`onStart`), action names (`skip`, `drop`) and capture backend names (`hook`, `replay`, `wrapper`) are code, never translated.                                |
 
 ## By term
 
@@ -40,8 +40,8 @@ Translate:
   stay), injection → 注入, interception → 拦截, session → 会话,
   command → 命令, callback → 回调, action → 动作, built-in → 内置功能,
   build system → 构建系统, child process → 子进程, linker → 链接器.
-- runtime, catter's capture mechanism: the page title is
-  运行机制（Runtime）; in prose it stays `runtime` (inject runtime).
+- capture backend, how catter gets a build's commands → 捕获后端 (the page
+  title is 捕获后端; hook backend → hook 后端).
 - A page that keeps one of these terms in English — hook, proxy, or Action
   (the design pages' section on actions is titled and cross-referenced as
   Action) — keeps it that way; a translator follows the page, not the list.

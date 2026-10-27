@@ -1,8 +1,8 @@
-# Hook Mechanism (inject runtime implementation)
+# Hook Mechanism (hook backend implementation)
 
-> This page describes the internals of the **inject runtime**. Handler authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations handlers care about, see [Runtime](runtime.md).
+> This page describes the internals of the **hook backend**. Handler authors usually do not need to read it; it answers the platform-level question "how are commands captured". For the capabilities and limitations handlers care about, see [Capture backends](capture-backends.md).
 
-The hook is the capture carrier of the inject runtime: a shared library loaded into every process spawned by the build system. It intercepts process creation calls. On Linux and macOS it rewrites them so that every child process goes through `catter-proxy` instead of executing directly; on Windows it asks catter itself what to do with each one and starts the program as catter decides.
+The hook is what the hook backend captures a build with: a shared library loaded into every process spawned by the build system. It intercepts process creation calls. On Linux and macOS it rewrites them so that every child process goes through `catter-proxy` instead of executing directly; on Windows it asks catter itself what to do with each one and starts the program as catter decides.
 
 The hook implementation is entirely platform-specific. Unix and Windows use fundamentally different interception techniques.
 
@@ -53,12 +53,12 @@ The hook library is loaded via the dynamic linker's constructor mechanism (`on_l
 
 ### Environment Variables
 
-The hook reads session information from these environment variables, set by the proxy when it launches the build command:
+The hook reads session information from these environment variables, which the proxy sets when it runs its command with the hook (`RUN`), the command ID being that command's own:
 
 | Variable                     | Purpose                                    |
 | ---------------------------- | ------------------------------------------ |
 | `__key_catter_proxy_path_v1` | Absolute path to the `catter-proxy` binary |
-| `__key_catter_command_id_v1` | Session ID of the parent process           |
+| `__key_catter_command_id_v1` | The ID of the command the process runs     |
 | `__key_catter_ipc_v1`        | The pipe of the catter session             |
 
 ### Interception Flow

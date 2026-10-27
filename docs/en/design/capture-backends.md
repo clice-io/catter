@@ -1,52 +1,50 @@
-# Runtime
+# Capture Backends
 
-A runtime is the mechanism by which catter actually captures process creation. Catter is organized around runtimes: handlers do not care how commands are captured, only what the current runtime provides.
+A capture backend is how catter gets a build's commands: it starts the build, and reports each command the build starts to catter, which has the session's handlers decide it and tells them how it ended. The handlers see the same commands, decisions and events whichever backend reports them.
 
-## Why multiple runtimes
+## Choosing one
 
-"Intercepting process creation" differs greatly in feasibility and cost across platforms:
+`--capture <backend>` names the backend that captures the build; the default is `hook`, today the only one. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
 
-- **Hooks are the most general**, transparently intercepting any child process creation, but they depend on platform features. For example, macOS restricts `DYLD_INSERT_LIBRARIES` and requires special development entitlements; Windows has no preload mechanism and relies on DLL injection instead.
-- **Some scenarios do not need hooks at all**. If a build system honors the `CC`/`CXX` environment variable conventions, replacing the compiler is enough to capture every compilation command.
-- **Some platforms provide dedicated monitoring APIs**, such as macOS Event Stream / Endpoint Security, which can replace or complement hooks.
+A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build.
 
-For these reasons catter abstracts capture mechanisms as runtimes: one runtime is one capture implementation, with the capabilities listed below. Handlers adapt to them instead of assuming a particular runtime exists.
+## What a backend does
 
-## Mechanisms
+- **It starts the build**, and catter ends as the build did. catter stands in for the build command: a SIGTERM, SIGINT or SIGHUP sent to catter goes on to it, and the build command ends when catter is killed.
+- **It reports each command before it runs**: its working directory, program, arguments and environment, and the command that started it. The commands of a parallel build come at once. A command catter could not capture comes as an `error` instead.
+- **It runs each command as the handlers decide**: as it is (`skip`), changed (`modify`, `edit`), or not at all (`drop`, which ends it with exit code 0). Once a handler aborts the build or fails, the command and every command the build starts after it end with exit code 1 without running.
+- **It reports how each command ended**, before any command the build starts once that command has ended, and before the build's own end.
 
-### inject (implemented, default)
+## Backends
 
-- **How it works**: a hook shared library is injected into the build system process. It intercepts process creation calls (the `execve` / `posix_spawn` family on Unix, `CreateProcess` on Windows). On Unix it rewrites commands so they run through `catter-proxy`; on Windows it asks catter itself and starts each program as catter decides, which the caller then holds as it would without catter.
+### hook (default)
+
+- **How it works**: a hook library is loaded into every process of the build and intercepts process creation (the `execve` / `posix_spawn` family on Linux and macOS, `CreateProcess` on Windows). On Linux and macOS each command then runs through `catter-proxy`, which asks catter and runs the command as decided, with the hook; on Windows the hook asks catter itself, and starts the program as catter decides. See [Hook mechanism](hook-mechanism.md) and [IPC protocol](ipc-protocol.md).
 - **Platforms**: Linux, macOS, Windows.
-- **Capabilities**: every action (`skip`, `drop`, `abort`, `modify`); commands carry a parent command ID.
-- **Strengths**: recursive capture -- every descendant process is intercepted; captured commands carry the full environment and a parent command ID. The build and its commands run on catter's own stdin, stdout and stderr: they write straight to the terminal, with their colors and in the order they write.
-- **Limitations**: the implementation relies on platform features (preload / DLL injection). On macOS, `DYLD_INSERT_LIBRARIES` is restricted by the system and requires special development entitlements; on Windows, DLL injection may conflict with strong signing or security software policies.
-- **Implementation details**: [Hook mechanism](hook-mechanism.md), [IPC protocol](ipc-protocol.md).
+- **What it sees**: every process of the build, each with the command that started it, but for those the hook cannot be loaded into, and what they start: on macOS Apple's own tools (`/bin/sh`, `/usr/bin/make`), which run as arm64e and from which System Integrity Protection drops the hook, and Intel programs under Rosetta; on Windows 32-bit (x86) programs, and programs started under another account.
+- The build and its commands run on catter's own stdin, stdout and stderr: they write straight to the terminal, with their colors and in the order they write.
 
-### env (planned)
+### replay (`--from`)
 
-- **How it works**: sets `CC` / `CXX` and similar environment variables to redirect compiler invocations to `catter-proxy` (wrapper mode).
-- **Use cases**: build systems that honor the standard compiler environment variable conventions can be captured without hooks.
-- **Expected limitations**: only invocations routed through those environment variables are captured; hard-coded compiler paths and build scripts with inline `cc` may bypass it; parent command IDs are expected to be unavailable.
-- **Status**: not implemented yet. Exact capabilities (such as the actions it supports) will be confirmed when implemented.
+- **How it works**: it plays the build a file recorded instead of running one: each command, error and exit in the file's order, with the IDs and parent commands the file gives them. The build ends with the exit code the file records.
+- **Actions**: nothing runs, so the handlers' actions have no effect.
 
-### eslogger (planned)
+### wrapper (planned)
 
-- **How it works**: uses the macOS Event Stream monitoring API to observe process creation / execution events (side-channel monitoring).
-- **Use cases**: an alternative on macOS when hooks are restricted by permissions.
-- **Expected limitations**: macOS only; requires a system-granted monitoring entitlement; how far side-channel monitoring can intervene in execution (`modify` / `drop`, for example) is to be confirmed when implemented.
+- **How it works**: compiler shims, put first on the build's `PATH` and named by `CC`, `CXX` and the like, stand in for the compilers: each reports its command and runs the real compiler as decided.
+- **Use cases**: builds the hook cannot reach, such as those run by Apple's own tools on macOS.
+- **Expected limitations**: only the programs it wraps are captured, and a compiler a build runs by a path of its own escapes it; a command's parent is the nearest wrapped program that started it, or the build command.
 - **Status**: not implemented yet.
 
 ## Capability matrix
 
-| Mechanism | Platforms               | Capture method                     | Actions                        | Parent command ID | Status                |
-| --------- | ----------------------- | ---------------------------------- | ------------------------------ | ----------------- | --------------------- |
-| inject    | Linux / macOS / Windows | hook intercepting process creation | `skip` `drop` `abort` `modify` | yes               | implemented (default) |
-| env       | cross-platform          | `CC` / `CXX` environment variables | TBD                            | expected no       | planned               |
-| eslogger  | macOS                   | Event Stream API                   | TBD                            | TBD               | planned               |
+| Backend | Platforms               | How it captures                        | Actions                               | Parent command              | Status                |
+| ------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
+| hook    | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
+| replay  | any                     | a recorded build (`--from`)            | none take effect                      | as recorded                 | implemented           |
+| wrapper | cross-platform          | compiler shims on `PATH`, `CC` / `CXX` | expected all                          | the nearest wrapped program | planned               |
 
-## Selecting and checking
+## Writing handlers for any backend
 
-- catter captures a build with `inject`, which requires no configuration; `--from` plays a recorded build instead of capturing one.
-- Handlers should not assume a mechanism: `initialize` names the current one (`mode`).
-- Under a runtime whose commands carry no parent command ID, a command's `parent` will be absent, and features relying on parent-child relationships (command trees, target trees) need to degrade gracefully.
+- Do not assume one: `initialize` names it (`mode`).
+- A command's parent is the command that started it as far as the backend sees: features that rely on the process tree (command trees, target trees) should not assume every process in between is there.
