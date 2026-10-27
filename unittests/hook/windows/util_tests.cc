@@ -121,6 +121,13 @@ ZEST_CASE(environment_block_reads_back_as_written) {
     ZEXPECT(ct::environment_of(block.data(), true) == variables);
 };
 
+ZEST_CASE(environment_block_is_sorted_by_name_ignoring_case) {
+    const std::vector<std::string> variables{"b=2", "A=1", "=C:=C:\\work", "a_b=3"};
+
+    ZEXPECT(ct::environment_of(ct::environment_block(variables).data(), true) ==
+            std::vector<std::string>{R"(=C:=C:\work)", "A=1", "a_b=3", "b=2"});
+};
+
 ZEST_CASE(empty_environment_block_is_two_nuls) {
     ZEXPECT(ct::environment_block({}) == std::wstring(2, L'\0'));
 };

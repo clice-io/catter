@@ -273,9 +273,13 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, [[maybe_unused]] LPVOID res
     DisableThreadLibraryCalls(hinst);
     // Undo the import catter added to the executable's import table.
     DetourRestoreAfterWith();
-    std::memcpy(&session,
-                DetourFindPayloadEx(catter::config::HOOK_SESSION_GUID, nullptr),
-                sizeof(session));
+    // catter killed between adding the DLL and copying its session leaves
+    // none: the process runs as it would without catter.
+    const void* found = DetourFindPayloadEx(catter::config::HOOK_SESSION_GUID, nullptr);
+    if(found == nullptr) {
+        return TRUE;
+    }
+    std::memcpy(&session, found, sizeof(session));
     if(session.ends) {
         TerminateProcess(GetCurrentProcess(), session.exit_code);
     }

@@ -98,11 +98,26 @@ std::vector<std::string> environment_of(const void* block, bool unicode) {
 }
 
 std::wstring environment_block(std::span<const std::string> variables) {
-    std::wstring block;
+    std::vector<std::wstring> entries;
     for(const auto& variable: variables) {
-        std::wstring wide;
-        kota::to_utf16(wide, variable);
-        block += wide;
+        kota::to_utf16(entries.emplace_back(), variable);
+    }
+    // A name ends at the first '=' past its first character: `=C:` is one.
+    auto name = [](std::wstring_view entry) {
+        return entry.substr(0, entry.find(L'=', 1));
+    };
+    std::ranges::stable_sort(entries, [&](std::wstring_view left, std::wstring_view right) {
+        const auto a = name(left);
+        const auto b = name(right);
+        return CompareStringOrdinal(a.data(),
+                                    static_cast<int>(a.size()),
+                                    b.data(),
+                                    static_cast<int>(b.size()),
+                                    TRUE) == CSTR_LESS_THAN;
+    });
+    std::wstring block;
+    for(const auto& entry: entries) {
+        block += entry;
         block += L'\0';
     }
     // An empty block is two NULs.

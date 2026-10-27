@@ -24,7 +24,8 @@ std::vector<std::string> arguments_of(const wchar_t* application_name, const wch
 /// process's when it is null.
 std::vector<std::string> environment_of(const void* block, bool unicode);
 
-/// The environment block of `variables`, in UTF-16.
+/// The environment block of `variables`, in UTF-16, sorted by name ignoring
+/// case, as CreateProcessW takes one.
 std::wstring environment_block(std::span<const std::string> variables);
 
 /// `directory` made absolute, as CreateProcessW takes it; this process's
