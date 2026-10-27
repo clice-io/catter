@@ -21,7 +21,7 @@ A program can outlive the session it started in: a build server (an sccache serv
 
 The daemon stands in for the build the same way: it starts the build command's proxy as a proxy starts its program, and ends as the build did. A SIGTERM, SIGINT or SIGHUP sent to the daemon goes on to the build command, and the proxy of the build command ends with the daemon when the daemon is killed: on macOS that proxy ends its program itself when its connection to the daemon ends before its `FINISH`.
 
-On Windows there is no proxy: the daemon decides the build command itself and starts it with the hook, and the hook starts each program the build starts. The caller gets the program's own process, as it would without catter, and the daemon waits on the process for its exit code. The daemon stands in for the build command: Ctrl+C and Ctrl+Break reach the build in the console they share, and the daemon waits for it to end; the build command ends with the daemon when the daemon is killed.
+The hook on Windows runs no proxy: the daemon decides the build command itself and starts it with the hook, and the hook starts each program the build starts. The caller gets the program's own process, as it would without catter, and the daemon waits on the process for its exit code. The daemon stands in for the build command: Ctrl+C and Ctrl+Break reach the build in the console they share, and the daemon waits for it to end; the build command ends with the daemon when the daemon is killed.
 
 ## Serialization
 
