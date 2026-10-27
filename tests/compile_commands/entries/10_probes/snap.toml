@@ -11,3 +11,27 @@ entries = [
         arguments = ["cc", "-c", "main.c", "-o", "main.o"],
     },
 ]
+
+[msvc."$ catter compile-commands -o compile_commands.json -- node build.mjs msvc"]
+stdout = '''
+conftest.c
+main.c
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[msvc."compile_commands.json"]
+entries = [
+    {
+        file = "conftest.c",
+        directory = "${WS}",
+        output = "${WS}/conftest.o",
+        arguments = ["cl", "/nologo", "/c", "conftest.c", "/Foconftest.o"],
+    },
+    {
+        file = "main.c",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["cl", "/nologo", "/c", "main.c", "/Fomain.o"],
+    },
+]
