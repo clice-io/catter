@@ -236,5 +236,4 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
     co_return *exit;
 }
 
-
 }  // namespace catter

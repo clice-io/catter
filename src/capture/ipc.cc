@@ -163,9 +163,9 @@ kota::task<bool> Server::Client::started(std::int64_t pid) {
     std::string error;
     try {
         // What injecting into it takes, besides waiting for it and ending it.
-        auto opened = kota::process::open(
-            static_cast<int>(pid),
-            PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE);
+        auto opened = kota::process::open(static_cast<int>(pid),
+                                          PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
+                                              PROCESS_VM_READ | PROCESS_VM_WRITE);
         if(!opened) {
             throw cpptrace::runtime_error(
                 std::format("Failed to open process {}: {}", pid, opened.error().message()));
