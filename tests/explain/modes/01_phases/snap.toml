@@ -1067,3 +1067,68 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- cl /nologo /TP -scanDependencies a.ddi -Foa.obj a.cppm"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cppm"
+    ],
+    "reads": [
+        "a.cppm"
+    ],
+    "writes": [
+        "a.ddi"
+    ],
+    "edges": [
+        {
+            "output": "a.ddi",
+            "inputs": [
+                "a.cppm"
+            ]
+        }
+    ],
+    "diagnostics": [
+        {
+            "code": "output-kind-ignored",
+            "message": "output kind object-file is not used for preprocess",
+            "path": "a.obj",
+            "index": 5,
+            "source": {
+                "kind": "option",
+                "option": "-Fo",
+                "optionIndex": 5
+            }
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cppm",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/TP",
+                "-scanDependencies",
+                "a.ddi",
+                "-Foa.obj",
+                "a.cppm"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
