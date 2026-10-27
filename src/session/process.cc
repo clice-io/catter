@@ -251,10 +251,10 @@ OpenedProcess::OpenedProcess(std::int64_t pid) {
                           FALSE,
                           static_cast<DWORD>(pid));
     if(process == nullptr) {
-        throw cpptrace::runtime_error(std::format("Failed to open process {}: {}",
-                                                  pid,
-                                                  std::system_category().message(
-                                                      static_cast<int>(GetLastError()))));
+        throw cpptrace::runtime_error(
+            std::format("Failed to open process {}: {}",
+                        pid,
+                        std::system_category().message(static_cast<int>(GetLastError()))));
     }
 }
 

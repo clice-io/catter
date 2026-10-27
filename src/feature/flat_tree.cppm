@@ -309,9 +309,9 @@ void print(FlatTree<Id, Content>& tree,
     std::println("");
     std::println("Detected {} cycles:", words.node);
     for(const auto& cycle: cycles) {
-        const auto names = cycle |
-                           std::views::transform([&](const Id& id) { return text(*tree.find(id)); }) |
-                           std::ranges::to<std::vector>();
+        const auto names =
+            cycle | std::views::transform([&](const Id& id) { return text(*tree.find(id)); }) |
+            std::ranges::to<std::vector>();
         std::println("[cycle] {} -> {}",
                      names | std::views::join_with(std::string_view(" -> ")) |
                          std::ranges::to<std::string>(),

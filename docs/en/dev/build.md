@@ -54,7 +54,7 @@ catter's code above `src/support` is C++20 named modules: `src/command` is `catt
 - `bin/catter-proxy` -- Proxy process manager, and the wrapper backend's shims
 - `hook_unix_payload` -- Unix hook shared library (Linux/macOS), `bin/libcatter-hook-unix.so` or `.dylib`
 - `hook_x64_payload`, `hook_arm64_payload` -- Windows hook DLLs, `bin/catter-hook-x64.dll` and `bin/catter-hook-arm64.dll`, one per architecture, both built by every Windows build
-- `support`, `command`, `session`, `capture` (with `capture_inject`), `protocol`, `feature` -- Libraries, one per directory of `src/`
+- `support`, `command`, `session`, `capture`, `protocol`, `feature` -- Libraries, one per directory of `src/`
 - `dist` -- what `pixi run -e dev build` builds; `package` and `symbols` -- the release package and its debug symbols
 
 ## Key Dependencies

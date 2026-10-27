@@ -63,20 +63,20 @@ defending against ghosts.
   never include guards) and sources (`.cc`), which include the standard
   and library headers themselves: the payloads import nothing.
 - Includes name the header by its path under `src/`, whatever directory
-  includes it: `"support/log.h"`, `"hook/unix/session.h"`; a directory
+  includes it: `"support/log.h"`, `"hook/unix/environment.h"`; a directory
   includes and imports only the layers below it (CLAUDE.md,
   `pixi run -e dev check-layers`).
 - Code lives in `namespace catter`, flat as clice's: a namespace of its
-  own only for the built-ins (`catter::feature`), the programs and the
-  payloads (`catter::driver`, `catter::proxy`, `catter::hook`), for a
+  own only for the built-ins (`catter::feature`), `catter`'s program
+  (`catter::driver`), the hook and its payloads (`catter::hook`), for a
   vocabulary whose names would
   clash in `catter` (the handler protocol's `catter::protocol`, the IPC's
-  `catter::ipc` and `catter::data`, each option
-  table's `catter::option::clang`), and for `catter::log`,
-  `catter::output` and `catter::config`.
+  `catter::ipc` and `catter::data`, the variables of the build's
+  environment, `catter::env`, each option table's
+  `catter::option::clang`), and for `catter::log` and `catter::output`.
 - Platform code is chosen by the macros the build defines (`CATTER_LINUX`,
   `CATTER_MAC`, `CATTER_WINDOWS`), or by a file per platform when most of
-  it differs (`capture/inject/unix` and `windows`, `hook/unix` and
+  it differs (`capture/inject/unix.cc` and `windows.cc`, `hook/unix` and
   `hook/windows`).
 - File-local helpers: a single one is `static`; a cluster of them goes in
   one anonymous namespace.

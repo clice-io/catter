@@ -240,8 +240,7 @@ bool for_the_system(const char* executable, bool shell_fallback) noexcept {
 
 /// A program that is not there or not executable fails to start as it would
 /// without catter: a build may expect that (a PATH search tries every entry).
-void report_failure([[maybe_unused]] std::string_view name,
-                    [[maybe_unused]] const Error& err) {
+void report_failure([[maybe_unused]] std::string_view name, [[maybe_unused]] const Error& err) {
     if(err.code == ENOENT || err.code == EACCES || err.code == ENOTDIR) {
         INFO("{} failed: {}", name, err.what());
     } else {

@@ -96,11 +96,11 @@ kota::task<> Server::Client::answer(kota::pipe pipe) {
     kota::ipc::BincodePeer peer(kota::event_loop::current(),
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(pipe)));
 
-    peer.on_request(MakeDecision::method,
-                    [&](const Context&, MakeDecision::Params params)
-                        -> kota::ipc::RequestResult<MakeDecision> {
-                        co_return co_await decide(std::move(params));
-                    });
+    peer.on_request(
+        MakeDecision::method,
+        [&](const Context&, MakeDecision::Params params) -> kota::ipc::RequestResult<MakeDecision> {
+            co_return co_await decide(std::move(params));
+        });
 
     peer.on_request(
         ReportError::method,
@@ -162,12 +162,15 @@ kota::task<bool> Server::Client::started(std::int64_t pid) {
         program.emplace(pid);
         began = std::chrono::steady_clock::now();
         switch(decided) {
-            case data::action::RUN: inject_hook(program->handle(), executable, id, server.name); break;
+            case data::action::RUN:
+                inject_hook(program->handle(), executable, id, server.name);
+                break;
             case data::action::DROP: end(0); break;
             case data::action::FAIL: end(1); break;
         }
-        untold = server.untold.insert(server.untold.end(),
-                                      {.program = &*program, .told = std::make_shared<kota::event>()});
+        untold =
+            server.untold.insert(server.untold.end(),
+                                 {.program = &*program, .told = std::make_shared<kota::event>()});
         co_return true;
     } catch(const cpptrace::exception& ex) {
         error = ex.message();

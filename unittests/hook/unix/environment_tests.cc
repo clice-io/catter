@@ -49,8 +49,8 @@ ZEST_CASE(a_preload_of_the_hook_alone_goes) {
 
 #ifdef CATTER_LINUX
 ZEST_CASE(spaces_separate_preloaded_libraries_as_colons_do) {
-    auto preload = entry(catter::hook::PRELOAD,
-                         std::string("/tmp/libkeep.so /tmp/") + catter::hook::LIBRARY);
+    auto preload =
+        entry(catter::hook::PRELOAD, std::string("/tmp/libkeep.so /tmp/") + catter::hook::LIBRARY);
     char* envp[] = {preload.data(), nullptr};
 
     auto env = ct::proxy_environment(envp, {});

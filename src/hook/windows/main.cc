@@ -125,8 +125,8 @@ private:
                                              (dwCreationFlags & CREATE_UNICODE_ENVIRONMENT) != 0),
         };
         using catter::ipc::RequestType;
-        const auto decision =
-            connection->request<RequestType::MAKE_DECISION>({.parent = session.id, .command = sent});
+        const auto decision = connection->request<RequestType::MAKE_DECISION>(
+            {.parent = session.id, .command = sent});
         if(!decision) {
             return unchanged();
         }

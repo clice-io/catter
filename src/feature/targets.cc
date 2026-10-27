@@ -108,12 +108,11 @@ public:
     }
 
     kota::task<> on_finish(data::process_result result) override {
-        print(
-            tree,
-            [](const Tree::Node& node) { return name_of(node.id); },
-            max_depth,
-            result.code,
-            {.nodes = "targets", .node = "target", .tree = "target forest"});
+        print(tree,
+              [](const Tree::Node& node) { return name_of(node.id); },
+              max_depth,
+              result.code,
+              {.nodes = "targets", .node = "target", .tree = "target forest"});
         co_return;
     }
 

@@ -6,10 +6,10 @@ module;
 #include <mach-o/utils.h>
 #endif
 
-#include "support/paths.h"
 #include "support/hook.h"
-#include "support/messages.h"
 #include "support/log.h"
+#include "support/messages.h"
+#include "support/paths.h"
 
 module catter;
 
@@ -71,10 +71,9 @@ kota::process::options hook_options(data::command command,
 
     const auto library = program_path(hook::LIBRARY);
     const auto preload = std::string(hook::PRELOAD) + "=";
-    if(auto entry = std::ranges::find_if(command.env,
-                                         [&](std::string_view entry) {
-                                             return entry.starts_with(preload);
-                                         });
+    if(auto entry =
+           std::ranges::find_if(command.env,
+                                [&](std::string_view entry) { return entry.starts_with(preload); });
        entry != command.env.end()) {
         *entry += hook::PRELOAD_SEPARATORS[0] + library;
     } else {

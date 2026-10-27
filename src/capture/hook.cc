@@ -4,7 +4,6 @@ module;
 
 #include "support/messages.h"
 #include "support/paths.h"
-
 #include "support/program.h"
 
 #ifdef CATTER_WINDOWS

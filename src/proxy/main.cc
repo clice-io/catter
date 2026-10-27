@@ -77,9 +77,8 @@ void set_variable(std::vector<std::string>& env, std::string_view name, std::str
 
 /// The value of variable `name` in `env`, which it leaves out of `env`.
 std::optional<std::string> take_variable(std::vector<std::string>& env, std::string_view name) {
-    auto value = variable(env, name).transform([](std::string_view value) {
-        return std::string(value);
-    });
+    auto value =
+        variable(env, name).transform([](std::string_view value) { return std::string(value); });
     std::erase_if(env, [&](std::string_view entry) {
         return entry.size() > name.size() && entry[name.size()] == '=' &&
                kota::sys::env_name_equal(entry.substr(0, name.size()), name);
@@ -359,7 +358,7 @@ kota::task<exit_status> report(const Proxied& proxied, Connection& connection) n
     }
 
     co_await connection.report_error(proxied.parent,
-                                      std::format("Run `{}` failed:\n{}\n", line, error));
+                                     std::format("Run `{}` failed:\n{}\n", line, error));
     co_return exit_status{.code = -1};
 }
 
@@ -386,8 +385,9 @@ kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
         }
     }
     Connection connection{
-        .peer = kota::ipc::BincodePeer(loop,
-                                       std::make_unique<kota::ipc::StreamTransport>(std::move(*pipe))),
+        .peer =
+            kota::ipc::BincodePeer(loop,
+                                   std::make_unique<kota::ipc::StreamTransport>(std::move(*pipe))),
     };
 
     auto run_connection = [](Connection& connection,
@@ -401,7 +401,8 @@ kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
         }
 #endif
     }(connection, !proxied.parent);
-    auto [_, status] = co_await kota::when_all{std::move(run_connection), report(proxied, connection)};
+    auto [_, status] =
+        co_await kota::when_all{std::move(run_connection), report(proxied, connection)};
     co_return status;
 }
 

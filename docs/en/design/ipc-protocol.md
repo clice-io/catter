@@ -13,7 +13,7 @@ The transport layer is platform-specific:
 | Linux / macOS | Unix domain socket | `<data dir>/ipc-<pid>.sock` |
 | Windows       | Named pipe         | `\\.\pipe\catter-ipc-<pid>` |
 
-Each daemon listens on a socket/pipe of its own, named by its process id, so builds that run under catter at the same time never meet. The data directory is `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows), or `CATTER_HOME` when it is set. The daemon creates the listening socket/pipe at startup. On Linux and macOS it passes its name to every `catter-proxy` instance the hook starts on the command line (`--ipc <pipe>`); the wrapper backend's shims, on every platform, find it in their environment (`__key_catter_ipc_v1`). Each one connects to it as a client when it starts, and the connection persists for the lifetime of the proxy process. On Windows the daemon gives it to the hook in each process it injects the hook into; the hook connects for each program it starts, and disconnects once the program is started.
+Each daemon listens on a socket/pipe of its own, named by its process id, so builds that run under catter at the same time never meet. The data directory is `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows), or `CATTER_HOME` when it is set. The daemon creates the listening socket/pipe at startup. Every `catter-proxy` finds its name in its environment (`__key_catter_ipc_v1`), which the daemon sets for the build command, and the hook, or a shim of the wrapper backend, for each command after it. Each one connects to it as a client when it starts, and the connection persists for the lifetime of the proxy process. On Windows the daemon gives it to the hook in each process it injects the hook into; the hook connects for each program it starts, and disconnects once the program is started.
 
 A program can outlive the session it started in: a build server (an sccache server, a Gradle daemon) runs the commands of later builds with the earlier session's pipe in its environment, or, on Windows, its hook. When that pipe is gone, the command runs as it would run without catter, uncaptured; `catter-proxy` logs a warning. A command that ends after its session keeps its exit code. A command whose working directory the proxy cannot read, as one the build removed, runs there all the same, uncaptured, and the proxy reports it as an error (`REPORT_ERROR`).
 
@@ -37,7 +37,6 @@ The protocol is defined in `src/support/messages.h`, which the daemon, `catter-p
 
 ```cpp
 enum class RequestType : uint8_t {
-    CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
@@ -49,22 +48,20 @@ Each request type maps to a `Request<Type>` specialization that declares `Params
 
 ## Request Types
 
-### CREATE
-
-Registers a new process session with the daemon.
-
-| Field      | Type                  | Description                                  |
-| ---------- | --------------------- | -------------------------------------------- |
-| **Params** | `ipcid_t` (`int32_t`) | The parent session ID                        |
-| **Result** | `ipcid_t` (`int32_t`) | A unique session ID assigned to this command |
-
-The parent ID establishes the parent-child relationship in the session tree. The proxy of the build command, which the daemon starts, sends 0: no command started it. The proxy of a command the hook intercepted sends the ID of the command whose process started it, which the hook reads from the `__key_catter_command_id_v1` environment variable and passes on the proxy's command line. A shim of the wrapper backend sends the ID in `__key_catter_command_id_v1`, which the shim, or the launcher, that started the program it was run from set to its own command's ID; the launcher of the build command finds none and sends 0. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
-
 ### MAKE_DECISION
 
-The core request. The client sends a captured command and the daemon decides what to do with it.
+The core request, which opens each command. The client sends a captured command and the command that started it, and the daemon gives the command its ID and decides what to do with it.
 
-**Params** -- `command`:
+**Params**:
+
+| Field     | Type                | Description                                                       |
+| --------- | ------------------- | ----------------------------------------------------------------- |
+| `parent`  | `optional<ipcid_t>` | The ID of the command that started it; none for the build command |
+| `command` | `command`           | The captured command                                              |
+
+The parent establishes the parent-child relationship in the session tree. The proxy of a command the hook intercepted sends the ID of the command whose process started it, which the hook passes on in the `__key_catter_command_id_v1` environment variable; a shim of the wrapper backend sends the ID in the same variable, which the shim, or the launcher, that started the program it was run from set to its own command's ID. The proxy of the build command, and the launcher of the build command, find none and send none. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
+
+`command`:
 
 | Field        | Type       | Description                                   |
 | ------------ | ---------- | --------------------------------------------- |
@@ -73,7 +70,14 @@ The core request. The client sends a captured command and the daemon decides wha
 | `args`       | `string[]` | Full argument array (including `argv[0]`)     |
 | `env`        | `string[]` | Environment variables (in `KEY=VALUE` format) |
 
-**Result** -- `action`:
+**Result**:
+
+| Field    | Type      | Description                                                                     |
+| -------- | --------- | ------------------------------------------------------------------------------- |
+| `id`     | `ipcid_t` | The ID the daemon gives the command, which those it starts name as their parent |
+| `action` | `action`  | What to do with the command                                                     |
+
+`action`:
 
 | Field  | Type           | Description                                                        |
 | ------ | -------------- | ------------------------------------------------------------------ |
@@ -96,14 +100,14 @@ Reports an error condition from the hook or proxy back to the daemon.
 
 **Params**:
 
-| Field       | Type      | Description                      |
-| ----------- | --------- | -------------------------------- |
-| `parent_id` | `ipcid_t` | Session ID of the parent process |
-| `error_msg` | `string`  | Human-readable error description |
+| Field     | Type                | Description                                                   |
+| --------- | ------------------- | ------------------------------------------------------------- |
+| `parent`  | `optional<ipcid_t>` | The ID of the command that started it, as for `MAKE_DECISION` |
+| `message` | `string`            | Human-readable error description                              |
 
 **Result**: `null` (no response payload)
 
-This is used when the hook encounters an invalid state (e.g., missing environment variables), when the proxy catches an exception during command processing, or, on Windows, when the program the hook was to start cannot start. The daemon logs the error and can notify the user.
+This is used when the proxy cannot capture its command (a shim finds no program past the shims, the working directory cannot be read) or catches an exception during command processing, or, on Windows, when the program the hook was to start cannot start. The daemon logs the error and can notify the user.
 
 ### FINISH
 
@@ -111,9 +115,10 @@ Reports that a command has completed execution.
 
 **Params** -- `process_result`:
 
-| Field  | Type      | Description                                                           |
-| ------ | --------- | --------------------------------------------------------------------- |
-| `code` | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
+| Field      | Type      | Description                                                           |
+| ---------- | --------- | --------------------------------------------------------------------- |
+| `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
+| `duration` | `int64_t` | How long the program ran, in microseconds                             |
 
 **Result**: `null` (no response payload)
 
@@ -144,10 +149,8 @@ A complete client lifecycle involves this sequence of IPC messages:
 ### Proxy (a command)
 
 ```
-Proxy -> Daemon:  CREATE(parent_id)
-Daemon -> Proxy:  new_session_id
-Proxy -> Daemon:  MAKE_DECISION(command)
-Daemon -> Proxy:  action {type, cmd}
+Proxy -> Daemon:  MAKE_DECISION(parent, command)
+Daemon -> Proxy:  {id, action {type, cmd}}
 [Proxy starts the command, or drops it]
 Proxy -> Daemon:  started(pid)              (macOS, a notification)
 [Proxy waits for the command]
@@ -156,15 +159,13 @@ Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
 
-The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached. Under the wrapper backend the daemon starts the build command through the launcher, `catter-proxy` by another name among the shims, which reports it the same way and runs it with the shims on its `PATH`; each shim then sends these messages for the program it stands in for.
+The daemon starts the proxy of the build command, which sends the same messages for the build command, with no parent, so that the build command reaches the handlers like any other command; it runs the build with the hook attached. Under the wrapper backend the daemon starts the build command through the launcher, `catter-proxy` by another name among the shims, which reports it the same way and runs it with the shims on its `PATH`; each shim then sends these messages for the program it stands in for.
 
 ### Windows Hook (intercepted command)
 
 ```
-Hook -> Daemon:   CREATE(parent_id)
-Daemon -> Hook:   new_session_id
-Hook -> Daemon:   MAKE_DECISION(command)
-Daemon -> Hook:   action {type, cmd}
+Hook -> Daemon:   MAKE_DECISION(parent, command)
+Daemon -> Hook:   {id, action {type, cmd}}
 [Hook starts the command suspended]
 Hook -> Daemon:   STARTED(pid)
 [Daemon injects the hook]
@@ -178,7 +179,7 @@ The daemon decides the build command itself, and starts it with the hook.
 ### Error Case
 
 ```
-Proxy -> Daemon:  REPORT_ERROR(parent_id, error_message)
+Proxy -> Daemon:  REPORT_ERROR(parent, message)
 Daemon -> Proxy:  null
 [Proxy exits with code -1]
 ```
@@ -196,7 +197,7 @@ Session 1 (root -- the build command)
        +-- Session 6 (sh -> gcc file3.c)
 ```
 
-Each session is identified by a unique `ipcid_t` (32-bit integer). The tree is built incrementally as `CREATE` requests arrive, each specifying a `parent_id`. This structure enables:
+Each session is identified by a unique `ipcid_t` (32-bit integer). The tree is built incrementally as `MAKE_DECISION` requests arrive, each naming its `parent`. This structure enables:
 
 - **Target tree reconstruction** -- by knowing which object files are linked into which targets
 - **Build profiling** -- by tracking timing data per session and visualizing the parallelism
@@ -229,6 +230,7 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
+    int64_t duration = 0;              // How long it ran, in microseconds
 };
 
 // Decision returned by the daemon

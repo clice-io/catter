@@ -44,7 +44,7 @@ int run(std::span<std::string> args) {
         return 0;
     }
     return run_build(feature::make_compile_commands(std::move(options->database)),
-                                 options->session);
+                     options->session);
 }
 
 [[maybe_unused]] const bool registered = register_subcommand(Subcommand::CompileCommands,

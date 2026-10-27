@@ -59,12 +59,11 @@ public:
     }
 
     kota::task<> on_finish(data::process_result result) override {
-        print(
-            tree,
-            [&](const Tree::Node& node) { return text_of(node.content); },
-            max_depth_of(options.depth.as_optional()),
-            result.code,
-            {.nodes = "commands", .node = "command", .tree = "command tree"});
+        print(tree,
+              [&](const Tree::Node& node) { return text_of(node.content); },
+              max_depth_of(options.depth.as_optional()),
+              result.code,
+              {.nodes = "commands", .node = "command", .tree = "command tree"});
         co_return;
     }
 
