@@ -274,7 +274,7 @@ struct CaptureError {
 struct Exit {
     data::ipcid_t id;
     std::int64_t code;
-    /// From the decision on the command to its exit, in microseconds.
+    /// How long the command ran, in microseconds.
     std::int64_t duration;
 };
 

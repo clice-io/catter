@@ -11,6 +11,8 @@ module;
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <mach/mach_time.h>
 #endif
 
 module catter;
@@ -27,9 +29,23 @@ namespace catter {
 
 namespace eslogger {
 
-static std::uint64_t key_of(const AuditToken& token) {
+namespace {
+
+std::uint64_t key_of(const AuditToken& token) {
     return (std::uint64_t(std::uint32_t(token.pid)) << 32) | std::uint32_t(token.pidversion);
 }
+
+/// `ticks` of Mach's absolute time, in microseconds.
+std::chrono::microseconds microseconds_of(std::uint64_t ticks) {
+    const static auto base = [] {
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        return info;
+    }();
+    return std::chrono::microseconds(ticks * base.numer / base.denom / 1000);
+}
+
+}  // namespace
 
 Event parse(std::string_view line) {
     auto event = kota::codec::json::from_string<Event>(line);
@@ -75,19 +91,22 @@ std::vector<Report> BuildProcesses::add(Event event) {
             .env = std::move(exec.env),
         };
         Started started{.id = new_id(), .parent = member.current(), .command = std::move(command)};
-        member.commands.push_back(started.id);
+        member.commands.push_back({.id = started.id, .started = event.mach_time});
         members.insert_or_assign(key_of(exec.target.audit_token), std::move(member));
         return {std::move(started)};
     }
 
     const int stat = event.event.exit->stat;
-    const auto result = result_of(kota::process::exit_status{
+    const kota::process::exit_status status{
         .code = WIFEXITED(stat) ? WEXITSTATUS(stat) : 0,
         .term_signal = WIFSIGNALED(stat) ? WTERMSIG(stat) : 0,
-    });
+    };
     std::vector<Report> ended;
-    for(auto id: found->second.commands | std::views::reverse) {
-        ended.push_back(Ended{.id = id, .result = result});
+    for(const auto& run: found->second.commands | std::views::reverse) {
+        ended.push_back(Ended{
+            .id = run.id,
+            .result = result_of(status, microseconds_of(event.mach_time - run.started)),
+        });
     }
     members.erase(found);
     return ended;

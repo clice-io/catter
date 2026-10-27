@@ -4,6 +4,10 @@ module;
 
 #include "support/messages.h"
 
+#ifdef CATTER_MAC
+#include <mach/mach_time.h>
+#endif
+
 module catter;
 
 import :capture.eslogger;
@@ -21,12 +25,23 @@ struct Token {
 
 std::uint64_t seq = 0;
 
+/// The time between two lines, in Mach's absolute time.
+constexpr std::uint64_t TICKS = 3'000'000;
+
+/// The time between two lines, in microseconds.
+std::int64_t microseconds_between_lines() {
+    mach_timebase_info_data_t info;
+    mach_timebase_info(&info);
+    return static_cast<std::int64_t>(TICKS * info.numer / info.denom / 1000);
+}
+
 /// A line as eslogger writes it, with fields catter does not read beside those
-/// it does.
+/// it does; each line comes TICKS after the one before.
 std::string line(Token process, int ppid, std::string_view event) {
     seq += 1;
     return std::format(
-        R"({{"schema_version":1,"mach_time":9609769343,"global_seq_num":{},"seq_num":7,"time":"2026-10-27T10:16:14.643246583Z","action_type":1,"process":{{"audit_token":{{"asid":100058,"pid":{},"pidversion":{},"euid":501}},"ppid":{},"original_ppid":{},"is_platform_binary":true,"executable":{{"path":"/bin/bash","path_truncated":false}}}},"event":{{{}}},"version":9}})",
+        R"({{"schema_version":1,"mach_time":{},"global_seq_num":{},"seq_num":7,"time":"2026-10-27T10:16:14.643246583Z","action_type":1,"process":{{"audit_token":{{"asid":100058,"pid":{},"pidversion":{},"euid":501}},"ppid":{},"original_ppid":{},"is_platform_binary":true,"executable":{{"path":"/bin/bash","path_truncated":false}}}},"event":{{{}}},"version":9}})",
+        seq * TICKS,
         seq,
         process.pid,
         process.pidversion,
@@ -95,7 +110,10 @@ std::vector<std::string> reports(int build, std::initializer_list<std::string> l
                     started->command.cwd));
             } else {
                 const auto& ended = std::get<eslogger::Ended>(report);
-                told.push_back(std::format("{} ended {}", ended.id, ended.result.code));
+                told.push_back(std::format("{} ended {} after {} lines",
+                                           ended.id,
+                                           ended.result.code,
+                                           ended.result.duration / microseconds_between_lines()));
             }
         }
     }
@@ -153,10 +171,10 @@ ZEST_CASE(follows_the_build_through_forks_and_execs) {
                         R"(2 < 1: /bin/bash ["/bin/sh", "-c", "cc -c a.c"] in /src)",
                         R"(3 < 2: /usr/bin/cc ["cc", "-c", "a.c"] in /src)",
                         R"(4 < 3: /usr/bin/clang ["clang", "-c", "a.c"] in /src)",
-                        "4 ended 0",
-                        "3 ended 0",
-                        "2 ended 3",
-                        "1 ended 3",
+                        "4 ended 0 after 1 lines",
+                        "3 ended 0 after 2 lines",
+                        "2 ended 3 after 5 lines",
+                        "1 ended 3 after 6 lines",
                     });
 }
 
@@ -178,7 +196,7 @@ ZEST_CASE(leaves_out_other_processes) {
         });
     ZEXPECT(told == std::vector<std::string>{
                         R"(1 < -: /usr/bin/make ["make"] in /src)",
-                        "1 ended 0",
+                        "1 ended 0 after 4 lines",
                     });
 }
 
@@ -192,7 +210,7 @@ ZEST_CASE(a_signal_ends_a_command_as_a_shell_tells_it) {
                         });
     ZEXPECT(told == std::vector<std::string>{
                         R"(1 < -: /usr/bin/make ["make"] in /src)",
-                        "1 ended 137",
+                        "1 ended 137 after 1 lines",
                     });
 }
 

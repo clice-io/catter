@@ -105,8 +105,8 @@ private:
 
     protocol::InitializeResult subscription{};
 
-    /// When each command was decided, which its exit is measured from.
-    std::unordered_map<data::ipcid_t, std::chrono::steady_clock::time_point> decided;
+    /// The commands the handler was told of, whose exits it is told.
+    std::unordered_set<data::ipcid_t> told;
 };
 
 }  // namespace catter

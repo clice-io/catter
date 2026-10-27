@@ -59,6 +59,8 @@ struct Details {
 
 struct Event {
     int schema_version;
+    /// When it happened, in Mach's absolute time.
+    std::uint64_t mach_time;
     /// Counts the events eslogger was sent, which are lost where it skips.
     std::uint64_t global_seq_num;
     /// The process that forked, execed or exited, as it was.
@@ -95,21 +97,29 @@ public:
         starter(starter), build(build), new_id(std::move(new_id)) {}
 
     /// What `event` tells of the build's commands: the one that starts, or
-    /// those that end with their process, the last it ran first.
+    /// those that end with their process, the last it ran first, each having
+    /// run from its exec to the exit.
     std::vector<Report> add(Event event);
 
 private:
+    struct Run {
+        data::ipcid_t id;
+
+        /// When the process execed the command's program.
+        std::uint64_t started;
+    };
+
     struct Member {
         /// The command its parent ran when it forked, which starts the first
         /// program it runs; none for the build command's process.
         std::optional<data::ipcid_t> forked_by;
 
         /// The commands it ran, the last the one it runs.
-        std::vector<data::ipcid_t> commands;
+        std::vector<Run> commands;
 
         /// The command of the process.
         std::optional<data::ipcid_t> current() const {
-            return commands.empty() ? forked_by : commands.back();
+            return commands.empty() ? forked_by : commands.back().id;
         }
     };
 

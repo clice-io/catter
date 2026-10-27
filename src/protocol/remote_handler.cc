@@ -334,7 +334,7 @@ kota::task<Action> RemoteHandler::on_command(data::ipcid_t id,
         co_return Action{.type = Action::Type::Skip};
     }
     if(subscription.events.exit) {
-        decided[id] = std::chrono::steady_clock::now();
+        told.insert(id);
     }
     co_return std::move(*action);
 }
@@ -449,16 +449,8 @@ kota::task<> RemoteHandler::on_error(data::ipcid_t id,
 }
 
 kota::task<> RemoteHandler::on_exit(data::ipcid_t id, data::process_result result) {
-    auto start = decided.extract(id);
-    if(start) {
-        auto duration = std::chrono::steady_clock::now() - start.mapped();
-        notify(
-            "exit",
-            protocol::Exit{
-                .id = id,
-                .code = result.code,
-                .duration = std::chrono::duration_cast<std::chrono::microseconds>(duration).count(),
-            });
+    if(told.erase(id) != 0) {
+        notify("exit", protocol::Exit{.id = id, .code = result.code, .duration = result.duration});
     }
     co_return;
 }

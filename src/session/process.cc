@@ -145,8 +145,19 @@ kota::process::options process_options(const data::command& command) {
     return opts;
 }
 
-data::process_result result_of(const kota::process::exit_status& status) {
-    return {.code = status.term_signal == 0 ? status.code : 128 + status.term_signal};
+data::process_result result_of(const kota::process::exit_status& status,
+                               std::chrono::microseconds ran) {
+    return {
+        .code = status.term_signal == 0 ? status.code : 128 + status.term_signal,
+        .duration = ran.count(),
+    };
+}
+
+data::process_result result_of(const kota::process::exit_status& status,
+                               std::chrono::steady_clock::time_point started) {
+    return result_of(status,
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         std::chrono::steady_clock::now() - started));
 }
 
 int exit_like(const kota::process::exit_status& status) {
