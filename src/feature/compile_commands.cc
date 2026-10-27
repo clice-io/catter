@@ -184,13 +184,13 @@ public:
                 const auto& by = from->second;
                 const auto& read = by.analysis.reads[by.read];
                 entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
+                consumed.insert(by.file);
                 source = absolute_path(by.cwd, read.path);
+            } else if(!preprocess) {
+                compiled.insert(source);
             }
             if(xmake_probe(source)) {
                 continue;
-            }
-            if(!preprocess) {
-                compiled.insert(source);
             }
             const bool existed = kota::fs::is_file(source);
             found.push_back({.entry = std::move(entry),
@@ -299,8 +299,13 @@ private:
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
         for(auto& [entry, source, preprocess, existed, made]: found) {
-            if(written.contains(source) || (preprocess && compiled.contains(source)) ||
-               (existed && !kota::fs::is_file(source))) {
+            if(written.contains(source) || (existed && !kota::fs::is_file(source))) {
+                continue;
+            }
+            // A compile of the source stands for every preprocess of it; a compile of what a
+            // preprocess wrote, for that one alone.
+            if(preprocess &&
+               (compiled.contains(source) || (made.has_value() && consumed.contains(made->file)))) {
                 continue;
             }
             // A build cache that looks objects up by the preprocessed source, xmake's, removes it
@@ -341,8 +346,11 @@ private:
     /// The entries of the build's commands, in the order the commands came.
     std::vector<Found> found;
 
-    /// The sources the build's commands but preprocesses read, absolute.
+    /// The sources the build's commands but preprocesses compile, absolute.
     std::unordered_set<std::string> compiled;
+
+    /// The files of preprocesses a compile of the build read, absolute.
+    std::unordered_set<std::string> consumed;
 
     /// The build's preprocesses, by the file each writes, absolute.
     std::unordered_map<std::string, Preprocessed> preprocessed;
