@@ -57,12 +57,7 @@ public:
         const auto proxy = program_path(std::format("{}.exe", PROXY));
         const auto launcher = this->launcher();
         if(kota::fs::create_hard_link(proxy, launcher)) {
-            std::string bytes;
-            auto error = kota::fs::read_file(bytes, proxy);
-            if(!error) {
-                error = kota::fs::write_file(launcher, bytes);
-            }
-            if(error) {
+            if(auto error = kota::fs::copy_file(proxy, launcher)) {
                 throw cpptrace::runtime_error(
                     std::format("Failed to copy {} to {}: {}", proxy, launcher, error.message()));
             }

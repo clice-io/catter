@@ -16,79 +16,6 @@ namespace catter {
 
 namespace {
 
-using kota::ipc::ReadError;
-
-/// What is wrong with `message` from a handler, which answers catter's
-/// requests, asks its own, and writes nothing else; none for those.
-std::optional<std::string> not_an_answer(std::string_view message) {
-    return std::visit(
-        [](const auto& incoming) -> std::optional<std::string> {
-            using T = std::remove_cvref_t<decltype(incoming)>;
-            if constexpr(std::is_same_v<T, kota::ipc::IncomingResponse>) {
-                return std::nullopt;
-            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingErrorResponse>) {
-                if(incoming.id) {
-                    return std::nullopt;
-                }
-                return std::format("an error that answers no request: {}", incoming.error.message);
-            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingRequest>) {
-                return std::nullopt;
-            } else if constexpr(std::is_same_v<T, kota::ipc::IncomingNotification>) {
-                return std::format("a notification `{}`", incoming.method);
-            } else {
-                return incoming.error.message;
-            }
-        },
-        kota::ipc::JSONCodec().parse_message(std::string(message)));
-}
-
-/// The handler's transport, which keeps how the handler's output ended, and
-/// ends it at what is no protocol message: the peer would answer that with an
-/// error, and go on waiting for the answers it asked for. A write that fails
-/// ends it too: a handler that has exited may refuse catter's next message
-/// before its output is seen to end.
-class Transport final : public kota::ipc::Transport {
-public:
-    Transport(std::unique_ptr<kota::ipc::Transport> inner, std::optional<ReadError>& end) :
-        inner(std::move(inner)), end(end) {}
-
-    kota::task<std::string, ReadError> read_message() override {
-        auto message = co_await inner->read_message();
-        if(!message) {
-            if(message.error().kind != ReadError::Kind::Oversized) {
-                end = message.error();
-            }
-            co_return kota::outcome_error(std::move(message.error()));
-        }
-        if(auto wrong = not_an_answer(*message)) {
-            end = ReadError{.kind = ReadError::Kind::Malformed, .message = std::move(*wrong)};
-            co_return kota::outcome_error(*end);
-        }
-        co_return std::move(*message);
-    }
-
-    kota::task<void, kota::ipc::Error> write_message(std::string_view message) override {
-        auto written = co_await inner->write_message(message);
-        if(!written && !end) {
-            end = ReadError{.kind = ReadError::Kind::Closed};
-        }
-        co_await kota::or_fail(std::move(written));
-    }
-
-    kota::task<void, kota::ipc::Error> close_output() override {
-        return inner->close_output();
-    }
-
-    kota::ipc::Result<void> close() override {
-        return inner->close();
-    }
-
-private:
-    std::unique_ptr<kota::ipc::Transport> inner;
-
-    std::optional<ReadError>& end;
-};
-
 #ifndef CATTER_WINDOWS
 
 /// The words of a command line as a POSIX shell splits it, without expanding
@@ -209,9 +136,12 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kota::ipc::Transport> transport,
                              kota::process process,
                              Options options) :
     options(std::move(options)),
-    peer(kota::event_loop::current(),
-         std::make_unique<Transport>(std::move(transport), output_end)),
+    peer(kota::event_loop::current(), std::move(transport)),
     process(std::move(process)) {
+    // A handler answers catter's requests, asks its own, and writes nothing
+    // else: anything else ends the conversation, rather than leave catter
+    // waiting for answers.
+    peer.set_violation_policy(kota::ipc::ViolationPolicy::End);
     peer.on_request("analyze",
                     [](kota::ipc::JSONPeer::RequestContext&, const protocol::AnalyzeParams& params)
                         -> kota::task<protocol::AnalyzeResult, kota::ipc::Error> {
@@ -303,16 +233,16 @@ kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::string_vi
 }
 
 std::string RemoteHandler::stopped_message(std::string_view before) const {
-    if(output_end->kind == ReadError::Kind::Malformed) {
+    if(auto end = peer.ended(); end->kind == kota::ipc::ConversationEnd::Kind::Malformed) {
         return std::format("Handler `{}` wrote what the protocol does not allow: {}",
                            options.name,
-                           output_end->message);
+                           end->message);
     }
     return std::format("Handler `{}` stopped{}", options.name, before);
 }
 
 std::string RemoteHandler::failure(std::string_view what, const kota::ipc::Error& error) const {
-    if(output_end) {
+    if(peer.ended()) {
         return stopped_message(std::format(" before it answered {}", what));
     }
     if(error.code == static_cast<int>(kota::ipc::protocol::ErrorCode::RequestCancelled)) {
@@ -343,7 +273,7 @@ template <typename Params>
 void RemoteHandler::notify(std::string_view method, const Params& params) {
     if(auto sent = peer.send_notification(method, params); !sent) {
         throw cpptrace::runtime_error(
-            output_end
+            peer.ended()
                 ? stopped_message("")
                 : std::format("Handler `{}` stopped: {}", options.name, sent.error().message));
     }
