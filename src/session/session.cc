@@ -9,6 +9,7 @@ module;
 module catter;
 
 import :session.handler;
+import :session.process;
 import :session.session;
 
 namespace catter {
@@ -145,6 +146,21 @@ kota::task<void> Session::loop(Accept accept) {
         throw cpptrace::runtime_error(std::move(error_msg));
     }
     co_return;
+}
+
+kota::task<kota::process::exit_status> run_session(Handler& handler,
+                                                   const Backend& backend,
+                                                   Build build) {
+    auto started = co_await handler.on_start(std::move(build));
+    if(!started) {
+        co_return kota::process::exit_status{};
+    }
+    Session session(handler);
+    const auto start = std::chrono::steady_clock::now();
+    auto status = co_await backend.run(*started, session);
+    session.rethrow();
+    co_await handler.on_finish(result_of(status, start));
+    co_return status;
 }
 
 kota::task<kota::process::exit_status> Session::start(Start start) {

@@ -4,6 +4,8 @@ module;
 
 module catter:driver.option;
 
+import :session.handler;
+
 namespace catter::driver {
 
 struct WorkingDirectory {
@@ -102,5 +104,10 @@ struct SessionOptions {
     /// more than once keeps only its last value, so the parse collects them.
     std::vector<HandlerOption> handlers;
 };
+
+/// Runs the build `options` name, its commands decided by `builtin`, if any,
+/// then by the handlers they name: the exit code catter ends with, as the build
+/// ended; 0 when the handlers start none.
+int run_build(std::unique_ptr<Handler> builtin, const SessionOptions& options);
 
 }  // namespace catter::driver

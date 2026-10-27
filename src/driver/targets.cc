@@ -4,11 +4,9 @@ module;
 
 module catter;
 
-import :driver.app_runner;
 import :driver.cli;
 import :driver.option;
 import :feature.targets;
-import :session.process;
 
 namespace catter::driver {
 
@@ -38,8 +36,7 @@ int run(std::span<std::string> args) {
         return 0;
     }
     check_at_least<Options>(help, "--depth", options->targets.depth.as_optional(), 0);
-    return exit_like(
-        run_session(feature::make_targets(std::move(options->targets)), options->session));
+    return run_build(feature::make_targets(std::move(options->targets)), options->session);
 }
 
 [[maybe_unused]] const bool registered = register_subcommand(Subcommand::Targets,

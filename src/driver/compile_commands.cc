@@ -4,11 +4,9 @@ module;
 
 module catter;
 
-import :driver.app_runner;
 import :driver.cli;
 import :driver.option;
 import :feature.compile_commands;
-import :session.process;
 
 namespace catter::driver {
 
@@ -45,8 +43,8 @@ int run(std::span<std::string> args) {
     if(!options.has_value()) {
         return 0;
     }
-    return exit_like(run_session(feature::make_compile_commands(std::move(options->database)),
-                                 options->session));
+    return run_build(feature::make_compile_commands(std::move(options->database)),
+                                 options->session);
 }
 
 [[maybe_unused]] const bool registered = register_subcommand(Subcommand::CompileCommands,
