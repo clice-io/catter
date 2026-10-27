@@ -4,7 +4,7 @@ module;
 
 #include "support/log.h"
 #include "support/messages.h"
-#include "support/paths.h"
+#include "support/output.h"
 #include "support/program.h"
 
 module catter;
@@ -145,6 +145,60 @@ std::vector<std::string> split_words(std::string_view command) {
 
 #endif
 
+struct Address {
+    /// The addresses of the host, in the order to try them.
+    std::vector<std::string> hosts;
+
+    int port;
+};
+
+/// `host:port`, the host of an IPv6 address in brackets.
+Address parse_address(std::string_view address, bool allow_remote) {
+    auto colon = address.rfind(':');
+    int port = 0;
+    if(colon != std::string_view::npos) {
+        auto digits = address.substr(colon + 1);
+        auto [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), port);
+        if(error != std::errc() || end != digits.data() + digits.size() || port <= 0 ||
+           port > 65535) {
+            port = 0;
+        }
+    }
+    if(port == 0) {
+        throw cpptrace::runtime_error(
+            std::format("`{}` is not an address for --connect: give it as host:port", address));
+    }
+
+    auto host = address.substr(0, colon);
+    if(host.starts_with('[') && host.ends_with(']')) {
+        host = host.substr(1, host.size() - 2);
+    }
+    if(host == "localhost") {
+        // A handler listening on localhost may have taken either.
+        return {
+            .hosts = {"127.0.0.1", "::1"},
+            .port = port
+        };
+    }
+    // catter resolves no names: the host is an IPv4 or IPv6 address.
+    if(host.empty() || (host.find_first_not_of("0123456789.") != std::string_view::npos &&
+                        host.find(':') == std::string_view::npos)) {
+        throw cpptrace::runtime_error(std::format(
+            "`{}` names no IP address: give --connect the handler's IP address and port",
+            address));
+    }
+    const bool local = host == "::1" || host.starts_with("127.");
+    if(!local) {
+        if(!allow_remote) {
+            throw cpptrace::runtime_error(std::format(
+                "`{}` is not on this machine, and a handler can change and drop the build's commands: give --allow-remote to connect to it",
+                address));
+        }
+        output::warn("the handler at `{}` on another machine decides on the build", address);
+    }
+    return {.hosts = {std::string(host)}, .port = port};
+}
+
 std::string seconds(std::chrono::milliseconds time) {
     return std::format("{} s", std::chrono::duration<double>(time).count());
 }
@@ -226,9 +280,10 @@ std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Op
         new RemoteHandler(std::move(transport), std::move(spawned->proc), std::move(options)));
 }
 
-kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::vector<std::string> hosts,
-                                                                  int port,
+kota::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::string_view address,
+                                                                  bool allow_remote,
                                                                   Options options) {
+    auto [hosts, port] = parse_address(address, allow_remote);
     std::string error;
     for(const auto& host: hosts) {
         auto transport =

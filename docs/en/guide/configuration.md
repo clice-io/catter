@@ -55,13 +55,15 @@ catter keeps its logs and the socket of each running session in `$HOME/.catter` 
 :::
 
 ```
-catter-proxy [options] -- <command>
+catter-proxy <program> <argv>...
 ```
 
-| Option         | Description                       |
-| -------------- | --------------------------------- |
-| `-p <id>`      | Parent process ID for IPC session |
-| `<executable>` | Resolved executable path          |
+| Argument    | Description                                       |
+| ----------- | ------------------------------------------------- |
+| `<program>` | The program to run, as the hook found it          |
+| `<argv>`    | The program's arguments, the program's name first |
+
+It finds the session it reports the command to in its environment, in the variables below.
 
 ## Environment Variables
 
@@ -73,6 +75,7 @@ These variables are set automatically by catter at runtime. They are documented 
 | ------------------------------- | -------------------------------------- |
 | `__key_catter_proxy_path_v1`    | Path to the `catter-proxy` executable  |
 | `__key_catter_command_id_v1`    | IPC command identifier                 |
+| `__key_catter_ipc_v1`           | The pipe of the catter session         |
 | `LD_PRELOAD` (Linux)            | Injects the catter hook shared library |
 | `DYLD_INSERT_LIBRARIES` (macOS) | Injects the catter hook shared library |
 

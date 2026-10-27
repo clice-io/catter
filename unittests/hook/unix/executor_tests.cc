@@ -12,11 +12,11 @@
 #include <kota/fs/resolve.h>
 
 #include "hook/unix/executor.h"
-#include "support/config/hook_unix.h"
+#include "support/hook.h"
+#include "support/messages.h"
 #include "utils/temp_file_manager.h"
 
 namespace ct = catter::hook;
-namespace cfg = catter::config;
 
 namespace {
 
@@ -40,78 +40,87 @@ catter::TempFileManager manager("./tmp-executor");
 CapturedCall exec_call;
 CapturedCall spawn_call;
 
-ct::Session valid_session{.proxy_path = "/tmp/catter-proxy",
-                          .self_id = "7",
-                          .ipc = "/tmp/ipc-1.sock"};
+const std::string proxy = "/tmp/catter-proxy";
 
+/// Sets variable `name` of this process's environment while it lives.
 class ScopedEnv {
 public:
-    ScopedEnv(std::string key, std::string value) : m_key(std::move(key)) {
-        if(auto* old_value = std::getenv(m_key.c_str()); old_value != nullptr) {
-            m_old_value = old_value;
+    ScopedEnv(std::string name, std::string value) : name(std::move(name)) {
+        if(auto* old = std::getenv(this->name.c_str()); old != nullptr) {
+            previous = old;
         }
-        ZEXPECT(::setenv(m_key.c_str(), value.c_str(), 1) == 0);
+        ZEXPECT(::setenv(this->name.c_str(), value.c_str(), 1) == 0);
     }
 
     ~ScopedEnv() {
-        if(m_old_value.has_value()) {
-            ::setenv(m_key.c_str(), m_old_value->c_str(), 1);
+        if(previous.has_value()) {
+            ::setenv(name.c_str(), previous->c_str(), 1);
             return;
         }
-        ::unsetenv(m_key.c_str());
+        ::unsetenv(name.c_str());
     }
 
 private:
-    std::string m_key;
-    std::optional<std::string> m_old_value;
+    std::string name;
+
+    std::optional<std::string> previous;
 };
 
+/// Strings as a null-terminated array of mutable C strings, as argv and envp are.
 class MutableCStrings {
 public:
-    MutableCStrings(std::initializer_list<std::string_view> values) {
-        m_values.reserve(values.size());
-        m_ptrs.reserve(values.size() + 1);
-        for(auto value: values) {
-            m_values.emplace_back(value);
+    MutableCStrings(std::initializer_list<std::string_view> strings) :
+        strings(strings.begin(), strings.end()) {
+        for(auto& string: this->strings) {
+            pointers.push_back(string.data());
         }
-        for(auto& value: m_values) {
-            m_ptrs.push_back(value.data());
-        }
-        m_ptrs.push_back(nullptr);
+        pointers.push_back(nullptr);
     }
 
     char* const* data() noexcept {
-        return m_ptrs.data();
+        return pointers.data();
     }
 
 private:
-    std::vector<std::string> m_values;
-    std::vector<char*> m_ptrs;
+    std::vector<std::string> strings;
+
+    std::vector<char*> pointers;
 };
+
+/// The environment of a process the hook runs in, which names its session.
+MutableCStrings session_env = {
+    std::string(catter::env::PROXY) + "=" + proxy,
+    std::string(catter::env::IPC) + "=/tmp/ipc-1.sock",
+    std::string(catter::env::COMMAND_ID) + "=7",
+};
+
+/// The environment of a process that has no session.
+MutableCStrings no_session_env = {};
 
 std::vector<std::string> collect_values(char* const values[]) {
     std::vector<std::string> result;
     if(values == nullptr) {
         return result;
     }
-    for(std::size_t i = 0; values[i] != nullptr; ++i) {
+    for(std::size_t i = 0; values[i] != nullptr; i += 1) {
         result.emplace_back(values[i]);
     }
     return result;
 }
 
-bool has_env_entry(const std::vector<std::string>& envp, std::string_view key) {
-    auto prefix = std::string(key) + "=";
+/// The value of variable `name` in `envp`; none when it has none.
+std::optional<std::string> value_of(const std::vector<std::string>& envp, std::string_view name) {
+    auto prefix = std::string(name) + "=";
     for(const auto& entry: envp) {
         if(entry.starts_with(prefix)) {
-            return true;
+            return entry.substr(prefix.size());
         }
     }
-    return false;
+    return std::nullopt;
 }
 
 int fake_execve(const char* path, char* const argv[], char* const envp[]) {
-    ++exec_call.calls;
+    exec_call.calls += 1;
     exec_call.path = path == nullptr ? "" : path;
     exec_call.argv = collect_values(argv);
     exec_call.envp = collect_values(envp);
@@ -124,7 +133,7 @@ int fake_posix_spawn(pid_t*,
                      const posix_spawnattr_t*,
                      char* const argv[],
                      char* const envp[]) {
-    ++spawn_call.calls;
+    spawn_call.calls += 1;
     spawn_call.path = path == nullptr ? "" : path;
     spawn_call.argv = collect_values(argv);
     spawn_call.envp = collect_values(envp);
@@ -140,78 +149,88 @@ std::string create_executable(std::string_view name, std::string_view content = 
 }
 
 void expect_proxy_command(const CapturedCall& call,
-                          const ct::Session& session,
                           std::string_view executable,
                           std::string_view argv0) {
-    ZEXPECT(call.path == session.proxy_path);
-    ZEXPECT(call.argv.size() >= 9);
-    ZEXPECT(call.argv.at(0) == session.proxy_path);
-    ZEXPECT(call.argv.at(1) == "-p");
-    ZEXPECT(call.argv.at(2) == session.self_id);
-    ZEXPECT(call.argv.at(3) == "--exec");
-    ZEXPECT(call.argv.at(4) == executable);
-    ZEXPECT(call.argv.at(5) == "--ipc");
-    ZEXPECT(call.argv.at(6) == session.ipc);
-    ZEXPECT(call.argv.at(7) == "--");
-    ZEXPECT(call.argv.at(8) == argv0);
+    ZEXPECT(call.path == proxy);
+    ZEXPECT(call.argv.size() >= 3);
+    ZEXPECT(call.argv.at(0) == proxy);
+    ZEXPECT(call.argv.at(1) == executable);
+    ZEXPECT(call.argv.at(2) == argv0);
 }
 
 ZEST_SUITE(executor) {
 // Every worker process removes ./tmp-executor when it exits, so these must run alone.
 ZEST_SUITE_ATTRS(serial = true);
 
-ZEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
+ZEST_CASE(execve_starts_the_proxy_with_the_session_and_without_the_hook) {
     exec_call.reset(42);
     spawn_call.reset();
 
     auto executable = create_executable("execve-tool");
     MutableCStrings argv = {"execve-tool", "-c", "main.cc"};
 
-    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=99";
-    std::string proxy_path = std::string(cfg::KEY_CATTER_PROXY_PATH) + "=/tmp/ignored-proxy";
+    std::string command_id = std::string(catter::env::COMMAND_ID) + "=99";
+    std::string proxy_path = std::string(catter::env::PROXY) + "=/tmp/ignored-proxy";
     std::string preload =
-        std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so:/tmp/" + cfg::HOOK_LIB_NAME;
-    std::string lang = "LANG=C";
-    MutableCStrings envp = {command_id, proxy_path, preload, lang};
+        std::string(catter::hook::PRELOAD) + "=/tmp/libkeep.so:/tmp/" + catter::hook::LIBRARY;
+    MutableCStrings envp = {command_id, proxy_path, preload, "LANG=C"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
 
     ZEXPECT(result == 42);
     ZEXPECT(exec_call.calls == 1);
-    expect_proxy_command(exec_call, valid_session, executable, "execve-tool");
-    ZEXPECT(exec_call.argv.at(9) == "-c");
-    ZEXPECT(exec_call.argv.at(10) == "main.cc");
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
-    ZEXPECT(has_env_entry(exec_call.envp, "LANG"));
-    ZEXPECT(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
-    ZEXPECT((exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
-             exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so"));
+    expect_proxy_command(exec_call, executable, "execve-tool");
+    ZEXPECT(exec_call.argv.at(3) == "-c");
+    ZEXPECT(exec_call.argv.at(4) == "main.cc");
+    ZEXPECT(value_of(exec_call.envp, catter::env::COMMAND_ID) == "7");
+    ZEXPECT(value_of(exec_call.envp, catter::env::IPC) == "/tmp/ipc-1.sock");
+    ZEXPECT(!value_of(exec_call.envp, catter::env::PROXY));
+    ZEXPECT(value_of(exec_call.envp, "LANG") == "C");
+    ZEXPECT(value_of(exec_call.envp, catter::hook::PRELOAD) == "/tmp/libkeep.so");
 }
 
-ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
+ZEST_CASE(execvp_resolves_with_the_process_environment) {
     exec_call.reset(51);
 
     auto executable = create_executable("path-tool");
     auto search_path = std::string(kota::fs::path::parent(executable));
     ScopedEnv path_env("PATH", search_path);
-    ScopedEnv command_id(std::string(cfg::KEY_CATTER_COMMAND_ID), "11");
+    ScopedEnv command_id(std::string(catter::env::COMMAND_ID), "11");
 
     MutableCStrings argv = {"path-tool"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execvp("path-tool", argv.data());
 
     ZEXPECT(result == 51);
     ZEXPECT(exec_call.calls == 1);
-    expect_proxy_command(exec_call, valid_session, executable, "path-tool");
-    ZEXPECT(has_env_entry(exec_call.envp, "PATH"));
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    expect_proxy_command(exec_call, executable, "path-tool");
+    ZEXPECT(value_of(exec_call.envp, "PATH") == search_path);
+    ZEXPECT(value_of(exec_call.envp, catter::env::COMMAND_ID) == "7");
+}
+
+ZEST_CASE(a_program_s_own_environment_names_the_session_to_the_proxy) {
+    exec_call.reset(55);
+
+    auto executable = create_executable("scrubbed-tool");
+    MutableCStrings argv = {"scrubbed-tool"};
+    MutableCStrings envp = {"PATH=/usr/bin"};
+
+    ct::Executor executor;
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
+
+    auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
+
+    ZEXPECT(result == 55);
+    expect_proxy_command(exec_call, executable, "scrubbed-tool");
+    ZEXPECT(value_of(exec_call.envp, catter::env::IPC) == "/tmp/ipc-1.sock");
+    ZEXPECT(value_of(exec_call.envp, catter::env::COMMAND_ID) == "7");
+    ZEXPECT(value_of(exec_call.envp, "PATH") == "/usr/bin");
 }
 
 ZEST_CASE(execvP_looks_in_the_search_path_it_is_given) {
@@ -223,13 +242,13 @@ ZEST_CASE(execvP_looks_in_the_search_path_it_is_given) {
     MutableCStrings envp = {"LANG=C"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execvP("search-tool", search_path.c_str(), argv.data(), envp.data());
 
     ZEXPECT(result == 52);
     ZEXPECT(exec_call.calls == 1);
-    expect_proxy_command(exec_call, valid_session, executable, "search-tool");
+    expect_proxy_command(exec_call, executable, "search-tool");
 }
 
 ZEST_CASE(execvP_fails_with_enoent_for_a_program_found_nowhere) {
@@ -237,7 +256,7 @@ ZEST_CASE(execvP_fails_with_enoent_for_a_program_found_nowhere) {
     MutableCStrings argv = {"missing-tool"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     errno = 0;
     auto result = executor.execvP("missing-tool", "/definitely/missing", argv.data(), nullptr);
@@ -247,14 +266,51 @@ ZEST_CASE(execvP_fails_with_enoent_for_a_program_found_nowhere) {
     ZEXPECT(exec_call.calls == 0);
 }
 
-ZEST_CASE(execve_invalid_session_still_fails_before_fallback_when_target_is_missing) {
+ZEST_CASE(execve_without_a_proxy_runs_the_program_itself) {
+    exec_call.reset(61);
+
+    auto executable = create_executable("lone-tool");
+    MutableCStrings argv = {"lone-tool", "-v"};
+    MutableCStrings envp = {"LANG=C"};
+
+    ct::Executor executor;
+    executor.init(no_session_env.data(), fake_execve, fake_posix_spawn);
+
+    auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
+
+    ZEXPECT(result == 61);
+    ZEXPECT(exec_call.path == executable);
+    ZEXPECT((exec_call.argv == std::vector<std::string>{"lone-tool", "-v"}));
+    ZEXPECT(exec_call.envp == std::vector<std::string>{"LANG=C"});
+}
+
+ZEST_CASE(posix_spawn_without_a_proxy_starts_the_program_itself) {
+    spawn_call.reset(62);
+
+    auto executable = create_executable("lone-spawn-tool");
+    MutableCStrings argv = {"lone-spawn-tool"};
+    MutableCStrings envp = {"LANG=C"};
+
+    ct::Executor executor;
+    executor.init(no_session_env.data(), fake_execve, fake_posix_spawn);
+
+    pid_t pid = 0;
+    auto result =
+        executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), envp.data());
+
+    ZEXPECT(result == 62);
+    ZEXPECT(spawn_call.path == executable);
+    ZEXPECT(spawn_call.argv == std::vector<std::string>{"lone-spawn-tool"});
+    ZEXPECT(spawn_call.envp == std::vector<std::string>{"LANG=C"});
+}
+
+ZEST_CASE(execve_without_a_proxy_fails_for_a_missing_program) {
     exec_call.reset(60);
 
-    ct::Session invalid_session{};
     MutableCStrings argv = {"missing-tool"};
 
     ct::Executor executor;
-    executor.init(invalid_session, fake_execve, fake_posix_spawn);
+    executor.init(no_session_env.data(), fake_execve, fake_posix_spawn);
 
     errno = 0;
     auto result = executor.execve("/definitely/missing/tool", argv.data(), nullptr);
@@ -269,7 +325,7 @@ ZEST_CASE(exec_boundary_maps_payload_errors_to_errno) {
     MutableCStrings argv = {"tool"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     errno = 0;
     auto result = executor.execve(nullptr, argv.data(), nullptr);
@@ -286,7 +342,7 @@ ZEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
     MutableCStrings argv = {"spawn-tool"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     pid_t pid = 0;
     auto result =
@@ -294,7 +350,7 @@ ZEST_CASE(posix_spawn_builds_proxy_command_and_returns_spawn_result) {
 
     ZEXPECT(result == 17);
     ZEXPECT(spawn_call.calls == 1);
-    expect_proxy_command(spawn_call, valid_session, executable, "spawn-tool");
+    expect_proxy_command(spawn_call, executable, "spawn-tool");
 }
 
 ZEST_CASE(spawn_boundary_returns_error_code) {
@@ -302,7 +358,7 @@ ZEST_CASE(spawn_boundary_returns_error_code) {
     MutableCStrings argv = {"tool"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     pid_t pid = 0;
     errno = 0;
@@ -321,7 +377,7 @@ ZEST_CASE(execve_leaves_a_file_of_no_executable_format_to_the_system) {
     MutableCStrings envp = {"LANG=C"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execve(executable.c_str(), argv.data(), envp.data());
 
@@ -339,12 +395,12 @@ ZEST_CASE(execvp_runs_a_file_of_no_executable_format_through_the_proxy) {
     MutableCStrings argv = {"shell-script"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execvp("shell-script", argv.data());
 
     ZEXPECT(result == 53);
-    expect_proxy_command(exec_call, valid_session, executable, "shell-script");
+    expect_proxy_command(exec_call, executable, "shell-script");
 }
 
 ZEST_CASE(execvp_runs_a_script_that_names_no_interpreter_through_the_proxy) {
@@ -355,12 +411,12 @@ ZEST_CASE(execvp_runs_a_script_that_names_no_interpreter_through_the_proxy) {
     MutableCStrings argv = {"empty-shebang"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     auto result = executor.execvp("empty-shebang", argv.data());
 
     ZEXPECT(result == 54);
-    expect_proxy_command(exec_call, valid_session, executable, "empty-shebang");
+    expect_proxy_command(exec_call, executable, "empty-shebang");
 }
 
 ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) {
@@ -370,7 +426,7 @@ ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) 
     MutableCStrings argv = {"lost-interpreter"};
 
     ct::Executor executor;
-    executor.init(valid_session, fake_execve, fake_posix_spawn);
+    executor.init(session_env.data(), fake_execve, fake_posix_spawn);
 
     pid_t pid = 0;
     auto result =

@@ -4,29 +4,9 @@ module;
 
 module catter:capture.backend;
 
-import :session.handler;
 import :session.session;
 
 namespace catter {
-
-/// A way to capture a build: it starts the build, and reports each command the
-/// build starts to the session.
-class Backend {
-public:
-    virtual ~Backend() = default;
-
-    /// Its name, which the handlers are told.
-    virtual std::string_view name() const noexcept = 0;
-
-    /// Whether the commands it reports wait for the handlers' decisions and
-    /// run as they decide: a backend that only observes the build hears of
-    /// each command once it runs.
-    virtual bool follows_decisions() const noexcept = 0;
-
-    /// Runs `build`, its commands reported to `session`: how the build ended.
-    virtual kota::task<kota::process::exit_status> run(const Build& build,
-                                                       Session& session) const = 0;
-};
 
 /// The backends that run a build, which `--capture` names: the first is the
 /// default.

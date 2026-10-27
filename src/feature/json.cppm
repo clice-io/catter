@@ -12,4 +12,8 @@ using JSON = kota::codec::dyn::Value;
 /// that is not UTF-8 as a decoder reads it, each ill-formed sequence as U+FFFD.
 std::string to_json(const JSON& value);
 
+/// `text` as a JSON string, quoted; text that is not UTF-8 as a decoder reads it, each ill-formed
+/// sequence as U+FFFD.
+std::string quote(std::string_view text);
+
 }  // namespace catter::feature

@@ -17,13 +17,9 @@ namespace catter {
 /// ended.
 class Session {
 public:
-    using Start = kota::function<kota::task<kota::process::exit_status>()>;
-    using Accept = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
-
     explicit Session(Handler& handler) : handler(handler) {}
 
-    /// The id of a new command: each client of the pipe takes one, and on
-    /// Windows the build command, which catter decides itself.
+    /// The id of a new command.
     data::ipcid_t new_id() noexcept;
 
     /// What the handlers decide for command `id`, which `parent` started, none
@@ -48,24 +44,38 @@ public:
     /// Throws what ended the session, if anything did.
     void rethrow() const;
 
-    /// Runs the build with `start` and, while it runs, serves each client that
-    /// connects to the pipe `pipe_name`, which the build reports its commands
-    /// to, with `accept`, as a new command: how the build ended.
-    kota::task<kota::process::exit_status> serve(std::string pipe_name, Start start, Accept accept);
-
-private:
-    kota::task<void> loop(Accept accept);
-
-    kota::task<kota::process::exit_status> start(Start start);
-
 private:
     Handler& handler;
 
     std::exception_ptr error;
 
-    std::unique_ptr<kota::acceptor<kota::pipe>> acc = nullptr;
-
     data::ipcid_t last_id = 0;
 };
+
+/// A way to capture a build: it starts the build, and reports each command the
+/// build starts to the session.
+class Backend {
+public:
+    virtual ~Backend() = default;
+
+    /// Its name, which the handlers are told.
+    virtual std::string_view name() const noexcept = 0;
+
+    /// Whether the commands it reports wait for the handlers' decisions and
+    /// run as they decide: a backend that only observes the build hears of
+    /// each command once it runs.
+    virtual bool follows_decisions() const noexcept = 0;
+
+    /// Runs `build`, its commands reported to `session`: how the build ended.
+    virtual kota::task<kota::process::exit_status> run(const Build& build,
+                                                       Session& session) const = 0;
+};
+
+/// Runs the session of `handler` over `backend`: the build `on_start` gives,
+/// if any, its commands decided by `handler`, and then its end. How the build
+/// ended; one that did not start ended with 0.
+kota::task<kota::process::exit_status> run_session(Handler& handler,
+                                                   const Backend& backend,
+                                                   Build build);
 
 }  // namespace catter

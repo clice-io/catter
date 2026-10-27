@@ -55,8 +55,8 @@ class Handler {
 public:
     virtual ~Handler() = default;
 
-    /// The build to run, changed or as it is, or none.
-    virtual kota::task<std::optional<Build>> on_start(Build build) = 0;
+    /// The build to run, changed or as it is, or none; as it is by default.
+    virtual kota::task<std::optional<Build>> on_start(Build build);
 
     /// `parent` is the command that started this one, none for the build
     /// command.
@@ -69,7 +69,8 @@ public:
                                   std::optional<data::ipcid_t> parent,
                                   std::string message) = 0;
 
-    virtual kota::task<> on_exit(data::ipcid_t id, data::process_result result) = 0;
+    /// Nothing by default.
+    virtual kota::task<> on_exit(data::ipcid_t id, data::process_result result);
 
     virtual kota::task<> on_finish(data::process_result result) = 0;
 };

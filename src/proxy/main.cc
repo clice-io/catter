@@ -2,42 +2,35 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/catter-proxy.h"
-#include "support/config/ipc.h"
-#include "support/config/session.h"
 #include "support/guard.h"
 #include "support/log.h"
 #include "support/messages.h"
-#include "support/output.h"
 #include "support/paths.h"
-#include "support/program.h"
 
 module catter;
 
 #ifndef CATTER_WINDOWS
-import :capture.inject.hook;
+import :capture.inject;
 #endif
-import :proxy.ipc;
-import :proxy.option;
 import :session.process;
 
 using namespace catter;
 
 namespace {
-using catter::data::action;
+
 using exit_status = kota::process::exit_status;
 
 /// A command the proxy stands in for, and the session it reports it to.
 struct Proxied {
-    /// The session's pipe.
+    /// The session's pipe; empty when there is none.
     std::string pipe;
 
-    /// The command that started this one, 0 for the build command.
-    data::ipcid_t parent = 0;
+    /// The command that started this one, none for the build command.
+    std::optional<data::ipcid_t> parent;
 
-    /// The command as it runs here. Its working directory is empty when it
-    /// cannot be read, as when the build removed it: the program starts in it
-    /// all the same.
+    /// The command as it runs here, without catter's variables. Its working
+    /// directory is empty when it cannot be read, as when the build removed
+    /// it: the program starts in it all the same.
     data::command command;
 
     /// The options that run the command as catter decided, as command `id`.
@@ -48,43 +41,6 @@ struct Proxied {
     std::optional<std::string> error;
 };
 
-kota::task<exit_status> run(data::action act,
-                            data::ipcid_t id,
-                            const Proxied& proxied,
-                            [[maybe_unused]] proxy::Peer& peer) {
-    using catter::data::action;
-
-    RunOptions stand_in{.stand_in = true};
-#ifdef CATTER_MAC
-    stand_in.started = [&](int pid) {
-        peer.started(pid);
-    };
-    auto exited = make_guard([&]() noexcept { peer.program.reset(); });
-#endif
-    switch(act.type) {
-        case action::RUN: {
-            co_return co_await run_process(proxied.launch(std::move(act.cmd), id),
-                                           std::move(stand_in));
-        }
-        case action::DROP: {
-            co_return exit_status{.code = 0};
-        }
-        case action::FAIL: {
-            co_return exit_status{.code = 1};
-        }
-    }
-    std::unreachable();
-}
-
-/// This process's environment, as a command carries it.
-std::vector<std::string> environment() {
-    std::vector<std::string> env;
-    for(const auto& [name, value]: kota::sys::environment()) {
-        env.push_back(std::format("{}={}", name, value));
-    }
-    return env;
-}
-
 /// This process's working directory; empty when it cannot be read.
 std::string working_directory() {
     std::string cwd;
@@ -94,59 +50,76 @@ std::string working_directory() {
     return cwd;
 }
 
-#ifndef CATTER_WINDOWS
-/// The command the hook started the proxy for, which runs with the hook, or
-/// what the hook found wrong.
-Proxied hooked(const catter::proxy::ProxyOption& opt) {
-    if(opt.error_msg.has_value() && !opt.args.has_value()) {
-        return {.pipe = *opt.ipc, .parent = *opt.parent_id, .error = *opt.error_msg};
-    }
-    if(!opt.args.has_value()) {
-        throw cpptrace::runtime_error("missing command arguments after --");
-    }
+/// Whether `entry`, `name=value`, is of variable `name`.
+bool is_entry_of(std::string_view entry, std::string_view name) {
+    return entry.size() > name.size() && entry[name.size()] == '=' &&
+           kota::sys::env_name_equal(entry.substr(0, name.size()), name);
+}
 
-    data::command cmd = {
+/// The value of variable `name` in `env`.
+std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
+    auto entry =
+        std::ranges::find_if(env, [&](std::string_view entry) { return is_entry_of(entry, name); });
+    if(entry == env.end()) {
+        return std::nullopt;
+    }
+    return std::string_view(*entry).substr(name.size() + 1);
+}
+
+/// The value of variable `name` in `env`, which it leaves out of `env`.
+std::optional<std::string> take_variable(std::vector<std::string>& env, std::string_view name) {
+    auto value =
+        variable(env, name).transform([](std::string_view value) { return std::string(value); });
+    std::erase_if(env, [&](std::string_view entry) { return is_entry_of(entry, name); });
+    return value;
+}
+
+/// catter's variables in the environment `env` of a program of the build,
+/// which name the session it reports to, taken out of `env`: they reach a
+/// command only as catter-proxy starts it.
+struct Variables {
+    std::string pipe;
+
+    std::optional<data::ipcid_t> parent;
+
+    /// The directory of the wrapper backend's shims, when the build runs under
+    /// it.
+    std::optional<std::string> shims;
+
+    explicit Variables(std::vector<std::string>& env) :
+        pipe(take_variable(env, env::IPC).value_or("")), shims(take_variable(env, env::SHIMS)) {
+        if(auto id = take_variable(env, env::COMMAND_ID)) {
+            data::ipcid_t value = 0;
+            if(std::from_chars(id->data(), id->data() + id->size(), value).ec == std::errc()) {
+                parent = value;
+            }
+        }
+        take_variable(env, env::PROXY);
+    }
+};
+
+#ifndef CATTER_WINDOWS
+/// The command the hook, or catter for the build command, started catter-proxy
+/// for, `catter-proxy <program> <argv>...`, which runs with the hook.
+Proxied hooked(std::span<const std::string> argv) {
+    data::command cmd{
         .cwd = working_directory(),
-        .args = *opt.args,
+        .executable = argv[1],
+        .args = {argv.begin() + 2, argv.end()},
         .env = environment(),
     };
-    cmd.executable = opt.exec.has_value() ? *opt.exec : resolve_program(cmd.args.at(0));
+    Variables variables(cmd.env);
     return {
-        .pipe = *opt.ipc,
-        .parent = *opt.parent_id,
+        .pipe = variables.pipe,
+        .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [pipe = *opt.ipc](data::command command, data::ipcid_t id) {
+            [pipe = variables.pipe](data::command command, data::ipcid_t id) {
                 return hook_options(std::move(command), id, pipe);
             },
     };
 }
 #endif
-
-/// The value of variable `name` in `env`, entries of which are `name=value`.
-std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
-    for(std::string_view entry: env) {
-        if(entry.size() > name.size() && entry[name.size()] == '=' &&
-           kota::sys::env_name_equal(entry.substr(0, name.size()), name)) {
-            return entry.substr(name.size() + 1);
-        }
-    }
-    return std::nullopt;
-}
-
-/// Sets variable `name` of `env` to `value`.
-void set_variable(std::vector<std::string>& env, std::string_view name, std::string_view value) {
-    auto entry = std::ranges::find_if(env, [&](std::string_view entry) {
-        return entry.size() > name.size() && entry[name.size()] == '=' &&
-               kota::sys::env_name_equal(entry.substr(0, name.size()), name);
-    });
-    auto assignment = std::format("{}={}", name, value);
-    if(entry == env.end()) {
-        env.push_back(std::move(assignment));
-    } else {
-        *entry = std::move(assignment);
-    }
-}
 
 bool has_separator(std::string_view path) {
     return std::ranges::any_of(path, [](char c) { return kota::fs::path::is_separator(c); });
@@ -184,7 +157,7 @@ std::optional<std::string> resolve_past(std::string_view program,
         }
         name = kota::fs::path::filename(program);
         std::string named(kota::fs::path::parent(program));
-        kota::fs::path::push(named, config::SHIM_DIRECTORY_FILE);
+        kota::fs::path::push(named, SHIM_DIRECTORY_FILE);
         if(std::string directory; !kota::fs::read_file(directory, named)) {
             kota::fs::path::push(directory, name);
             return directory;
@@ -210,13 +183,8 @@ Proxied wrapped(std::string_view self,
                 std::vector<std::string> args,
                 bool launcher) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
-    std::string pipe(variable(cmd.env, config::KEY_CATTER_IPC).value_or(""));
-    std::string shims(
-        variable(cmd.env, config::KEY_CATTER_SHIMS).value_or(kota::fs::path::parent(self)));
-    data::ipcid_t parent = 0;
-    if(auto id = variable(cmd.env, config::KEY_CATTER_COMMAND_ID)) {
-        std::from_chars(id->data(), id->data() + id->size(), parent);
-    }
+    Variables variables(cmd.env);
+    const std::string shims = variables.shims.value_or(std::string(kota::fs::path::parent(self)));
     std::optional<std::string> path(variable(cmd.env, "PATH"));
 
     auto real = resolve_past(program, shims, path.value_or(""));
@@ -230,8 +198,8 @@ Proxied wrapped(std::string_view self,
     }
     if(!real) {
         return {
-            .pipe = std::move(pipe),
-            .parent = parent,
+            .pipe = variables.pipe,
+            .parent = variables.parent,
             .error = std::format("`{}` is found nowhere past catter's shims", program),
         };
     }
@@ -240,188 +208,218 @@ Proxied wrapped(std::string_view self,
     if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
-    const bool build = launcher && parent == 0 && !pipe.empty();
+    const bool build = launcher && !variables.parent && !variables.pipe.empty();
     if(!build && path) {
         std::string without;
         // Entries PATH was split into join back.
         [[maybe_unused]] auto error = kota::sys::join_paths(without, past_shims(*path, shims));
         assert(!error);
-        set_variable(cmd.env, "PATH", without);
+        std::ranges::replace_if(
+            cmd.env,
+            [](std::string_view entry) { return is_entry_of(entry, "PATH"); },
+            "PATH=" + without);
     }
     cmd.executable = std::move(*real);
     cmd.args = std::move(args);
     return {
-        .pipe = std::move(pipe),
-        .parent = parent,
+        .pipe = variables.pipe,
+        .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [](data::command command, data::ipcid_t id) {
-                set_variable(command.env, config::KEY_CATTER_COMMAND_ID, std::to_string(id));
+            [variables](data::command command, data::ipcid_t id) {
+                command.env.push_back(std::format("{}={}", env::IPC, variables.pipe));
+                if(variables.shims) {
+                    command.env.push_back(std::format("{}={}", env::SHIMS, *variables.shims));
+                }
+                command.env.push_back(std::format("{}={}", env::COMMAND_ID, id));
                 return process_options(command);
             },
     };
 }
 
-std::string format_args(std::span<const std::string> argv) {
-    std::string result;
-    for(const auto& arg: argv) {
-        if(!result.empty()) {
-            result += ' ';
+/// The connection to the session.
+struct Connection {
+    kota::ipc::BincodePeer peer;
+
+#ifdef CATTER_MAC
+    /// The program the proxy stands in for, from its start until its exit.
+    std::optional<std::int64_t> program;
+#endif
+
+    /// Sends request `Type`: its result. Throws when the session fails it, or
+    /// is gone.
+    template <ipc::RequestType Type>
+    kota::task<typename ipc::Request<Type>::Result>
+        request(const typename ipc::Request<Type>::Params& params) {
+        using Request = ipc::Request<Type>;
+        auto result = co_await peer.send_request<typename Request::Result>(Request::method, params);
+        if(!result) {
+            throw cpptrace::runtime_error(
+                std::format("IPC request failed: {}", result.error().message));
         }
-        result += arg;
+        co_return std::move(*result);
     }
-    return result;
+
+    /// Tells the session that catter cannot capture the command, as `message`
+    /// says; it is lost when the session is gone.
+    kota::task<> report_error(std::optional<data::ipcid_t> parent, std::string message) {
+        try {
+            co_await request<ipc::RequestType::REPORT_ERROR>(
+                {.parent = parent, .message = std::move(message)});
+        } catch(const std::exception& ex) {
+            LOG_WARN("Failed to report an uncaptured command: {}", ex.what());
+        }
+    }
+};
+
+/// Runs `command` as `action` says, as command `id`: how it ended.
+kota::task<exit_status> run(data::action action,
+                            data::ipcid_t id,
+                            const Proxied& proxied,
+                            [[maybe_unused]] Connection& connection) {
+    RunOptions stand_in{.stand_in = true};
+#ifdef CATTER_MAC
+    stand_in.started = [&](int pid) {
+        connection.program = pid;
+        using Started = ipc::Request<ipc::RequestType::STARTED>;
+        // The program runs all the same.
+        [[maybe_unused]] auto sent =
+            connection.peer.send_notification(Started::method, Started::Params{pid});
+    };
+    auto exited = make_guard([&]() noexcept { connection.program.reset(); });
+#endif
+    switch(action.type) {
+        case data::action::RUN: {
+            co_return co_await run_process(proxied.launch(std::move(action.cmd), id),
+                                           std::move(stand_in));
+        }
+        case data::action::DROP: {
+            co_return exit_status{.code = 0};
+        }
+        case data::action::FAIL: {
+            co_return exit_status{.code = 1};
+        }
+    }
+    std::unreachable();
 }
 
-kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
-                                             const Proxied& proxied,
-                                             proxy::Peer& peer) noexcept {
-    // ensure peer is closed when proxy_main exits, otherwise the peer might still be
-    // running and trying to access resources that have been cleaned up after proxy_main
-    // exits.
-    auto guard = make_guard([&]() noexcept {
-        auto err = peer.close();
-        if(err.has_error()) {
-            LOG_ERROR("Failed to close IPC peer: {}", err.error().message);
+/// Reports the command of `proxied` to its session, and runs it as decided.
+kota::task<exit_status> report(const Proxied& proxied, Connection& connection) noexcept {
+    auto close = make_guard([&]() noexcept {
+        if(auto closed = connection.peer.close(); !closed) {
+            LOG_ERROR("Failed to close the connection to the session: {}", closed.error().message);
         }
     });
 
-    std::string err;
-
+    const auto& command = proxied.command;
+    const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
+    std::string error;
     try {
         if(proxied.error) {
-            co_await peer.report_error(proxied.parent, *proxied.error);
+            co_await connection.report_error(proxied.parent, *proxied.error);
             co_return exit_status{.code = -1};
         }
-        const auto& cmd = proxied.command;
-        if(cmd.cwd.empty()) {
-            co_await peer.report_error(
+        if(command.cwd.empty()) {
+            co_await connection.report_error(
                 proxied.parent,
                 std::format(
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
-                    format_args(cmd.args)));
-            co_return co_await run_process(process_options(cmd), {.stand_in = true});
+                    line));
+            co_return co_await run_process(process_options(command), {.stand_in = true});
         }
 
-        auto id = co_await peer.create(proxied.parent);
-
-        auto received_act = co_await peer.make_decision(cmd);
-
+        auto [id, action] = co_await connection.request<ipc::RequestType::MAKE_DECISION>(
+            {.parent = proxied.parent, .command = command});
         const auto start = std::chrono::steady_clock::now();
-        auto status = co_await run(received_act, id, proxied, peer);
+        auto status = co_await run(std::move(action), id, proxied, connection);
 
         // A command can outlive its session (a build server): its result
         // stands, though catter is gone.
         try {
-            co_await peer.finish(result_of(status, start));
+            co_await connection.request<ipc::RequestType::FINISH>(result_of(status, start));
         } catch(const std::exception& ex) {
             LOG_WARN("Command {} ended after its session: {}", id, ex.what());
         }
-
         co_return status;
     } catch(const cpptrace::exception& ex) {
-        err = std::format("{}\n", ex.message());
+        error = ex.message();
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
     } catch(const std::exception& ex) {
-        err = std::format("{}\n", ex.what());
-    } catch(...) {
-        err = "Unknown fatal error.\n";
+        error = ex.what();
     }
 
-    auto msg = std::format("Run `{}` failed:\n{}", format_args(argv), err);
-
-    LOG_ERROR(msg);
-    co_await peer.report_error(proxied.parent, msg);
-
+    co_await connection.report_error(proxied.parent,
+                                     std::format("Run `{}` failed:\n{}\n", line, error));
     co_return exit_status{.code = -1};
-};
-
-#ifdef CATTER_MAC
-/// Runs the connection to catter. macOS ends no child with its parent: the
-/// build command ends here when catter ends while it runs, and with catter its
-/// connection.
-kota::task<> run_connection(proxy::Peer& peer, bool build_command) {
-    co_await peer.run();
-    if(build_command && peer.program) {
-        ::kill(static_cast<pid_t>(*peer.program), SIGKILL);
-    }
 }
-#endif
 
 /// Stands in for the command of `proxied`: reports it to its session, and runs
 /// it as decided, or as it is when there is no session.
-kota::task<exit_status> proxy_main(std::span<const std::string> argv,
-                                   const Proxied& proxied) noexcept {
-    auto& current = kota::event_loop::current();
-    auto ret = co_await kota::pipe::connect(proxied.pipe, kota::pipe::options(), current);
-    if(!ret) {
+kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
+    auto& loop = kota::event_loop::current();
+    auto pipe = co_await kota::pipe::connect(proxied.pipe, kota::pipe::options(), loop);
+    if(!pipe) {
         // A build server an earlier session started (an sccache server, a
         // Gradle daemon) outlives that session's pipe: its commands run as
         // they would without catter.
-        LOG_WARN("Failed to connect to IPC pipe: {}, error: {}; running the command uncaptured",
+        LOG_WARN("Failed to connect to the session at `{}`: {}; the command runs uncaptured",
                  proxied.pipe,
-                 ret.error().message());
+                 pipe.error().message());
         if(proxied.error) {
             co_return exit_status{.code = -1};
         }
         try {
             co_return co_await run_process(process_options(proxied.command), {.stand_in = true});
         } catch(const std::exception& ex) {
-            LOG_ERROR("Run `{}` failed: {}", format_args(argv), ex.what());
+            LOG_ERROR("{}", ex.what());
             co_return exit_status{.code = -1};
         }
     }
-    auto peer = proxy::Peer{
-        kota::ipc::BincodePeer{current,
-                               std::make_unique<kota::ipc::StreamTransport>(std::move(*ret))}
+    Connection connection{
+        .peer =
+            kota::ipc::BincodePeer(loop,
+                                   std::make_unique<kota::ipc::StreamTransport>(std::move(*pipe))),
     };
 
+    auto run_connection = [](Connection& connection,
+                             [[maybe_unused]] bool build_command) -> kota::task<> {
+        co_await connection.peer.run();
 #ifdef CATTER_MAC
-    // The build command's proxy is started with parent 0.
-    auto connection = run_connection(peer, proxied.parent == 0);
-#else
-    auto connection = peer.run();
+        // macOS ends no child with its parent: the build command ends here
+        // when catter ends while it runs, and with catter its connection.
+        if(build_command && connection.program) {
+            ::kill(static_cast<pid_t>(*connection.program), SIGKILL);
+        }
 #endif
+    }(connection, !proxied.parent);
     auto [_, status] =
-        co_await kota::when_all{std::move(connection), handle_proxy_request(argv, proxied, peer)};
-
+        co_await kota::when_all{std::move(run_connection), report(proxied, connection)};
     co_return status;
 }
 
-void init_logger(std::string_view pipe) {
+int run_proxied(const Proxied& proxied) {
     // No session, no data directory of its.
-    if(pipe.empty()) {
+    if(proxied.pipe.empty()) {
         log::mute_logger();
-        return;
+    } else {
+        try {
+            log::init_logger("catter-proxy", data_path(proxied.pipe, "log/catter-proxy.log"));
+        } catch(const std::exception&) {
+            log::mute_logger();
+        }
     }
-    try {
-#ifdef CATTER_WINDOWS
-        // The session's pipe is a named pipe, in no directory.
-        auto path = data_path(config::PROXY_LOG_PATH);
-#else
-        auto path = config::session_data_path(pipe, config::PROXY_LOG_PATH);
-#endif
-        log::init_logger("catter-proxy.log", path, false);
-    } catch(const std::exception&) {
-        log::mute_logger();
-    }
-}
-
-int run_proxied(std::span<const std::string> argv, const Proxied& proxied) {
-    init_logger(proxied.pipe);
-    auto [status] = kota::run(proxy_main(argv, proxied));
+    auto [status] = kota::run(stand_in(proxied));
     return status.has_value() ? exit_like(*status) : -1;
 }
 
-// we do not output in proxy, it must be invoked by main program.
-// usage: catter-proxy -p <parent ipc id> [--exec <exe path>] -- <args...>
-// TODO: act as a fake compiler
+/// catter-proxy stands in for the commands of the build: by its own name for
+/// the program the hook was asked to start, and among the wrapper backend's
+/// shims as the launcher or as the program a shim is named after.
 int run(std::span<const std::string> argv) {
     hold_closed_streams();
 
-    // Among the wrapper backend's shims, catter-proxy is the launcher, or a
-    // shim by the name of the program it stands in for: the link it was
-    // started by, which kota::sys::executable_path would resolve.
+    // The link this program was started by, which kota::sys::executable_path
+    // would resolve.
     std::string self;
     kota::sys::started_path(self);
 #ifdef CATTER_WINDOWS
@@ -431,38 +429,21 @@ int run(std::span<const std::string> argv) {
 #else
     const auto name = kota::fs::path::filename(self);
 #endif
-    if(name == config::LAUNCHER_NAME) {
+#ifndef CATTER_WINDOWS
+    if(name == PROXY) {
+        if(argv.size() < 2) {
+            LOG_ERROR("catter-proxy runs a program for the hook: catter-proxy <program> <argv>...");
+            return 1;
+        }
+        return run_proxied(hooked(argv));
+    }
+#endif
+    if(name == LAUNCHER) {
         std::vector<std::string> args(argv.begin() + 1, argv.end());
         std::string program = args.front();
-        return run_proxied(argv, wrapped(self, program, std::move(args), true));
+        return run_proxied(wrapped(self, program, std::move(args), true));
     }
-    if(name != config::PROXY_EXE_NAME) {
-        return run_proxied(
-            argv,
-            wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end()), false));
-    }
-
-#ifdef CATTER_WINDOWS
-    // The hook on Windows starts each program itself.
-    return -1;
-#else
-
-    kota::deco::cli::Command<catter::proxy::Option> cli(
-        "Catter Proxy, the tool for receive hook info and send it to catter.");
-
-    int ret = 0;
-    std::vector<std::string> args(argv.begin() + 1, argv.end());
-    cli.match(catter::proxy::Option::Cate::help,
-              [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
-        .match(catter::proxy::Option::Cate::proxy,
-               [&](const auto& opt) { ret = run_proxied(argv, hooked(opt.proxy_opt)); })
-        .on_error([&](const kota::deco::cli::ParseError& err) {
-            std::cerr << err.message << std::endl;
-            ret = -1;
-        })
-        .execute(args);
-    return ret;
-#endif
+    return run_proxied(wrapped(self, self, {argv.begin(), argv.end()}, false));
 }
 
 }  // namespace

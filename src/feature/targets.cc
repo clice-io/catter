@@ -6,15 +6,66 @@ module;
 
 module catter;
 
+import catter.command;
 import :feature.descendants;
-import :feature.edges;
 import :feature.flat_tree;
+import :feature.path;
 import :feature.targets;
 import :session.handler;
 
 namespace catter::feature {
 
 namespace {
+
+/// A file a command writes and the files it writes it from, absolute.
+struct Edge {
+    std::string output;
+
+    std::vector<std::string> inputs;
+};
+
+void add(std::vector<Edge>& edges,
+         std::string_view cwd,
+         std::string_view output,
+         const auto& inputs) {
+    if(output == "-") {
+        return;
+    }
+    Edge edge{.output = absolute_path(cwd, output)};
+    for(std::string_view input: inputs) {
+        if(input != "-") {
+            edge.inputs.push_back(absolute_path(cwd, input));
+        }
+    }
+    edges.push_back(std::move(edge));
+}
+
+/// The files the command `argv` of `executable`, run in `cwd`, writes from those it reads, when
+/// it is a compiler's, its response files read in, or an archiver's; the standard streams, `-`,
+/// left out.
+std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
+                                          std::string_view executable,
+                                          std::span<const std::string> argv) {
+    std::vector<Edge> edges;
+    if(auto compiler = analyze_compiler(executable, argv, cwd, kota::fs::read_file)) {
+        for(const auto& write: compiler->writes) {
+            add(edges,
+                cwd,
+                write.path,
+                write.reads | std::views::transform([&](std::uint32_t read) {
+                    return std::string_view(compiler->reads[read].path);
+                }));
+        }
+        return edges;
+    }
+    if(auto archiver = analyze_archiver(executable, argv)) {
+        for(const auto& write: archiver->writes) {
+            add(edges, cwd, write, archiver->reads);
+        }
+        return edges;
+    }
+    return std::nullopt;
+}
 
 /// The name a target shows by: its file's name, or, for a path that ends in none, the path.
 std::string name_of(std::string_view path) {
@@ -27,10 +78,6 @@ class TargetTree final : public Handler {
 public:
     explicit TargetTree(TargetsOptions options) :
         max_depth(max_depth_of(options.depth.as_optional())) {}
-
-    kota::task<std::optional<Build>> on_start(Build build) override {
-        co_return build;
-    }
 
     kota::task<Action> on_command(data::ipcid_t id,
                                   std::optional<data::ipcid_t> parent,
@@ -60,35 +107,12 @@ public:
         co_return;
     }
 
-    kota::task<> on_exit(data::ipcid_t, data::process_result) override {
-        co_return;
-    }
-
     kota::task<> on_finish(data::process_result result) override {
-        if(result.code != 0) {
-            std::println("Build failed with exit code {}. Printing partial target forest.",
-                         result.code);
-        }
-        if(tree.size() == 0) {
-            std::println("No targets found.");
-            co_return;
-        }
-        const auto cycles = tree.assemble();
-        std::print(
-            "{}",
-            render(tree, [](const Tree::Node& node) { return name_of(node.id); }, max_depth));
-        if(!cycles.empty()) {
-            std::println("");
-            std::println("Detected target cycles:");
-            for(const auto& cycle: cycles) {
-                const auto names =
-                    cycle | std::views::transform(name_of) | std::ranges::to<std::vector>();
-                std::println("[cycle] {} -> {}",
-                             names | std::views::join_with(std::string_view(" -> ")) |
-                                 std::ranges::to<std::string>(),
-                             names.front());
-            }
-        }
+        print(tree,
+              [](const Tree::Node& node) { return name_of(node.id); },
+              max_depth,
+              result.code,
+              {.nodes = "targets", .node = "target", .tree = "target forest"});
         co_return;
     }
 

@@ -4,6 +4,6 @@
 #include "support/paths.h"
 
 int main(int argc, char** argv) {
-    catter::log::init_logger("ut", catter::data_path("test.log"), false);
+    catter::log::init_logger("ut", catter::data_path("test.log"));
     return kota::zest::run_cli(argc, argv);
 }

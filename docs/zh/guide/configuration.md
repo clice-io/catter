@@ -55,13 +55,15 @@ catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Lin
 :::
 
 ```
-catter-proxy [options] -- <command>
+catter-proxy <program> <argv>...
 ```
 
-| 选项           | 说明                     |
-| -------------- | ------------------------ |
-| `-p <id>`      | 用于 IPC 会话的父进程 ID |
-| `<executable>` | 已解析的可执行文件路径   |
+| 参数        | 说明                           |
+| ----------- | ------------------------------ |
+| `<program>` | 要运行的程序，即钩子找到的那个 |
+| `<argv>`    | 程序的参数，第一个是程序名     |
+
+它从环境中找到要向其报告命令的会话，即下面这些变量。
 
 ## 环境变量
 
@@ -73,6 +75,7 @@ catter-proxy [options] -- <command>
 | -------------------------------- | ------------------------------- |
 | `__key_catter_proxy_path_v1`     | `catter-proxy` 可执行文件的路径 |
 | `__key_catter_command_id_v1`     | IPC 命令标识符                  |
+| `__key_catter_ipc_v1`            | catter 会话的管道               |
 | `LD_PRELOAD`（Linux）            | 注入 catter 钩子共享库          |
 | `DYLD_INSERT_LIBRARIES`（macOS） | 注入 catter 钩子共享库          |
 

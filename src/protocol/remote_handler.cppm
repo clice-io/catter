@@ -41,10 +41,11 @@ public:
     /// POSIX shell splits words, without expanding anything.
     static std::unique_ptr<RemoteHandler> spawn(std::string_view command, Options options);
 
-    /// Connects to the handler listening at `port` of the first of `hosts`
-    /// that takes the connection.
-    static kota::task<std::unique_ptr<RemoteHandler>> connect(std::vector<std::string> hosts,
-                                                              int port,
+    /// Connects to the handler listening at `address`, `host:port`, the host
+    /// of an IPv6 address in brackets: on this machine, but with
+    /// `allow_remote`.
+    static kota::task<std::unique_ptr<RemoteHandler>> connect(std::string_view address,
+                                                              bool allow_remote,
                                                               Options options);
 
     kota::task<std::optional<Build>> on_start(Build build) override;

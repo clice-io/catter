@@ -2,7 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/catter.h"
 #include "support/log.h"
 #include "support/paths.h"
 
@@ -13,7 +12,6 @@ module;
 module catter;
 
 import :driver.cli;
-import :driver.driver;
 import :session.process;
 
 using namespace catter;
@@ -41,7 +39,7 @@ int run(std::span<const std::string> argv) {
 
     try {
         try {
-            log::init_logger("catter", data_path(config::CATTER_LOG_PATH));
+            log::init_logger("catter", data_path("log/catter.log"));
         } catch(...) {
             // Without its log, catter reports what failed on the terminal only.
             log::mute_logger();

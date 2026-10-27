@@ -10,6 +10,14 @@ import :session.handler;
 
 namespace catter {
 
+kota::task<std::optional<Build>> Handler::on_start(Build build) {
+    co_return build;
+}
+
+kota::task<> Handler::on_exit(data::ipcid_t, data::process_result) {
+    co_return;
+}
+
 HandlerChain::HandlerChain(std::vector<Handler*> handlers) : handlers(std::move(handlers)) {}
 
 kota::task<std::optional<Build>> HandlerChain::on_start(Build build) {

@@ -6,8 +6,6 @@ module;
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
-
-#include "support/exception.h"
 #else
 #include <fcntl.h>
 #include <pthread.h>
@@ -125,6 +123,14 @@ void hold_closed_streams() {
         }
     }
 #endif
+}
+
+std::vector<std::string> environment() {
+    std::vector<std::string> env;
+    for(const auto& [name, value]: kota::sys::environment()) {
+        env.push_back(std::format("{}={}", name, value));
+    }
+    return env;
 }
 
 kota::process::options process_options(const data::command& command) {
@@ -245,9 +251,10 @@ OpenedProcess::OpenedProcess(std::int64_t pid) {
                           FALSE,
                           static_cast<DWORD>(pid));
     if(process == nullptr) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   std::format("Failed to open process {}", pid));
+        throw cpptrace::runtime_error(
+            std::format("Failed to open process {}: {}",
+                        pid,
+                        std::system_category().message(static_cast<int>(GetLastError()))));
     }
 }
 

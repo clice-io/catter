@@ -1,13 +1,38 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 // The messages catter exchanges over its session's pipe with what reports
-// the build's commands: catter-proxy on Unix, the hook itself on Windows.
+// the build's commands: catter-proxy, and on Windows the hook itself; and the
+// variables a program of the build finds that pipe in.
+
+/// What the environment of a program of the build tells of the session it
+/// reports its commands to.
+namespace catter::env {
+
+/// The session's pipe.
+constexpr char IPC[] = "__key_catter_ipc_v1";
+
+/// The command the program runs, which those it starts are children of.
+constexpr char COMMAND_ID[] = "__key_catter_command_id_v1";
+
+/// The directory of the wrapper backend's shims, set while a build runs under
+/// it.
+constexpr char SHIMS[] = "__key_catter_shims_v1";
+
+/// catter-proxy, which the hook starts in place of each program.
+constexpr char PROXY[] = "__key_catter_proxy_path_v1";
+
+/// All of them, which a session sets anew for the build it runs.
+constexpr std::array<std::string_view, 4> VARIABLES = {IPC, COMMAND_ID, SHIMS, PROXY};
+
+}  // namespace catter::env
 
 namespace catter::data {
 
@@ -31,9 +56,11 @@ struct process_result {
 /// it was sent unless a handler changed it.
 struct action {
     enum : std::uint8_t {
-        DROP,  // Do not execute the command
-        RUN,   // Execute the command
-        FAIL,  // Do not execute the command: the session has ended with an error
+        /// Do not run the command: it exits 0.
+        DROP,
+        RUN,
+        /// Do not run the command: the session has ended with an error.
+        FAIL,
     } type;
 
     command cmd;
@@ -43,8 +70,9 @@ struct action {
 
 namespace catter::ipc {
 
+/// Each client of the pipe reports one command: what it is to do first, or that
+/// it cannot be captured; then how it ended.
 enum class RequestType : std::uint8_t {
-    CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
@@ -54,25 +82,30 @@ enum class RequestType : std::uint8_t {
 template <RequestType Type>
 struct Request;
 
-template <>
-struct Request<RequestType::CREATE> {
-    using Params = data::ipcid_t;
-    using Result = data::ipcid_t;
-    constexpr inline static std::string_view method = "create";
-};
-
+/// What catter decides for the command, which `parent` started, none for the
+/// build command: the id it gives the command, which those the command starts
+/// name as their parent, and what to do.
 template <>
 struct Request<RequestType::MAKE_DECISION> {
-    using Params = data::command;
-    using Result = data::action;
+    struct Params {
+        std::optional<data::ipcid_t> parent;
+        data::command command;
+    };
+
+    struct Result {
+        data::ipcid_t id;
+        data::action action;
+    };
+
     constexpr inline static std::string_view method = "make_decision";
 };
 
+/// catter cannot capture a command `parent` started: `message` says why.
 template <>
 struct Request<RequestType::REPORT_ERROR> {
     struct Params {
-        data::ipcid_t parent_id;
-        std::string error_msg;
+        std::optional<data::ipcid_t> parent;
+        std::string message;
     };
 
     using Result = std::nullptr_t;

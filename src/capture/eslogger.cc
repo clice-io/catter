@@ -345,8 +345,8 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     ending = true;
     co_await mark();
     if(lost != 0) {
-        output::yellowln(
-            "Warning: Endpoint Security dropped {} events eslogger was to report while the build ran: commands of the build may be missing",
+        output::warn(
+            "Endpoint Security dropped {} events eslogger was to report while the build ran: commands of the build may be missing",
             lost);
     }
     co_return status;

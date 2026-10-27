@@ -20,7 +20,7 @@ The hook replaces all standard POSIX functions for creating new processes:
 **exec family**:
 
 - `execve()`, `execv()`
-- `execvpe()`, `execvp()`, `execvP()`
+- `execvp()`, `execvpe()` (Linux), `execvP()` (macOS)
 - `execl()`, `execlp()`, `execle()`
 
 **posix_spawn family**:
@@ -38,18 +38,16 @@ dyld ends a program that cannot load a library inserted into it, and the hook is
 
 The hook is implemented as a set of cooperating classes:
 
-- **`Session`** -- Reads and stores session information from the environment (the proxy path, the self command ID and the session's pipe).
 - **`find_program()`** (kotatsu) -- Finds the target executable as the exec function would, in `PATH` or the current directory; a program that is missing or cannot run fails as the call would.
-- **`Command` / `build_proxy_command()`** -- Builds the rewritten proxy command, substituting `catter-proxy` for the original executable.
-- **`SanitizedEnv` / `sanitize_environment()`** -- Scrubs the environment before the real `execve` is called. Removes catter variables and strips the hook library from the preload variable.
-- **`Executor`** -- Orchestrates the interception. Validates the session, resolves the executable, builds the proxy command, cleans the environment, and calls the original function; it also holds the real `execve` / `posix_spawn` function pointers (the earlier standalone `Linker` class has been folded into it).
+- **`proxy_environment()`** -- The environment `catter-proxy` gets: the one the program asked for, without the hook among the preloaded libraries, and with the variables that name the session.
+- **`Executor`** -- Orchestrates the interception. It takes the session from the environment the library loaded with, finds the executable, and calls the original function with `catter-proxy` in the program's place; it also holds the real `execve` / `posix_spawn` function pointers.
 
 ### Hook Initialization
 
 The hook library is loaded via the dynamic linker's constructor mechanism (`on_load`, `__attribute__((constructor))`). During initialization, the library:
 
 1. Sets up logging (in debug builds, to `log/catter-hook.log` in the catter data directory)
-2. Calls `Executor::init()`: reads session state from the environment and resolves the real `execve` / `posix_spawn` function pointers (`dlsym(RTLD_NEXT, ...)` on Linux, direct system symbols on macOS)
+2. Calls `Executor::init()` with the environment and the real `execve` / `posix_spawn` function pointers (`dlsym(RTLD_NEXT, ...)` on Linux, direct system symbols on macOS)
 
 ### Environment Variables
 
@@ -67,22 +65,22 @@ When any process creation function is called (e.g., `execve("/usr/bin/g++", argv
 
 1. The hook's replacement function is entered.
 
-2. **`Executor`** validates the session. If the session is invalid (missing environment variables), it builds an error command that reports the problem to the daemon.
+2. When the environment the library loaded with names no `catter-proxy`, the call goes to the system as it is: the process has no session.
 
 3. **`Executor`** finds the target executable with kotatsu's `find_program()`. For functions like `execvp()` and `execvpe()`, it searches the directories of `PATH`. For `execve()`, a path without a `/` is taken from the current directory.
 
-4. **`Command`** (`build_proxy_command()`) constructs the proxy command:
+4. **`Executor`** constructs the proxy command:
 
    ```
-   <proxy_path> -p <self_id> --exec <resolved_path> --ipc <pipe> -- <original_argv...>
+   <proxy_path> <resolved_path> <original_argv...>
    ```
 
-   The original `argv[0]` and all subsequent arguments are preserved after the `--` separator.
+   The original `argv[0]` and all subsequent arguments follow the resolved path.
 
-5. **`SanitizedEnv`** (`sanitize_environment()`) modifies the environment array:
-   - Removes `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` and `__key_catter_ipc_v1`
+5. **`proxy_environment()`** modifies the environment array:
    - Strips the hook library name from `LD_PRELOAD` (or `DYLD_INSERT_LIBRARIES`)
    - If `LD_PRELOAD` becomes empty after stripping, removes it entirely
+   - Puts `__key_catter_ipc_v1` and `__key_catter_command_id_v1` in place of any the program's environment has, as the process loaded with them: a program may start another with an environment of its own making, as `env -i` does, and `catter-proxy` still finds its session there
 
 6. **`Executor`** calls the **real** `execve()` with the rewritten command (through the function pointers resolved during initialization).
 
@@ -179,7 +177,7 @@ When `CreateProcessA` or `CreateProcessW` is called by the hooked process:
 
 2. **Connect to the session**. The hook opens the session's pipe. When it cannot, as for a build server an earlier session started, whose session is gone, the call goes to the original `CreateProcess` unchanged, and the program runs uncaptured.
 
-3. **Ask catter**. The hook reads the command as `CreateProcess` would start it: the arguments of the command line, the environment block (or the caller's own environment), and the working directory. It sends `CREATE` and `MAKE_DECISION`, and waits for catter's answer, as `CreateProcess` itself waits for nothing else.
+3. **Ask catter**. The hook reads the command as `CreateProcess` would start it: the arguments of the command line, the environment block (or the caller's own environment), and the working directory. It sends `MAKE_DECISION`, and waits for catter's answer, as `CreateProcess` itself waits for nothing else.
 
 4. **Start the program suspended**. The hook calls the original `CreateProcess` with the caller's own arguments, flags, handles and `STARTUPINFO`, adding only `CREATE_SUSPENDED`. What a handler changed of the command is written anew: its program, looked for as `CreateProcess` would look for it from the command's working directory; its command line, written from its arguments, only when it changed them; its environment; its working directory. The rest goes on as the caller wrote it, so `cmd.exe`, and any other program that reads its command line itself, reads what it would without catter. When the program cannot start, the hook reports it (`REPORT_ERROR`) and fails the call with the system's error.
 
@@ -211,12 +209,12 @@ DLL_PROCESS_ATTACH:
 
 ## Platform Comparison
 
-| Aspect               | Linux                                                      | macOS                           | Windows                                |
-| -------------------- | ---------------------------------------------------------- | ------------------------------- | -------------------------------------- |
-| Hook library         | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`     | `catter-hook-{x64,arm64}.dll`          |
-| Injection method     | `LD_PRELOAD` env var                                       | `DYLD_INSERT_LIBRARIES` env var | `DetourUpdateProcessWithDll`           |
-| Interposition        | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` macro          | Detours trampoline hooking             |
-| Intercepted APIs     | `execve`, `execvp`, `posix_spawn`, etc.                    | Same as Linux                   | `CreateProcessA`, `CreateProcessW`     |
-| Recursive hooking    | Automatic (env inherited)                                  | Automatic (env inherited)       | Explicit (DLL re-injected per process) |
-| Session              | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1` | Same as Linux                   | A Detours payload in each process      |
-| Who starts a command | `catter-proxy`                                             | Same as Linux                   | The hook, in the caller's own call     |
+| Aspect               | Linux                                                                             | macOS                           | Windows                                |
+| -------------------- | --------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- |
+| Hook library         | `libcatter-hook-unix.so`                                                          | `libcatter-hook-unix.dylib`     | `catter-hook-{x64,arm64}.dll`          |
+| Injection method     | `LD_PRELOAD` env var                                                              | `DYLD_INSERT_LIBRARIES` env var | `DetourUpdateProcessWithDll`           |
+| Interposition        | `dlsym(RTLD_NEXT, ...)`                                                           | `DYLD_INTERPOSE` macro          | Detours trampoline hooking             |
+| Intercepted APIs     | `execve`, `execvp`, `posix_spawn`, etc.                                           | Same as Linux                   | `CreateProcessA`, `CreateProcessW`     |
+| Recursive hooking    | Automatic (env inherited)                                                         | Automatic (env inherited)       | Explicit (DLL re-injected per process) |
+| Session              | `__key_catter_proxy_path_v1`, `__key_catter_command_id_v1`, `__key_catter_ipc_v1` | Same as Linux                   | A Detours payload in each process      |
+| Who starts a command | `catter-proxy`                                                                    | Same as Linux                   | The hook, in the caller's own call     |
