@@ -48,7 +48,7 @@ std::string edited(std::string_view command,
     auto result = apply_edits(argv,
                               analysis->expansion,
                               analysis->arguments,
-                              syntax_of(analysis->dialect),
+                              syntax_of(analysis->identity.compiler, analysis->dialect),
                               std::vector(edits));
     return result.has_value() ? join(*result) : "error: " + result.error();
 }
@@ -83,6 +83,11 @@ ZEST_CASE(a_remove_names_an_unknown_option_as_written) {
     ZEXPECT(edited("gcc -fno-such-option=3 -fno-such-flag -c a.c",
                    {removing("-fno-such-option=*")}) == "gcc -fno-such-flag -c a.c");
     ZEXPECT(edited("gcc -fno-such-flag -c a.c", {removing("-fno-such-flag")}) == "gcc -c a.c");
+    // One the table does not know but takes a value goes with it.
+    ZEXPECT(edited("gcc -c a.c -dumpbase b.c", {removing("-dumpbase")}) == "gcc -c a.c");
+    ZEXPECT(edited("cl /c a.cc -ifcOutput a.ifc", {removing("-ifcOutput")}) == "cl /c a.cc");
+    ZEXPECT(edited("cl /c a.cc /ifcSearchDir a /ifcSearchDir b", {removing("/ifcSearchDir b")}) ==
+            "cl /c a.cc /ifcSearchDir a");
 };
 
 ZEST_CASE(appended_flags_go_after_the_options_as_written) {

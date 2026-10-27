@@ -30,7 +30,7 @@ catter compile-commands [options] -- <build-command>
 
 编译命令的响应文件（`@file`）在命令启动时、运行之前读取，因为 MSBuild 等构建工具会在命令结束后删除它们：条目里是这些文件中的参数，按编译器的方式切分，MSVC 的 `cl`、`clang-cl` 和 cl 模式下的 clang 用 Windows 的规则。
 
-每条编译器命令对它的每个源文件、以及由这个源文件写出的每个文件，各生成一条条目，条目带有这条命令的目录、参数，以及命令里对源文件的写法；没有写出任何文件的源文件（例如 `-fsyntax-only`）得到一条不带 `output` 的条目。预处理（`-E`、`-M`）只为构建中没有其他命令编译的源文件生成条目，且不带 `output`。构建中某条编译命令写出的文件（例如 `-S` 得到的 `.s`）如果又被构建编译，它本身没有条目：由它的源文件的条目代表它。
+每条编译器命令对它的每个源文件、以及由这个源文件写出的每个文件，各生成一条条目，条目带有这条命令的目录、参数，以及命令里对源文件的写法；没有写出任何文件的源文件（例如 `-fsyntax-only`）得到一条不带 `output` 的条目。预处理（`-E`、`-M`、cl 的 `/scanDependencies`）只为构建中没有其他命令编译的源文件生成条目，且不带 `output`。构建中某条编译命令写出的文件（例如 `-S` 得到的 `.s`）如果又被构建编译，它本身没有条目：由它的源文件的条目代表它。
 
 ## CDB 条目格式
 
@@ -49,7 +49,7 @@ catter compile-commands [options] -- <build-command>
 
 ## 支持的编译器
 
-- GCC、Clang、`clang-cl` 和 MSVC 的 `cl`，源文件可以是 C、C++（包括模块）、Objective-C、Objective-C++、汇编和 CUDA，也可以是 `-x` 指定的任何语言。
+- GCC、Clang、`clang-cl` 和 MSVC 的 `cl`，名字前可以有目标前缀、后面可以有版本号（`x86_64-linux-gnu-gcc-13`、MacPorts 的 `clang-mp-18`），源文件可以是 C、C++（包括模块）、Objective-C、Objective-C++、汇编和 CUDA，也可以是 `-x` 指定的任何语言。
 
 编译器包装器如 `ccache`、`distcc`、`sccache` 可被正确识别和透明处理。catter 能识别 nvcc，但还不读取它的参数：它的命令没有条目。
 

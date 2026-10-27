@@ -63,7 +63,8 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
                      .artifact_model = std::string(name(target.model)),
                      .source = std::string(name(target.source)),
                      },
-        .arguments = arguments_of(analysis.arguments, syntax_of(analysis.dialect)),
+        .arguments = arguments_of(analysis.arguments,
+                                  syntax_of(analysis.identity.compiler, analysis.dialect)),
     };
     if(!analysis.expansion.files.empty()) {
         message.expansion = protocol::Expansion{
@@ -236,7 +237,7 @@ std::expected<std::vector<std::string>, std::string>
         return apply_edits(argv,
                            compiler->expansion,
                            compiler->arguments,
-                           syntax_of(compiler->dialect),
+                           syntax_of(compiler->identity.compiler, compiler->dialect),
                            changes);
     }
     return apply_edits(argv, tool->arguments, syntax_of(tool->tool), changes);

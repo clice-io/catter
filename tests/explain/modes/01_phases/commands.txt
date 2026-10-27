@@ -5,3 +5,5 @@ clang -c -emit-llvm a.c -o a.bc
 gcc a.c b.c -o app
 gcc a.o b.o -o app
 gcc -E a.c -o -
+gcc -MM a.c -o a.d
+cl /nologo /TP -scanDependencies a.ddi -Foa.obj a.cppm

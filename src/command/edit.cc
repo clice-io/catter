@@ -98,12 +98,18 @@ bool removes(const RemovePattern& pattern, const Piece& piece, Syntax syntax) {
         return false;
     }
     if(argument.id == syntax.table->unknown_option_id) {
-        // An unknown option is its spelling; `=*` after it takes any value.
+        // An unknown option is its spelling; `=*` after it takes any value, as does one that
+        // takes a separate value named alone.
         std::string_view spelling = wanted.spelling;
         if(spelling.ends_with("=*")) {
             return argument.spelling.starts_with(spelling.substr(0, spelling.size() - 1));
         }
-        return argument.spelling == spelling;
+        if(argument.spelling != spelling) {
+            return false;
+        }
+        if(wanted.values.empty()) {
+            return true;
+        }
     }
     if(wanted.values.size() == 1 && wanted.values[0] == "*") {
         return true;

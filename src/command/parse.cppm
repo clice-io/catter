@@ -58,7 +58,7 @@ struct ParsedCommand {
 
     std::vector<Candidate> candidates;
 
-    /// The language `/TC` or `/TP` sets for every source, when one does.
+    /// The language `/TC` or `/TP` sets for every input but objects and libraries, when one does.
     std::optional<std::string> every_language;
 
     std::vector<Output> outputs;

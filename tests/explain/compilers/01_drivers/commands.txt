@@ -2,3 +2,5 @@ gcc -c a.c -o a.o
 clang++ -c a.cc
 cl /nologo /c /Foa.obj a.cc
 nvcc -c a.cu -o a.o
+gcc-mp-14 -c a.c -o a.o
+clang++-mp-18 -c a.cc

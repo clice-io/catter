@@ -78,7 +78,7 @@ entries = [
 ]
 
 [test."compile_commands.json".win32]
-wrong = "cl's dependency scans, -scanDependencies, which clang's option table does not know, are taken for links and get entries"
+differs = "CMake builds with MSVC, whose options and object names are its own"
 entries = [
     {
         file = "${WS}/greet.cppm",
@@ -110,31 +110,6 @@ entries = [
         ],
     },
     {
-        file = "${WS}/greet.cppm",
-        directory = "${WS}/build",
-        output = "${WS}/build/greet.exe",
-        arguments = [
-            "${MSVC}/bin/Hostx64/x64/cl.exe",
-            "-DCATTER_TEST=1",
-            "/DWIN32",
-            "/D_WINDOWS",
-            "/EHsc",
-            "/Ob0",
-            "/Od",
-            "/RTC1",
-            "-std:c++20",
-            "-MDd",
-            "-Zi",
-            "${WS}/greet.cppm",
-            "-nologo",
-            "-TP",
-            "-showIncludes",
-            "-scanDependencies",
-            'CMakeFiles\modules.dir\greet.cppm.obj.ddi',
-            '-FoCMakeFiles\modules.dir\greet.cppm.obj',
-        ],
-    },
-    {
         file = "${WS}/main.cc",
         directory = "${WS}/build",
         output = "${WS}/build/CMakeFiles/modules.dir/main.cc.obj",
@@ -160,31 +135,6 @@ entries = [
             "/FS",
             "-c",
             "${WS}/main.cc",
-        ],
-    },
-    {
-        file = "${WS}/main.cc",
-        directory = "${WS}/build",
-        output = "${WS}/build/main.exe",
-        arguments = [
-            "${MSVC}/bin/Hostx64/x64/cl.exe",
-            "-DCATTER_TEST=1",
-            "/DWIN32",
-            "/D_WINDOWS",
-            "/EHsc",
-            "/Ob0",
-            "/Od",
-            "/RTC1",
-            "-std:c++20",
-            "-MDd",
-            "-Zi",
-            "${WS}/main.cc",
-            "-nologo",
-            "-TP",
-            "-showIncludes",
-            "-scanDependencies",
-            'CMakeFiles\modules.dir\main.cc.obj.ddi',
-            '-FoCMakeFiles\modules.dir\main.cc.obj',
         ],
     },
 ]

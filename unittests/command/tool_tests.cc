@@ -55,4 +55,20 @@ ZEST_CASE(a_tool_s_arguments_are_read_by_its_table) {
     ZEXPECT(options == std::vector<std::string>{"--gc-sections", "-o", "<input>", "-l"});
 };
 
+ZEST_CASE(coff_tools_match_options_without_case) {
+    auto options = [](std::string_view command) {
+        const auto argv = split(command);
+        auto analysis = analyze_tool(argv[0], argv);
+        const auto syntax = syntax_of(analysis->tool);
+        std::vector<std::string> options;
+        for(const auto& argument: analysis->arguments) {
+            options.emplace_back(option_name(syntax, argument.id));
+        }
+        return options;
+    };
+    ZEXPECT(options("lld-link /OUT:app.exe /LibPath:lib /DEBUG a.obj") ==
+            std::vector<std::string>{"/out:", "/libpath:", "/debug", "<input>"});
+    ZEXPECT(options("llvm-lib /OUT:a.lib a.obj") == std::vector<std::string>{"/out:", "<input>"});
+};
+
 };  // ZEST_SUITE(cmd_tool_tests)

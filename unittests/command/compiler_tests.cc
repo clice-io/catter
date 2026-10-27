@@ -26,6 +26,8 @@ constexpr std::string_view commands[] = {
     "cl /nologo a.cc /link/out:x.exe lib.lib",
     "clang-cl /c a.cc /link/out:a.exe",
     "gcc a.o b.o -o app -lm",
+    "gcc -c a.c -dumpbase b.c -wrapper echo,c.c -o a.o",
+    "cl /TP -scanDependencies a.ddi -Foa.obj a.cc",
 };
 
 }  // namespace
@@ -98,6 +100,37 @@ ZEST_CASE(missing_option_value_fails_the_parse) {
     ZEXPECT(analysis.error().kind == Error::Kind::CompilerParse);
 };
 
+ZEST_CASE(options_only_gcc_knows_take_their_values) {
+    auto reads = [](std::string_view command) {
+        const auto argv = split(command);
+        auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
+        return analysis->reads | std::views::transform(&Read::path) |
+               std::ranges::to<std::vector<std::string>>();
+    };
+    ZEXPECT(reads("gcc -c foo.c -dumpbase xx.c") == std::vector<std::string>{"foo.c"});
+    ZEXPECT(reads("g++ -wrapper echo,foo.c -c bar.c") == std::vector<std::string>{"bar.c"});
+    ZEXPECT(reads("gcc -aux-info protos.c -dumpbase-ext .c -c foo.c") ==
+            std::vector<std::string>{"foo.c"});
+    // cl's options of C++ modules, with either prefix, even where `/TP` makes any input a source.
+    for(auto option: {"ifcMap", "ifcOutput", "ifcSearchDir", "scanDependencies", "stdIfcDir"}) {
+        for(auto prefix: {"/", "-"}) {
+            ZEST_CONTEXT("option: {}{}", prefix, option);
+            ZEXPECT(reads(std::format("cl /c /TP a.cc {}{} value", prefix, option)) ==
+                    std::vector<std::string>{"a.cc"});
+        }
+    }
+};
+
+ZEST_CASE(an_option_the_table_does_not_know_keeps_its_value) {
+    const auto argv = split("gcc -c foo.c -dumpbase xx.c");
+    auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
+    ZASSERT(analysis.has_value());
+    const auto& argument = analysis->arguments.back();
+    ZEXPECT(option_name(syntax_of(Compiler::GCC, Dialect::GCC), argument.id) == "<unknown>");
+    ZEXPECT(argument.spelling == "-dumpbase");
+    ZEXPECT(argument.values == std::vector<std::string>{"xx.c"});
+};
+
 ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     auto languages = [](std::string_view command) {
         const auto argv = split(command);
@@ -111,10 +144,14 @@ ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     ZEXPECT(languages("gcc -c a.c -x c++ b.cc -x none c.c d.cpp") ==
             std::vector<std::string>{"a.c:c", "b.cc:c++", "c.c:c", "d.cpp:c++"});
     ZEXPECT(languages("cl /c a.c /TC b.c") == std::vector<std::string>{"a.c:c", "b.c:c"});
-    // `/TP` is for every source, before it too, not for a file of no source's suffix, which the
-    // value of an option the table does not know may be.
-    ZEXPECT(languages("cl a.c /TP b.cc c.obj /ifcOutput d.ifc") ==
-            std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none"});
+    // `/TP` is for every input but objects and libraries, before it too.
+    ZEXPECT(languages("cl a.c /TP b.cc c.obj noext /ifcOutput d.ifc") ==
+            std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none", "noext:c++"});
+    // cl takes what follows `/` for an option, clang-cl for a file when its table knows none.
+    ZEXPECT(languages("cl /c /TP a.cc /analyze /interface") ==
+            std::vector<std::string>{"a.cc:c++"});
+    ZEXPECT(languages("clang-cl /c /TP /src/a.cc /src/noext") ==
+            std::vector<std::string>{"/src/a.cc:c++", "/src/noext:c++"});
     ZEXPECT(languages("g++ -x c++ -c legacy.c -x c -c noext -x c++-header pch.hxx.cxx") ==
             std::vector<std::string>{"legacy.c:c++", "noext:c", "pch.hxx.cxx:c++-header"});
     ZEXPECT(languages("clang -c a.cppm b.ixx c.m d.mm e.M f.s g.S h.sx i.cu") ==

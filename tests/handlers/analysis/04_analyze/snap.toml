@@ -3,6 +3,8 @@ stderr = '''
 gcc: compile, writes ['a.o']
 UnparsedAnalysis: compiler-parse
 NoneType: None
+lld-coff: [('/out:', ['app.exe']), ('/debug', []), ('<input>', [])]
+archiver: r, writes ['liba.a']
 '''
 exit = 0
 

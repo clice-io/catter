@@ -13,8 +13,9 @@ namespace {
 using namespace option::clang;
 
 std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::string> argv,
+                                                           Compiler compiler,
                                                            Dialect dialect) {
-    auto arguments = read_arguments(syntax_of(dialect), argv);
+    auto arguments = read_arguments(syntax_of(compiler, dialect), argv);
     if(!arguments.has_value()) {
         return std::unexpected(Error{
             .kind = Error::Kind::CompilerParse,
@@ -43,6 +44,9 @@ struct Builder {
     ParsedCommand command;
 
     bool preprocess = false;
+
+    /// Whether the preprocessor writes what the sources include in place of them.
+    bool dependencies = false;
 
     bool syntax_only = false;
 
@@ -119,9 +123,9 @@ struct Builder {
             case ID_c:
             case ID_emit_obj: compile_object(); break;
             case ID_S: compile_assembly_like(); break;
-            case ID_E:
+            case ID_E: preprocess = true; break;
             case ID_M:
-            case ID_MM: preprocess = true; break;
+            case ID_MM: dependencies = true; break;
             case ID_fsyntax_only: syntax_only = true; break;
             case ID_emit_llvm:
             case ID_emit_llvm_bc: compile_llvm_like(); break;
@@ -183,6 +187,14 @@ struct Builder {
                 break;
             case ID__SLASH_link: apply_linker_arguments(position); break;
             case ID_INPUT: candidate(position); break;
+            case ID_UNKNOWN:
+                if(argument.count == 2 && argument.spelling.substr(1) == "scanDependencies") {
+                    dependencies = true;
+                    output(position, OutputKind::PrimaryArtifact);
+                } else if(argument.spelling.substr(1) == "scanDependencies-") {
+                    dependencies = true;
+                }
+                break;
             default:
                 if(selects_mode(argument)) {
                     return Error{
@@ -231,7 +243,10 @@ struct Builder {
     }
 
     void finish() {
-        if(preprocess) {
+        if(dependencies) {
+            command.phase = Phase::Preprocess;
+            command.artifact = Artifact::Dependencies;
+        } else if(preprocess) {
             command.phase = Phase::Preprocess;
             command.artifact = Artifact::PreprocessedSource;
         } else if(syntax_only) {
@@ -276,8 +291,8 @@ ParsedCommand parse_gnu(const Identity& identity, std::vector<Argument> argument
     return std::move(builder.command);
 }
 
-std::expected<ParsedCommand, Error> parse_cl(std::span<const std::string> argv) {
-    auto arguments = read_arguments(argv, Dialect::MSVC);
+std::expected<ParsedCommand, Error> parse_cl(Compiler compiler, std::span<const std::string> argv) {
+    auto arguments = read_arguments(argv, compiler, Dialect::MSVC);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
@@ -304,14 +319,14 @@ bool in_cl_mode(std::span<const Argument> arguments) {
 std::expected<ParsedCommand, Error> parse(const Identity& identity,
                                           std::span<const std::string> argv) {
     if(identity.dialect == Dialect::MSVC) {
-        return parse_cl(argv);
+        return parse_cl(identity.compiler, argv);
     }
-    auto arguments = read_arguments(argv, identity.dialect);
+    auto arguments = read_arguments(argv, identity.compiler, identity.dialect);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
     if(identity.dialect == Dialect::Clang && in_cl_mode(*arguments)) {
-        return parse_cl(argv);
+        return parse_cl(identity.compiler, argv);
     }
     return parse_gnu(identity, std::move(*arguments));
 }

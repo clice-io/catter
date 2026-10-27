@@ -178,3 +178,122 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- cl /nologo /c /TP a.inl -interface -ifcOutput a.ifc"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.inl"
+    ],
+    "reads": [
+        "a.inl"
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.inl"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.inl",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/TP",
+                "a.inl",
+                "-interface",
+                "-ifcOutput",
+                "a.ifc"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo /c /TP /analyze /interface a.cppm"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cppm"
+    ],
+    "reads": [
+        "a.cppm"
+    ],
+    "writes": [
+        "a.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cppm"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cppm",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/TP",
+                "/analyze",
+                "/interface",
+                "a.cppm"
+            ],
+            "output": "${WS}/a.obj"
+        }
+    ]
+}
+'''
+exit = 0

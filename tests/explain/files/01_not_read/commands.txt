@@ -1,2 +1,4 @@
 gcc -c -
 cl /nologo /c a.cc /link /out:a.exe
+gcc -c foo.c -dumpbase xx.c
+gcc -wrapper echo,foo.c -c bar.c

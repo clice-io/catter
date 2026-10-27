@@ -4,17 +4,17 @@ module;
 
 module catter.command;
 
+import :executable;
+
 namespace catter {
 
 namespace {
 
-/// The name of an executable without its directory and `.exe`, lowered.
-std::string stem_of(std::string_view executable) {
-    auto name = lowercase(executable.substr(executable.find_last_of(R"(/\)") + 1));
-    if(name.ends_with(".exe")) {
-        name.resize(name.size() - 4);
-    }
-    return name;
+/// `ar`, `llvm-ar` and `gcc-ar`, perhaps after a target, `x86_64-linux-gnu-ar`, and before a
+/// version, `gcc-ar-14`.
+bool archiver(std::string_view executable) {
+    const static auto pattern = executable_pattern(R"((?:[^\\/]+-)?ar)", version_suffix);
+    return std::regex_match(executable.begin(), executable.end(), pattern);
 }
 
 /// Options before the operation that change no file, but for `--thin`: `-X64`, `--version`, ...
@@ -73,8 +73,7 @@ Error unsupported(std::string message) {
 
 std::expected<ArchiverAnalysis, Error> analyze_archiver(std::string_view executable,
                                                         std::span<const std::string> argv) {
-    const auto stem = stem_of(executable);
-    if(stem != "ar" && stem != "llvm-ar" && stem != "gcc-ar") {
+    if(!archiver(executable)) {
         return std::unexpected(Error{
             .kind = Error::Kind::ArchiverNotRecognized,
             .message = std::format("not a recognized archiver executable: {}", executable),

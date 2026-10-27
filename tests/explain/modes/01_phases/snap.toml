@@ -1019,3 +1019,214 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- gcc -MM a.c -o a.d"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.d"
+    ],
+    "edges": [
+        {
+            "output": "a.d",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-MM",
+                "a.c",
+                "-o",
+                "a.d"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -MM a.c -o a.d".darwin]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.d"
+    ],
+    "edges": [
+        {
+            "output": "a.d",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-MM",
+                "a.c",
+                "-o",
+                "a.d"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -MM a.c -o a.d".win32]
+differs = "a command that names no target compiles for the host"
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "os": "windows",
+        "objectFormat": "coff",
+        "artifactModel": "coff-gnu",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.d"
+    ],
+    "edges": [
+        {
+            "output": "a.d",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-MM",
+                "a.c",
+                "-o",
+                "a.d"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo /TP -scanDependencies a.ddi -Foa.obj a.cppm"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "preprocess",
+    "artifact": "dependencies",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cppm"
+    ],
+    "reads": [
+        "a.cppm"
+    ],
+    "writes": [
+        "a.ddi"
+    ],
+    "edges": [
+        {
+            "output": "a.ddi",
+            "inputs": [
+                "a.cppm"
+            ]
+        }
+    ],
+    "diagnostics": [
+        {
+            "code": "output-kind-ignored",
+            "message": "output kind object-file is not used for preprocess",
+            "path": "a.obj",
+            "index": 5,
+            "source": {
+                "kind": "option",
+                "option": "-Fo",
+                "optionIndex": 5
+            }
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cppm",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/TP",
+                "-scanDependencies",
+                "a.ddi",
+                "-Foa.obj",
+                "a.cppm"
+            ]
+        }
+    ]
+}
+'''
+exit = 0
