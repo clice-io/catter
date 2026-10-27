@@ -25,20 +25,6 @@ entries = [
     {
         file = "src/util.cc",
         directory = "${WS}",
-        arguments = [
-            "g++",
-            "-c",
-            "-m64",
-            "-Iinclude",
-            "-DTEST=1",
-            "-MMD",
-            "-MF",
-            "util.d",
-            "-E",
-            "-fpch-preprocess",
-            "-o",
-            "build/__cpp_util.cc.cc",
-            "src/util.cc",
-        ],
+        arguments = ["g++", "-m64", "-Iinclude", "-DTEST=1", "-MMD", "-MF", "util.d", "src/util.cc", "-c"],
     },
 ]

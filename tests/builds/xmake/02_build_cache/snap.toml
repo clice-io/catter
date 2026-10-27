@@ -95,3 +95,46 @@ entries = [
         ],
     },
 ]
+
+[test."$ catter compile-commands -q --replace -o compile_commands.json -- xmake build -r -P . -j 1"]
+stdout = '''
+[ 19%]: <hello> cache compiling.release src/main.cc
+[ 38%]: <hello> cache compiling.release src/util.cc
+[ 56%]: <hello> linking.release hello
+[100%]: build ok, spent #s
+'''
+exit = 0
+
+[test."compile_commands.json after a rebuild"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/main.cc",
+            "-c",
+        ],
+    },
+    {
+        file = "src/util.cc",
+        directory = "${WS}",
+        arguments = [
+            "${ENV}/bin/g++",
+            "-m64",
+            "-Iinclude",
+            "-DCATTER_TEST=1",
+            "-MMD",
+            "-MF",
+            "${TMP}/.xmake#/#/_#",
+            "src/util.cc",
+            "-c",
+        ],
+    },
+]
