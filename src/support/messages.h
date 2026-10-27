@@ -7,7 +7,27 @@
 #include <vector>
 
 // The messages catter exchanges over its session's pipe with what reports
-// the build's commands: catter-proxy on Unix, the hook itself on Windows.
+// the build's commands: catter-proxy on Unix, the hook itself on Windows; and
+// the variables a program of the build finds that pipe in.
+
+/// What the environment of a program of the build tells of the session it
+/// reports its commands to.
+namespace catter::env {
+
+/// The session's pipe.
+constexpr char IPC[] = "__key_catter_ipc_v1";
+
+/// The command the program runs, which those it starts are children of.
+constexpr char COMMAND_ID[] = "__key_catter_command_id_v1";
+
+/// The directory of the wrapper backend's shims, set while a build runs under
+/// it.
+constexpr char SHIMS[] = "__key_catter_shims_v1";
+
+/// catter-proxy, which the hook starts in place of each program.
+constexpr char PROXY[] = "__key_catter_proxy_path_v1";
+
+}  // namespace catter::env
 
 namespace catter::data {
 
@@ -31,9 +51,11 @@ struct process_result {
 /// it was sent unless a handler changed it.
 struct action {
     enum : std::uint8_t {
-        DROP,  // Do not execute the command
-        RUN,   // Execute the command
-        FAIL,  // Do not execute the command: the session has ended with an error
+        /// Do not run the command: it exits 0.
+        DROP,
+        RUN,
+        /// Do not run the command: the session has ended with an error.
+        FAIL,
     } type;
 
     command cmd;

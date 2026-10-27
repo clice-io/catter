@@ -4,27 +4,27 @@
 
 #include "hook/unix/debug.h"
 #include "hook/unix/environment.h"
-#include "support/config/hook_unix.h"
+#include "support/messages.h"
 
 namespace catter::hook {
 
 Session Session::make(const char* const envp[]) noexcept {
     Session session;
-    auto proxy_path = get_env_value(envp, config::KEY_CATTER_PROXY_PATH);
+    auto proxy_path = get_env_value(envp, env::PROXY);
     if(proxy_path == nullptr) {
         WARN("catter proxy path not found in environment");
         return session;
     } else {
         session.proxy_path = proxy_path;
     }
-    auto self_id = get_env_value(envp, config::KEY_CATTER_COMMAND_ID);
+    auto self_id = get_env_value(envp, env::COMMAND_ID);
     if(self_id == nullptr) {
         WARN("catter self id not found in environment");
         return session;
     } else {
         session.self_id = self_id;
     }
-    auto ipc = get_env_value(envp, config::KEY_CATTER_IPC);
+    auto ipc = get_env_value(envp, env::IPC);
     if(ipc == nullptr) {
         WARN("catter ipc pipe not found in environment");
         return session;

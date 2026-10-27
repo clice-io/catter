@@ -8,8 +8,7 @@ module;
 #include <detours.h>
 // clang-format on
 
-#include "support/config/hook_windows.h"
-#include "support/exception.h"
+#include "support/hook.h"
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/paths.h"
@@ -22,6 +21,14 @@ import :session.process;
 namespace catter {
 
 namespace {
+
+/// Throws that `what` failed, as `error` says: by default, the calling thread's
+/// last error.
+[[noreturn]] void fail(std::string_view what,
+                       std::error_code error = {static_cast<int>(GetLastError()),
+                                                std::system_category()}) {
+    throw cpptrace::runtime_error(std::format("{}: {}", what, error.message()));
+}
 
 /// The machines catter has a hook for, catter-hook-<arch>.dll beside catter.
 struct Hook {
@@ -49,9 +56,7 @@ USHORT process_machine(HANDLE process) {
     USHORT wow64_machine = IMAGE_FILE_MACHINE_UNKNOWN;
     USHORT native_machine = IMAGE_FILE_MACHINE_UNKNOWN;
     if(!IsWow64Process2(process, &wow64_machine, &native_machine)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to get the machine of the process");
+        fail("Failed to get the machine of the process");
     }
     return wow64_machine == IMAGE_FILE_MACHINE_UNKNOWN ? native_machine : wow64_machine;
 }
@@ -72,9 +77,7 @@ void fix_converted_header(HANDLE process, USHORT machine) {
         static_cast<BYTE*>(DetourFindRemotePayload(process, DETOUR_EXE_RESTORE_GUID, nullptr));
     DETOUR_EXE_RESTORE saved{};
     if(remote == nullptr || !ReadProcessMemory(process, remote, &saved, sizeof(saved), nullptr)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to read the headers Detours saved in the process");
+        fail("Failed to read the headers Detours saved in the process");
     }
     // Detours converts only .NET executables, and saves the converted header.
     if(saved.pclr == nullptr || saved.inh.FileHeader.Machine == machine) {
@@ -90,9 +93,7 @@ void fix_converted_header(HANDLE process, USHORT machine) {
        !VirtualProtectEx(process, in_image, sizeof(machine), PAGE_READWRITE, &protection) ||
        !WriteProcessMemory(process, in_image, &machine, sizeof(machine), nullptr) ||
        !VirtualProtectEx(process, in_image, sizeof(machine), protection, &protection)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to write the machine of the process's header");
+        fail("Failed to write the machine of the process's header");
     }
 }
 
@@ -101,13 +102,11 @@ void fix_converted_header(HANDLE process, USHORT machine) {
 std::optional<std::string> ascii_path(std::string_view path) {
     std::wstring wide;
     if(auto error = kota::to_utf16(wide, path)) {
-        throw catter::system_error(error, std::format("Failed to find {}", path));
+        fail(std::format("Failed to find {}", path), error);
     }
     const DWORD size = GetShortPathNameW(wide.c_str(), nullptr, 0);
     if(size == 0) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   std::format("Failed to find {}", path));
+        fail(std::format("Failed to find {}", path));
     }
     std::wstring short_path(size, L'\0');
     short_path.resize(GetShortPathNameW(wide.c_str(), short_path.data(), size));
@@ -121,7 +120,7 @@ std::optional<std::string> ascii_path(std::string_view path) {
 std::string temporary_copy(std::string_view dll) {
     auto status = kota::fs::status(dll);
     if(!status) {
-        throw catter::system_error(status.error(), std::format("Failed to find {}", dll));
+        fail(std::format("Failed to find {}", dll), status.error());
     }
     const auto build =
         std::format("{}|{}|{}", dll, status->size, status->mtime.time_since_epoch().count());
@@ -154,7 +153,7 @@ std::string temporary_copy(std::string_view dll) {
     // Another catter renamed its copy first, which a process may have loaded
     // already.
     if(error && !kota::fs::is_file(copy)) {
-        throw catter::system_error(error, std::format("Failed to copy {} to {}", dll, copy));
+        fail(std::format("Failed to copy {} to {}", dll, copy), error);
     }
     return copy;
 }
@@ -181,7 +180,7 @@ std::string import_name(std::string_view dll) {
 /// Adds the hook DLL of the suspended process's machine to its imports, and
 /// gives it `session`; false for a process of a machine catter has no hook
 /// for.
-bool add_hook(HANDLE process, std::string_view executable, const config::HookSession& session) {
+bool add_hook(HANDLE process, std::string_view executable, const hook::Session& session) {
     const USHORT machine = process_machine(process);
     const auto hook = std::ranges::find(HOOKS, machine, &Hook::machine);
     if(hook == std::ranges::end(HOOKS)) {
@@ -191,19 +190,13 @@ bool add_hook(HANDLE process, std::string_view executable, const config::HookSes
     const auto dll = import_name(program_path(std::format("catter-hook-{}.dll", hook->arch)));
     LPCSTR dlls[] = {dll.c_str()};
     if(!DetourUpdateProcessWithDll(process, dlls, 1)) {
-        throw catter::system_error(
-            GetLastError(),
-            std::system_category(),
-            std::format("Failed to add {} to the imports of {}", dll, executable));
+        fail(std::format("Failed to add {} to the imports of {}", dll, executable));
     }
     if(machine != DETOURS_MACHINE) {
         fix_converted_header(process, machine);
     }
-    if(!DetourCopyPayloadToProcess(process, config::HOOK_SESSION_GUID, &session, sizeof(session))) {
-        throw catter::system_error(
-            GetLastError(),
-            std::system_category(),
-            std::format("Failed to give the hook in {} its session", executable));
+    if(!DetourCopyPayloadToProcess(process, hook::SESSION_GUID, &session, sizeof(session))) {
+        fail(std::format("Failed to give the hook in {} its session", executable));
     }
     return true;
 }
@@ -214,7 +207,7 @@ void inject_hook(HANDLE process,
                  std::string_view executable,
                  std::int32_t id,
                  std::string_view pipe) {
-    config::HookSession session{.id = id};
+    hook::Session session{.id = id};
     pipe.copy(session.pipe, sizeof(session.pipe) - 1);
     if(!add_hook(process, executable, session)) {
         LOG_WARN("No hook for machine 0x{:04X}: {} runs, but what it starts is not captured",

@@ -9,11 +9,12 @@
 #include <string_view>
 
 #include "hook/unix/environment.h"
-#include "support/config/hook_unix.h"
+#include "support/hook.h"
+#include "support/messages.h"
 
 namespace {
 bool should_drop_entry(const char* entry) noexcept {
-    for(const auto& key: catter::config::KEYS_TO_INJECT) {
+    for(std::string_view key: {catter::env::PROXY, catter::env::COMMAND_ID, catter::env::IPC}) {
         if(catter::hook::is_entry_of(entry, key)) {
             return true;
         }
@@ -29,13 +30,13 @@ std::optional<std::string> sanitize_preload_entry(const char* entry) noexcept {
 
     auto value = full_entry.substr(eq_pos + 1);
     std::string new_value;
-    for(const auto& lib: value | std::views::split(catter::config::OS_PATH_SEPARATOR)) {
+    for(const auto& lib: value | std::views::split(catter::hook::PRELOAD_SEPARATORS[0])) {
         std::string_view lib_sv(lib.begin(), lib.end());
-        if(lib_sv.ends_with(catter::config::HOOK_LIB_NAME)) {
+        if(lib_sv.ends_with(catter::hook::LIBRARY)) {
             continue;
         }
         if(!new_value.empty()) {
-            new_value += catter::config::OS_PATH_SEPARATOR;
+            new_value += catter::hook::PRELOAD_SEPARATORS[0];
         }
         new_value += lib_sv;
     }
@@ -43,7 +44,7 @@ std::optional<std::string> sanitize_preload_entry(const char* entry) noexcept {
         // If the new value is empty, we just skip this entry.
         return std::nullopt;
     }
-    return catter::config::LD_PRELOAD_INIT_ENTRY + new_value;
+    return std::string(catter::hook::PRELOAD) + "=" + new_value;
 }
 }  // namespace
 
@@ -62,7 +63,7 @@ SanitizedEnv sanitize_environment(char* const envp[]) noexcept {
             continue;
         }
 
-        if(is_entry_of(envp[i], catter::config::KEY_PRELOAD)) {
+        if(is_entry_of(envp[i], hook::PRELOAD)) {
             auto new_entry = sanitize_preload_entry(envp[i]);
             if(!new_entry.has_value()) {
                 continue;

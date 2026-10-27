@@ -8,19 +8,20 @@
 #include <utility>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/base_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <kota/fs/directory.h>
 #include <kota/fs/file.h>
 #include <kota/fs/path.h>
 
-#include "support/config/log.h"
-
-// every target have a single logger instance
-// which have commandline and file sink
-
 namespace {
-std::shared_ptr<spdlog::logger> logger_instance = nullptr;
+
+/// Like `[2024-06-15 14:23:01.123] [info] [pid:12345][tid:123]`, then the
+/// message on a line of its own.
+#ifdef DEBUG
+constexpr char PATTERN[] = "[%@] [%Y-%m-%d %H:%M:%S.%e] [%l] [pid:%P][tid:%t] \n %v";
+#else
+constexpr char PATTERN[] = "[%Y-%m-%d %H:%M:%S.%e] [%l] [pid:%P][tid:%t] \n %v";
+#endif
 
 /// Appends to the log file at a path. spdlog's file sinks take a narrow file
 /// name, which Windows reads in the ANSI code page: a data directory past it,
@@ -61,21 +62,10 @@ private:
 
 namespace catter::log {
 
-void init_logger(const std::string& logger_name,
-                 std::string_view file_path,
-                 bool cmdline,
-                 bool reopen) noexcept {
-    // add file sink and console sink
-    auto file_sink = std::make_shared<path_file_sink>(file_path, reopen);
-    file_sink->set_pattern(catter::config::LOG_PATTERN_FILE);
-    std::vector<spdlog::sink_ptr> sinks{file_sink};
-    if(cmdline) {
-        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        console_sink->set_pattern(catter::config::LOG_PATTERN_CONSOLE);
-        sinks.push_back(console_sink);
-    }
-    logger_instance = std::make_shared<spdlog::logger>(logger_name, begin(sinks), end(sinks));
-    spdlog::set_default_logger(logger_instance);
+void init_logger(const std::string& logger_name, std::string_view file_path, bool reopen) noexcept {
+    auto sink = std::make_shared<path_file_sink>(file_path, reopen);
+    sink->set_pattern(PATTERN);
+    spdlog::set_default_logger(std::make_shared<spdlog::logger>(logger_name, std::move(sink)));
 }
 
 void mute_logger() noexcept {

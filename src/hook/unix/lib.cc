@@ -10,10 +10,9 @@
 #include "hook/unix/crossplat.h"
 #include "hook/unix/debug.h"
 #include "hook/unix/executor.h"
-#include "support/config/hook_unix.h"
-
 #ifdef DEBUG
-#include "support/config/ipc.h"
+#include "support/messages.h"
+#include "support/paths.h"
 #endif
 
 #define EXPORT_SYMBOL __attribute__((visibility("default")))
@@ -55,12 +54,10 @@ extern "C" EXPORT_SYMBOL void on_load() {
 #ifdef DEBUG
     // Read without the hook's own lookup, which logs: before the logger
     // starts, a log goes to stdout, the program's.
-    if(auto ipc = std::getenv(catter::config::KEY_CATTER_IPC)) {
-        catter::log::init_logger(
-            "catter-hook",
-            catter::config::session_data_path(ipc, catter::config::HOOK_LOG_PATH),
-            false,
-            true);
+    if(auto ipc = std::getenv(catter::env::IPC)) {
+        catter::log::init_logger("catter-hook",
+                                 catter::data_path(ipc, "log/catter-hook.log"),
+                                 true);
     } else {
         catter::log::mute_logger();
     }

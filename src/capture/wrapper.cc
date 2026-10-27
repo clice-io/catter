@@ -2,11 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/catter-proxy.h"
-#include "support/config/ipc.h"
-#include "support/config/session.h"
-#include "support/messages.h"
 #include "support/paths.h"
+#include "support/messages.h"
 
 module catter;
 
@@ -25,7 +22,7 @@ constexpr auto PROGRAM_VARIABLES = std::to_array<std::string_view>(
 
 /// The variables the wrapper backend sets for the build command, in place of those catter has.
 constexpr auto SESSION_VARIABLES = std::to_array<std::string_view>(
-    {"PATH", config::KEY_CATTER_COMMAND_ID, config::KEY_CATTER_IPC, config::KEY_CATTER_SHIMS});
+    {"PATH", env::COMMAND_ID, env::IPC, env::SHIMS});
 
 #ifdef CATTER_WINDOWS
 /// The tools MSBuild runs, cl's compiler, linker and librarian, each from the directory a property
@@ -61,7 +58,7 @@ public:
         }
 #ifdef CATTER_WINDOWS
         // The shims are hard links, which a copy, on a volume other than catter's, takes.
-        const auto proxy = program_path(std::format("{}.exe", config::PROXY_EXE_NAME));
+        const auto proxy = program_path(std::format("{}.exe", PROXY));
         const auto launcher = this->launcher();
         if(kota::fs::create_hard_link(proxy, launcher)) {
             std::string bytes;
@@ -80,7 +77,7 @@ public:
             link(name, dir);
         }
 #else
-        link(config::LAUNCHER_NAME, dir);
+        link(LAUNCHER, dir);
 #endif
     }
 
@@ -99,9 +96,9 @@ public:
     std::string launcher() const {
         std::string path = dir;
 #ifdef CATTER_WINDOWS
-        kota::fs::path::push(path, std::format("{}.exe", config::LAUNCHER_NAME));
+        kota::fs::path::push(path, std::format("{}.exe", LAUNCHER));
 #else
-        kota::fs::path::push(path, config::LAUNCHER_NAME);
+        kota::fs::path::push(path, LAUNCHER);
 #endif
         return path;
     }
@@ -183,7 +180,7 @@ private:
 #ifdef CATTER_WINDOWS
         auto error = kota::fs::create_hard_link(launcher(), path);
 #else
-        auto error = kota::fs::create_symlink(program_path(config::PROXY_EXE_NAME), path);
+        auto error = kota::fs::create_symlink(program_path(PROXY), path);
 #endif
         if(error) {
             throw cpptrace::runtime_error(
@@ -197,7 +194,7 @@ private:
         std::string shims = dir;
         kota::fs::path::push(shims, std::to_string(++count));
         std::string named = shims;
-        kota::fs::path::push(named, config::SHIM_DIRECTORY_FILE);
+        kota::fs::path::push(named, SHIM_DIRECTORY_FILE);
         std::error_code error;
         if(auto created = kota::fs::create_directory(shims); !created) {
             error = created.error();
@@ -301,7 +298,7 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
         throw cpptrace::runtime_error(
             "The wrapper backend puts its shims on the build's PATH, which is not set: set it");
     }
-    if(std::ranges::any_of(variables, named(config::KEY_CATTER_SHIMS), &kota::sys::EnvVar::name)) {
+    if(std::ranges::any_of(variables, named(env::SHIMS), &kota::sys::EnvVar::name)) {
         throw cpptrace::runtime_error(
             "catter runs in a build under the wrapper backend, whose shims would stand in for this session's: run it outside that build, or with --capture hook");
     }
@@ -332,8 +329,8 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
     }
 
     env.push_back({.name = "PATH", .value = std::move(path_list)});
-    env.push_back({.name = config::KEY_CATTER_IPC, .value = std::string(pipe)});
-    env.push_back({.name = config::KEY_CATTER_SHIMS, .value = std::string(shims.directory())});
+    env.push_back({.name = env::IPC, .value = std::string(pipe)});
+    env.push_back({.name = env::SHIMS, .value = std::string(shims.directory())});
 
 #ifdef CATTER_WINDOWS
     for(auto name: MSBUILD_PATHS) {
@@ -365,7 +362,7 @@ public:
 
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
-        auto pipe_name = config::session_pipe_name();
+        auto pipe = pipe_name();
         // A build tool that writes the shims' paths down writes them as they are spelled.
         auto directory = data_path(std::format("shims-{}", kota::sys::pid()));
         kota::fs::path::normalize(directory);
@@ -373,11 +370,11 @@ public:
         kota::process::options launch{
             .program = shims.launcher(),
             .args = build.command,
-            .env = environment(shims, pipe_name),
+            .env = environment(shims, pipe),
             .cwd = build.cwd,
         };
         co_return co_await session.serve(
-            pipe_name,
+            pipe,
             [launch = std::move(launch)]() mutable {
                 return run_process(std::move(launch), {.stand_in = true});
             },

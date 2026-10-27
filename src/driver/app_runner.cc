@@ -80,8 +80,7 @@ Address parse_address(std::string_view address, bool allow_remote) {
                 "`{}` is not on this machine, and a handler can change and drop the build's commands: give --allow-remote to connect to it",
                 address));
         }
-        output::yellowln("Warning: the handler at `{}` on another machine decides on the build",
-                         address);
+        output::warn("the handler at `{}` on another machine decides on the build", address);
     }
     return {.hosts = {std::string(host)}, .port = port};
 }

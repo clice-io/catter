@@ -6,11 +6,10 @@ module;
 #include <mach-o/utils.h>
 #endif
 
-#include "support/config/catter-proxy.h"
-#include "support/config/hook_unix.h"
-#include "support/log.h"
-#include "support/messages.h"
 #include "support/paths.h"
+#include "support/hook.h"
+#include "support/messages.h"
+#include "support/log.h"
 
 module catter;
 
@@ -72,30 +71,30 @@ kota::process::options hook_options(data::command command,
     }
 #endif
 
-    const auto lib_path = program_path(catter::config::RELATIVE_PATH_OF_HOOK_LIB);
+    const auto lib_path = program_path(hook::LIBRARY);
     if(!kota::fs::is_file(lib_path)) {
         throw cpptrace::runtime_error(
             std::format("Catter-Proxy Hook library not found at path `{}`", lib_path));
     }
 
     bool preload_injected = false;
-    std::string key_preload_prefix = std::string(catter::config::KEY_PRELOAD) + "=";
+    std::string key_preload_prefix = std::string(hook::PRELOAD) + "=";
     for(auto& env_item: command.env) {
         if(env_item.starts_with(key_preload_prefix)) {
-            env_item += catter::config::OS_PATH_SEPARATOR + lib_path;
+            env_item += hook::PRELOAD_SEPARATORS[0] + lib_path;
             preload_injected = true;
             break;
         }
     }
 
     if(!preload_injected) {
-        command.env.push_back(std::format("{}={}", catter::config::KEY_PRELOAD, lib_path));
+        command.env.push_back(std::format("{}={}", hook::PRELOAD, lib_path));
     }
-    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_COMMAND_ID, id));
+    command.env.push_back(std::format("{}={}", env::COMMAND_ID, id));
     command.env.push_back(std::format("{}={}",
-                                      catter::config::KEY_CATTER_PROXY_PATH,
-                                      program_path(catter::config::PROXY_EXE_NAME)));
-    command.env.push_back(std::format("{}={}", catter::config::KEY_CATTER_IPC, pipe_name));
+                                      env::PROXY,
+                                      program_path(PROXY)));
+    command.env.push_back(std::format("{}={}", env::IPC, pipe_name));
 
     std::string cmd_for_print = "";
     for(auto& arg: command.args) {

@@ -2,14 +2,10 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/catter-proxy.h"
-#include "support/config/ipc.h"
-#include "support/config/session.h"
+#include "support/paths.h"
+#include "support/messages.h"
 #include "support/guard.h"
 #include "support/log.h"
-#include "support/messages.h"
-#include "support/output.h"
-#include "support/paths.h"
 #include "support/program.h"
 
 module catter;
@@ -184,7 +180,7 @@ std::optional<std::string> resolve_past(std::string_view program,
         }
         name = kota::fs::path::filename(program);
         std::string named(kota::fs::path::parent(program));
-        kota::fs::path::push(named, config::SHIM_DIRECTORY_FILE);
+        kota::fs::path::push(named, SHIM_DIRECTORY_FILE);
         if(std::string directory; !kota::fs::read_file(directory, named)) {
             kota::fs::path::push(directory, name);
             return directory;
@@ -210,11 +206,11 @@ Proxied wrapped(std::string_view self,
                 std::vector<std::string> args,
                 bool launcher) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
-    std::string pipe(variable(cmd.env, config::KEY_CATTER_IPC).value_or(""));
+    std::string pipe(variable(cmd.env, env::IPC).value_or(""));
     std::string shims(
-        variable(cmd.env, config::KEY_CATTER_SHIMS).value_or(kota::fs::path::parent(self)));
+        variable(cmd.env, env::SHIMS).value_or(kota::fs::path::parent(self)));
     data::ipcid_t parent = 0;
-    if(auto id = variable(cmd.env, config::KEY_CATTER_COMMAND_ID)) {
+    if(auto id = variable(cmd.env, env::COMMAND_ID)) {
         std::from_chars(id->data(), id->data() + id->size(), parent);
     }
     std::optional<std::string> path(variable(cmd.env, "PATH"));
@@ -256,7 +252,7 @@ Proxied wrapped(std::string_view self,
         .command = std::move(cmd),
         .launch =
             [](data::command command, data::ipcid_t id) {
-                set_variable(command.env, config::KEY_CATTER_COMMAND_ID, std::to_string(id));
+                set_variable(command.env, env::COMMAND_ID, std::to_string(id));
                 return process_options(command);
             },
     };
@@ -395,13 +391,7 @@ void init_logger(std::string_view pipe) {
         return;
     }
     try {
-#ifdef CATTER_WINDOWS
-        // The session's pipe is a named pipe, in no directory.
-        auto path = data_path(config::PROXY_LOG_PATH);
-#else
-        auto path = config::session_data_path(pipe, config::PROXY_LOG_PATH);
-#endif
-        log::init_logger("catter-proxy.log", path, false);
+        log::init_logger("catter-proxy", data_path(pipe, "log/catter-proxy.log"));
     } catch(const std::exception&) {
         log::mute_logger();
     }
@@ -431,12 +421,12 @@ int run(std::span<const std::string> argv) {
 #else
     const auto name = kota::fs::path::filename(self);
 #endif
-    if(name == config::LAUNCHER_NAME) {
+    if(name == LAUNCHER) {
         std::vector<std::string> args(argv.begin() + 1, argv.end());
         std::string program = args.front();
         return run_proxied(argv, wrapped(self, program, std::move(args), true));
     }
-    if(name != config::PROXY_EXE_NAME) {
+    if(name != PROXY) {
         return run_proxied(
             argv,
             wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end()), false));

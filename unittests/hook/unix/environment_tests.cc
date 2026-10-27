@@ -5,7 +5,8 @@
 
 #include "hook/unix/env_sanitizer.h"
 #include "hook/unix/environment.h"
-#include "support/config/hook_unix.h"
+#include "support/hook.h"
+#include "support/messages.h"
 
 namespace ct = catter::hook;
 namespace cfg = catter::config;

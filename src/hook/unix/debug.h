@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef DEBUG
-#include "support/config/hook_unix.h"
 #include "support/log.h"
 
 #define INFO(...) LOG_INFO(__VA_ARGS__)

@@ -2,16 +2,14 @@ module;
 
 #include "modules/prelude.h"
 
-#include "support/config/ipc.h"
 #include "support/messages.h"
 #include "support/paths.h"
-#include "support/program.h"
 
 #ifdef CATTER_WINDOWS
 #include "support/log.h"
+#include "support/program.h"
 #else
-#include "support/config/catter-proxy.h"
-#include "support/config/hook_unix.h"
+#include "support/hook.h"
 #endif
 
 module catter;
@@ -232,19 +230,19 @@ public:
                                                Session& session) const override {
         assert(!build.command.empty());
 #ifndef CATTER_WINDOWS
-        if(auto hook = program_path(config::RELATIVE_PATH_OF_HOOK_LIB);
-           hook.find_first_of(config::PRELOAD_SEPARATORS) != std::string::npos) {
+        if(auto library = program_path(hook::LIBRARY);
+           library.find_first_of(hook::PRELOAD_SEPARATORS) != std::string::npos) {
             throw cpptrace::runtime_error(std::format(
                 "catter cannot preload its hook `{}` into the build: {} splits paths at {}. Install catter in a directory whose path has none",
-                hook,
-                config::KEY_PRELOAD,
-                config::PRELOAD_SEPARATORS_NAMED));
+                library,
+                hook::PRELOAD,
+                hook::PRELOAD_SEPARATORS_NAMED));
         }
 #endif
 
-        auto pipe_name = config::session_pipe_name();
+        auto pipe = pipe_name();
 #ifdef CATTER_WINDOWS
-        Programs programs(pipe_name);
+        Programs programs(pipe);
         data::command command{
             .cwd = build.cwd,
             .executable = resolve_program(build.command.front(), build.cwd),
@@ -254,7 +252,7 @@ public:
             command.env.push_back(std::format("{}={}", name, value));
         }
         co_return co_await session.serve(
-            pipe_name,
+            pipe,
             [&, command = std::move(command)]() mutable {
                 return run_build(session, std::move(command), programs);
             },
@@ -264,13 +262,13 @@ public:
             });
 #else
         kota::process::options proxy{
-            .program = program_path(config::PROXY_EXE_NAME),
-            .args = {"-p", "0", "--ipc", pipe_name, "--"},
+            .program = program_path(PROXY),
+            .args = {"-p", "0", "--ipc", pipe, "--"},
             .cwd = build.cwd,
         };
         proxy.args.append_range(build.command);
         co_return co_await session.serve(
-            pipe_name,
+            pipe,
             [proxy = std::move(proxy)]() mutable {
                 return run_process(std::move(proxy), {.stand_in = true});
             },

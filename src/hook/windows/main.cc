@@ -16,7 +16,7 @@
 
 #include "hook/windows/connection.h"
 #include "hook/windows/create_process.h"
-#include "support/config/hook_windows.h"
+#include "support/hook.h"
 #include "support/messages.h"
 #include "support/program.h"
 
@@ -24,7 +24,7 @@
 namespace {
 
 /// The session this process reports the programs it starts to.
-catter::config::HookSession session;
+hook::Session session;
 
 namespace hooks {
 
@@ -275,7 +275,7 @@ BOOL WINAPI DllMain(HINSTANCE hinst, DWORD dwReason, [[maybe_unused]] LPVOID res
     DetourRestoreAfterWith();
     // catter killed between adding the DLL and copying its session leaves
     // none: the process runs as it would without catter.
-    const void* found = DetourFindPayloadEx(catter::config::HOOK_SESSION_GUID, nullptr);
+    const void* found = DetourFindPayloadEx(hook::SESSION_GUID, nullptr);
     if(found == nullptr) {
         return TRUE;
     }

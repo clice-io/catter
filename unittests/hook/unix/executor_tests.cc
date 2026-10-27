@@ -12,7 +12,8 @@
 #include <kota/fs/resolve.h>
 
 #include "hook/unix/executor.h"
-#include "support/config/hook_unix.h"
+#include "support/hook.h"
+#include "support/messages.h"
 #include "utils/temp_file_manager.h"
 
 namespace ct = catter::hook;
