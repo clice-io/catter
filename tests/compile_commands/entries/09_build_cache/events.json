@@ -16,6 +16,12 @@
       "argv": ["g++", "-c", "-m64", "-DTEST=1", "-fpreprocessed", "-Wno-gnu-line-marker", "-o", "build/main.cc.o", "build/__cpp_main.cc.cc"]
     },
     {
+      "id": 7,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-c", "-m64", "-Iinclude", "-E", "-o", "build/__cpp_main.cc.cc", "src/other.cc"]
+    },
+    {
       "id": 6,
       "parent": 1,
       "exe": "g++",

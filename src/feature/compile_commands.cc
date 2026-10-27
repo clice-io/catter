@@ -168,6 +168,7 @@ public:
            analysis->writes.front().path != "-" && analysis->writes.front().reads.size() == 1) {
             const auto& write = analysis->writes.front();
             made = Preprocessed{
+                .id = id,
                 .cwd = command.cwd,
                 .analysis = *analysis,
                 .read = write.reads.front(),
@@ -186,7 +187,7 @@ public:
                 const auto& by = from->second;
                 const auto& read = by.analysis.reads[by.read];
                 entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
-                consumed.insert(by.file);
+                consumed.insert(by.id);
                 source = absolute_path(by.cwd, read.path);
             } else if(!preprocess) {
                 compiled.insert(source);
@@ -248,8 +249,11 @@ public:
     }
 
 private:
-    /// A preprocess of the build's, run in `cwd`, that writes `file` from `read` of `analysis`.
+    /// The preprocess `id` of the build's, run in `cwd`, that writes `file` from `read` of
+    /// `analysis`.
     struct Preprocessed {
+        data::ipcid_t id;
+
         std::string cwd;
 
         CompilerAnalysis analysis;
@@ -307,7 +311,7 @@ private:
             // A compile of the source stands for every preprocess of it; a compile of what a
             // preprocess wrote, for that one alone.
             if(preprocess &&
-               (compiled.contains(source) || (made.has_value() && consumed.contains(made->file)))) {
+               (compiled.contains(source) || (made.has_value() && consumed.contains(made->id)))) {
                 continue;
             }
             // A build cache that looks objects up by the preprocessed source, xmake's, removes it
@@ -351,8 +355,8 @@ private:
     /// The sources the build's commands but preprocesses compile, absolute.
     std::unordered_set<std::string> compiled;
 
-    /// The files of preprocesses a compile of the build read, absolute.
-    std::unordered_set<std::string> consumed;
+    /// The preprocesses whose file a compile of the build read.
+    std::unordered_set<data::ipcid_t> consumed;
 
     /// The build's preprocesses, by the file each writes, absolute.
     std::unordered_map<std::string, Preprocessed> preprocessed;
