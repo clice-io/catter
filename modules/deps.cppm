@@ -69,6 +69,7 @@ using ::cpptrace::detail::lazy_trace_holder;
 }
 
 export namespace kota {
+using ::kota::ScopeExit;
 using ::kota::UTF8Sequence;
 using ::kota::acceptor;
 using ::kota::aggregate_op;
