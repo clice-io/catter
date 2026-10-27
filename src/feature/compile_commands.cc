@@ -291,14 +291,15 @@ private:
             return true;
         }
         // CMake's own directory, `share/cmake-3.31` or `share/cmake`, holds its modules.
-        std::string_view previous;
+        std::array<std::string_view, 2> previous;
         for(auto component: kota::fs::path::components(source)) {
-            if(component == "Modules" &&
-               (previous == "cmake" || (previous.starts_with("cmake-") && previous.size() > 6 &&
-                                        std::isdigit(static_cast<unsigned char>(previous[6]))))) {
+            const auto [share, cmake] = previous;
+            if(component == "Modules" && share == "share" &&
+               (cmake == "cmake" || (cmake.starts_with("cmake-") && cmake.size() > 6 &&
+                                     std::isdigit(static_cast<unsigned char>(cmake[6]))))) {
                 return true;
             }
-            previous = component;
+            previous = {cmake, component};
         }
         return false;
     }

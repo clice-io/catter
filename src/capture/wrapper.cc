@@ -25,6 +25,10 @@ namespace {
 constexpr auto PROGRAM_VARIABLES = std::to_array<std::string_view>(
     {"CC", "CXX", "OBJC", "OBJCXX", "CUDACXX", "HIPCXX", "AR", "LD"});
 
+/// The variables the wrapper backend sets for the build command, in place of those catter has.
+constexpr auto SESSION_VARIABLES = std::to_array<std::string_view>(
+    {"PATH", config::KEY_CATTER_COMMAND_ID, config::KEY_CATTER_IPC, config::KEY_CATTER_SHIMS});
+
 /// CMake's languages whose compilers catter knows, each of which CMake runs through the program
 /// CMAKE_<LANG>_COMPILER_LAUNCHER and CMAKE_<LANG>_LINKER_LAUNCHER name.
 constexpr auto CMAKE_LANGUAGES =
@@ -230,13 +234,27 @@ std::vector<kota::process::env_var> environment(Shims& shims,
         throw cpptrace::runtime_error(
             "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
     }
-    shims.add_found(path->value, cwd);
+    // The shims of a session this one runs under, which would tell its commands to that session.
+    auto outer =
+        std::ranges::find_if(variables, named(config::KEY_CATTER_SHIMS), &kota::sys::EnvVar::name);
+    std::vector<std::string> directories = {std::string(shims.directory())};
+    for(auto directory: kota::sys::split_paths(path->value)) {
+        if(outer == variables.end() || directory != outer->value) {
+            directories.emplace_back(directory);
+        }
+    }
+    std::string path_list;
+    if(auto error = kota::sys::join_paths(path_list, directories)) {
+        throw cpptrace::runtime_error(std::format(
+            "catter cannot put its shims {} on PATH, which splits paths at what that path holds: set CATTER_HOME to a directory whose path has none",
+            shims.directory()));
+    }
+    shims.add_found(path_list, cwd);
 
     std::vector<kota::process::env_var> env;
     for(auto& [name, value]: variables) {
-        // The build command has no parent; its PATH comes last.
-        if(kota::sys::env_name_equal(name, config::KEY_CATTER_COMMAND_ID) ||
-           kota::sys::env_name_equal(name, "PATH")) {
+        // The build command has no parent; the session's variables come last.
+        if(std::ranges::any_of(SESSION_VARIABLES, named(name))) {
             continue;
         }
         if(std::ranges::any_of(PROGRAM_VARIABLES, named(name))) {
@@ -245,17 +263,7 @@ std::vector<kota::process::env_var> environment(Shims& shims,
         env.push_back({.name = std::move(name), .value = std::move(value)});
     }
 
-    std::string shims_path;
-    std::vector<std::string> directories = {std::string(shims.directory())};
-    for(auto directory: kota::sys::split_paths(path->value)) {
-        directories.emplace_back(directory);
-    }
-    if(auto error = kota::sys::join_paths(shims_path, directories)) {
-        throw cpptrace::runtime_error(std::format(
-            "catter cannot put its shims {} on PATH, which splits paths at what that path holds: set CATTER_HOME to a directory whose path has none",
-            shims.directory()));
-    }
-    env.push_back({.name = "PATH", .value = std::move(shims_path)});
+    env.push_back({.name = "PATH", .value = std::move(path_list)});
     env.push_back({.name = config::KEY_CATTER_IPC, .value = std::string(pipe)});
     env.push_back({.name = config::KEY_CATTER_SHIMS, .value = std::string(shims.directory())});
 
