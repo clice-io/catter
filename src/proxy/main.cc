@@ -2,8 +2,15 @@ module;
 
 #include "modules/prelude.h"
 
+#if defined(CATTER_LINUX)
+#include <sys/auxv.h>
+#elif defined(CATTER_MAC)
+#include <mach-o/dyld.h>
+#endif
+
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
+#include "support/config/session.h"
 #include "support/guard.h"
 #include "support/log.h"
 #include "support/messages.h"
@@ -24,9 +31,30 @@ namespace {
 using catter::data::action;
 using exit_status = kota::process::exit_status;
 
+/// A command the proxy stands in for, and the session it reports it to.
+struct Proxied {
+    /// The session's pipe.
+    std::string pipe;
+
+    /// The command that started this one, 0 for the build command.
+    data::ipcid_t parent = 0;
+
+    /// The command as it runs here. Its working directory is empty when it
+    /// cannot be read, as when the build removed it: the program starts in it
+    /// all the same.
+    data::command command;
+
+    /// The options that run the command as catter decided, as command `id`.
+    std::function<kota::process::options(data::command, data::ipcid_t)> launch;
+
+    /// Why catter cannot capture the command, which the proxy reports in its
+    /// place.
+    std::optional<std::string> error;
+};
+
 kota::task<exit_status> run(data::action act,
                             data::ipcid_t id,
-                            std::string pipe_name,
+                            const Proxied& proxied,
                             [[maybe_unused]] proxy::Peer& peer) {
     using catter::data::action;
 
@@ -39,7 +67,7 @@ kota::task<exit_status> run(data::action act,
 #endif
     switch(act.type) {
         case action::RUN: {
-            co_return co_await run_process(hook_options(std::move(act.cmd), id, pipe_name),
+            co_return co_await run_process(proxied.launch(std::move(act.cmd), id),
                                            std::move(stand_in));
         }
         case action::DROP: {
@@ -52,24 +80,173 @@ kota::task<exit_status> run(data::action act,
     std::unreachable();
 }
 
-/// The command the proxy stands in for, as it runs here. Its working
-/// directory is empty when it cannot be read, as when the build removed it:
-/// the program starts in it all the same.
-data::command command_of(const catter::proxy::ProxyOption& opt) {
+/// This process's environment, as a command carries it.
+std::vector<std::string> environment() {
+    std::vector<std::string> env;
+    for(const auto& [name, value]: kota::sys::environment()) {
+        env.push_back(std::format("{}={}", name, value));
+    }
+    return env;
+}
+
+/// This process's working directory; empty when it cannot be read.
+std::string working_directory() {
+    std::string cwd;
+    if(kota::fs::current_dir(cwd)) {
+        cwd.clear();
+    }
+    return cwd;
+}
+
+/// The command the hook started the proxy for, which runs with the hook, or
+/// what the hook found wrong.
+Proxied hooked(const catter::proxy::ProxyOption& opt) {
+    if(opt.error_msg.has_value() && !opt.args.has_value()) {
+        return {.pipe = *opt.ipc, .parent = *opt.parent_id, .error = *opt.error_msg};
+    }
     if(!opt.args.has_value()) {
         throw cpptrace::runtime_error("missing command arguments after --");
     }
 
-    data::command cmd = {.args = *opt.args};
-    if(kota::fs::current_dir(cmd.cwd)) {
-        cmd.cwd.clear();
+    data::command cmd = {
+        .cwd = working_directory(),
+        .args = *opt.args,
+        .env = environment(),
+    };
+    cmd.executable = opt.exec.has_value() ? *opt.exec : resolve_program(cmd.args.at(0));
+    return {
+        .pipe = *opt.ipc,
+        .parent = *opt.parent_id,
+        .command = std::move(cmd),
+        .launch =
+            [pipe = *opt.ipc](data::command command, data::ipcid_t id) {
+                return hook_options(std::move(command), id, pipe);
+            },
+    };
+}
+
+/// The value of variable `name` in `env`, entries of which are `name=value`.
+std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
+    for(std::string_view entry: env) {
+        if(entry.size() > name.size() && entry[name.size()] == '=' &&
+           kota::sys::env_name_equal(entry.substr(0, name.size()), name)) {
+            return entry.substr(name.size() + 1);
+        }
     }
-    for(const auto& [name, value]: kota::sys::environment()) {
-        cmd.env.push_back(std::format("{}={}", name, value));
+    return std::nullopt;
+}
+
+/// Sets variable `name` of `env` to `value`.
+void set_variable(std::vector<std::string>& env, std::string_view name, std::string_view value) {
+    auto entry = std::ranges::find_if(env, [&](std::string_view entry) {
+        return entry.size() > name.size() && entry[name.size()] == '=' &&
+               kota::sys::env_name_equal(entry.substr(0, name.size()), name);
+    });
+    auto assignment = std::format("{}={}", name, value);
+    if(entry == env.end()) {
+        env.push_back(std::move(assignment));
+    } else {
+        *entry = std::move(assignment);
+    }
+}
+
+/// Whether `directory` is one of the directories of shims, `shims`.
+bool among(std::string_view directory, std::span<const std::string> shims) {
+    return std::ranges::any_of(shims, [&](const std::string& shim) {
+        auto same = kota::fs::equivalent(directory, shim);
+        return same.has_value() && *same;
+    });
+}
+
+/// The entries of the list of paths `path_list` that are no directory of shims.
+std::vector<std::string> past_shims(std::string_view path_list,
+                                    std::span<const std::string> shims) {
+    std::vector<std::string> directories;
+    for(auto directory: kota::sys::split_paths(path_list)) {
+        if(!among(directory, shims)) {
+            directories.emplace_back(directory);
+        }
+    }
+    return directories;
+}
+
+/// The file the system starts for `program`, a name or a path, from a PATH of
+/// `path_list`, as it would had catter put no shims in the way: a shim's name
+/// is looked for again past the directories of `shims`. None when there is
+/// none.
+std::optional<std::string> resolve_past(std::string_view program,
+                                        std::span<const std::string> shims,
+                                        std::string_view path_list) {
+    std::string_view name = program;
+    if(std::ranges::any_of(program, [](char c) { return kota::fs::path::is_separator(c); })) {
+        if(!among(kota::fs::path::parent(program), shims)) {
+            return std::string(program);
+        }
+        name = kota::fs::path::filename(program);
+    }
+    kota::sys::ProgramSearch search{.directories = past_shims(path_list, shims)};
+    std::string found;
+    // No directories would search the shims' PATH.
+    if(search.directories.empty() || kota::sys::find_program(found, name, search)) {
+        return std::nullopt;
+    }
+    return found;
+}
+
+/// The command a shim, or the launcher, stands in for: `args` as the build
+/// started it, which runs `program`. The build command, which catter starts
+/// through the launcher, runs with the shims on its PATH; the commands under it
+/// run without them, so that the compilers a build tool runs do not find the
+/// shims again, nor a build cache's compiler in their place.
+Proxied wrapped(std::string_view self, std::string_view program, std::vector<std::string> args) {
+    data::command cmd{.cwd = working_directory(), .env = environment()};
+    auto pipe = variable(cmd.env, config::KEY_CATTER_IPC);
+    std::vector<std::string> shims = {std::string(kota::fs::path::parent(self))};
+    if(auto session_shims = variable(cmd.env, config::KEY_CATTER_SHIMS)) {
+        shims.emplace_back(*session_shims);
+    }
+    data::ipcid_t parent = 0;
+    if(auto id = variable(cmd.env, config::KEY_CATTER_COMMAND_ID)) {
+        std::from_chars(id->data(), id->data() + id->size(), parent);
     }
 
-    cmd.executable = opt.exec.has_value() ? *opt.exec : resolve_program(cmd.args.at(0));
-    return cmd;
+    auto real = resolve_past(program, shims, variable(cmd.env, "PATH").value_or(""));
+    if(!real) {
+        return {
+            .pipe = std::string(pipe.value_or("")),
+            .parent = parent,
+            .error = std::format("`{}` is found nowhere past catter's shims", program),
+        };
+    }
+    // A build tool that ran the shim by its path does not see the shim's: it
+    // ran the program.
+    if(std::ranges::any_of(args.front(), [](char c) { return kota::fs::path::is_separator(c); }) &&
+       among(kota::fs::path::parent(args.front()), shims)) {
+        args.front() = *real;
+    }
+    cmd.executable = std::move(*real);
+    cmd.args = std::move(args);
+    return {
+        .pipe = std::string(pipe.value_or("")),
+        .parent = parent,
+        .command = std::move(cmd),
+        .launch =
+            [shims = std::move(shims), build = parent == 0](data::command command,
+                                                            data::ipcid_t id) {
+                set_variable(command.env, config::KEY_CATTER_COMMAND_ID, std::to_string(id));
+                if(!build) {
+                    std::string path;
+                    if(kota::sys::join_paths(
+                           path,
+                           past_shims(variable(command.env, "PATH").value_or(""), shims))) {
+                        throw cpptrace::runtime_error(
+                            "The PATH of the command cannot be written without catter's shims");
+                    }
+                    set_variable(command.env, "PATH", path);
+                }
+                return process_options(command);
+            },
+    };
 }
 
 std::string format_args(std::span<const std::string> argv) {
@@ -84,7 +261,7 @@ std::string format_args(std::span<const std::string> argv) {
 }
 
 kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
-                                             const catter::proxy::ProxyOption& opt,
+                                             const Proxied& proxied,
                                              proxy::Peer& peer) noexcept {
     // ensure peer is closed when proxy_main exits, otherwise the peer might still be
     // running and trying to access resources that have been cleaned up after proxy_main
@@ -99,26 +276,25 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
     std::string err;
 
     try {
-        if(opt.error_msg.has_value() && !opt.args.has_value()) {
-            co_await peer.report_error(*opt.parent_id, *opt.error_msg);
+        if(proxied.error) {
+            co_await peer.report_error(proxied.parent, *proxied.error);
             co_return exit_status{.code = -1};
         }
-
-        auto cmd = command_of(opt);
+        const auto& cmd = proxied.command;
         if(cmd.cwd.empty()) {
             co_await peer.report_error(
-                *opt.parent_id,
+                proxied.parent,
                 std::format(
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
                     format_args(cmd.args)));
             co_return co_await run_process(process_options(cmd), {.stand_in = true});
         }
 
-        auto id = co_await peer.create(*opt.parent_id);
+        auto id = co_await peer.create(proxied.parent);
 
         auto received_act = co_await peer.make_decision(cmd);
 
-        auto status = co_await run(received_act, id, *opt.ipc, peer);
+        auto status = co_await run(received_act, id, proxied, peer);
 
         // A command can outlive its session (a build server): its result
         // stands, though catter is gone.
@@ -141,7 +317,7 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
     auto msg = std::format("Run `{}` failed:\n{}", format_args(argv), err);
 
     LOG_ERROR(msg);
-    co_await peer.report_error(*opt.parent_id, msg);
+    co_await peer.report_error(proxied.parent, msg);
 
     co_return exit_status{.code = -1};
 };
@@ -158,19 +334,24 @@ kota::task<> run_connection(proxy::Peer& peer, bool build_command) {
 }
 #endif
 
+/// Stands in for the command of `proxied`: reports it to its session, and runs
+/// it as decided, or as it is when there is no session.
 kota::task<exit_status> proxy_main(std::span<const std::string> argv,
-                                   const catter::proxy::ProxyOption& opt) noexcept {
+                                   const Proxied& proxied) noexcept {
     auto& current = kota::event_loop::current();
-    auto ret = co_await kota::pipe::connect(*opt.ipc, kota::pipe::options(), current);
+    auto ret = co_await kota::pipe::connect(proxied.pipe, kota::pipe::options(), current);
     if(!ret) {
         // A build server an earlier session started (an sccache server, a
         // Gradle daemon) outlives that session's pipe: its commands run as
         // they would without catter.
         LOG_WARN("Failed to connect to IPC pipe: {}, error: {}; running the command uncaptured",
-                 *opt.ipc,
+                 proxied.pipe,
                  ret.error().message());
+        if(proxied.error) {
+            co_return exit_status{.code = -1};
+        }
         try {
-            co_return co_await run_process(process_options(command_of(opt)), {.stand_in = true});
+            co_return co_await run_process(process_options(proxied.command), {.stand_in = true});
         } catch(const std::exception& ex) {
             LOG_ERROR("Run `{}` failed: {}", format_args(argv), ex.what());
             co_return exit_status{.code = -1};
@@ -183,14 +364,50 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
 
 #ifdef CATTER_MAC
     // The build command's proxy is started with parent 0.
-    auto connection = run_connection(peer, *opt.parent_id == 0);
+    auto connection = run_connection(peer, proxied.parent == 0);
 #else
     auto connection = peer.run();
 #endif
     auto [_, status] =
-        co_await kota::when_all{std::move(connection), handle_proxy_request(argv, opt, peer)};
+        co_await kota::when_all{std::move(connection), handle_proxy_request(argv, proxied, peer)};
 
     co_return status;
+}
+
+void init_logger(std::string_view pipe) {
+    // No session, no data directory of its.
+    if(pipe.empty()) {
+        log::mute_logger();
+        return;
+    }
+    try {
+        log::init_logger("catter-proxy.log",
+                         config::session_data_path(pipe, config::PROXY_LOG_PATH),
+                         false);
+    } catch(const std::exception&) {
+        log::mute_logger();
+    }
+}
+
+/// The path this program was started by, a symlink to it among the wrapper
+/// backend's shims, which kota::sys::executable_path resolves.
+std::string started_by() {
+#if defined(CATTER_LINUX)
+    return reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
+#elif defined(CATTER_MAC)
+    std::uint32_t size = 0;
+    ::_NSGetExecutablePath(nullptr, &size);
+    std::string path(size, '\0');
+    ::_NSGetExecutablePath(path.data(), &size);
+    path.resize(std::strlen(path.c_str()));
+    return path;
+#endif
+}
+
+int run_proxied(std::span<const std::string> argv, const Proxied& proxied) {
+    init_logger(proxied.pipe);
+    auto [status] = kota::run(proxy_main(argv, proxied));
+    return status.has_value() ? exit_like(*status) : -1;
 }
 
 // we do not output in proxy, it must be invoked by main program.
@@ -198,6 +415,30 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
 // TODO: act as a fake compiler
 int run(std::span<const std::string> argv) {
     hold_closed_streams();
+
+    // Among the wrapper backend's shims, catter-proxy is the launcher, or a
+    // shim by the name of the program it stands in for.
+    const auto self = started_by();
+    auto name = kota::fs::path::filename(self);
+    if(name == config::LAUNCHER_NAME) {
+        std::vector<std::string> args(argv.begin() + 1, argv.end());
+        std::string program = args.front();
+        return run_proxied(argv, wrapped(self, program, std::move(args)));
+    }
+    if(name != config::PROXY_EXE_NAME) {
+        // A shim of a program a variable such as CC named by its path is beside
+        // the file that names it.
+        std::string program(name);
+        std::string pinned_file(kota::fs::path::parent(self));
+        kota::fs::path::push(pinned_file, config::SHIM_PROGRAM_FILE);
+        if(std::string pinned; !kota::fs::read_file(pinned, pinned_file)) {
+            program = std::move(pinned);
+        }
+        return run_proxied(
+            argv,
+            wrapped(self, program, std::vector<std::string>(argv.begin(), argv.end())));
+    }
+
     kota::deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");
 
@@ -206,18 +447,7 @@ int run(std::span<const std::string> argv) {
     cli.match(catter::proxy::Option::Cate::help,
               [&](const catter::proxy::Option& opt) { cli.usage(std::cerr); })
         .match(catter::proxy::Option::Cate::proxy,
-               [&](const auto& opt) {
-                   try {
-                       log::init_logger(
-                           "catter-proxy.log",
-                           config::session_data_path(*opt.proxy_opt.ipc, config::PROXY_LOG_PATH),
-                           false);
-                   } catch(const std::exception&) {
-                       log::mute_logger();
-                   }
-                   auto [status] = kota::run(proxy_main(argv, opt.proxy_opt));
-                   ret = status.has_value() ? exit_like(*status) : -1;
-               })
+               [&](const auto& opt) { ret = run_proxied(argv, hooked(opt.proxy_opt)); })
         .on_error([&](const kota::deco::cli::ParseError& err) {
             std::cerr << err.message << std::endl;
             ret = -1;

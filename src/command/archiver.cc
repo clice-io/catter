@@ -10,13 +10,6 @@ namespace catter {
 
 namespace {
 
-/// `ar`, `llvm-ar` and `gcc-ar`, perhaps after a target, `x86_64-linux-gnu-ar`, and before a
-/// version, `gcc-ar-14`.
-bool archiver(std::string_view executable) {
-    const static auto pattern = executable_pattern(R"((?:[^\\/]+-)?ar)", version_suffix);
-    return std::regex_match(executable.begin(), executable.end(), pattern);
-}
-
 /// Options before the operation that change no file, but for `--thin`: `-X64`, `--version`, ...
 constexpr auto flags = std::to_array<std::string_view>(
     {"-X32", "-X64", "-X32_64", "-Xany", "--version", "--help", "-h"});
@@ -71,9 +64,14 @@ Error unsupported(std::string message) {
 
 }  // namespace
 
+bool is_archiver(std::string_view executable) {
+    const static auto pattern = executable_pattern(R"((?:[^\\/]+-)?ar)", version_suffix);
+    return std::regex_match(executable.begin(), executable.end(), pattern);
+}
+
 std::expected<ArchiverAnalysis, Error> analyze_archiver(std::string_view executable,
                                                         std::span<const std::string> argv) {
-    if(!archiver(executable)) {
+    if(!is_archiver(executable)) {
         return std::unexpected(Error{
             .kind = Error::Kind::ArchiverNotRecognized,
             .message = std::format("not a recognized archiver executable: {}", executable),

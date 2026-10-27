@@ -1,0 +1,22 @@
+[test."$ node build.mjs"]
+stdout = '''
+tools/cc -c a.c
+tools/c++ -c b.cc
+tools/ar rcs lib.a a.o
+other/cc -c c.c
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 --capture wrapper -- node build.mjs"]
+stdout = '''
+tools/cc -c a.c
+tools/c++ -c b.cc
+tools/ar rcs lib.a a.o
+other/cc -c c.c
+node build.mjs
+├── cc -c a.c
+├── c++ -c b.cc
+├── ar rcs lib.a a.o
+└── ${WS}/other/cc -c c.c
+'''
+exit = 0

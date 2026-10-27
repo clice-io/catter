@@ -1,0 +1,12 @@
+[test."$ catter run --capture wrapper --handler \"python handler.py\" -- node build.mjs"]
+stdout = '''
+tools/cc -c keep.c
+keep.c: exit 0
+drop.c: exit 0
+tools/cc -c modified.c
+modify.c: exit 0
+abort.c: exit 1
+after.c: exit 1
+Handler `python handler.py` aborted the build at command 5: abort.c must not run
+'''
+exit = 1

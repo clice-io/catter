@@ -193,7 +193,7 @@ public:
             } else if(!preprocess) {
                 compiled.insert(source);
             }
-            if(xmake_probe(source)) {
+            if(xmake_probe(source) || cmake_probe(command.cwd, source)) {
                 continue;
             }
             const bool existed = kota::fs::is_file(source);
@@ -281,6 +281,24 @@ private:
         /// The preprocess that made it, when it writes a file from the source.
         std::optional<Preprocessed> made;
     };
+
+    /// Whether the entry of `source` of a command run in `cwd` is one CMake probes the compiler
+    /// with, as a build configured under catter shows: one it runs in its own directory of the
+    /// build, CMakeFiles, where it identifies the compiler and tries what it compiles, or of a
+    /// file of its own modules.
+    static bool cmake_probe(std::string_view cwd, std::string_view source) {
+        if(std::ranges::contains(kota::fs::path::components(cwd), "CMakeFiles")) {
+            return true;
+        }
+        std::string_view previous;
+        for(auto component: kota::fs::path::components(source)) {
+            if(component == "Modules" && previous.starts_with("cmake")) {
+                return true;
+            }
+            previous = component;
+        }
+        return false;
+    }
 
     /// Whether `source` is one xmake compiles to probe the compiler, which it keeps in its own
     /// directory of the temporary directory, `.xmake<uid>`.
