@@ -1,15 +1,19 @@
 #include "hook/windows/util.h"
 
 #include <algorithm>
+#include <cstring>
+#include <cwchar>
+#include <format>
+#include <span>
 #include <string>
 #include <string_view>
+#include <vector>
+#include <windows.h>
 #include <kota/support/utf16.h>
 #include <kota/fs/resolve.h>
 #include <kota/fs/status.h>
 #include <kota/sys/env.h>
 #include <kota/sys/windows.h>
-
-#include "support/config/hook_windows.h"
 
 namespace catter::hook {
 
@@ -56,30 +60,71 @@ std::optional<std::string> resolve_program(const wchar_t* application_name,
     return path;
 }
 
-std::optional<std::wstring> proxy_command_line(const wchar_t* application_name,
-                                               const wchar_t* command_line) {
-    const auto program = resolve_program(application_name, command_line);
-    if(!program) {
-        return std::nullopt;
-    }
-    std::string proxy;
-    std::string id;
-    std::string pipe;
-    kota::sys::get_env(proxy, config::ENV_VAR_PROXY_PATH);
-    kota::sys::get_env(id, config::ENV_VAR_IPC_ID);
-    kota::sys::get_env(pipe, config::ENV_VAR_IPC_PIPE);
-
+std::vector<std::string> arguments_of(const wchar_t* application_name,
+                                      const wchar_t* command_line) {
     std::string line;
-    kota::sys::windows::join_command_line(
-        line,
-        {proxy, "-p", id, "--exec", *program, "--ipc", pipe, "--"});
-    line += ' ';
-    std::wstring wide;
-    kota::to_utf16(wide, line);
-    if(command_line != nullptr) {
-        wide += command_line;
+    kota::from_utf16(line, command_line != nullptr ? command_line : application_name);
+    std::vector<std::string> arguments;
+    for(auto argument: kota::sys::windows::split_command_line(line)) {
+        arguments.emplace_back(argument);
     }
-    return wide;
+    return arguments;
+}
+
+std::vector<std::string> environment_of(const void* block, bool unicode) {
+    std::vector<std::string> variables;
+    if(block == nullptr) {
+        for(const auto& [name, value]: kota::sys::environment()) {
+            variables.push_back(std::format("{}={}", name, value));
+        }
+        return variables;
+    }
+    if(unicode) {
+        for(auto* entry = static_cast<const wchar_t*>(block); *entry != L'\0';
+            entry += std::wcslen(entry) + 1) {
+            kota::from_utf16(variables.emplace_back(), entry);
+        }
+        return variables;
+    }
+    for(auto* entry = static_cast<const char*>(block); *entry != '\0';
+        entry += std::strlen(entry) + 1) {
+        const int length = MultiByteToWideChar(CP_ACP, 0, entry, -1, nullptr, 0);
+        std::wstring wide(static_cast<size_t>(length), L'\0');
+        MultiByteToWideChar(CP_ACP, 0, entry, -1, wide.data(), length);
+        wide.pop_back();
+        kota::from_utf16(variables.emplace_back(), wide);
+    }
+    return variables;
+}
+
+std::wstring environment_block(std::span<const std::string> variables) {
+    std::wstring block;
+    for(const auto& variable: variables) {
+        std::wstring wide;
+        kota::to_utf16(wide, variable);
+        block += wide;
+        block += L'\0';
+    }
+    // An empty block is two NULs.
+    if(block.empty()) {
+        block += L'\0';
+    }
+    block += L'\0';
+    return block;
+}
+
+std::string directory_of(const wchar_t* directory) {
+    std::string path;
+    if(directory == nullptr) {
+        kota::fs::current_dir(path);
+        return path;
+    }
+    kota::from_utf16(path, directory);
+    std::string absolute;
+    if(kota::fs::absolute(absolute, path)) {
+        return path;
+    }
+    return absolute;
 }
 
 }  // namespace catter::hook

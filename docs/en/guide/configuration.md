@@ -50,7 +50,7 @@ catter keeps its logs and the socket of each running session in `$HOME/.catter` 
 ## catter-proxy CLI
 
 ::: warning
-`catter-proxy` is an internal component. It is invoked automatically by catter and is not intended for direct use.
+`catter-proxy` is an internal component of catter on Linux and macOS. It is invoked automatically by catter and is not intended for direct use.
 :::
 
 ```
@@ -77,7 +77,4 @@ These variables are set automatically by catter at runtime. They are documented 
 
 ### Windows
 
-| Variable            | Purpose                               |
-| ------------------- | ------------------------------------- |
-| `CATTER_IPC_ID`     | IPC session identifier                |
-| `CATTER_PROXY_PATH` | Path to the `catter-proxy` executable |
+catter sets none: it gives the hook in each process of the build its session directly, and the build's environment stays as the build made it.

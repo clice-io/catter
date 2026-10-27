@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter;
 
 import :capture.replay;

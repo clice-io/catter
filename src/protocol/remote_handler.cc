@@ -3,6 +3,7 @@ module;
 #include "modules/prelude.h"
 
 #include "support/log.h"
+#include "support/messages.h"
 #include "support/paths.h"
 
 module catter;

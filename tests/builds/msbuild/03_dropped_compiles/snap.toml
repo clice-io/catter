@@ -1,0 +1,8 @@
+[test."$ catter run --handler \"python handler.py\" -- cmake --build build --config Debug -- -m:1 -nologo"]
+stdout = '''
+
+  1>Checking Build System
+  Building Custom Rule ${WS}/CMakeLists.txt
+LINK : fatal error LNK1104: cannot open file 'hello.dir\Debug\main.obj' [${WS}/build/hello.vcxproj]
+'''
+exit = 1

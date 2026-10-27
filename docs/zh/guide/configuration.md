@@ -50,7 +50,7 @@ catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Lin
 ## catter-proxy 命令行
 
 ::: warning
-`catter-proxy` 是内部组件，由 catter 自动调用，不需要用户直接使用。
+`catter-proxy` 是 catter 在 Linux 和 macOS 上的内部组件，由 catter 自动调用，不需要用户直接使用。
 :::
 
 ```
@@ -77,7 +77,4 @@ catter-proxy [options] -- <command>
 
 ### Windows
 
-| 变量                | 用途                            |
-| ------------------- | ------------------------------- |
-| `CATTER_IPC_ID`     | IPC 会话标识符                  |
-| `CATTER_PROXY_PATH` | `catter-proxy` 可执行文件的路径 |
+catter 不设置任何环境变量：它直接把会话交给构建中每个进程里的钩子，构建的环境保持构建自己设置的样子。

@@ -6,7 +6,7 @@ import * as path from "node:path";
 const from = path.dirname(process.env.CATTER_EXECUTABLE);
 mkdirSync("bin");
 for (const name of readdirSync(from)) {
-  if (/^(catter|catter-proxy)\.exe$|\.dll$/.test(name)) {
+  if (/^catter\.exe$|\.dll$/.test(name)) {
     copyFileSync(path.join(from, name), path.join("bin", name));
   }
 }

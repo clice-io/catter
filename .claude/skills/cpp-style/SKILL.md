@@ -70,8 +70,8 @@ defending against ghosts.
   own only for the built-ins (`catter::feature`), the programs and the
   payloads (`catter::driver`, `catter::proxy`, `catter::hook`), for a
   vocabulary whose names would
-  clash in `catter` (the handler protocol's `catter::protocol`, the IPC
-  with `catter-proxy`'s `catter::ipc` and `catter::data`, each option
+  clash in `catter` (the handler protocol's `catter::protocol`, the IPC's
+  `catter::ipc` and `catter::data`, each option
   table's `catter::option::clang`), and for `catter::log`,
   `catter::output` and `catter::config`.
 - Platform code is chosen by the macros the build defines (`CATTER_LINUX`,
@@ -101,8 +101,8 @@ of the build, next to that program's own runtime. They:
   clash with the host program's;
 - never let an exception escape into the host: a hooked entry point
   catches everything and turns it into the error the original call
-  reports (`errno` and the return value), as the Unix payload's do
-  (`executor.cc`). The Windows payload's detours do not catch yet.
+  reports (`errno` and the return value), as the payloads' do
+  (`executor.cc`, `guarded` in `hook/windows/main.cc`).
 
 ## Data & Types
 
@@ -238,8 +238,8 @@ Domain words with one meaning each — use them only in that meaning:
   `abort`, `modify`, and over the protocol `edit`: `protocol::Action`; in
   `catter::Action` an abort is the exception the handler throws, and an edit
   the modified command). What the
-  daemon then tells the proxy to do is the IPC protocol's `data::action`
-  (`DROP`, `INJECT`, `WRAP`, `FAIL`); keep the two apart.
+  daemon then tells catter-proxy, or the Windows hook, to do is the IPC
+  protocol's `data::action` (`DROP`, `INJECT`, `FAIL`); keep the two apart.
 - **runtime**: a capture mechanism (`inject` today).
 - **payload**: the hook library loaded into the build's processes.
 

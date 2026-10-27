@@ -1,0 +1,23 @@
+[test."$ start.exe not-a-program.exe"]
+stdout = "failed to start: error 216"
+exit = 0
+
+[test."$ catter tree -w 1000 -- start.exe not-a-program.exe"]
+stdout = '''
+failed to start: error 216
+start.exe not-a-program.exe
+└── [capture error] `not-a-program.exe` failed to start: This version of %1 is not compatible with the version of Windows you're running. Check your computer's system information and then contact the software publisher.
+'''
+exit = 0
+
+[test."$ start.exe start.exe no-such-directory"]
+stdout = "failed to start: error 267"
+exit = 0
+
+[test."$ catter tree -w 1000 -- start.exe start.exe no-such-directory"]
+stdout = '''
+failed to start: error 267
+start.exe start.exe no-such-directory
+└── [capture error] `start.exe` failed to start: The directory name is invalid.
+'''
+exit = 0

@@ -1,4 +1,4 @@
-; catter-proxy adds the DLL to a process's import table as an import of
+; catter adds the DLL to a process's import table as an import of
 ; ordinal 1, the ordinal Detours' DLLs export.
 EXPORTS
     DetourFinishHelperProcess @1 NONAME

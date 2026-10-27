@@ -16,7 +16,7 @@ runtime 是 catter 实际捕获进程创建行为的机制。catter 围绕 runti
 
 ### inject（已实现，默认）
 
-- **原理**：hook 共享库注入构建系统进程，拦截进程创建调用（Unix 的 `execve` / `posix_spawn` 族，Windows 的 `CreateProcess`），把命令重写为经 `catter-proxy` 中转后执行。
+- **原理**：hook 共享库注入构建系统进程，拦截进程创建调用（Unix 的 `execve` / `posix_spawn` 族，Windows 的 `CreateProcess`）。在 Unix 上，它把命令重写为经 `catter-proxy` 中转后执行；在 Windows 上，它自己询问 catter，按 catter 的决定启动每个程序，之后调用方持有这个程序，与没有 catter 时一样。
 - **平台**：Linux、macOS、Windows。
 - **能力**：支持全部动作（`skip`、`drop`、`abort`、`modify`）；命令带有父命令 ID。
 - **特点**：递归捕获——所有子孙进程都会被拦截；捕获的命令带有完整环境变量和父命令 ID。构建及其命令直接使用 catter 自己的标准输入、标准输出和标准错误：它们直接写到终端，颜色不丢，输出顺序也和写入时一致。

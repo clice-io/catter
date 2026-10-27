@@ -1,0 +1,16 @@
+[test."$ catter tree -w 1000 -- catter-test-no-such-program"]
+stdout = '''
+Build failed with exit code 255. Printing partial command tree.
+[capture error] Run `${CATTER}/catter-proxy -p 0 --ipc ${CATTER_HOME}/ipc-#.sock -- catter-test-no-such-program` failed:
+Process `catter-test-no-such-program` spawn failed, because `no such file or directory`
+'''
+exit = 255
+
+[test."$ catter tree -w 1000 -- catter-test-no-such-program".win32]
+differs = "Windows has no catter-proxy, catter starts the build command itself, and its exit codes are 32 bits"
+stdout = '''
+Build failed with exit code -1. Printing partial command tree.
+[capture error] Run `catter-test-no-such-program` failed:
+Process `catter-test-no-such-program` spawn failed, because `no such file or directory`
+'''
+exit = 4294967295

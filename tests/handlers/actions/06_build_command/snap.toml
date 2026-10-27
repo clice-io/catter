@@ -1,0 +1,6 @@
+[dropped."$ catter run --handler \"python handler.py\" -- node child.mjs drop-me"]
+exit = 0
+
+[modified."$ catter run --handler \"python handler.py\" -- node child.mjs modify-me"]
+stdout = 'ran with ["modify-me","added-by-handler"]'
+exit = 0

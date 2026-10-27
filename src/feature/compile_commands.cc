@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter;
 
 import catter.command;
@@ -11,7 +13,6 @@ import :feature.descendants;
 import :feature.json;
 import :feature.path;
 import :feature.text;
-import :session.data;
 import :session.handler;
 
 namespace catter::feature {

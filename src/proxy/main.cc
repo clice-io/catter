@@ -2,14 +2,11 @@ module;
 
 #include "modules/prelude.h"
 
-#ifdef CATTER_WINDOWS
-#include <windows.h>
-#endif
-
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
 #include "support/guard.h"
 #include "support/log.h"
+#include "support/messages.h"
 #include "support/output.h"
 #include "support/paths.h"
 
@@ -26,29 +23,6 @@ namespace {
 using catter::data::action;
 using exit_status = kota::process::exit_status;
 
-/// Gives `opts`, which start `args`, the command line the build wrote for them,
-/// which follows `--` in this proxy's own: cmd.exe, and any other program that
-/// reads its command line itself, would read the arguments joined again.
-void keep_command_line([[maybe_unused]] kota::process::options& opts,
-                       [[maybe_unused]] std::span<const std::string> args) {
-#ifdef CATTER_WINDOWS
-    const auto& argv = kota::sys::arguments();
-    const auto dashes = std::ranges::find(argv, "--");
-    if(dashes != argv.end() &&
-       std::ranges::equal(std::ranges::subrange(dashes + 1, argv.end()), args)) {
-        std::string prefix;
-        kota::sys::windows::join_command_line(prefix, std::span(argv.begin(), dashes + 1));
-        prefix += ' ';
-        std::string line;
-        kota::from_utf16(line, std::wstring_view(::GetCommandLineW()));
-        if(line.starts_with(prefix)) {
-            opts.windows_command_line = line.substr(prefix.size());
-        }
-    }
-    LOG_INFO("Starting `{}` with the command line {}", opts.program, opts.windows_command_line);
-#endif
-}
-
 kota::task<exit_status> run(data::action act,
                             data::ipcid_t id,
                             std::string pipe_name,
@@ -63,16 +37,9 @@ kota::task<exit_status> run(data::action act,
     auto exited = make_guard([&]() noexcept { peer.program.reset(); });
 #endif
     switch(act.type) {
-        case action::WRAP: {
-            auto opts = process_options(act.cmd);
-            keep_command_line(opts, act.cmd.args);
-            co_return co_await run_process(std::move(opts), std::move(stand_in));
-        }
         case action::INJECT: {
-            const auto args = act.cmd.args;
-            auto opts = hook_options(std::move(act.cmd), id, pipe_name);
-            keep_command_line(opts, args);
-            co_return co_await run_process(std::move(opts), std::move(stand_in));
+            co_return co_await run_process(hook_options(std::move(act.cmd), id, pipe_name),
+                                           std::move(stand_in));
         }
         case action::DROP: {
             co_return exit_status{.code = 0};
@@ -80,10 +47,8 @@ kota::task<exit_status> run(data::action act,
         case action::FAIL: {
             co_return exit_status{.code = 1};
         }
-        default: {
-            co_return exit_status{.code = -1};
-        }
     }
+    std::unreachable();
 }
 
 /// The command the proxy stands in for, as it runs here. Its working
@@ -209,10 +174,7 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
                  *opt.ipc,
                  ret.error().message());
         try {
-            auto cmd = command_of(opt);
-            auto opts = process_options(cmd);
-            keep_command_line(opts, cmd.args);
-            co_return co_await run_process(std::move(opts), {.stand_in = true});
+            co_return co_await run_process(process_options(command_of(opt)), {.stand_in = true});
         } catch(const std::exception& ex) {
             LOG_ERROR("Run `{}` failed: {}", format_args(argv), ex.what());
             co_return exit_status{.code = -1};
@@ -236,7 +198,7 @@ kota::task<exit_status> proxy_main(std::span<const std::string> argv,
 }
 
 // we do not output in proxy, it must be invoked by main program.
-// usage: catter-proxy.exe -p <parent ipc id> [--exec <exe path>] -- <args...>
+// usage: catter-proxy -p <parent ipc id> [--exec <exe path>] -- <args...>
 // TODO: act as a fake compiler
 int run(std::span<const std::string> argv) {
     hold_closed_streams();
@@ -271,11 +233,5 @@ int run(std::span<const std::string> argv) {
 }  // namespace
 
 extern "C++" int main(int argc, char* argv[]) {
-#ifdef CATTER_WINDOWS
-    // main's argv is in the ANSI code page, which holds few characters past
-    // ASCII.
-    return run(kota::sys::arguments());
-#else
     return run(std::vector<std::string>(argv, argv + argc));
-#endif
 }

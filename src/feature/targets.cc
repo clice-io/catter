@@ -2,13 +2,14 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter;
 
 import :feature.descendants;
 import :feature.edges;
 import :feature.flat_tree;
 import :feature.targets;
-import :session.data;
 import :session.handler;
 
 namespace catter::feature {

@@ -4,7 +4,6 @@ module;
 
 module catter:capture.replay;
 
-import :session.data;
 import :session.handler;
 
 namespace catter {

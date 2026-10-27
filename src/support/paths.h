@@ -13,9 +13,10 @@ std::string data_path(std::string_view name);
 /// libraries are installed together.
 std::string program_path(std::string_view name);
 
-/// The file the system starts for program `name`: found as execvp finds it,
-/// or on Windows as CreateProcess does; `name` itself when there is none, to
-/// fail to start as it would without catter.
-std::string resolve_program(std::string_view name);
+/// The file the system starts for program `name` from directory `directory`,
+/// this process's current one when empty: found as execvp finds it, or on
+/// Windows as CreateProcess does; `name` itself when there is none, to fail to
+/// start as it would without catter.
+std::string resolve_program(std::string_view name, std::string_view directory = {});
 
 }  // namespace catter
