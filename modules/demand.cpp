@@ -67,6 +67,8 @@
 #include <kota/ipc/codec/bincode.h>
 #include <kota/ipc/codec/json.h>
 #include <kota/ipc/peer.h>
+#include <kota/ipc/peer/bincode.h>
+#include <kota/ipc/peer/json.h>
 #include <kota/ipc/protocol.h>
 #include <kota/ipc/transport.h>
 #include <kota/meta/annotation.h>

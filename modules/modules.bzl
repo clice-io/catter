@@ -19,6 +19,8 @@ LIBRARIES = [
     "@kotatsu//:deco",
     "@kotatsu//:fs",
     "@kotatsu//:ipc",
+    "@kotatsu//:ipc_codec",
+    "@kotatsu//:ipc_codec_json",
     "@kotatsu//:ipc_json",
     "@kotatsu//:meta",
     "@kotatsu//:option",
