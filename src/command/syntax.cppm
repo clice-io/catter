@@ -18,10 +18,14 @@ struct Syntax {
     /// Options the table does not know that take the next argument as their value, as GCC's
     /// `-dumpbase` does: each is read as an unknown option with that value.
     std::span<const std::string_view> separate = {};
+
+    /// Whether an argument after `/` the table does not know is an unknown option, as cl takes
+    /// it, rather than a file, as clang-cl takes it where paths start with `/`.
+    bool slash_options = false;
 };
 
-/// The syntax of a compiler's arguments.
-Syntax syntax_of(Dialect dialect);
+/// The syntax of the arguments of `compiler`, read in `dialect`: clang's in cl mode are MSVC's.
+Syntax syntax_of(Compiler compiler, Dialect dialect);
 
 /// The arguments of `argv`, argv[0] included, as `syntax` reads them, or why they do not parse.
 std::expected<std::vector<Argument>, std::string> read_arguments(Syntax syntax,

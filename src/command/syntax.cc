@@ -28,7 +28,7 @@ constexpr auto cl_separate = std::to_array<std::string_view>({
 
 }  // namespace
 
-Syntax syntax_of(Dialect dialect) {
+Syntax syntax_of(Compiler compiler, Dialect dialect) {
     using namespace option::clang;
     switch(dialect) {
         case Dialect::Clang: return {.table = &table(), .visibility = DefaultVis};
@@ -37,7 +37,8 @@ Syntax syntax_of(Dialect dialect) {
         case Dialect::MSVC:
             return {.table = &table(),
                     .visibility = DefaultVis | CLOption,
-                    .separate = cl_separate};
+                    .separate = cl_separate,
+                    .slash_options = compiler == Compiler::MSVC};
         // nvcc's arguments are not read yet.
         case Dialect::NVCC: break;
     }
@@ -81,8 +82,11 @@ std::expected<std::vector<Argument>, std::string>
                 next = index + 1 + values.size();
                 break;
             }
+            const bool option = syntax.slash_options &&
+                                result->id == syntax.table->input_option_id &&
+                                argv[index].starts_with('/');
             arguments.push_back(Argument{
-                .id = result->id,
+                .id = option ? syntax.table->unknown_option_id : result->id,
                 .index = index,
                 .count = result->next_index - result->index,
                 .spelling = result->spelling,

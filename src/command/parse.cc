@@ -13,8 +13,9 @@ namespace {
 using namespace option::clang;
 
 std::expected<std::vector<Argument>, Error> read_arguments(std::span<const std::string> argv,
+                                                           Compiler compiler,
                                                            Dialect dialect) {
-    auto arguments = read_arguments(syntax_of(dialect), argv);
+    auto arguments = read_arguments(syntax_of(compiler, dialect), argv);
     if(!arguments.has_value()) {
         return std::unexpected(Error{
             .kind = Error::Kind::CompilerParse,
@@ -288,8 +289,8 @@ ParsedCommand parse_gnu(const Identity& identity, std::vector<Argument> argument
     return std::move(builder.command);
 }
 
-std::expected<ParsedCommand, Error> parse_cl(std::span<const std::string> argv) {
-    auto arguments = read_arguments(argv, Dialect::MSVC);
+std::expected<ParsedCommand, Error> parse_cl(Compiler compiler, std::span<const std::string> argv) {
+    auto arguments = read_arguments(argv, compiler, Dialect::MSVC);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
@@ -316,14 +317,14 @@ bool in_cl_mode(std::span<const Argument> arguments) {
 std::expected<ParsedCommand, Error> parse(const Identity& identity,
                                           std::span<const std::string> argv) {
     if(identity.dialect == Dialect::MSVC) {
-        return parse_cl(argv);
+        return parse_cl(identity.compiler, argv);
     }
-    auto arguments = read_arguments(argv, identity.dialect);
+    auto arguments = read_arguments(argv, identity.compiler, identity.dialect);
     if(!arguments.has_value()) {
         return std::unexpected(std::move(arguments.error()));
     }
     if(identity.dialect == Dialect::Clang && in_cl_mode(*arguments)) {
-        return parse_cl(argv);
+        return parse_cl(identity.compiler, argv);
     }
     return parse_gnu(identity, std::move(*arguments));
 }

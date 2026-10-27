@@ -126,7 +126,7 @@ ZEST_CASE(an_option_the_table_does_not_know_keeps_its_value) {
     auto analysis = analyze_compiler(argv[0], argv, "", kota::fs::read_file);
     ZASSERT(analysis.has_value());
     const auto& argument = analysis->arguments.back();
-    ZEXPECT(option_name(syntax_of(Dialect::GCC), argument.id) == "<unknown>");
+    ZEXPECT(option_name(syntax_of(Compiler::GCC, Dialect::GCC), argument.id) == "<unknown>");
     ZEXPECT(argument.spelling == "-dumpbase");
     ZEXPECT(argument.values == std::vector<std::string>{"xx.c"});
 };
@@ -147,6 +147,11 @@ ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     // `/TP` is for every input but objects and libraries, before it too.
     ZEXPECT(languages("cl a.c /TP b.cc c.obj noext /ifcOutput d.ifc") ==
             std::vector<std::string>{"a.c:c++", "b.cc:c++", "c.obj:none", "noext:c++"});
+    // cl takes what follows `/` for an option, clang-cl for a file when its table knows none.
+    ZEXPECT(languages("cl /c /TP a.cc /analyze /interface") ==
+            std::vector<std::string>{"a.cc:c++"});
+    ZEXPECT(languages("clang-cl /c /TP /src/a.cc /src/noext") ==
+            std::vector<std::string>{"/src/a.cc:c++", "/src/noext:c++"});
     ZEXPECT(languages("g++ -x c++ -c legacy.c -x c -c noext -x c++-header pch.hxx.cxx") ==
             std::vector<std::string>{"legacy.c:c++", "noext:c", "pch.hxx.cxx:c++-header"});
     ZEXPECT(languages("clang -c a.cppm b.ixx c.m d.mm e.M f.s g.S h.sx i.cu") ==

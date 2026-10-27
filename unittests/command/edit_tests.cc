@@ -48,7 +48,7 @@ std::string edited(std::string_view command,
     auto result = apply_edits(argv,
                               analysis->expansion,
                               analysis->arguments,
-                              syntax_of(analysis->dialect),
+                              syntax_of(analysis->identity.compiler, analysis->dialect),
                               std::vector(edits));
     return result.has_value() ? join(*result) : "error: " + result.error();
 }
