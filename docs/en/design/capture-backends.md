@@ -21,13 +21,13 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 
 - **How it works**: a hook library is loaded into every process of the build and intercepts process creation (the `execve` / `posix_spawn` family on Linux and macOS, `CreateProcess` on Windows). On Linux and macOS each command then runs through `catter-proxy`, which asks catter and runs the command as decided, with the hook; on Windows the hook asks catter itself, and starts the program as catter decides. See [Hook mechanism](hook-mechanism.md) and [IPC protocol](ipc-protocol.md).
 - **Platforms**: Linux, macOS, Windows.
-- **What it sees**: every process of the build, each with the command that started it, but for those the hook cannot be loaded into, and what they start: on macOS Apple's own tools (`/bin/sh`, `/usr/bin/make`), which run as arm64e and from which System Integrity Protection drops the hook, and Intel programs under Rosetta; on Windows 32-bit (x86) programs, and programs started under another account.
+- **What it sees**: every process of the build, each with the command that started it, but for what a program the hook cannot be loaded into starts: the program is reported and runs as decided, without the hook. On macOS those are Apple's own tools (`/bin/sh`, `/usr/bin/make`), which run as arm64e and from which System Integrity Protection drops the hook, and Intel programs under Rosetta; on Windows, 32-bit (x86) programs. A program a Windows program starts under another account is not seen at all.
 - The build and its commands run on catter's own stdin, stdout and stderr: they write straight to the terminal, with their colors and in the order they write.
 
 ### replay (`--from`)
 
 - **How it works**: it plays the build a file recorded instead of running one: each command, error and exit in the file's order, with the IDs and parent commands the file gives them. The build ends with the exit code the file records.
-- **Actions**: nothing runs, so the handlers' actions have no effect.
+- **Actions**: nothing runs, so `skip`, `drop`, `modify` and `edit` change nothing. `abort` ends the replay as it ends a live build: no later event reaches the handlers, and catter exits 1.
 
 ### wrapper (planned)
 
@@ -41,7 +41,7 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 | Backend | Platforms               | How it captures                        | Actions                               | Parent command              | Status                |
 | ------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
 | hook    | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
-| replay  | any                     | a recorded build (`--from`)            | none take effect                      | as recorded                 | implemented           |
+| replay  | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
 | wrapper | cross-platform          | compiler shims on `PATH`, `CC` / `CXX` | expected all                          | the nearest wrapped program | planned               |
 
 ## Writing handlers for any backend

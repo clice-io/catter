@@ -1,4 +1,4 @@
-[inject."$ catter run --handler \"python handler.py\" -- node build.mjs"]
+[hook."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 fails: exit 3
 aborts

@@ -1,4 +1,4 @@
-[inject."$ catter run --handler \"node handler.ts\" -- node build.mjs"]
+[hook."$ catter run --handler \"node handler.ts\" -- node build.mjs"]
 stdout = '''
 ran with ["drop-me"]
 drop-me: exit 0

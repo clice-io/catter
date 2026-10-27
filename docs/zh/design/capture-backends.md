@@ -21,13 +21,13 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 
 - **原理**：将钩子库加载到构建的每个进程中，拦截进程创建（Linux 和 macOS 上的 `execve` / `posix_spawn` 族，Windows 上的 `CreateProcess`）。在 Linux 和 macOS 上，每条命令随后通过 `catter-proxy` 运行：它向 catter 询问如何处理命令，按决定运行命令，并为它加载钩子；在 Windows 上，钩子自己询问 catter，并按 catter 的决定启动程序。参见[钩子机制](hook-mechanism.md)和 [IPC 协议](ipc-protocol.md)。
 - **平台**：Linux、macOS、Windows。
-- **捕获范围**：构建的每个进程及启动该进程的命令，但无法加载钩子的进程及其启动的进程除外。在 macOS 上，例外包括 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`），以及在 Rosetta 下运行的 Intel 程序；Apple 自带的工具以 arm64e 运行，系统完整性保护（System Integrity Protection）会移除其中的钩子。在 Windows 上，例外包括 32 位（x86）程序和以其他账户启动的程序。
+- **捕获范围**：构建的每个进程及启动该进程的命令，但无法加载钩子的程序所启动的进程除外：这样的程序本身仍会上报，并按决定运行，只是不带钩子。在 macOS 上，这类程序是 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`），以及在 Rosetta 下运行的 Intel 程序；Apple 自带的工具以 arm64e 运行，系统完整性保护（System Integrity Protection）会移除其中的钩子。在 Windows 上，这类程序是 32 位（x86）程序。Windows 程序以其他账户启动的程序则完全看不到。
 - 构建及其命令直接使用 catter 自己的标准输入、标准输出和标准错误：它们直接写到终端，颜色不丢，输出顺序也和写入时一致。
 
 ### replay（`--from`）
 
 - **原理**：回放文件中录制的构建，而不运行构建：按文件中的顺序重现每条命令、错误和退出事件，并使用文件记录的 ID 和父命令。构建以文件记录的退出码结束。
-- **动作**：没有任何命令运行，因此 handler 的动作不起作用。
+- **动作**：没有任何命令运行，因此 `skip`、`drop`、`modify` 和 `edit` 不改变任何东西。`abort` 像结束真实构建一样结束回放：之后的事件不再送达 handler，catter 以 1 退出。
 
 ### wrapper（计划中）
 
@@ -41,7 +41,7 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 | 后端    | 平台                    | 捕获方式                             | 动作                                  | 父命令               | 状态           |
 | ------- | ----------------------- | ------------------------------------ | ------------------------------------- | -------------------- | -------------- |
 | hook    | Linux / macOS / Windows | 构建的每个进程中的钩子               | `skip` `drop` `abort` `modify` `edit` | 启动它的进程         | 已实现（默认） |
-| replay  | 任意                    | 录制的构建（`--from`）               | 均不生效                              | 按录制内容           | 已实现         |
+| replay  | 任意                    | 录制的构建（`--from`）               | 仅 `abort` 生效                       | 按录制内容           | 已实现         |
 | wrapper | 跨平台                  | `PATH` 上的编译器 shim，`CC` / `CXX` | 预期全部支持                          | 离它最近的被包装程序 | 计划中         |
 
 ## 为任意后端编写 handler

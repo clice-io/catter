@@ -1,4 +1,4 @@
-[inject."$ catter run --handler \"python handler.py\" -- node build.mjs"]
+[hook."$ catter run --handler \"python handler.py\" -- node build.mjs"]
 stdout = '''
 act-on-me: exit 1
 leave-me: exit 1

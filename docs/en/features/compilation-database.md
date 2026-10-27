@@ -22,7 +22,7 @@ catter compile-commands [options] -- <build-command>
 | `-q, --quiet`                | Suppress informational output.                                                          |
 | `-v, --verbose`              | Print detailed command analysis and generated entries.                                  |
 
-A relative output path is from the `-C` directory. `compile-commands` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
+A relative output path is from the `-C` directory. `compile-commands` also takes the options of every command that runs a build: `-C`, `--capture`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Behavior
 

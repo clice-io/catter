@@ -16,7 +16,7 @@ catter targets [options] -- <build-command>
 | ----------------- | -------------- |
 | `-d, --depth <n>` | 限制渲染深度。 |
 
-`targets` 也接受所有运行构建的命令共有的选项：`-C`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
+`targets` 也接受所有运行构建的命令共有的选项：`-C`、`--capture`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
 
 ## 输出
 
