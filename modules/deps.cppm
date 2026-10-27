@@ -466,6 +466,7 @@ export namespace kota::deco::cli::detail {
 using ::kota::deco::cli::detail::access_member_path;
 using ::kota::deco::cli::detail::exit_code_of;
 using ::kota::deco::cli::detail::help_requested;
+using ::kota::deco::cli::detail::input_args_text;
 using ::kota::deco::cli::detail::make_usage_document;
 using ::kota::deco::cli::detail::member_object_pointer_traits;
 using ::kota::deco::cli::detail::member_path_result;
@@ -530,6 +531,7 @@ using ::kota::deco::decl::AliasForwardField;
 using ::kota::deco::decl::AliasForwardFn;
 using ::kota::deco::decl::AliasForwardFnWithContext;
 using ::kota::deco::decl::AliasForwardResult;
+using ::kota::deco::decl::ArgNum;
 using ::kota::deco::decl::Category;
 using ::kota::deco::decl::CategoryRef;
 using ::kota::deco::decl::CommaJoinedAliasFields;
@@ -567,6 +569,8 @@ using ::kota::deco::decl::SubCommand;
 using ::kota::deco::decl::VectorOption;
 using ::kota::deco::decl::default_category;
 using ::kota::deco::decl::help_names;
+using ::kota::deco::decl::input_arg_num;
+using ::kota::deco::decl::invalid_input_arg_num;
 using ::kota::deco::decl::is_alias_placeholder_name;
 using enum ::kota::deco::decl::KVStyle;
 }
@@ -1318,6 +1322,7 @@ using ::kota::sys::signal_name;
 using ::kota::sys::spawn;
 using ::kota::sys::split_paths;
 using ::kota::sys::split_paths_view;
+using ::kota::sys::started_path;
 using ::kota::sys::temp_dir;
 using ::kota::sys::unset_env;
 }
