@@ -20,7 +20,7 @@ Unix 钩子是通过动态链接器的预加载机制加载的共享库：
 **exec 系列**:
 
 - `execve()`、`execv()`
-- `execvpe()`、`execvp()`、`execvP()`
+- `execvp()`、`execvpe()`（Linux）、`execvP()`（macOS）
 - `execl()`、`execlp()`、`execle()`
 
 **posix_spawn 系列**:
@@ -38,18 +38,16 @@ dyld 会终止无法加载插入库的程序，而钩子是按 catter 自身的�
 
 钩子由一组协作的类实现：
 
-- **`Session`** -- 从环境变量中读取并存储会话信息（代理路径、自身命令 ID 和会话的管道）。
 - **`find_program()`**（kotatsu）-- 像 exec 函数那样，在 `PATH` 或当前目录中查找目标可执行文件；程序不存在或无法运行时，像原调用一样失败。
-- **`Command` / `build_proxy_command()`** -- 构造重写后的代理命令，将 `catter-proxy` 替换原始可执行文件。
-- **`SanitizedEnv` / `sanitize_environment()`** -- 在调用真正的 `execve` 之前清理环境。移除 catter 相关变量，并从预加载变量中剥离钩子库。
-- **`Executor`** -- 协调整个拦截过程。验证会话、解析可执行文件、构造代理命令、清理环境、调用原始函数；并持有真实 `execve` / `posix_spawn` 的函数指针（早期独立的 `Linker` 类已并入其中）。
+- **`proxy_environment()`** -- `catter-proxy` 得到的环境：即程序要求的环境，去掉预加载库中的钩子，并加上指明会话的变量。
+- **`Executor`** -- 协调整个拦截过程。它从库加载时的环境中取得会话，查找可执行文件，再以 `catter-proxy` 代替原程序调用原始函数；并持有真实 `execve` / `posix_spawn` 的函数指针。
 
 ### 钩子初始化
 
 钩子库通过动态链接器的构造函数机制（`on_load`，`__attribute__((constructor))`）加载。初始化期间，库会：
 
 1. 设置日志（调试构建下输出到 catter 数据目录下的 `log/catter-hook.log`）
-2. 调用 `Executor::init()`：从环境变量中读取会话状态，并解析真实的 `execve` / `posix_spawn` 函数指针（Linux 上经 `dlsym(RTLD_NEXT, ...)`，macOS 上直接引用系统符号）
+2. 以环境和真实的 `execve` / `posix_spawn` 函数指针调用 `Executor::init()`（Linux 上经 `dlsym(RTLD_NEXT, ...)`，macOS 上直接引用系统符号）
 
 ### 环境变量
 
@@ -67,22 +65,22 @@ dyld 会终止无法加载插入库的程序，而钩子是按 catter 自身的�
 
 1. 进入钩子的替换函数。
 
-2. **`Executor`** 验证会话。如果会话无效（缺少环境变量），它会构建一个错误命令，将问题报告给守护进程。
+2. 如果库加载时的环境中没有指明 `catter-proxy`，调用原样交给系统：该进程没有会话。
 
 3. **`Executor`** 用 kotatsu 的 `find_program()` 查找目标可执行文件。对于 `execvp()` 和 `execvpe()` 等函数，它会搜索 `PATH` 中的目录。对于 `execve()`，不含 `/` 的路径从当前目录查找。
 
-4. **`Command`**（`build_proxy_command()`）构造代理命令：
+4. **`Executor`** 构造代理命令：
 
    ```
-   <proxy_path> -p <self_id> --exec <resolved_path> --ipc <pipe> -- <original_argv...>
+   <proxy_path> <resolved_path> <original_argv...>
    ```
 
-   原始的 `argv[0]` 及所有后续参数保留在 `--` 分隔符之后。
+   原始的 `argv[0]` 及所有后续参数跟在解析出的路径之后。
 
-5. **`SanitizedEnv`**（`sanitize_environment()`）修改环境数组：
-   - 移除 `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` 和 `__key_catter_ipc_v1`
+5. **`proxy_environment()`** 修改环境数组：
    - 从 `LD_PRELOAD`（或 `DYLD_INSERT_LIBRARIES`）中剥离钩子库名称
    - 如果剥离后 `LD_PRELOAD` 变为空，则将其完全移除
+   - 放入进程加载时的 `__key_catter_ipc_v1` 和 `__key_catter_command_id_v1`，替换程序环境中已有的同名变量：程序可能以自己构造的环境启动另一个程序，如 `env -i` 那样，`catter-proxy` 在那里仍能找到它的会话
 
 6. **`Executor`** 使用重写后的命令调用**真正的** `execve()`（通过初始化时解析得到的函数指针）。
 
@@ -179,7 +177,7 @@ Detours 的工作原理：
 
 2. **连接会话**。钩子打开会话的管道。打不开时（例如早先的会话启动的构建服务器，而那个会话已经结束），这次调用原样交给原始的 `CreateProcess`，程序运行但不被捕获。
 
-3. **询问 catter**。钩子按 `CreateProcess` 将要启动的样子读取命令：命令行中的参数、环境块（没有时取调用方自己的环境）和工作目录。它发送 `CREATE` 和 `MAKE_DECISION`，然后等待 catter 的答复；除此之外，`CreateProcess` 本身不等待任何别的东西。
+3. **询问 catter**。钩子按 `CreateProcess` 将要启动的样子读取命令：命令行中的参数、环境块（没有时取调用方自己的环境）和工作目录。它发送 `MAKE_DECISION`，然后等待 catter 的答复；除此之外，`CreateProcess` 本身不等待任何别的东西。
 
 4. **以挂起状态启动程序**。钩子用调用方自己的参数、标志、句柄和 `STARTUPINFO` 调用原始的 `CreateProcess`，只额外加上 `CREATE_SUSPENDED`。handler 改动过的部分会重新写入：程序，以命令的工作目录为当前目录，按 `CreateProcess` 的方式查找；命令行，仅当 handler 改了参数时才由参数重新拼出；环境；工作目录。其余部分保持调用方写下的样子，因此 `cmd.exe` 以及其他自己读取命令行的程序，读到的和没有 catter 时一样。程序无法启动时，钩子报告这一错误（`REPORT_ERROR`），并让这次调用以系统给出的错误失败。
 
@@ -211,12 +209,12 @@ DLL_PROCESS_ATTACH:
 
 ## 平台对比
 
-| 方面         | Linux                                                      | macOS                            | Windows                            |
-| ------------ | ---------------------------------------------------------- | -------------------------------- | ---------------------------------- |
-| 钩子库       | `libcatter-hook-unix.so`                                   | `libcatter-hook-unix.dylib`      | `catter-hook-{x64,arm64}.dll`      |
-| 注入方式     | `LD_PRELOAD` 环境变量                                      | `DYLD_INSERT_LIBRARIES` 环境变量 | `DetourUpdateProcessWithDll`       |
-| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                    | `DYLD_INTERPOSE` 宏              | Detours trampoline 钩子            |
-| 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                       | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW` |
-| 递归钩子     | 自动（环境变量继承）                                       | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）       |
-| 会话         | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1` | 与 Linux 相同                    | 每个进程中的一份 Detours 载荷      |
-| 由谁启动命令 | `catter-proxy`                                             | 与 Linux 相同                    | 钩子，在调用方自己的调用中         |
+| 方面         | Linux                                                                             | macOS                            | Windows                            |
+| ------------ | --------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------- |
+| 钩子库       | `libcatter-hook-unix.so`                                                          | `libcatter-hook-unix.dylib`      | `catter-hook-{x64,arm64}.dll`      |
+| 注入方式     | `LD_PRELOAD` 环境变量                                                             | `DYLD_INSERT_LIBRARIES` 环境变量 | `DetourUpdateProcessWithDll`       |
+| 函数替换     | `dlsym(RTLD_NEXT, ...)`                                                           | `DYLD_INTERPOSE` 宏              | Detours trampoline 钩子            |
+| 拦截的 API   | `execve`、`execvp`、`posix_spawn` 等                                              | 与 Linux 相同                    | `CreateProcessA`、`CreateProcessW` |
+| 递归钩子     | 自动（环境变量继承）                                                              | 自动（环境变量继承）             | 显式（每个进程重新注入 DLL）       |
+| 会话         | `__key_catter_proxy_path_v1`、`__key_catter_command_id_v1`、`__key_catter_ipc_v1` | 与 Linux 相同                    | 每个进程中的一份 Detours 载荷      |
+| 由谁启动命令 | `catter-proxy`                                                                    | 与 Linux 相同                    | 钩子，在调用方自己的调用中         |

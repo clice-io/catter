@@ -13,7 +13,7 @@ Catter 使用进程间通信在守护进程（`catter`）和它的客户端之�
 | Linux / macOS | Unix 域套接字 | `<data dir>/ipc-<pid>.sock` |
 | Windows       | 命名管道      | `\\.\pipe\catter-ipc-<pid>` |
 
-每个守护进程监听自己的套接字/管道，以其进程 ID 命名，因此同时在 catter 下运行的多个构建互不干扰。数据目录为 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）；设置了 `CATTER_HOME` 时使用它。守护进程在启动时创建监听套接字/管道。在 Linux 和 macOS 上，它通过命令行（`--ipc <pipe>`）把管道名称传给钩子启动的每个 `catter-proxy` 实例；wrapper 后端的 shim 则在所有平台上都从自己的环境变量（`__key_catter_ipc_v1`）中得到它。每个实例启动时作为客户端连接，连接在代理进程的整个生命周期内持续存在。在 Windows 上，守护进程把管道名称交给它注入钩子的每个进程中的钩子；钩子为它启动的每个程序连接一次，程序启动后即断开。
+每个守护进程监听自己的套接字/管道，以其进程 ID 命名，因此同时在 catter 下运行的多个构建互不干扰。数据目录为 `$HOME/.catter`（Linux、macOS）或 `%LOCALAPPDATA%\catter`（Windows）；设置了 `CATTER_HOME` 时使用它。守护进程在启动时创建监听套接字/管道。每个 `catter-proxy` 都从自己的环境变量（`__key_catter_ipc_v1`）中得到管道名称：守护进程为构建命令设置它，之后的每条命令则由钩子或 wrapper 后端的 shim 设置。每个实例启动时作为客户端连接，连接在代理进程的整个生命周期内持续存在。在 Windows 上，守护进程把管道名称交给它注入钩子的每个进程中的钩子；钩子为它启动的每个程序连接一次，程序启动后即断开。
 
 程序可能比启动它的会话活得更久：构建服务进程（sccache 服务、Gradle 守护进程）会带着环境中早先会话的管道名（Windows 上则是带着它的钩子）为之后的构建运行命令。那个管道已经不存在时，命令像没有 catter 时一样运行，不捕获；`catter-proxy` 会记录一条警告。在会话结束后才结束的命令保留它的退出码。代理读不到工作目录的命令（比如构建删除了它的工作目录）照样在那里运行，不捕获，代理把它作为错误报告（`REPORT_ERROR`）。
 
@@ -37,7 +37,6 @@ Windows 上的钩子不经过代理：守护进程自己决定如何处理构建
 
 ```cpp
 enum class RequestType : uint8_t {
-    CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
     FINISH,
@@ -49,22 +48,20 @@ enum class RequestType : uint8_t {
 
 ## 请求类型
 
-### CREATE
-
-在守护进程中注册一个新的进程会话。
-
-| 字段       | 类型                   | 说明                        |
-| ---------- | ---------------------- | --------------------------- |
-| **Params** | `ipcid_t`（`int32_t`） | 父进程会话 ID               |
-| **Result** | `ipcid_t`（`int32_t`） | 分配给这条命令的唯一会话 ID |
-
-父 ID 在会话树中建立父子关系。构建命令的代理由守护进程启动，发送 0：没有命令启动它。钩子拦截到的命令的代理发送启动它的那个进程所运行的命令的 ID，钩子从 `__key_catter_command_id_v1` 环境变量读出这个 ID，放在代理的命令行上传给它。wrapper 后端的 shim 发送 `__key_catter_command_id_v1` 中的 ID：运行这个 shim 的程序由某个 shim 或启动器（launcher）启动，后者把这个变量设为它自己那条命令的 ID；构建命令的启动器找不到这个变量，发送 0。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
-
 ### MAKE_DECISION
 
-核心请求。客户端发送捕获到的命令，守护进程决定如何处理。
+核心请求，每条命令都以它开始。客户端发送捕获到的命令以及启动它的命令，守护进程为这条命令分配 ID，并决定如何处理它。
 
-**Params** -- `command`：
+**Params**：
+
+| 字段      | 类型                | 说明                                |
+| --------- | ------------------- | ----------------------------------- |
+| `parent`  | `optional<ipcid_t>` | 启动它的那条命令的 ID；构建命令没有 |
+| `command` | `command`           | 捕获到的命令                        |
+
+父 ID 在会话树中建立父子关系。钩子拦截到的命令的代理发送启动它的那个进程所运行的命令的 ID，钩子通过 `__key_catter_command_id_v1` 环境变量把这个 ID 传给代理；wrapper 后端的 shim 发送同一个变量中的 ID：运行这个 shim 的程序由某个 shim 或启动器（launcher）启动，后者把这个变量设为它自己那条命令的 ID。构建命令的代理和构建命令的启动器都找不到这个 ID，也就不发送。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
+
+`command`：
 
 | 字段         | 类型       | 说明                           |
 | ------------ | ---------- | ------------------------------ |
@@ -73,7 +70,14 @@ enum class RequestType : uint8_t {
 | `args`       | `string[]` | 完整参数数组（包含 `argv[0]`） |
 | `env`        | `string[]` | 环境变量（`KEY=VALUE` 格式）   |
 
-**Result** -- `action`：
+**Result**：
+
+| 字段     | 类型      | 说明                                                   |
+| -------- | --------- | ------------------------------------------------------ |
+| `id`     | `ipcid_t` | 守护进程分配给这条命令的 ID，它启动的命令以此作为父 ID |
+| `action` | `action`  | 如何处理这条命令                                       |
+
+`action`：
 
 | 字段   | 类型           | 说明                                                  |
 | ------ | -------------- | ----------------------------------------------------- |
@@ -96,14 +100,14 @@ enum class RequestType : uint8_t {
 
 **Params**：
 
-| 字段        | 类型      | 说明               |
-| ----------- | --------- | ------------------ |
-| `parent_id` | `ipcid_t` | 父进程的会话 ID    |
-| `error_msg` | `string`  | 人类可读的错误描述 |
+| 字段      | 类型                | 说明                                             |
+| --------- | ------------------- | ------------------------------------------------ |
+| `parent`  | `optional<ipcid_t>` | 启动它的那条命令的 ID，与 `MAKE_DECISION` 中相同 |
+| `message` | `string`            | 人类可读的错误描述                               |
 
 **Result**: `null`（无响应负载）
 
-当钩子遇到无效状态（例如缺少环境变量）、代理在命令处理过程中捕获到异常，或在 Windows 上钩子要启动的程序无法启动时使用。守护进程记录错误并可通知用户。
+当代理无法捕获它的命令（shim 在各个 shim 之外找不到程序、工作目录无法读取）或在命令处理过程中捕获到异常时使用，在 Windows 上也用于钩子要启动的程序无法启动的情况。守护进程记录错误并可通知用户。
 
 ### FINISH
 
@@ -111,9 +115,10 @@ enum class RequestType : uint8_t {
 
 **Params** -- `process_result`：
 
-| 字段   | 类型      | 说明                                          |
-| ------ | --------- | --------------------------------------------- |
-| `code` | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号 |
+| 字段       | 类型      | 说明                                          |
+| ---------- | --------- | --------------------------------------------- |
+| `code`     | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号 |
+| `duration` | `int64_t` | 程序运行的时长，单位为微秒                    |
 
 **Result**: `null`（无响应负载）
 
@@ -144,10 +149,8 @@ enum class RequestType : uint8_t {
 ### 代理（一条命令）
 
 ```
-Proxy -> Daemon:  CREATE(parent_id)
-Daemon -> Proxy:  new_session_id
-Proxy -> Daemon:  MAKE_DECISION(command)
-Daemon -> Proxy:  action {type, cmd}
+Proxy -> Daemon:  MAKE_DECISION(parent, command)
+Daemon -> Proxy:  {id, action {type, cmd}}
 [Proxy starts the command, or drops it]
 Proxy -> Daemon:  started(pid)              (macOS, a notification)
 [Proxy waits for the command]
@@ -156,15 +159,13 @@ Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
 
-守护进程启动构建命令的代理，它为构建命令发送同样的消息，父 ID 为 0，因此构建命令也会像其他命令一样送达各个 handler；它挂载钩子运行构建。在 wrapper 后端下，守护进程通过启动器启动构建命令：启动器是放在 shim 之中、换了个名字的 `catter-proxy`，它以同样的方式上报构建命令，并在它的 `PATH` 上放好 shim 来运行它；之后每个 shim 为它所代替的程序发送这些消息。
+守护进程启动构建命令的代理，它为构建命令发送同样的消息，不带父 ID，因此构建命令也会像其他命令一样送达各个 handler；它挂载钩子运行构建。在 wrapper 后端下，守护进程通过启动器启动构建命令：启动器是放在 shim 之中、换了个名字的 `catter-proxy`，它以同样的方式上报构建命令，并在它的 `PATH` 上放好 shim 来运行它；之后每个 shim 为它所代替的程序发送这些消息。
 
 ### Windows 钩子（被拦截的命令）
 
 ```
-Hook -> Daemon:   CREATE(parent_id)
-Daemon -> Hook:   new_session_id
-Hook -> Daemon:   MAKE_DECISION(command)
-Daemon -> Hook:   action {type, cmd}
+Hook -> Daemon:   MAKE_DECISION(parent, command)
+Daemon -> Hook:   {id, action {type, cmd}}
 [Hook starts the command suspended]
 Hook -> Daemon:   STARTED(pid)
 [Daemon injects the hook]
@@ -178,7 +179,7 @@ Daemon -> Hook:   true
 ### 错误情况
 
 ```
-Proxy -> Daemon:  REPORT_ERROR(parent_id, error_message)
+Proxy -> Daemon:  REPORT_ERROR(parent, message)
 Daemon -> Proxy:  null
 [Proxy exits with code -1]
 ```
@@ -196,7 +197,7 @@ Session 1 (root -- the build command)
        +-- Session 6 (sh -> gcc file3.c)
 ```
 
-每个会话由唯一的 `ipcid_t`（32 位整数）标识。会话树随着 `CREATE` 请求的到达而增量构建，每个请求都指定了 `parent_id`。这种结构支持以下功能：
+每个会话由唯一的 `ipcid_t`（32 位整数）标识。会话树随着 `MAKE_DECISION` 请求的到达而增量构建，每个请求都指明了它的 `parent`。这种结构支持以下功能：
 
 - **目标树重建** -- 通过了解哪些目标文件链接到哪些目标
 - **构建分析** -- 通过跟踪每个会话的计时数据并可视化并行度
@@ -229,6 +230,7 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
+    int64_t duration = 0;              // How long it ran, in microseconds
 };
 
 // Decision returned by the daemon
