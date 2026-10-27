@@ -290,9 +290,12 @@ private:
         if(std::ranges::contains(kota::fs::path::components(cwd), "CMakeFiles")) {
             return true;
         }
+        // CMake's own directory, `share/cmake-3.31` or `share/cmake`, holds its modules.
         std::string_view previous;
         for(auto component: kota::fs::path::components(source)) {
-            if(component == "Modules" && previous.starts_with("cmake")) {
+            if(component == "Modules" &&
+               (previous == "cmake" || (previous.starts_with("cmake-") && previous.size() > 6 &&
+                                        std::isdigit(static_cast<unsigned char>(previous[6]))))) {
                 return true;
             }
             previous = component;

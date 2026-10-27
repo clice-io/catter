@@ -2,6 +2,8 @@
 stdout = '''
 cache/cc -c a.c
 tools/cc -c a.c
+cache/cc -c b.c
+tools/cc -c b.c
 '''
 exit = 0
 
@@ -9,6 +11,8 @@ exit = 0
 stdout = '''
 cache/cc -c a.c
 tools/cc -c a.c
+cache/cc -c b.c
+tools/cc -c b.c
 node build.mjs
 └── cc -c a.c
 '''

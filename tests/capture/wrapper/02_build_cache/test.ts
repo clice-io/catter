@@ -3,7 +3,7 @@ import { test } from "@catter/tools/testing";
 
 // PATH finds cc as a build cache's, cache/cc, which runs the cc it finds past its own directory:
 // under the wrapper backend it finds the compiler, not the shim again, and the compile is told
-// once.
+// once; a shim no session reaches runs it uncaptured, and the cache finds the compiler too.
 test({ except: { win32: "the wrapper backend runs on Linux and macOS" } }, async (t) => {
     const env = {
         PATH: [

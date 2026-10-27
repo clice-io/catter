@@ -201,24 +201,26 @@ std::optional<std::string> resolve_past(std::string_view program,
 }
 
 /// The command a shim, or the launcher, stands in for: `args` as the build
-/// started it, which runs `program`, the shim itself for a shim. The build command, which catter
-/// starts through the launcher, runs with the shims on its PATH; the commands under it run without
-/// them, so that the compilers a build tool runs do not find the shims again, nor a build cache's
-/// compiler in their place.
+/// started it, which runs `program`, the shim itself for a shim. The build
+/// command, which catter starts through the launcher, runs with the shims on
+/// its PATH; the commands under it run without them, captured or not, so that
+/// the compilers a build tool runs do not find the shims again, nor a build
+/// cache's compiler in their place.
 Proxied wrapped(std::string_view self, std::string_view program, std::vector<std::string> args) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
-    auto pipe = variable(cmd.env, config::KEY_CATTER_IPC);
+    std::string pipe(variable(cmd.env, config::KEY_CATTER_IPC).value_or(""));
     std::string shims(
         variable(cmd.env, config::KEY_CATTER_SHIMS).value_or(kota::fs::path::parent(self)));
     data::ipcid_t parent = 0;
     if(auto id = variable(cmd.env, config::KEY_CATTER_COMMAND_ID)) {
         std::from_chars(id->data(), id->data() + id->size(), parent);
     }
+    std::optional<std::string> path(variable(cmd.env, "PATH"));
 
-    auto real = resolve_past(program, shims, variable(cmd.env, "PATH").value_or(""));
+    auto real = resolve_past(program, shims, path.value_or(""));
     if(!real) {
         return {
-            .pipe = std::string(pipe.value_or("")),
+            .pipe = std::move(pipe),
             .parent = parent,
             .error = std::format("`{}` is found nowhere past catter's shims", program),
         };
@@ -228,26 +230,22 @@ Proxied wrapped(std::string_view self, std::string_view program, std::vector<std
     if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
+    if(parent != 0 && path) {
+        std::string without;
+        // Entries PATH was split into join back.
+        [[maybe_unused]] auto error = kota::sys::join_paths(without, past_shims(*path, shims));
+        assert(!error);
+        set_variable(cmd.env, "PATH", without);
+    }
     cmd.executable = std::move(*real);
     cmd.args = std::move(args);
     return {
-        .pipe = std::string(pipe.value_or("")),
+        .pipe = std::move(pipe),
         .parent = parent,
         .command = std::move(cmd),
         .launch =
-            [shims = std::move(shims), build = parent == 0](data::command command,
-                                                            data::ipcid_t id) {
+            [](data::command command, data::ipcid_t id) {
                 set_variable(command.env, config::KEY_CATTER_COMMAND_ID, std::to_string(id));
-                if(!build) {
-                    std::string path;
-                    if(kota::sys::join_paths(
-                           path,
-                           past_shims(variable(command.env, "PATH").value_or(""), shims))) {
-                        throw cpptrace::runtime_error(
-                            "The PATH of the command cannot be written without catter's shims");
-                    }
-                    set_variable(command.env, "PATH", path);
-                }
                 return process_options(command);
             },
     };
