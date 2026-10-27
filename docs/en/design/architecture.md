@@ -11,7 +11,7 @@ Handler authors only need to understand two things:
 
 "Intercepting process creation" differs greatly in feasibility across platforms: a hook in every process of the build is the most general, but some programs keep it out (on macOS, Apple's own tools). Catter therefore separates how a build's commands are captured, a backend, from what is done with them, the session. Each backend starts the build and reports its commands to the session, which has the handlers decide each and tells them how each ended: the handlers see the same events whichever backend reports them.
 
-catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach, on Linux and macOS. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
+catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
 
 ## Handlers
 
@@ -79,12 +79,12 @@ Keep in mind:
 
 ## Components and processes
 
-A single catter run involves several processes and components. They are all part of the hook backend, and handler authors usually do not need to know about them:
+A single catter run involves several processes and components. They are part of the hook and wrapper backends, and handler authors usually do not need to know about them:
 
-| Component           | Role                                                                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                                          |
-| `catter-proxy`      | On Linux and macOS: stands in for each command the hook intercepted, and for the build command, which catter starts through it; relays IPC             |
-| hook shared library | Loaded by the hook backend into every process of the build to intercept process creation; on Windows it asks the daemon itself and starts each program |
+| Component           | Role                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `catter` (daemon)   | Runs the session's handlers, receives commands over IPC and returns decisions                                                                                                                 |
+| `catter-proxy`      | Stands in for each command the hook intercepted on Linux and macOS, for each program the wrapper backend has a shim of, and for the build command, which catter starts through it; relays IPC |
+| hook shared library | Loaded by the hook backend into every process of the build to intercept process creation; on Windows it asks the daemon itself and starts each program                                        |
 
-They are **implementation details of the hook backend**; the separation of backends from the session is the center of the architecture. See [Capture backends](capture-backends.md) and [Hook mechanism](hook-mechanism.md).
+They are **implementation details of the backends**; the separation of backends from the session is the center of the architecture. See [Capture backends](capture-backends.md) and [Hook mechanism](hook-mechanism.md).

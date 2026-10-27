@@ -4,7 +4,7 @@
 
 ## 选择后端
 
-`--capture <backend>` 指定捕获构建的后端：默认的 `hook`，或者 Linux 和 macOS 上的 `wrapper`。`--from <file>` 回放一次录制的构建，而不运行构建：回放录制的构建不涉及捕获，因此使用 `--from` 时不能同时使用 `--capture`；指定不存在的后端名称也会报错。这两种错误都会在任何程序运行之前报告。
+`--capture <backend>` 指定捕获构建的后端：默认的 `hook`，或者 `wrapper`。`--from <file>` 回放一次录制的构建，而不运行构建：回放录制的构建不涉及捕获，因此使用 `--from` 时不能同时使用 `--capture`；指定不存在的后端名称也会报错。这两种错误都会在任何程序运行之前报告。
 
 handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后端的名字，回放录制的构建时则为 `replay`。
 
@@ -31,10 +31,10 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 
 ### wrapper
 
-- **原理**：catter 按名字认得一批编译器、链接器和归档工具，为构建的 `PATH` 上每个这类名字的第一个程序各做一个 shim（包装程序），放进会话自己的一个目录，并把这个目录放在构建的 `PATH` 最前面。`CC`、`CXX`、`AR` 这类以路径指定程序的变量改为指向该程序的 shim；CMake 则通过 wrapper 后端的启动器（launcher）运行每次编译和链接（`CMAKE_<LANG>_COMPILER_LAUNCHER` 和 `CMAKE_<LANG>_LINKER_LAUNCHER`，除非构建自己设置了它们）。shim 就是 `catter-proxy`：它上报自己的命令，按决定运行它所代替的程序，即 shim 之后 `PATH` 上第一个同名的程序，并上报这条命令如何结束。它运行的程序在自己的 `PATH` 上找不到 shim：构建缓存运行的编译器（例如 ccache 运行它自己目录之后的那个编译器）就是编译器本身，而不会又是 shim。
-- **平台**：Linux、macOS。
+- **原理**：catter 在构建的 `PATH` 上的每个目录之前放一个会话自己的目录，为那个目录中 catter 按名字认得的每个编译器、链接器和归档工具各放一个 shim（包装程序）：无论构建工具查找哪些名字、按什么顺序查找，都会经由 shim 找到没有 catter 时它会找到的那个程序。`CC`、`CXX`、`AR` 这类以路径指定程序的变量改为指向该程序的 shim；CMake 则通过 wrapper 后端的启动器（launcher）运行每次编译和链接（`CMAKE_<LANG>_COMPILER_LAUNCHER` 和 `CMAKE_<LANG>_LINKER_LAUNCHER`）；在 Windows 上，MSBuild 通过 shim 运行 `cl.exe`、`link.exe` 和 `lib.exe`（`CLToolPath`、`LinkToolPath` 和 `LibToolPath`）。以上每一项都只在构建没有自行设置时生效。shim 就是 `catter-proxy`：它上报自己的命令，按决定运行它所代替的程序，并上报这条命令如何结束。它运行的程序在自己的 `PATH` 上找不到 shim：构建缓存运行的编译器（例如 ccache 运行它自己目录之后的那个编译器）就是编译器本身，而不会又是 shim。
+- **平台**：Linux、macOS、Windows。
 - **捕获范围**：有 shim 的程序，无论构建中由谁运行它们，Apple 自带的 `/usr/bin/make` 和 `/bin/sh` 运行的也包括在内。命令的父命令是启动它的、离它最近的有 shim 的程序，或者构建命令；编译器启动的程序看不到。
-- **限制**：构建如果按 catter 运行之前找到的路径运行编译器（CMake 生成的 `build.ninja` 就是这样），就会绕过 shim：应在同一个会话中配置并构建，`catter compile-commands --capture wrapper -- sh -c "cmake -B build && cmake --build build"`。shim 随会话一起消失，因此在 wrapper 后端下配置的构建只能在那个会话中运行：请为 catter 单独配置一个构建。构建自己放在 `PATH` 最前面的目录（例如工具链的目录）中的程序，会先于 shim 被找到。
+- **限制**：构建如果按 catter 运行之前找到的路径运行编译器（CMake 生成的 `build.ninja` 就是这样），就会绕过 shim：应在同一个会话中配置并构建，`catter compile-commands --capture wrapper -- sh -c "cmake -B build && cmake --build build"`。shim 随会话一起消失，因此在 wrapper 后端下配置的构建只能在那个会话中运行：请为 catter 单独配置一个构建。构建自己放在 `PATH` 最前面的目录（例如工具链的目录）中的程序，会先于 shim 被找到；通过 `PATH` 中的相对路径项找到的程序没有 shim，因为构建每换一个目录，相对路径项指向的就是另一个目录。在 Windows 上，只有 `.exe` 程序有 shim；项目如果自己设置了 `CLToolPath`、`LinkToolPath` 或 `LibToolPath`（MSVC 以外的工具集可能会这样做），就会绕过 shim 运行这些工具。
 
 ## 能力矩阵
 
@@ -42,7 +42,7 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 | ------- | ----------------------- | ------------------------------------ | ------------------------------------- | -------------------- | -------------- |
 | hook    | Linux / macOS / Windows | 构建的每个进程中的钩子               | `skip` `drop` `abort` `modify` `edit` | 启动它的进程         | 已实现（默认） |
 | replay  | 任意                    | 录制的构建（`--from`）               | 仅 `abort` 生效                       | 按录制内容           | 已实现         |
-| wrapper | Linux / macOS           | `PATH` 上的编译器 shim，`CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | 离它最近的被包装程序 | 已实现         |
+| wrapper | Linux / macOS / Windows | `PATH` 上的编译器 shim，`CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | 离它最近的被包装程序 | 已实现         |
 
 ## 为任意后端编写 handler
 

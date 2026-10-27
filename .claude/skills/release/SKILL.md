@@ -10,8 +10,8 @@ description: Read before any release work — handing a user a CI build, tagging
 Git tag `vX.Y.Z` == release page; a tag with a `-` (`v0.1.0-alpha.4`) is a
 pre-release. The build stamps no version: each packaged build makes
 `catter.tar.gz` (`catter.zip` for Windows), `catter/{bin/, LICENSE}`, and
-its symbols, `catter-symbol.tar.xz` (`.zip`), the GSYM of `catter`, and on
-Linux and macOS of `catter-proxy`, for `llvm-gsymutil`; the promote workflow names them after
+its symbols, `catter-symbol.tar.xz` (`.zip`), the GSYM of `catter` and
+`catter-proxy`, for `llvm-gsymutil`; the promote workflow names them after
 the tag's version and the target triple,
 `catter-<version>.<triple>.tar.gz` and
 `catter-<version>.<triple>.symbols.tar.xz`, so a tag needs no version bump

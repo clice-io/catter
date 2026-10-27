@@ -39,6 +39,16 @@ kota::task<> Service::report_error(ipcid_t parent_id, std::string error_msg) noe
     co_await session.uncaptured(id, parent_of(parent_id), std::move(error_msg));
 }
 
+#ifdef CATTER_WINDOWS
+kota::task<bool> Service::started([[maybe_unused]] std::int64_t pid) noexcept {
+    co_return false;
+}
+
+kota::task<> Service::wait_started() noexcept {
+    co_return;
+}
+#endif
+
 kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client) {
     kota::ipc::BincodePeer peer(kota::event_loop::current(),
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(client)));
@@ -80,7 +90,8 @@ kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client) {
                         -> kota::ipc::RequestResult<Request<RequestType::STARTED>> {
                         co_return co_await service->started(params.pid);
                     });
-#else
+#endif
+
     peer.on_request(Request<RequestType::FINISH>::method,
                     [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
                         -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {
@@ -90,7 +101,6 @@ kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client) {
                         co_await service->finish(params);
                         co_return nullptr;
                     });
-#endif
 
     co_await peer.run();
     LOG_INFO("IPC peer disconnected");

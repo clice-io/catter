@@ -1,8 +1,8 @@
 # IPC Protocol (hook and wrapper backends)
 
-> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy` on Linux and macOS, which the hook runs each command through and which the wrapper backend's shims are, and the hook itself on Windows. The protocol names no backend: it is what every backend that runs a build reports its commands over; handler authors usually do not need to read it.
+> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy`, which the hook runs each command through on Linux and macOS and which the wrapper backend's shims are, and the hook itself on Windows. The protocol names no backend: it is what every backend that runs a build reports its commands over; handler authors usually do not need to read it.
 
-Catter uses inter-process communication between the daemon (`catter`) and its clients: on Linux and macOS each `catter-proxy` instance, which stands in for one command; on Windows the hook, from inside the `CreateProcess` call that starts one command. The daemon acts as a server, and each client connects once per command.
+Catter uses inter-process communication between the daemon (`catter`) and its clients: each `catter-proxy` instance, which stands in for one command; on Windows the hook too, from inside the `CreateProcess` call that starts one command. The daemon acts as a server, and each client connects once per command.
 
 ## Transport
 
@@ -13,7 +13,7 @@ The transport layer is platform-specific:
 | Linux / macOS | Unix domain socket | `<data dir>/ipc-<pid>.sock` |
 | Windows       | Named pipe         | `\\.\pipe\catter-ipc-<pid>` |
 
-Each daemon listens on a socket/pipe of its own, named by its process id, so builds that run under catter at the same time never meet. The data directory is `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows), or `CATTER_HOME` when it is set. The daemon creates the listening socket/pipe at startup. On Linux and macOS it passes its name to every `catter-proxy` instance on the command line (`--ipc <pipe>`); each one connects to it as a client when it starts, and the connection persists for the lifetime of the proxy process. On Windows the daemon gives it to the hook in each process it injects the hook into; the hook connects for each program it starts, and disconnects once the program is started.
+Each daemon listens on a socket/pipe of its own, named by its process id, so builds that run under catter at the same time never meet. The data directory is `$HOME/.catter` (Linux, macOS) or `%LOCALAPPDATA%\catter` (Windows), or `CATTER_HOME` when it is set. The daemon creates the listening socket/pipe at startup. On Linux and macOS it passes its name to every `catter-proxy` instance the hook starts on the command line (`--ipc <pipe>`); the wrapper backend's shims, on every platform, find it in their environment (`__key_catter_ipc_v1`). Each one connects to it as a client when it starts, and the connection persists for the lifetime of the proxy process. On Windows the daemon gives it to the hook in each process it injects the hook into; the hook connects for each program it starts, and disconnects once the program is started.
 
 A program can outlive the session it started in: a build server (an sccache server, a Gradle daemon) runs the commands of later builds with the earlier session's pipe in its environment, or, on Windows, its hook. When that pipe is gone, the command runs as it would run without catter, uncaptured; `catter-proxy` logs a warning. A command that ends after its session keeps its exit code. A command whose working directory the proxy cannot read, as one the build removed, runs there all the same, uncaptured, and the proxy reports it as an error (`REPORT_ERROR`).
 
@@ -21,7 +21,7 @@ A program can outlive the session it started in: a build server (an sccache serv
 
 The daemon stands in for the build the same way: it starts the build command's proxy as a proxy starts its program, and ends as the build did. A SIGTERM, SIGINT or SIGHUP sent to the daemon goes on to the build command, and the proxy of the build command ends with the daemon when the daemon is killed: on macOS that proxy ends its program itself when its connection to the daemon ends before its `FINISH`.
 
-On Windows there is no proxy: the daemon decides the build command itself and starts it with the hook, and the hook starts each program the build starts. The caller gets the program's own process, as it would without catter, and the daemon waits on the process for its exit code. The daemon stands in for the build command: Ctrl+C and Ctrl+Break reach the build in the console they share, and the daemon waits for it to end; the build command ends with the daemon when the daemon is killed.
+The hook on Windows runs no proxy: the daemon decides the build command itself and starts it with the hook, and the hook starts each program the build starts. The caller gets the program's own process, as it would without catter, and the daemon waits on the process for its exit code. The daemon stands in for the build command: Ctrl+C and Ctrl+Break reach the build in the console they share, and the daemon waits for it to end; the build command ends with the daemon when the daemon is killed.
 
 ## Serialization
 
@@ -156,7 +156,7 @@ Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
 
-The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached. Under the wrapper backend the daemon starts the build command through the launcher, `catter-proxy` by another name among the shims, which reports it the same way and runs it with the shims first on its `PATH`; each shim then sends these messages for the program it stands in for.
+The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached. Under the wrapper backend the daemon starts the build command through the launcher, `catter-proxy` by another name among the shims, which reports it the same way and runs it with the shims on its `PATH`; each shim then sends these messages for the program it stands in for.
 
 ### Windows Hook (intercepted command)
 

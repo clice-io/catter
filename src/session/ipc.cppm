@@ -35,13 +35,14 @@ public:
 #ifdef CATTER_WINDOWS
     /// The hook started the command's program suspended, as process `pid`:
     /// whether it is made to run as decided, which the hook resumes then, or
-    /// cannot run, which the hook ends.
-    virtual kota::task<bool> started(std::int64_t pid) noexcept = 0;
+    /// cannot run, which the hook ends. A client that runs its program itself,
+    /// as a shim does, hands none over.
+    virtual kota::task<bool> started(std::int64_t pid) noexcept;
 
     /// Waits for the program started to exit, and finishes the command as
     /// finish() does; at once when none was. The hook goes once it has
     /// started the program.
-    virtual kota::task<> wait_started() noexcept = 0;
+    virtual kota::task<> wait_started() noexcept;
 #endif
 
 protected:

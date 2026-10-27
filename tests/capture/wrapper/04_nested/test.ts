@@ -4,7 +4,6 @@ import { test } from "@catter/tools/testing";
 // says so before it runs the wrapper backend, whose shims would meet that session's.
 test(
     {
-        except: { win32: "the wrapper backend runs on Linux and macOS" },
         errors: ["catter runs in a build under the wrapper backend"],
     },
     async (t) => {

@@ -1,0 +1,16 @@
+[test."$ node build.mjs"]
+stdout = '''
+first/g++ -c a.cc
+second/c++ -c b.cc
+'''
+exit = 0
+
+[test."$ catter tree -w 1000 --capture wrapper -- node build.mjs"]
+stdout = '''
+first/g++ -c a.cc
+second/c++ -c b.cc
+node build.mjs
+├── ${WS}/first/g++ -c a.cc
+└── c++ -c b.cc
+'''
+exit = 0

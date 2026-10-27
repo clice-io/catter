@@ -123,7 +123,7 @@ The Windows hook uses a fundamentally different approach because Windows has no 
 1. **DLL injection** -- to load the hook library into target processes
 2. **API hooking via [Microsoft Detours](https://github.com/microsoft/Detours)** -- to intercept `CreateProcess` calls within those processes
 
-There is no `catter-proxy` on Windows. The hook runs inside the caller's own `CreateProcess` call, where it can do what `catter-proxy` does on Unix: it speaks to catter over the session's pipe, and it starts the program itself. Windows gives catter the exit code of any process it holds a handle to, so catter needs no process of its own beside each program to learn how it ended.
+The Windows hook runs no `catter-proxy`. It runs inside the caller's own `CreateProcess` call, where it can do what `catter-proxy` does on Unix: it speaks to catter over the session's pipe, and it starts the program itself. Windows gives catter the exit code of any process it holds a handle to, so catter needs no process of its own beside each program to learn how it ended.
 
 ### Hook DLLs
 

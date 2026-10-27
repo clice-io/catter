@@ -130,11 +130,21 @@ entries = [
     },
 ]
 
-[wrapper."$ catter compile-commands --capture wrapper -o compile_commands.json -- sh -c \"cmake -S . -B build -G Ninja > /dev/null && cmake --build build -j 1\""]
+[wrapper."$ catter compile-commands --capture wrapper -o compile_commands.json -- cmake -P configure_and_build.cmake"]
 stdout = '''
 [1/3] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
 [2/3] Building CXX object CMakeFiles/hello.dir/src/util.cc.o
 [3/3] Linking CXX executable hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[wrapper."$ catter compile-commands --capture wrapper -o compile_commands.json -- cmake -P configure_and_build.cmake".win32]
+differs = "CMake builds with MSVC: Ninja names objects and executables the Windows way"
+stdout = '''
+[1/3] Building CXX object CMakeFiles\hello.dir\src\main.cc.obj
+[2/3] Building CXX object CMakeFiles\hello.dir\src\util.cc.obj
+[3/3] Linking CXX executable hello.exe
 CDB saved to ${WS}/compile_commands.json with 2 entries.
 '''
 exit = 0
@@ -222,6 +232,63 @@ entries = [
             "CMakeFiles/hello.dir/src/util.cc.o.d",
             "-o",
             "CMakeFiles/hello.dir/src/util.cc.o",
+            "-c",
+            "${WS}/src/util.cc",
+        ],
+    },
+]
+
+[wrapper."compile_commands.json".win32]
+differs = "CMake compiles with MSVC's cl.exe, which takes other flags"
+entries = [
+    {
+        file = "${WS}/src/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/hello.dir/src/main.cc.obj",
+        arguments = [
+            "${MSVC}/bin/HostX64/x64/cl.exe",
+            "/nologo",
+            "/TP",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
+            "/DWIN32",
+            "/D_WINDOWS",
+            "/EHsc",
+            "/Zi",
+            "/Ob0",
+            "/Od",
+            "/RTC1",
+            "-MDd",
+            "/showIncludes",
+            '/FoCMakeFiles\hello.dir\src\main.cc.obj',
+            '/FdCMakeFiles\hello.dir\',
+            "/FS",
+            "-c",
+            "${WS}/src/main.cc",
+        ],
+    },
+    {
+        file = "${WS}/src/util.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/hello.dir/src/util.cc.obj",
+        arguments = [
+            "${MSVC}/bin/HostX64/x64/cl.exe",
+            "/nologo",
+            "/TP",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
+            "/DWIN32",
+            "/D_WINDOWS",
+            "/EHsc",
+            "/Zi",
+            "/Ob0",
+            "/Od",
+            "/RTC1",
+            "-MDd",
+            "/showIncludes",
+            '/FoCMakeFiles\hello.dir\src\util.cc.obj',
+            '/FdCMakeFiles\hello.dir\',
+            "/FS",
             "-c",
             "${WS}/src/util.cc",
         ],

@@ -6,11 +6,6 @@ exit = 0
 stdout = "`nope` is not a capture backend: give hook or wrapper"
 exit = 1
 
-[test."$ catter tree --capture nope -- node -e 0".win32]
-differs = "the wrapper backend runs on Linux and macOS"
-stdout = "`nope` is not a capture backend: give hook"
-exit = 1
-
 [test."$ catter tree --capture hook --from events.json"]
 stdout = "--from replays a recorded build, which nothing captures: give --capture with a build command after --"
 exit = 1

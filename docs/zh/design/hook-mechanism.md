@@ -123,7 +123,7 @@ Windows 钩子使用了与 Unix 完全不同的方法，因为 Windows 没有 `L
 1. **DLL 注入** -- 将钩子库加载到目标进程中
 2. **基于 [Microsoft Detours](https://github.com/microsoft/Detours) 的 API 钩子** -- 在这些进程内拦截 `CreateProcess` 调用
 
-Windows 上没有 `catter-proxy`。钩子在调用方自己的 `CreateProcess` 调用中运行，在这里就能完成 `catter-proxy` 在 Unix 上做的事：通过会话的管道与 catter 通信，并亲自启动程序。catter 只要持有某个进程的句柄，Windows 就会把这个进程的退出码交给它，因此 catter 无需在每个程序旁边另起一个自己的进程来得知程序如何结束。
+Windows 钩子不运行 `catter-proxy`。它在调用方自己的 `CreateProcess` 调用中运行，在这里就能完成 `catter-proxy` 在 Unix 上做的事：通过会话的管道与 catter 通信，并亲自启动程序。catter 只要持有某个进程的句柄，Windows 就会把这个进程的退出码交给它，因此 catter 无需在每个程序旁边另起一个自己的进程来得知程序如何结束。
 
 ### 钩子 DLL
 
