@@ -150,12 +150,10 @@ void set_variable(std::vector<std::string>& env, std::string_view name, std::str
     }
 }
 
-/// Whether `directory` is one of the directories of shims, `shims`.
+/// Whether `directory` is one of the directories of shims, `shims`, as catter
+/// wrote it on PATH.
 bool among(std::string_view directory, std::span<const std::string> shims) {
-    return std::ranges::any_of(shims, [&](const std::string& shim) {
-        auto same = kota::fs::equivalent(directory, shim);
-        return same.has_value() && *same;
-    });
+    return std::ranges::contains(shims, directory);
 }
 
 /// The entries of the list of paths `path_list` that are no directory of shims.
@@ -202,7 +200,8 @@ Proxied wrapped(std::string_view self, std::string_view program, std::vector<std
     data::command cmd{.cwd = working_directory(), .env = environment()};
     auto pipe = variable(cmd.env, config::KEY_CATTER_IPC);
     std::vector<std::string> shims = {std::string(kota::fs::path::parent(self))};
-    if(auto session_shims = variable(cmd.env, config::KEY_CATTER_SHIMS)) {
+    if(auto session_shims = variable(cmd.env, config::KEY_CATTER_SHIMS);
+       session_shims && *session_shims != shims.front()) {
         shims.emplace_back(*session_shims);
     }
     data::ipcid_t parent = 0;
