@@ -87,7 +87,8 @@ ZEST_CASE(request_gets_its_result) {
     CloseHandle(server);
 
     ZEXPECT(asked == 7);
-    ZEXPECT(result.has_value() && *result);
+    ZASSERT(result.has_value());
+    ZEXPECT(*result);
 };
 
 ZEST_CASE(busy_pipe_is_waited_for) {
