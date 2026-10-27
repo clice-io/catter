@@ -6,25 +6,26 @@ module;
 
 module catter;
 
-import :capture.runtime_driver;
+import :capture.backend;
 import :driver.app_runner;
 import :protocol.remote_handler;
 import :session.handler;
 import :session.process;
+import :session.session;
 
 namespace catter::driver {
 
 namespace {
 
 /// Runs the session of `handler`: the build it starts, if any, and then its end.
-kota::task<kota::process::exit_status> run(Handler& handler,
-                                           const RuntimeDriver& driver,
-                                           Build build) {
+kota::task<kota::process::exit_status> run(Handler& handler, const Backend& backend, Build build) {
     auto started = co_await handler.on_start(std::move(build));
     if(!started) {
         co_return kota::process::exit_status{};
     }
-    auto status = co_await driver.execute(*started, handler);
+    Session session(handler);
+    auto status = co_await backend.run(*started, session);
+    session.rethrow();
     co_await handler.on_finish(result_of(status));
     co_return status;
 }
@@ -101,8 +102,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
         throw cpptrace::runtime_error(
             "give the build command after --, or a recorded build with --from");
     }
-    const auto& driver =
-        options.from.has_value() ? replay_runtime_driver() : inject_runtime_driver();
+    const auto& backend = options.from.has_value() ? replay_backend() : hook_backend();
     Build build{
         .command = options.from.has_value() ? std::vector{*options.from} : *options.command,
         .cwd = options.directory.directory->path,
@@ -112,7 +112,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
         return RemoteHandler::Options{
             .name = std::string(name),
             .session = session,
-            .mode = std::string(driver.name()),
+            .mode = std::string(backend.name()),
             .timeout = std::chrono::seconds(*options.handler_timeout),
         };
     };
@@ -139,7 +139,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
             chain.push_back(remote.get());
         }
         HandlerChain handler(std::move(chain));
-        status = co_await run(handler, driver, std::move(build));
+        status = co_await run(handler, backend, std::move(build));
     } catch(...) {
         error = std::current_exception();
     }

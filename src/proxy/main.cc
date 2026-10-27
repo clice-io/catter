@@ -38,7 +38,7 @@ kota::task<exit_status> run(data::action act,
     auto exited = make_guard([&]() noexcept { peer.program.reset(); });
 #endif
     switch(act.type) {
-        case action::INJECT: {
+        case action::RUN: {
             co_return co_await run_process(hook_options(std::move(act.cmd), id, pipe_name),
                                            std::move(stand_in));
         }
@@ -112,11 +112,6 @@ kota::task<exit_status> handle_proxy_request(std::span<const std::string> argv,
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
                     format_args(cmd.args)));
             co_return co_await run_process(process_options(cmd), {.stand_in = true});
-        }
-
-        if(!co_await peer.check_mode(data::ServiceMode::INJECT)) {
-            throw cpptrace::runtime_error(
-                "catter is not in inject mode, cannot handle the request");
         }
 
         auto id = co_await peer.create(*opt.parent_id);

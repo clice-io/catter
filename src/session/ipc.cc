@@ -9,11 +9,37 @@ module catter;
 
 import :session.data;
 import :session.ipc;
+import :session.session;
 
 namespace catter::ipc {
 using namespace data;
 
-kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe client) {
+/// The build command is started with parent 0: no command started it.
+static std::optional<ipcid_t> parent_of(ipcid_t parent_id) {
+    if(parent_id == 0) {
+        return std::nullopt;
+    }
+    return parent_id;
+}
+
+kota::task<ipcid_t> Service::create(ipcid_t parent_id) noexcept {
+    this->parent_id = parent_id;
+    co_return id;
+}
+
+kota::task<action> Service::make_decision(command cmd) noexcept {
+    co_return co_await session.decide(id, parent_of(parent_id), std::move(cmd));
+}
+
+kota::task<> Service::finish(process_result result) noexcept {
+    co_await session.exited(id, std::move(result));
+}
+
+kota::task<> Service::report_error(ipcid_t parent_id, std::string error_msg) noexcept {
+    co_await session.failed(id, parent_of(parent_id), std::move(error_msg));
+}
+
+kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client) {
     kota::ipc::BincodePeer peer(kota::event_loop::current(),
                                 std::make_unique<kota::ipc::StreamTransport>(std::move(client)));
     using Context = kota::ipc::BincodePeer::RequestContext;
@@ -55,12 +81,6 @@ kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe clien
                         co_return co_await service->started(params.pid);
                     });
 #else
-    peer.on_request(Request<RequestType::CHECK_MODE>::method,
-                    [&](const Context& ctx, Request<RequestType::CHECK_MODE>::Params params)
-                        -> kota::ipc::RequestResult<Request<RequestType::CHECK_MODE>> {
-                        co_return params == data::ServiceMode::INJECT;
-                    });
-
     peer.on_request(Request<RequestType::FINISH>::method,
                     [&](const Context& ctx, const Request<RequestType::FINISH>::Params& params)
                         -> kota::ipc::RequestResult<Request<RequestType::FINISH>> {

@@ -7,74 +7,60 @@ module;
 module catter:session.session;
 
 import :session.handler;
-import :session.ipc;
 
 namespace catter {
 
-template <typename ServiceFactoryResult>
-struct ServiceFactoryLike_helper : std::false_type {};
-
-template <typename ServiceType>
-    requires std::derived_from<ServiceType, ipc::ServiceBase>
-struct ServiceFactoryLike_helper<std::unique_ptr<ServiceType>> : std::true_type {};
-
-template <typename ServiceFactoryType>
-using ServiceFactoryResult = std::invoke_result_t<ServiceFactoryType, data::ipcid_t>;
-
-template <typename ServiceFactoryType>
-concept ServiceFactoryLike =
-    std::invocable<ServiceFactoryType, data::ipcid_t> &&
-    ServiceFactoryLike_helper<ServiceFactoryResult<ServiceFactoryType>>::value;
-
+/// The build's commands as a capture backend reports them: each decided by
+/// the handlers and told to them. The first exception a handler throws ends
+/// the session: no handler is called after it, every command decided after
+/// it fails without running, and `rethrow` throws it once the build has
+/// ended.
 class Session {
 public:
-    using PipeAcceptor = kota::acceptor<kota::pipe>;
-    using ClientAcceptor = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
     using Start = kota::function<kota::task<kota::process::exit_status>()>;
+    using Accept = kota::function<kota::task<void>(data::ipcid_t, kota::pipe&&)>;
 
-    struct RunPlan {
-        /// Starts the build and waits for its end.
-        Start start;
-        /// The pipe the session listens on, which the build reports its commands to.
-        std::string pipe_name;
-        ClientAcceptor callback;
-    };
+    explicit Session(Handler& handler) : handler(handler) {}
 
-    /// Create a run plan with the given start and client accepted callback.
-    /// @param start Starts the build and waits for its end.
-    /// @param pipe_name The pipe to listen on, which the build reports its commands to.
-    /// @param factory The factory for creating service instances when a client is accepted.
-    /// @return A run plan containing the start and client accepted callback.
-    template <typename ServiceFactoryType>
-        requires ServiceFactoryLike<std::decay_t<ServiceFactoryType>>
-    static auto make_run_plan(Start start, std::string pipe_name, ServiceFactoryType&& factory) {
-        return RunPlan{
-            .start = std::move(start),
-            .pipe_name = std::move(pipe_name),
-            .callback =
-                [factory = std::forward<ServiceFactoryType>(factory)](data::ipcid_t id,
-                                                                      kota::pipe&& client) {
-                    return ipc::accept(factory(id), std::move(client));
-                },
-        };
-    }
-
-    /// Run the session with the given run plan.
-    /// @param run_plan The run plan containing the start and service factory.
-    /// @return How the build ended.
-    kota::task<kota::process::exit_status> run(RunPlan run_plan);
-
-    /// The id of a new command: each client that connects takes one, and on
-    /// Windows the build command, which catter starts itself.
+    /// The id of a new command.
     data::ipcid_t new_id() noexcept;
 
+    /// What the handlers decide for command `id`, which `parent` started, none
+    /// for the build command: it runs as it is unless they change it, and a
+    /// command that is not to run keeps it as it was sent.
+    kota::task<data::action> decide(data::ipcid_t id,
+                                    std::optional<data::ipcid_t> parent,
+                                    data::command command);
+
+    /// Tells the handlers how command `id` ended.
+    kota::task<> exited(data::ipcid_t id, data::process_result result);
+
+    /// Tells the handlers that catter could not capture command `id`:
+    /// `message` says why.
+    kota::task<> failed(data::ipcid_t id, std::optional<data::ipcid_t> parent, std::string message);
+
+    /// Ends the session with `error`, unless it has ended already.
+    void fail(std::exception_ptr error) noexcept;
+
+    /// Throws what ended the session, if anything did.
+    void rethrow() const;
+
+    /// Runs the build with `start` and, while it runs, serves each client that
+    /// connects to the pipe `pipe_name`, which the build reports its commands
+    /// to, with `accept`, as a new command: how the build ended.
+    kota::task<kota::process::exit_status> serve(std::string pipe_name, Start start, Accept accept);
+
 private:
-    kota::task<void> loop(ClientAcceptor acceptor);
+    kota::task<void> loop(Accept accept);
 
     kota::task<kota::process::exit_status> start(Start start);
 
 private:
-    std::unique_ptr<PipeAcceptor> acc = nullptr;
+    Handler& handler;
+
+    std::exception_ptr error;
+
+    std::unique_ptr<kota::acceptor<kota::pipe>> acc = nullptr;
 
     data::ipcid_t last_id = 0;
 };
