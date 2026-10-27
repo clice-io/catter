@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "cwd": ".",
+  "events": [
+    { "id": 1, "exe": "xmake", "argv": ["xmake", "build"] },
+    {
+      "id": 2,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-c", "-m64", "-Iinclude", "-DTEST=1", "-MMD", "-MF", "main.d", "-E", "-fpch-preprocess", "-o", "build/__cpp_main.cc.cc", "src/main.cc"]
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-c", "-m64", "-DTEST=1", "-fpreprocessed", "-Wno-gnu-line-marker", "-o", "build/main.cc.o", "build/__cpp_main.cc.cc"]
+    },
+    {
+      "id": 7,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-c", "-m64", "-Iinclude", "-E", "-o", "build/__cpp_main.cc.cc", "src/other.cc"]
+    },
+    {
+      "id": 6,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-c", "-m64", "-Iinclude", "-DTEST=2", "-E", "-fpch-preprocess", "-o", "build/test2/__cpp_main.cc.cc", "src/main.cc"]
+    },
+    {
+      "id": 4,
+      "parent": 1,
+      "exe": "g++",
+      "argv": ["g++", "-E", "-P", "-Iinclude", "include/api.h", "-o", "build/api.i"]
+    },
+    { "id": 5, "parent": 1, "exe": "g++", "argv": ["g++", "-o", "build/app", "build/main.cc.o"] }
+  ],
+  "finish": { "code": 0 }
+}

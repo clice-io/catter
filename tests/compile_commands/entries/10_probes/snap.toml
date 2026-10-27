@@ -1,0 +1,31 @@
+[posix."$ catter compile-commands -o compile_commands.json -- node build.mjs posix"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+exit = 0
+
+[posix."compile_commands.json"]
+entries = [
+    {
+        file = "main.c",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["cc", "-c", "main.c", "-o", "main.o"],
+    },
+]
+
+[msvc."$ catter compile-commands -o compile_commands.json -- node build.mjs msvc"]
+stdout = '''
+conftest.c
+main.c
+CDB saved to ${WS}/compile_commands.json with 1 entries.
+'''
+exit = 0
+
+[msvc."compile_commands.json"]
+entries = [
+    {
+        file = "main.c",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["cl", "/nologo", "/c", "main.c", "/Fomain.o"],
+    },
+]
