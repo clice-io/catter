@@ -71,12 +71,11 @@ public:
     }
 
     /// Adds a shim of each program in the directories of the list of paths `path_list` that catter
-    /// knows by its name: the first of each name, as PATH finds it.
-    void add_found(std::string_view path_list) {
-        for(auto directory: kota::sys::split_paths(path_list)) {
-            if(directory.empty()) {
-                continue;
-            }
+    /// knows by its name: the first of each name, as PATH finds it for a build that runs in `cwd`.
+    void add_found(std::string_view path_list, std::string_view cwd) {
+        for(auto entry_of_list: kota::sys::split_paths(path_list)) {
+            std::string directory(cwd);
+            kota::fs::path::push(directory, entry_of_list);
             auto entries = kota::fs::read_dir(directory);
             if(!entries) {
                 continue;
@@ -172,7 +171,9 @@ std::string through_shim(std::string_view value, Shims& shims) {
 /// process's, with the shims first on PATH, the programs variables such as CC name by their
 /// paths run through theirs, and CMake running each compile and link through the launcher, unless
 /// the build names a launcher of its own.
-std::vector<kota::process::env_var> environment(Shims& shims, std::string_view pipe) {
+std::vector<kota::process::env_var> environment(Shims& shims,
+                                                std::string_view pipe,
+                                                std::string_view cwd) {
     std::vector<kota::process::env_var> env;
     std::optional<std::string> path;
     auto named = [](std::string_view name) {
@@ -199,7 +200,7 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
         throw cpptrace::runtime_error(
             "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
     }
-    shims.add_found(*path);
+    shims.add_found(*path, cwd);
     std::string shims_path;
     std::vector<std::string> directories = {std::string(shims.directory())};
     for(auto directory: kota::sys::split_paths(*path)) {
@@ -238,7 +239,7 @@ public:
         kota::process::options launch{
             .program = shims.launcher(),
             .args = build.command,
-            .env = environment(shims, pipe_name),
+            .env = environment(shims, pipe_name, build.cwd),
             .cwd = build.cwd,
         };
         co_return co_await session.serve(
