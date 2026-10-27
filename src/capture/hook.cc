@@ -216,7 +216,7 @@ kota::task<kota::process::exit_status> run_build(Session& session,
 class HookBackend final : public Backend {
 public:
     std::string_view name() const noexcept override {
-        return "inject";
+        return "hook";
     }
 
     kota::task<kota::process::exit_status> run(const Build& build,

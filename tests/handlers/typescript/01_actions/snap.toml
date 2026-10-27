@@ -7,7 +7,7 @@ ran with ["leave-me"]
 leave-me: exit 0
 '''
 stderr = '''
-start: mode inject, build ["node","build.mjs"]
+start: mode hook, build ["node","build.mjs"]
 command 1: ["build.mjs"]
 command 2: ["child.mjs","drop-me"]
 exit 2: code 0

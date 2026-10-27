@@ -11,6 +11,7 @@ Arguments:
 Options:
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
+  --capture <backend>          How the build's commands are captured: hook. [default: hook]
   --from <file>                Replay the build recorded in this file instead of running one.
   --handler <command>          Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.
   --connect <host:port>        Connect to a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once.
@@ -35,6 +36,7 @@ Arguments:
 Options:
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
+  --capture <backend>          How the build's commands are captured: hook. [default: hook]
   --from <file>                Replay the build recorded in this file instead of running one.
   --handler <command>          Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.
   --connect <host:port>        Connect to a handler listening at the address, on this machine unless --allow-remote is given; may be given more than once.

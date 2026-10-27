@@ -85,6 +85,31 @@ Address parse_address(std::string_view address, bool allow_remote) {
     return {.hosts = {std::string(host)}, .port = port};
 }
 
+/// The backend that captures the build: replay for a recorded one, else the one
+/// --capture names.
+const Backend& backend_of(const SessionOptions& options) {
+    if(options.from.has_value()) {
+        if(options.capture.has_value()) {
+            throw cpptrace::runtime_error(
+                "--from replays a recorded build, which nothing captures: give --capture with a build command after --");
+        }
+        return replay_backend();
+    }
+    const auto backends = capture_backends();
+    if(!options.capture.has_value()) {
+        return *backends.front();
+    }
+    if(auto found = std::ranges::find(backends, *options.capture, &Backend::name);
+       found != backends.end()) {
+        return **found;
+    }
+    throw cpptrace::runtime_error(
+        std::format("`{}` is not a capture backend: give {}",
+                    *options.capture,
+                    std::ranges::to<std::string>(backends | std::views::transform(&Backend::name) |
+                                                 std::views::join_with(std::string_view(" or ")))));
+}
+
 /// Tells this session from the others a handler over TCP serves.
 std::string session_id() {
     std::random_device device;
@@ -102,7 +127,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
         throw cpptrace::runtime_error(
             "give the build command after --, or a recorded build with --from");
     }
-    const auto& backend = options.from.has_value() ? replay_backend() : hook_backend();
+    const auto& backend = backend_of(options);
     Build build{
         .command = options.from.has_value() ? std::vector{*options.from} : *options.command,
         .cwd = options.directory.directory->path,

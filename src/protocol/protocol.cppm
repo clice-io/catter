@@ -44,8 +44,8 @@ struct InitializeParams {
     int version;
     /// Tells the sessions apart that one handler over TCP serves.
     std::string session;
-    /// How the commands are captured: `inject`, or `replay` of a recorded
-    /// build.
+    /// The backend that captures the commands: `hook`, or `replay` of a
+    /// recorded build.
     std::string mode;
     Build build;
 };

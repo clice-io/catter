@@ -5,7 +5,7 @@ aborts
 in sub: exit 0
 '''
 stderr = '''
-start: version 1, mode inject, build ['node', 'build.mjs'] in ., session of 16 characters
+start: version 1, mode hook, build ['node', 'build.mjs'] in ., session of 16 characters
 command 1: parent None, args ['build.mjs'], in ., env None
 command 2: parent 1, args ['-e', 'process.exit(3)'], in ., env None
 exit 2: code 3, took #ms

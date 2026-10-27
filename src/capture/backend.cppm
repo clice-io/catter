@@ -23,6 +23,10 @@ public:
                                                        Session& session) const = 0;
 };
 
+/// The backends that run a build, which `--capture` names: the first is the
+/// default.
+std::span<const Backend* const> capture_backends() noexcept;
+
 /// Runs the build with the hook in each of its processes.
 const Backend& hook_backend() noexcept;
 
