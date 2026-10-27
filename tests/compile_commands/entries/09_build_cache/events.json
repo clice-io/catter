@@ -19,9 +19,9 @@
       "id": 4,
       "parent": 1,
       "exe": "g++",
-      "argv": ["g++", "-c", "-m64", "-Iinclude", "-DTEST=1", "-MMD", "-MF", "util.d", "-E", "-fpch-preprocess", "-o", "build/__cpp_util.cc.cc", "src/util.cc"]
+      "argv": ["g++", "-E", "-P", "-Iinclude", "include/api.h", "-o", "build/api.i"]
     },
-    { "id": 5, "parent": 1, "exe": "g++", "argv": ["g++", "-o", "build/app", "build/main.cc.o", "build/util.cc.o"] }
+    { "id": 5, "parent": 1, "exe": "g++", "argv": ["g++", "-o", "build/app", "build/main.cc.o"] }
   ],
   "finish": { "code": 0 }
 }

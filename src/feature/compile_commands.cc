@@ -160,27 +160,28 @@ public:
         compiler_commands.insert(id);
 
         const bool preprocess = analysis->phase == Phase::Preprocess;
-        // The file a preprocess writes from its one source: a preprocess with `-o` has one.
-        std::string preprocessed_file;
+        // What a preprocess writes from its one source to a file, as one with `-o` does.
+        std::optional<Preprocessed> made;
         if(analysis->artifact == Artifact::PreprocessedSource && analysis->writes.size() == 1 &&
-           analysis->writes.front().path != "-") {
+           analysis->writes.front().path != "-" && analysis->writes.front().reads.size() == 1) {
             const auto& write = analysis->writes.front();
-            preprocessed_file = absolute_path(command.cwd, write.path);
-            preprocessed.insert_or_assign(preprocessed_file,
-                                          Preprocessed{
-                                              .cwd = command.cwd,
-                                              .analysis = *analysis,
-                                              .read = write.reads.front(),
-                                          });
+            made = Preprocessed{
+                .cwd = command.cwd,
+                .analysis = *analysis,
+                .read = write.reads.front(),
+                .file = absolute_path(command.cwd, write.path),
+            };
+            preprocessed.insert_or_assign(made->file, *made);
+            preprocesses.emplace(id, made->file);
         }
         for(auto& entry: entries_of(command.cwd, *analysis)) {
             const auto& object = entry.as_object();
             auto source = absolute_path(command.cwd, object.find("file")->as_string());
             const auto* output = object.find("output");
-            auto made = preprocessed.find(source);
-            if(made != preprocessed.end() && analysis->artifact == Artifact::Object &&
+            auto from = preprocessed.find(source);
+            if(from != preprocessed.end() && analysis->artifact == Artifact::Object &&
                output != nullptr) {
-                const auto& by = made->second;
+                const auto& by = from->second;
                 const auto& read = by.analysis.reads[by.read];
                 entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
                 source = absolute_path(by.cwd, read.path);
@@ -196,7 +197,7 @@ public:
                              .source = std::move(source),
                              .preprocess = preprocess,
                              .existed = existed,
-                             .preprocessed_file = preprocessed_file});
+                             .made = made});
         }
         for(const auto& write: analysis->writes) {
             if(write.path != "-") {
@@ -218,6 +219,10 @@ public:
     }
 
     kota::task<> on_exit(data::ipcid_t id, data::process_result result) override {
+        if(auto preprocess = preprocesses.extract(id);
+           !preprocess.empty() && kota::fs::is_file(preprocess.mapped())) {
+            kept_files.insert(std::move(preprocess.mapped()));
+        }
         if(descendants.left_out(id) || !*options.abort_on_command_failure || result.code == 0) {
             co_return;
         }
@@ -241,6 +246,17 @@ public:
     }
 
 private:
+    /// A preprocess of the build's, run in `cwd`, that writes `file` from `read` of `analysis`.
+    struct Preprocessed {
+        std::string cwd;
+
+        CompilerAnalysis analysis;
+
+        std::uint32_t read;
+
+        std::string file;
+    };
+
     /// An entry of the build's, of the source it names, absolute.
     struct Found {
         JSON entry;
@@ -255,18 +271,8 @@ private:
         /// a probe's, as a configure script's is.
         bool existed;
 
-        /// The file a preprocess wrote from the source, or nothing.
-        std::string preprocessed_file;
-    };
-
-    /// A preprocess of the build's, run in `cwd`, of the file it writes: a compile of that file
-    /// compiles `read` of `analysis`.
-    struct Preprocessed {
-        std::string cwd;
-
-        CompilerAnalysis analysis;
-
-        std::uint32_t read;
+        /// The preprocess that made it, when it writes a file from the source.
+        std::optional<Preprocessed> made;
     };
 
     /// Whether `source` is one xmake compiles to probe the compiler, which it keeps in its own
@@ -292,16 +298,19 @@ private:
         std::size_t generated = 0;
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
-        for(auto& [entry, source, preprocess, existed, preprocessed_file]: found) {
+        for(auto& [entry, source, preprocess, existed, made]: found) {
             if(written.contains(source) || (preprocess && compiled.contains(source)) ||
                (existed && !kota::fs::is_file(source))) {
                 continue;
             }
             // A build cache that looks objects up by the preprocessed source, xmake's, removes it
             // once it has the object, from the cache or from a compile.
-            if(!preprocessed_file.empty() && !kota::fs::is_file(preprocessed_file)) {
-                const auto& by = preprocessed.at(preprocessed_file);
-                entry = entry_of(by.cwd, by.analysis, by.analysis.reads[by.read], std::nullopt);
+            if(made.has_value() && kept_files.contains(made->file) &&
+               !kota::fs::is_file(made->file)) {
+                entry = entry_of(made->cwd,
+                                 made->analysis,
+                                 made->analysis.reads[made->read],
+                                 std::nullopt);
             }
             const auto& object = entry.as_object();
             const auto file = object.find("file")->as_string();
@@ -337,6 +346,12 @@ private:
 
     /// The build's preprocesses, by the file each writes, absolute.
     std::unordered_map<std::string, Preprocessed> preprocessed;
+
+    /// The preprocesses that have not exited, and the file each writes.
+    std::unordered_map<data::ipcid_t, std::string> preprocesses;
+
+    /// The files preprocesses wrote, there when they exited: a replayed build writes none.
+    std::unordered_set<std::string> kept_files;
 
     /// The directory of temporary files.
     std::string temporary;
