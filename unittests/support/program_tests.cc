@@ -62,8 +62,9 @@ ZEST_CASE(path_found_nowhere_is_the_name_itself) {
 ZEST_CASE(name_is_looked_for_in_the_directory_given_as_the_current_one) {
     Directory directory("catter-program-name");
 
-    ZEXPECT(resolve_program(PROGRAM, directory.files.path("bin")) ==
-            directory.files.path(under("bin", PROGRAM)));
+    const auto bin = directory.files.path("bin");
+
+    ZEXPECT(resolve_program(PROGRAM, bin) == under(bin, PROGRAM));
 };
 #endif
 
