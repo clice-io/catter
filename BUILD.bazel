@@ -229,7 +229,7 @@ cc_library(
     deps = [
         ":support",
         "@kotatsu//:fs",
-        "@kotatsu//:ipc",
+        "@kotatsu//:ipc_codec",
         "@kotatsu//:sys",
     ],
 )

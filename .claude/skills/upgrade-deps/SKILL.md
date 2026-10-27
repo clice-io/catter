@@ -53,7 +53,7 @@ both. The kotatsu libraries catter's modules use are in `LIBRARIES` of
 `modules/modules.bzl` (`@kotatsu//:fs`, `:sys`, `:async`, `:ipc`,
 `:codec_json`, `:deco`, `:zest`, ...), which `deps` wraps; `support` and
 the hook payloads name theirs in `BUILD.bazel`, the payloads `:fs` and
-`:sys` alone.
+`:sys`, and the Windows one `:ipc_codec` too.
 
 1. Pick the version, usually that of kotatsu's `main`; it is in the
    registry once `modules/kotatsu/<version>/` is on clice-io/bazel's

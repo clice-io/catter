@@ -70,7 +70,9 @@ public:
     kota::task<kota::process::exit_status> wait();
 
 private:
-    void* process;
+    kota::process waiter;
+
+    void* process = nullptr;
 };
 #endif
 

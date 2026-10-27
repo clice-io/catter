@@ -8,7 +8,6 @@ module;
 #include <windows.h>
 
 #include "support/exception.h"
-#include "support/guard.h"
 #else
 #include <fcntl.h>
 #include <pthread.h>
@@ -246,11 +245,18 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
 
 #ifdef CATTER_WINDOWS
 
-OpenedProcess::OpenedProcess(std::int64_t pid) :
-    process(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ |
-                            PROCESS_VM_WRITE | PROCESS_TERMINATE | SYNCHRONIZE,
-                        FALSE,
-                        static_cast<DWORD>(pid))) {
+OpenedProcess::OpenedProcess(std::int64_t pid) {
+    auto opened = kota::process::open(static_cast<int>(pid));
+    if(!opened) {
+        throw cpptrace::runtime_error(
+            std::format("Failed to open process {}: {}", pid, opened.error().message()));
+    }
+    waiter = std::move(*opened);
+    // What injecting into it takes, which waiting for it does not.
+    process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ |
+                              PROCESS_VM_WRITE | PROCESS_TERMINATE | SYNCHRONIZE,
+                          FALSE,
+                          static_cast<DWORD>(pid));
     if(process == nullptr) {
         throw catter::system_error(GetLastError(),
                                    std::system_category(),
@@ -271,37 +277,12 @@ void OpenedProcess::terminate(std::uint32_t code) noexcept {
 }
 
 kota::task<kota::process::exit_status> OpenedProcess::wait() {
-    // The callback's post may run once a cancelled wait has gone: it keeps
-    // the event.
-    struct Context {
-        kota::relay relay;
-        std::shared_ptr<kota::event> exited;
-    };
-
-    Context context{
-        .relay = kota::event_loop::current().create_relay(),
-        .exited = std::make_shared<kota::event>(),
-    };
-    HANDLE wait = nullptr;
-    auto on_exited = [](void* context, BOOLEAN) {
-        auto& [relay, exited] = *static_cast<Context*>(context);
-        relay.send([exited] { exited->set(); });
-    };
-    if(!RegisterWaitForSingleObject(&wait,
-                                    process,
-                                    on_exited,
-                                    &context,
-                                    INFINITE,
-                                    WT_EXECUTEONLYONCE)) {
-        throw catter::system_error(GetLastError(),
-                                   std::system_category(),
-                                   "Failed to wait for a process to exit");
+    auto exit = co_await waiter.wait();
+    if(!exit) {
+        throw cpptrace::runtime_error(
+            std::format("Process wait failed `{}`", exit.error().message()));
     }
-    auto unregister = make_guard([&]() noexcept { UnregisterWaitEx(wait, INVALID_HANDLE_VALUE); });
-    co_await context.exited->wait();
-    DWORD code = 0;
-    GetExitCodeProcess(process, &code);
-    co_return kota::process::exit_status{.code = code};
+    co_return *exit;
 }
 
 #endif
