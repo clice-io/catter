@@ -146,21 +146,22 @@ private:
 };
 
 /// `value` of a variable that names a program to run, perhaps with arguments after it, which
-/// runs the program's shim in its place: the shim of the program a path names, a name being
-/// looked for on PATH, where the shims are first.
-std::string through_shim(std::string_view value, std::string_view cwd, Shims& shims) {
+/// runs the program's shim in its place: the shim of the program an absolute path names. A name is
+/// looked for on PATH, where the shims are first; a relative path, which a build tool takes from
+/// each directory it runs in, is left as it is.
+std::string through_shim(std::string_view value, Shims& shims) {
     const auto end = value.find_first_of(" \t");
-    std::string program(value.substr(0, end));
-    if(!std::ranges::any_of(program, [](char c) { return kota::fs::path::is_separator(c); }) ||
-       !known(kota::fs::path::filename(program))) {
+    const auto program = value.substr(0, end);
+    if(!kota::fs::path::is_absolute(program) || !known(kota::fs::path::filename(program))) {
         return std::string(value);
     }
-    if(!kota::fs::path::is_absolute(program)) {
-        std::string absolute(cwd);
-        kota::fs::path::push(absolute, program);
-        program = std::move(absolute);
-    }
     auto shim = shims.pin(program);
+    // Build tools split the variable at blanks, and run what comes before the first.
+    if(shim.find_first_of(" \t") != std::string::npos) {
+        throw cpptrace::runtime_error(std::format(
+            "catter cannot name the shim {} in a variable such as CC, which build tools split at blanks: set CATTER_HOME to a directory whose path has none",
+            shim));
+    }
     if(end != std::string_view::npos) {
         shim += value.substr(end);
     }
@@ -171,11 +172,9 @@ std::string through_shim(std::string_view value, std::string_view cwd, Shims& sh
 /// process's, with the shims first on PATH, the programs variables such as CC name by their
 /// paths run through theirs, and CMake running each compile and link through the launcher, unless
 /// the build names a launcher of its own.
-std::vector<kota::process::env_var> environment(Shims& shims,
-                                                std::string_view pipe,
-                                                std::string_view cwd) {
+std::vector<kota::process::env_var> environment(Shims& shims, std::string_view pipe) {
     std::vector<kota::process::env_var> env;
-    std::string path;
+    std::optional<std::string> path;
     auto named = [](std::string_view name) {
         return [name](std::string_view other) {
             return kota::sys::env_name_equal(name, other);
@@ -191,18 +190,20 @@ std::vector<kota::process::env_var> environment(Shims& shims,
             continue;
         }
         if(std::ranges::any_of(PROGRAM_VARIABLES, named(name))) {
-            value = through_shim(value, cwd, shims);
+            value = through_shim(value, shims);
         }
         env.push_back({.name = std::move(name), .value = std::move(value)});
     }
 
-    shims.add_found(path);
+    if(!path) {
+        throw cpptrace::runtime_error(
+            "The wrapper backend puts its shims first on the build's PATH, which is not set: set it");
+    }
+    shims.add_found(*path);
     std::string shims_path;
     std::vector<std::string> directories = {std::string(shims.directory())};
-    if(!path.empty()) {
-        for(auto directory: kota::sys::split_paths(path)) {
-            directories.emplace_back(directory);
-        }
+    for(auto directory: kota::sys::split_paths(*path)) {
+        directories.emplace_back(directory);
     }
     if(auto error = kota::sys::join_paths(shims_path, directories)) {
         throw cpptrace::runtime_error(std::format(
@@ -237,7 +238,7 @@ public:
         kota::process::options launch{
             .program = shims.launcher(),
             .args = build.command,
-            .env = environment(shims, pipe_name, build.cwd),
+            .env = environment(shims, pipe_name),
             .cwd = build.cwd,
         };
         co_return co_await session.serve(

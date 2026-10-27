@@ -150,18 +150,21 @@ void set_variable(std::vector<std::string>& env, std::string_view name, std::str
     }
 }
 
-/// Whether `directory` is one of the directories of shims, `shims`, as catter
-/// wrote it on PATH.
-bool among(std::string_view directory, std::span<const std::string> shims) {
-    return std::ranges::contains(shims, directory);
+bool has_separator(std::string_view path) {
+    return std::ranges::any_of(path, [](char c) { return kota::fs::path::is_separator(c); });
 }
 
-/// The entries of the list of paths `path_list` that are no directory of shims.
-std::vector<std::string> past_shims(std::string_view path_list,
-                                    std::span<const std::string> shims) {
+/// Whether `path` names one of the shims in the directory `shims`.
+bool is_shim(std::string_view path, std::string_view shims) {
+    return has_separator(path) && kota::fs::path::is_within(path, shims);
+}
+
+/// The entries of the list of paths `path_list` but the directory of shims
+/// `shims`, as catter wrote it there.
+std::vector<std::string> past_shims(std::string_view path_list, std::string_view shims) {
     std::vector<std::string> directories;
     for(auto directory: kota::sys::split_paths(path_list)) {
-        if(!among(directory, shims)) {
+        if(directory != shims) {
             directories.emplace_back(directory);
         }
     }
@@ -169,16 +172,22 @@ std::vector<std::string> past_shims(std::string_view path_list,
 }
 
 /// The file the system starts for `program`, a name or a path, from a PATH of
-/// `path_list`, as it would had catter put no shims in the way: a shim's name
-/// is looked for again past the directories of `shims`. None when there is
-/// none.
+/// `path_list`, as it would had catter put no shims in the way: for a shim,
+/// the program the file beside it names, as one a variable such as CC named
+/// by its path, else the first of the shim's name on PATH past the shims.
+/// None when there is none.
 std::optional<std::string> resolve_past(std::string_view program,
-                                        std::span<const std::string> shims,
+                                        std::string_view shims,
                                         std::string_view path_list) {
     std::string_view name = program;
-    if(std::ranges::any_of(program, [](char c) { return kota::fs::path::is_separator(c); })) {
-        if(!among(kota::fs::path::parent(program), shims)) {
+    if(has_separator(program)) {
+        if(!is_shim(program, shims)) {
             return std::string(program);
+        }
+        std::string pinned(kota::fs::path::parent(program));
+        kota::fs::path::push(pinned, config::SHIM_PROGRAM_FILE);
+        if(std::string named; !kota::fs::read_file(named, pinned)) {
+            return named;
         }
         name = kota::fs::path::filename(program);
     }
@@ -192,18 +201,15 @@ std::optional<std::string> resolve_past(std::string_view program,
 }
 
 /// The command a shim, or the launcher, stands in for: `args` as the build
-/// started it, which runs `program`. The build command, which catter starts
-/// through the launcher, runs with the shims on its PATH; the commands under it
-/// run without them, so that the compilers a build tool runs do not find the
-/// shims again, nor a build cache's compiler in their place.
+/// started it, which runs `program`, the shim itself for a shim. The build command, which catter
+/// starts through the launcher, runs with the shims on its PATH; the commands under it run without
+/// them, so that the compilers a build tool runs do not find the shims again, nor a build cache's
+/// compiler in their place.
 Proxied wrapped(std::string_view self, std::string_view program, std::vector<std::string> args) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
     auto pipe = variable(cmd.env, config::KEY_CATTER_IPC);
-    std::vector<std::string> shims = {std::string(kota::fs::path::parent(self))};
-    if(auto session_shims = variable(cmd.env, config::KEY_CATTER_SHIMS);
-       session_shims && *session_shims != shims.front()) {
-        shims.emplace_back(*session_shims);
-    }
+    std::string shims(
+        variable(cmd.env, config::KEY_CATTER_SHIMS).value_or(kota::fs::path::parent(self)));
     data::ipcid_t parent = 0;
     if(auto id = variable(cmd.env, config::KEY_CATTER_COMMAND_ID)) {
         std::from_chars(id->data(), id->data() + id->size(), parent);
@@ -219,8 +225,7 @@ Proxied wrapped(std::string_view self, std::string_view program, std::vector<std
     }
     // A build tool that ran the shim by its path does not see the shim's: it
     // ran the program.
-    if(std::ranges::any_of(args.front(), [](char c) { return kota::fs::path::is_separator(c); }) &&
-       among(kota::fs::path::parent(args.front()), shims)) {
+    if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
     cmd.executable = std::move(*real);
@@ -425,17 +430,8 @@ int run(std::span<const std::string> argv) {
         return run_proxied(argv, wrapped(self, program, std::move(args)));
     }
     if(name != config::PROXY_EXE_NAME) {
-        // A shim of a program a variable such as CC named by its path is beside
-        // the file that names it.
-        std::string program(name);
-        std::string pinned_file(kota::fs::path::parent(self));
-        kota::fs::path::push(pinned_file, config::SHIM_PROGRAM_FILE);
-        if(std::string pinned; !kota::fs::read_file(pinned, pinned_file)) {
-            program = std::move(pinned);
-        }
-        return run_proxied(
-            argv,
-            wrapped(self, program, std::vector<std::string>(argv.begin(), argv.end())));
+        return run_proxied(argv,
+                           wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end())));
     }
 
     kota::deco::cli::Command<catter::proxy::Option> cli(

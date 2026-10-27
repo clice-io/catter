@@ -4,6 +4,8 @@ tools/cc -c a.c
 tools/c++ -c b.cc
 tools/ar rcs lib.a a.o
 other/cc -c c.c
+other/cc -c d.c
+tools/cc -c e.c
 '''
 exit = 0
 
@@ -13,10 +15,14 @@ tools/cc -c a.c
 tools/c++ -c b.cc
 tools/ar rcs lib.a a.o
 other/cc -c c.c
+other/cc -c d.c
+tools/cc -c e.c
 node build.mjs
 ├── cc -c a.c
 ├── c++ -c b.cc
 ├── ar rcs lib.a a.o
-└── ${WS}/other/cc -c c.c
+├── ${WS}/other/cc -c c.c
+├── ${WS}/other/cc -c d.c
+└── cc -c e.c
 '''
 exit = 0
