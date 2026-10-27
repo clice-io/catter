@@ -37,7 +37,6 @@ The protocol is defined in `src/support/messages.h`, which the daemon, `catter-p
 
 ```cpp
 enum class RequestType : uint8_t {
-    CHECK_MODE,
     CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
@@ -50,17 +49,6 @@ Each request type maps to a `Request<Type>` specialization that declares `Params
 
 ## Request Types
 
-### CHECK_MODE
-
-Asks the daemon what service mode is active.
-
-| Field      | Type                 | Description                                   |
-| ---------- | -------------------- | --------------------------------------------- |
-| **Params** | `ServiceMode` (enum) | The mode to check (currently only `INJECT`)   |
-| **Result** | `bool`               | `true` if the daemon is in the requested mode |
-
-This is the first request a proxy sends after connecting. It confirms the daemon is ready to handle intercepted commands. The Windows hook does not send it.
-
 ### CREATE
 
 Registers a new process session with the daemon.
@@ -70,7 +58,7 @@ Registers a new process session with the daemon.
 | **Params** | `ipcid_t` (`int32_t`) | The parent session ID                        |
 | **Result** | `ipcid_t` (`int32_t`) | A unique session ID assigned to this command |
 
-The parent ID establishes the parent-child relationship in the session tree. For the first proxy (injector mode), the parent ID is provided by the daemon when it spawns the proxy. For wrapper-mode proxies, the parent ID comes from the `__key_catter_command_id_v1` environment variable, which was set by the hook. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
+The parent ID establishes the parent-child relationship in the session tree. The proxy of the build command, which the daemon starts, sends 0: no command started it. The proxy of a command the hook intercepted sends the ID of the command whose process started it, which the hook reads from the `__key_catter_command_id_v1` environment variable and passes on the proxy's command line. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
 
 ### MAKE_DECISION
 
@@ -89,18 +77,18 @@ The core request. The client sends a captured command and the daemon decides wha
 
 | Field  | Type           | Description                                                        |
 | ------ | -------------- | ------------------------------------------------------------------ |
-| `type` | `uint8_t` enum | One of `DROP`, `INJECT`, or `FAIL`                                 |
+| `type` | `uint8_t` enum | One of `DROP`, `RUN`, or `FAIL`                                    |
 | `cmd`  | `command`      | The command to execute: the one sent, unless a handler modified it |
 
 **Action types**:
 
 - **`DROP` (0)** -- Do not execute the command: it ends with exit code 0. Used when a handler determines a command is irrelevant (e.g., a compiler invocation the user wants to skip). The proxy returns exit code 0 immediately; on Windows the daemon injects the hook into the program the hook started suspended, set to end the process with exit code 0 as soon as it loads, before the program's own code runs.
-- **`INJECT` (1)** -- Execute the command with the hook library attached. The proxy re-adds `LD_PRELOAD`, or on Windows the daemon injects the hook DLL into the program the hook started, so that child processes of this command are also intercepted, but for a program the hook cannot load (on macOS Apple's own tools and programs under Rosetta, on Windows a machine with no hook DLL), which runs without it. This is the default for build commands whose children should be monitored.
+- **`RUN` (1)** -- Execute the command. The proxy runs it with the hook library attached, re-adding `LD_PRELOAD`, or on Windows the daemon injects the hook DLL into the program the hook started, so that child processes of this command are also intercepted, but for a program the hook cannot load (on macOS Apple's own tools and programs under Rosetta, on Windows a machine with no hook DLL), which runs without it. This is what a command gets unless a handler drops it or the session has ended with an error.
 - **`FAIL` (2)** -- Do not execute the command: it ends with exit code 1, as for `DROP`. The session has ended with an error (a handler aborted the build, or failed), and every command that starts after it fails this way until the build ends.
 
 The daemon may modify the command in the returned action. For example, a handler could change compiler flags, redirect output paths, or substitute a different executable.
 
-> These actions belong to the **protocol layer** and are not the same layer as the `skip` / `drop` / `abort` / `modify` actions handlers decide: handler actions are mapped to protocol actions by the runtime driver. See the Actions section of [System Architecture](architecture.md) for the mapping and semantics.
+> These actions belong to the **protocol layer** and are not the same layer as the `skip` / `drop` / `abort` / `modify` actions handlers decide: the session maps handler actions to protocol actions. See the Actions section of [System Architecture](architecture.md) for the mapping and semantics.
 
 ### REPORT_ERROR
 
@@ -143,7 +131,7 @@ Tells the daemon the process id of the command's program.
 
 **Result**: `bool` -- whether the program runs as decided
 
-On Windows the hook sends it once it has started the program, suspended. The daemon opens the process and makes it run as decided: it injects the hook (`INJECT`), or injects it set to end the process with exit code 0 (`DROP`) or 1 (`FAIL`) as soon as it loads, so that a caller that prepares the process while it is suspended still can; a process of a machine catter has no hook for, x86, it ends at once. Then it answers `true`, and the hook resumes the program, unless its caller asked for it suspended; the daemon waits for the process to exit, then tells the session's handlers its exit code, as for `FINISH`. When the daemon cannot make the program run as decided, it reports the error to the handlers and answers `false`, and the hook ends the program with exit code 1.
+On Windows the hook sends it once it has started the program, suspended. The daemon opens the process and makes it run as decided: it injects the hook (`RUN`), or injects it set to end the process with exit code 0 (`DROP`) or 1 (`FAIL`) as soon as it loads, so that a caller that prepares the process while it is suspended still can; a process of a machine catter has no hook for, x86, it ends at once. Then it answers `true`, and the hook resumes the program, unless its caller asked for it suspended; the daemon waits for the process to exit, then tells the session's handlers its exit code, as for `FINISH`. When the daemon cannot make the program run as decided, it reports the error to the handlers and answers `false`, and the hook ends the program with exit code 1.
 
 Before it decides a command, and once the build command has ended, the daemon waits until the exits of the programs that have ended are told: the build sees a program end before the daemon does, and the commands it starts next, and its own end, come after that exit, as they do on Linux and macOS, where `catter-proxy` sends its `FINISH` before it exits.
 
@@ -153,23 +141,9 @@ On macOS `catter-proxy` sends it as a notification, without waiting for a respon
 
 A complete client lifecycle involves this sequence of IPC messages:
 
-### Injector Mode (first proxy)
+### Proxy (a command)
 
 ```
-Proxy -> Daemon:  CHECK_MODE(INJECT)
-Daemon -> Proxy:  true
-[Proxy launches build command with hook attached]
-[Proxy waits for build to complete]
-[Proxy exits when build finishes]
-```
-
-The injector proxy also sends `CREATE`, `MAKE_DECISION`, `started` (on macOS) and `FINISH` for the top-level build command, so the build system command itself reaches the handlers like any other intercepted command.
-
-### Wrapper Mode (intercepted command)
-
-```
-Proxy -> Daemon:  CHECK_MODE(INJECT)
-Daemon -> Proxy:  true
 Proxy -> Daemon:  CREATE(parent_id)
 Daemon -> Proxy:  new_session_id
 Proxy -> Daemon:  MAKE_DECISION(command)
@@ -181,6 +155,8 @@ Proxy -> Daemon:  FINISH(process_result)
 Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
+
+The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached.
 
 ### Windows Hook (intercepted command)
 
@@ -259,7 +235,7 @@ struct process_result {
 struct action {
     enum : uint8_t {
         DROP,    // Do not execute
-        INJECT,  // Execute with hook attached
+        RUN,     // Execute
         FAIL,    // Do not execute: the session has ended with an error
     } type;
     command cmd;                       // Possibly modified command

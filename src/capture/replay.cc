@@ -6,7 +6,9 @@ module;
 
 module catter;
 
-import :capture.replay;
+import :capture.backend;
+import :session.handler;
+import :session.session;
 
 namespace catter {
 
@@ -97,24 +99,37 @@ ReplayFile parse_replay_file(std::string_view path) {
     return std::move(*replay);
 }
 
-}  // namespace
+/// Plays the build a replay file recorded to the session, as the hook reports
+/// a real one: each command to decide, or as one catter could not capture
+/// when the event has an error, and its result, when the event has one, as its
+/// exit. The build ends as the file's `finish` says, else with exit 0.
+class ReplayBackend final : public Backend {
+public:
+    std::string_view name() const noexcept override {
+        return "replay";
+    }
 
-kota::task<kota::process::exit_status> replay_build(std::string_view path, Handler& handler) {
-    const auto replay = parse_replay_file(path);
-    std::string base(kota::fs::path::parent(path));
-    kota::fs::path::push(base, replay.cwd.value_or("."));
-    kota::fs::path::normalize(base);
-    for(const auto& event: replay.events) {
-        if(event.error.has_value()) {
-            co_await handler.on_error(event.id,
-                                      parent_of(event.error->parent),
-                                      event.error->message);
-            continue;
-        }
-        auto cwd = base;
-        kota::fs::path::push(cwd, event.cwd.value_or("."));
-        kota::fs::path::normalize(cwd);
-        co_await handler.on_command(event.id,
+    kota::task<kota::process::exit_status> run(const Build& build,
+                                               Session& session) const override {
+        assert(build.command.size() == 1);
+        auto path = build.cwd;
+        kota::fs::path::push(path, build.command.front());
+        kota::fs::path::normalize(path);
+        const auto replay = parse_replay_file(path);
+        std::string base(kota::fs::path::parent(path));
+        kota::fs::path::push(base, replay.cwd.value_or("."));
+        kota::fs::path::normalize(base);
+        for(const auto& event: replay.events) {
+            if(event.error.has_value()) {
+                co_await session.uncaptured(event.id,
+                                            parent_of(event.error->parent),
+                                            event.error->message);
+                continue;
+            }
+            auto cwd = base;
+            kota::fs::path::push(cwd, event.cwd.value_or("."));
+            kota::fs::path::normalize(cwd);
+            co_await session.decide(event.id,
                                     parent_of(event.parent),
                                     data::command{
                                         .cwd = std::move(cwd),
@@ -122,12 +137,20 @@ kota::task<kota::process::exit_status> replay_build(std::string_view path, Handl
                                         .args = event.argv,
                                         .env = event.env.value_or(std::vector<std::string>{}),
                                     });
-        if(event.execution.has_value()) {
-            co_await handler.on_exit(event.id, to_process_result(*event.execution));
+            if(event.execution.has_value()) {
+                co_await session.exited(event.id, to_process_result(*event.execution));
+            }
         }
-    }
 
-    co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
+        co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
+    }
+};
+
+}  // namespace
+
+const Backend& replay_backend() noexcept {
+    const static ReplayBackend backend;
+    return backend;
 }
 
 }  // namespace catter

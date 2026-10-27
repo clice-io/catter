@@ -37,10 +37,6 @@ struct Peer {
         return this->peer.close();
     }
 
-    kota::task<bool> check_mode(data::ServiceMode mode) {
-        co_return co_await this->send_request<Request<RequestType::CHECK_MODE>>(mode);
-    }
-
     kota::task<data::ipcid_t> create(data::ipcid_t parent_id) {
         co_return co_await this->send_request<Request<RequestType::CREATE>>(parent_id);
     }

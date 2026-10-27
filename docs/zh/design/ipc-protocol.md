@@ -37,7 +37,6 @@ Windows 上没有代理：守护进程自己决定如何处理构建命令，并
 
 ```cpp
 enum class RequestType : uint8_t {
-    CHECK_MODE,
     CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
@@ -50,17 +49,6 @@ enum class RequestType : uint8_t {
 
 ## 请求类型
 
-### CHECK_MODE
-
-查询守护进程当前活动的服务模式。
-
-| 字段       | 类型                  | 说明                                    |
-| ---------- | --------------------- | --------------------------------------- |
-| **Params** | `ServiceMode`（枚举） | 要检查的模式（当前仅有 `INJECT`）       |
-| **Result** | `bool`                | 如果守护进程处于请求的模式则返回 `true` |
-
-这是代理连接后发送的第一个请求。它确认守护进程已准备好处理被拦截的命令。Windows 钩子不发送它。
-
 ### CREATE
 
 在守护进程中注册一个新的进程会话。
@@ -70,7 +58,7 @@ enum class RequestType : uint8_t {
 | **Params** | `ipcid_t`（`int32_t`） | 父进程会话 ID               |
 | **Result** | `ipcid_t`（`int32_t`） | 分配给这条命令的唯一会话 ID |
 
-父 ID 在会话树中建立父子关系。对于第一个代理（注入模式），父 ID 由守护进程在生成代理时提供。对于包装模式的代理，父 ID 来自 `__key_catter_command_id_v1` 环境变量，由钩子设置。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
+父 ID 在会话树中建立父子关系。构建命令的代理由守护进程启动，发送 0：没有命令启动它。钩子拦截到的命令的代理发送启动它的那个进程所运行的命令的 ID，钩子从 `__key_catter_command_id_v1` 环境变量读出这个 ID，放在代理的命令行上传给它。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
 
 ### MAKE_DECISION
 
@@ -89,18 +77,18 @@ enum class RequestType : uint8_t {
 
 | 字段   | 类型           | 说明                                                  |
 | ------ | -------------- | ----------------------------------------------------- |
-| `type` | `uint8_t` 枚举 | `DROP`、`INJECT` 或 `FAIL` 之一                       |
+| `type` | `uint8_t` 枚举 | `DROP`、`RUN` 或 `FAIL` 之一                          |
 | `cmd`  | `command`      | 要执行的命令：即发来的命令，除非某个 handler 修改了它 |
 
 **动作类型**：
 
 - **`DROP`（0）** -- 不执行命令：它以退出码 0 结束。用于 handler 判定命令无关紧要的情况（例如用户想跳过的编译器调用）。代理立即返回退出码 0；在 Windows 上，守护进程把钩子注入钩子以挂起状态启动的程序，并让钩子一加载就以退出码 0 结束进程，赶在程序自身的代码运行之前。
-- **`INJECT`（1）** -- 挂载钩子库后执行命令。代理重新添加 `LD_PRELOAD`，在 Windows 上则由守护进程把钩子 DLL 注入钩子启动的程序，使此命令的子进程也被拦截；钩子无法加载的程序（macOS 上 Apple 自带的工具和在 Rosetta 下运行的程序，Windows 上没有对应钩子 DLL 的架构）除外，它们不带钩子运行。这是需要监控子进程的构建命令的默认动作。
+- **`RUN`（1）** -- 执行命令。代理挂载钩子库运行它，重新添加 `LD_PRELOAD`；在 Windows 上则由守护进程把钩子 DLL 注入钩子启动的程序，使此命令的子进程也被拦截；钩子无法加载的程序（macOS 上 Apple 自带的工具和在 Rosetta 下运行的程序，Windows 上没有对应钩子 DLL 的架构）除外，它们不带钩子运行。除非某个 handler 丢弃了命令，或者会话已因错误结束，命令得到的都是这个动作。
 - **`FAIL`（2）** -- 不执行命令：它以退出码 1 结束，方式与 `DROP` 相同。会话已因错误结束（某个 handler 中止了构建，或者自身出错），此后启动的每条命令都会这样失败，直到构建结束。
 
 守护进程可能会修改返回动作中的命令。例如，handler 可以更改编译器标志、重定向输出路径或替换可执行文件。
 
-> 这里的动作是**协议层**概念，与 handler 决定的 `skip` / `drop` / `abort` / `modify` 不是同一层：handler 的动作由 runtime 驱动映射为协议动作。映射关系与语义见[系统架构](architecture.md)的 Action 一节。
+> 这里的动作是**协议层**概念，与 handler 决定的 `skip` / `drop` / `abort` / `modify` 不是同一层：由会话把 handler 的动作映射为协议动作。映射关系与语义见[系统架构](architecture.md)的 Action 一节。
 
 ### REPORT_ERROR
 
@@ -143,7 +131,7 @@ enum class RequestType : uint8_t {
 
 **Result**: `bool` -- 程序是否按决定的方式运行
 
-在 Windows 上，钩子以挂起状态启动程序后发送它。守护进程打开该进程，让它按决定的方式运行：注入钩子（`INJECT`）；或者注入一个设为加载后立即以退出码 0（`DROP`）或 1（`FAIL`）结束进程的钩子，这样在进程挂起期间对它做准备的调用方仍然可以照常进行；catter 没有对应钩子的架构（x86）的进程，则会被立即结束。随后守护进程答复 `true`，钩子恢复程序，除非它的调用方要求程序保持挂起；守护进程等待进程退出，然后把它的退出码告诉会话的各个 handler，与 `FINISH` 一样。守护进程无法让程序按决定的方式运行时，会把错误报告给各个 handler 并答复 `false`，钩子则以退出码 1 结束该程序。
+在 Windows 上，钩子以挂起状态启动程序后发送它。守护进程打开该进程，让它按决定的方式运行：注入钩子（`RUN`）；或者注入一个设为加载后立即以退出码 0（`DROP`）或 1（`FAIL`）结束进程的钩子，这样在进程挂起期间对它做准备的调用方仍然可以照常进行；catter 没有对应钩子的架构（x86）的进程，则会被立即结束。随后守护进程答复 `true`，钩子恢复程序，除非它的调用方要求程序保持挂起；守护进程等待进程退出，然后把它的退出码告诉会话的各个 handler，与 `FINISH` 一样。守护进程无法让程序按决定的方式运行时，会把错误报告给各个 handler 并答复 `false`，钩子则以退出码 1 结束该程序。
 
 在决定一条命令之前，以及构建命令结束之后，守护进程会等到已结束程序的退出都已告知 handler：构建比守护进程先看到程序结束，它接下来启动的命令以及它自己的结束都发生在那次退出之后，与 Linux 和 macOS 上一样，因为在那里 `catter-proxy` 会在退出前发送 `FINISH`。
 
@@ -153,23 +141,9 @@ enum class RequestType : uint8_t {
 
 一个完整的客户端生命周期包含如下 IPC 消息序列：
 
-### 注入模式（第一个代理）
+### 代理（一条命令）
 
 ```
-Proxy -> Daemon:  CHECK_MODE(INJECT)
-Daemon -> Proxy:  true
-[Proxy launches build command with hook attached]
-[Proxy waits for build to complete]
-[Proxy exits when build finishes]
-```
-
-注入模式的代理同样会为顶层构建命令发送 `CREATE`、`MAKE_DECISION`、`started`（macOS 上）和 `FINISH`，因此构建系统命令本身也会像其他被拦截的命令一样送达各个 handler。
-
-### 包装模式（被拦截的命令）
-
-```
-Proxy -> Daemon:  CHECK_MODE(INJECT)
-Daemon -> Proxy:  true
 Proxy -> Daemon:  CREATE(parent_id)
 Daemon -> Proxy:  new_session_id
 Proxy -> Daemon:  MAKE_DECISION(command)
@@ -181,6 +155,8 @@ Proxy -> Daemon:  FINISH(process_result)
 Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
+
+守护进程启动构建命令的代理，它为构建命令发送同样的消息，父 ID 为 0，因此构建命令也会像其他命令一样送达各个 handler；它挂载钩子运行构建。
 
 ### Windows 钩子（被拦截的命令）
 
@@ -259,7 +235,7 @@ struct process_result {
 struct action {
     enum : uint8_t {
         DROP,    // Do not execute
-        INJECT,  // Execute with hook attached
+        RUN,     // Execute
         FAIL,    // Do not execute: the session has ended with an error
     } type;
     command cmd;                       // Possibly modified command

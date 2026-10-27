@@ -16,8 +16,7 @@ module;
 
 module catter;
 
-import :capture.replay;
-import :capture.runtime_driver;
+import :capture.backend;
 import :session.ipc;
 import :session.process;
 import :session.session;
@@ -29,38 +28,6 @@ import :capture.inject.windows.inject;
 
 namespace catter {
 namespace {
-
-/// The error that ends a session: the first one a handler threw. The only
-/// way to set it is `set`, which keeps the first.
-class Failure {
-public:
-    explicit operator bool() const noexcept {
-        return error != nullptr;
-    }
-
-    void set(std::exception_ptr error) noexcept {
-        if(!this->error) {
-            this->error = std::move(error);
-        }
-    }
-
-    void rethrow() const {
-        if(error) {
-            std::rethrow_exception(error);
-        }
-    }
-
-private:
-    std::exception_ptr error;
-};
-
-/// The build command is started with parent 0: no command started it.
-std::optional<data::ipcid_t> parent_of(data::ipcid_t parent_id) {
-    if(parent_id == 0) {
-        return std::nullopt;
-    }
-    return parent_id;
-}
 
 #ifdef CATTER_WINDOWS
 /// The programs the hook starts: the pipe the hook in each reports to, and
@@ -125,64 +92,29 @@ private:
 
     std::list<Untold> untold;
 };
-#endif
 
-class InjectService final : public ipc::InjectService {
+/// Serves the hook in a program of the build as it starts a program: the hook
+/// asks what the program is to do, starts it suspended and leaves it to
+/// catter, which makes it run as decided and waits for its exit.
+class Service final : public ipc::Service {
 public:
-#ifdef CATTER_WINDOWS
-    InjectService(data::ipcid_t id, Handler& handler, Failure& failure, Programs& programs) :
-        programs(programs), id(id), handler(handler), failure(failure) {}
-#else
-    InjectService(data::ipcid_t id, Handler& handler, Failure& failure) :
-        id(id), handler(handler), failure(failure) {}
-#endif
-
-    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept override {
-        this->parent_id = parent_id;
-        co_return this->id;
-    }
+    Service(Session& session, data::ipcid_t id, Programs& programs) :
+        ipc::Service(session, id), programs(programs) {}
 
     kota::task<data::action> make_decision(data::command cmd) noexcept override {
-#ifdef CATTER_WINDOWS
         co_await programs.ended();
-        auto decision = co_await decide(std::move(cmd));
+        auto decision = co_await ipc::Service::make_decision(std::move(cmd));
         decided = decision.type;
         executable = decision.cmd.executable;
         co_return decision;
-#else
-        co_return co_await decide(std::move(cmd));
-#endif
     }
 
-    kota::task<> finish(data::process_result result) noexcept override {
-        if(failure) {
-            co_return;
-        }
-        try {
-            co_await handler.on_exit(this->id, std::move(result));
-        } catch(...) {
-            failure.set(std::current_exception());
-        }
-    }
-
-    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept override {
-        if(failure) {
-            co_return;
-        }
-        try {
-            co_await handler.on_error(this->id, parent_of(parent_id), std::move(error_msg));
-        } catch(...) {
-            failure.set(std::current_exception());
-        }
-    }
-
-#ifdef CATTER_WINDOWS
     kota::task<bool> started(std::int64_t pid) noexcept override {
         std::string error;
         try {
             program.emplace(pid);
             switch(decided) {
-                case data::action::INJECT: {
+                case data::action::RUN: {
                     inject_hook(program->handle(), executable, id, programs.pipe_name());
                     break;
                 }
@@ -216,64 +148,15 @@ public:
         try {
             status = co_await program->wait();
         } catch(...) {
-            failure.set(std::current_exception());
+            session.fail(std::current_exception());
             co_return;
         }
         co_await finish(result_of(status));
         held.reset();
         program.reset();
     }
-#endif
-
-    struct Factory {
-        Handler* handler;
-
-        Failure* failure;
-
-#ifdef CATTER_WINDOWS
-        Programs* programs;
-#endif
-
-        std::unique_ptr<InjectService> operator() (data::ipcid_t id) const {
-#ifdef CATTER_WINDOWS
-            return std::make_unique<InjectService>(id, *handler, *failure, *programs);
-#else
-            return std::make_unique<InjectService>(id, *handler, *failure);
-#endif
-        }
-    };
 
 private:
-    /// What the handlers decide for `cmd`: it starts as it is unless they
-    /// change it, and when it is not to run its program is told the command
-    /// as it was sent, which the hook starts to end at once.
-    kota::task<data::action> decide(data::command cmd) {
-        if(failure) {
-            co_return data::action{.type = data::action::FAIL, .cmd = std::move(cmd)};
-        }
-        Action act;
-        try {
-            act = co_await handler.on_command(this->id, parent_of(this->parent_id), cmd);
-        } catch(...) {
-            failure.set(std::current_exception());
-            co_return data::action{.type = data::action::FAIL, .cmd = std::move(cmd)};
-        }
-
-        switch(act.type) {
-            case Action::Type::Drop: {
-                co_return data::action{.type = data::action::DROP, .cmd = std::move(cmd)};
-            }
-            case Action::Type::Skip: {
-                co_return data::action{.type = data::action::INJECT, .cmd = std::move(cmd)};
-            }
-            case Action::Type::Modify: {
-                co_return data::action{.type = data::action::INJECT, .cmd = std::move(act.command)};
-            }
-        }
-        std::unreachable();
-    }
-
-#ifdef CATTER_WINDOWS
     /// Ends the program started, which is not to run, with exit code `code`:
     /// from within, once its caller resumes it, if it can have the hook.
     void end(std::uint32_t code) {
@@ -281,10 +164,8 @@ private:
             program->terminate(code);
         }
     }
-#endif
 
 private:
-#ifdef CATTER_WINDOWS
     Programs& programs;
 
     /// What was decided for the command, and its program.
@@ -296,31 +177,21 @@ private:
     std::optional<OpenedProcess> program;
 
     std::optional<Programs::Hold> held;
-#endif
-
-    data::ipcid_t id = 0;
-
-    data::ipcid_t parent_id = 0;
-
-    Handler& handler;
-
-    Failure& failure;
 };
 
-#ifdef CATTER_WINDOWS
 /// Runs the build command as the hook runs each command it starts: decided by
 /// the handlers, started with the hook, and its end told to them once the
 /// exits of the programs that ended before it are.
-kota::task<kota::process::exit_status> run_build(data::command command,
-                                                 std::unique_ptr<ipc::InjectService> service,
+kota::task<kota::process::exit_status> run_build(Session& session,
+                                                 data::command command,
                                                  Programs& programs) {
-    const auto id = co_await service->create(0);
+    const auto id = session.new_id();
     const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
-    auto decision = co_await service->make_decision(std::move(command));
-    if(decision.type != data::action::INJECT) {
+    auto decision = co_await session.decide(id, std::nullopt, std::move(command));
+    if(decision.type != data::action::RUN) {
         const kota::process::exit_status status{.code =
                                                     decision.type == data::action::DROP ? 0 : 1};
-        co_await service->finish(result_of(status));
+        co_await session.exited(id, result_of(status));
         co_return status;
     }
 
@@ -331,25 +202,25 @@ kota::task<kota::process::exit_status> run_build(data::command command,
             co_await run_process(hook_options(std::move(decision.cmd), id, programs.pipe_name()),
                                  {.stand_in = true});
         co_await programs.ended();
-        co_await service->finish(result_of(status));
+        co_await session.exited(id, result_of(status));
         co_return status;
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
     }
-    co_await service->report_error(0, std::format("Run `{}` failed:\n{}", line, error));
+    co_await session.uncaptured(id, std::nullopt, std::format("Run `{}` failed:\n{}", line, error));
     co_return kota::process::exit_status{.code = -1};
 }
 #endif
 
-class InjectRuntimeDriver final : public RuntimeDriver {
+class HookBackend final : public Backend {
 public:
     std::string_view name() const noexcept override {
         return "inject";
     }
 
-    kota::task<kota::process::exit_status> execute(const Build& build,
-                                                   Handler& handler) const override {
+    kota::task<kota::process::exit_status> run(const Build& build,
+                                               Session& session) const override {
         assert(!build.command.empty());
 #ifndef CATTER_WINDOWS
         if(auto hook = program_path(config::RELATIVE_PATH_OF_HOOK_LIB);
@@ -363,13 +234,8 @@ public:
 #endif
 
         auto pipe_name = config::session_pipe_name();
-        Failure failure;
-        Session session;
 #ifdef CATTER_WINDOWS
         Programs programs(pipe_name);
-        InjectService::Factory factory{.handler = &handler,
-                                       .failure = &failure,
-                                       .programs = &programs};
         data::command command{
             .cwd = build.cwd,
             .executable = resolve_program(build.command.front(), build.cwd),
@@ -378,57 +244,39 @@ public:
         for(const auto& [name, value]: kota::sys::environment()) {
             command.env.push_back(std::format("{}={}", name, value));
         }
-        Session::Start start = [&, command = std::move(command)]() mutable {
-            return run_build(std::move(command), factory(session.new_id()), programs);
-        };
+        co_return co_await session.serve(
+            pipe_name,
+            [&, command = std::move(command)]() mutable {
+                return run_build(session, std::move(command), programs);
+            },
+            [&](data::ipcid_t id, kota::pipe&& client) {
+                return ipc::accept(std::make_unique<Service>(session, id, programs),
+                                   std::move(client));
+            });
 #else
-        InjectService::Factory factory{.handler = &handler, .failure = &failure};
         kota::process::options proxy{
             .program = program_path(config::PROXY_EXE_NAME),
             .args = {"-p", "0", "--ipc", pipe_name, "--"},
             .cwd = build.cwd,
         };
         proxy.args.append_range(build.command);
-        Session::Start start = [proxy = std::move(proxy)]() mutable {
-            return run_process(std::move(proxy), {.stand_in = true});
-        };
+        co_return co_await session.serve(
+            pipe_name,
+            [proxy = std::move(proxy)]() mutable {
+                return run_process(std::move(proxy), {.stand_in = true});
+            },
+            [&](data::ipcid_t id, kota::pipe&& client) {
+                return ipc::accept(std::make_unique<ipc::Service>(session, id), std::move(client));
+            });
 #endif
-
-        auto status =
-            co_await session.run(Session::make_run_plan(std::move(start), pipe_name, factory));
-        failure.rethrow();
-        co_return status;
-    }
-};
-
-/// Plays a recorded build (see replay.cppm) instead of running one: the build
-/// command is the replay file.
-class ReplayRuntimeDriver final : public RuntimeDriver {
-public:
-    std::string_view name() const noexcept override {
-        return "replay";
-    }
-
-    kota::task<kota::process::exit_status> execute(const Build& build,
-                                                   Handler& handler) const override {
-        assert(build.command.size() == 1);
-        auto file = build.cwd;
-        kota::fs::path::push(file, build.command.front());
-        kota::fs::path::normalize(file);
-        co_return co_await replay_build(file, handler);
     }
 };
 
 }  // namespace
 
-const RuntimeDriver& inject_runtime_driver() noexcept {
-    const static InjectRuntimeDriver driver;
-    return driver;
-}
-
-const RuntimeDriver& replay_runtime_driver() noexcept {
-    const static ReplayRuntimeDriver driver;
-    return driver;
+const Backend& hook_backend() noexcept {
+    const static HookBackend backend;
+    return backend;
 }
 
 }  // namespace catter

@@ -28,16 +28,12 @@ struct process_result {
 /// it was sent unless a handler changed it.
 struct action {
     enum : std::uint8_t {
-        DROP,    // Do not execute the command
-        INJECT,  // Inject <catter-payload> into the command
-        FAIL,    // Do not execute the command: the session has ended with an error
+        DROP,  // Do not execute the command
+        RUN,   // Execute the command
+        FAIL,  // Do not execute the command: the session has ended with an error
     } type;
 
     command cmd;
-};
-
-enum class ServiceMode : std::uint8_t {
-    INJECT,
 };
 
 }  // namespace catter::data
@@ -45,7 +41,6 @@ enum class ServiceMode : std::uint8_t {
 namespace catter::ipc {
 
 enum class RequestType : std::uint8_t {
-    CHECK_MODE,
     CREATE,
     MAKE_DECISION,
     REPORT_ERROR,
@@ -55,13 +50,6 @@ enum class RequestType : std::uint8_t {
 
 template <RequestType Type>
 struct Request;
-
-template <>
-struct Request<RequestType::CHECK_MODE> {
-    using Params = data::ServiceMode;
-    using Result = bool;
-    constexpr inline static std::string_view method = "check_mode";
-};
 
 template <>
 struct Request<RequestType::CREATE> {

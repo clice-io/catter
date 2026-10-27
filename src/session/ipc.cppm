@@ -6,28 +6,31 @@ module;
 
 module catter:session.ipc;
 
+import :session.session;
+
 namespace catter::ipc {
 
-class ServiceBase {
+/// Serves a client of the session's pipe, which reports one command of the
+/// build, `id`, and asks what it is to do: catter-proxy on Unix, the hook on
+/// Windows.
+class Service {
 public:
-    ServiceBase() = default;
-    ServiceBase(const ServiceBase&) = default;
-    ServiceBase(ServiceBase&&) = default;
-    ServiceBase& operator= (const ServiceBase&) = default;
-    ServiceBase& operator= (ServiceBase&&) = default;
+    Service(Session& session, data::ipcid_t id) noexcept : session(session), id(id) {}
 
-    virtual ~ServiceBase() = default;
-};
+    Service(const Service&) = delete;
+    Service& operator= (const Service&) = delete;
 
-class InjectService : public ServiceBase {
-public:
-    InjectService() = default;
-    virtual ~InjectService() override = default;
+    virtual ~Service() = default;
 
-    virtual kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept = 0;
-    virtual kota::task<data::action> make_decision(data::command cmd) noexcept = 0;
-    virtual kota::task<> finish(data::process_result result) noexcept = 0;
-    virtual kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept = 0;
+    /// `parent_id` is the command that started this one, 0 for the build
+    /// command.
+    kota::task<data::ipcid_t> create(data::ipcid_t parent_id) noexcept;
+
+    virtual kota::task<data::action> make_decision(data::command cmd) noexcept;
+
+    kota::task<> finish(data::process_result result) noexcept;
+
+    kota::task<> report_error(data::ipcid_t parent_id, std::string error_msg) noexcept;
 
 #ifdef CATTER_WINDOWS
     /// The hook started the command's program suspended, as process `pid`:
@@ -40,8 +43,15 @@ public:
     /// started the program.
     virtual kota::task<> wait_started() noexcept = 0;
 #endif
+
+protected:
+    Session& session;
+
+    data::ipcid_t id;
+
+    data::ipcid_t parent_id = 0;
 };
 
-kota::task<void> accept(std::unique_ptr<InjectService> service, kota::pipe client);
+kota::task<void> accept(std::unique_ptr<Service> service, kota::pipe client);
 
 }  // namespace catter::ipc
