@@ -16,7 +16,7 @@ catter targets [options] -- <build-command>
 | ----------------- | ------------------- |
 | `-d, --depth <n>` | Limit render depth. |
 
-`targets` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
+`targets` also takes the options of every command that runs a build: `-C`, `--capture`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Output
 

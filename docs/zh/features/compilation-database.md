@@ -22,7 +22,7 @@ catter compile-commands [options] -- <build-command>
 | `-q, --quiet`                | 不输出提示信息。                                               |
 | `-v, --verbose`              | 打印命令分析的细节和生成的条目。                               |
 
-相对的输出路径从 `-C` 指定的目录算起。`compile-commands` 也接受所有运行构建的命令共有的选项：`-C`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
+相对的输出路径从 `-C` 指定的目录算起。`compile-commands` 也接受所有运行构建的命令共有的选项：`-C`、`--capture`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
 
 ## 行为
 

@@ -40,8 +40,8 @@ A handler, a program of your own that catter speaks to over a small protocol, ca
 
 ## Architecture at a Glance
 
-Catter is organized around **runtimes**: a runtime is the mechanism that actually captures build process creation. The default `inject` runtime intercepts child process creation through platform hooks (Linux `LD_PRELOAD`, macOS `DYLD_INSERT_LIBRARIES`, Windows DLL injection); every captured command is handed to the daemon, which passes it to the session's handlers.
+Catter is organized around **capture backends**: a capture backend is how catter gets a build's commands. The default, `hook`, intercepts child process creation through platform hooks (Linux `LD_PRELOAD`, macOS `DYLD_INSERT_LIBRARIES`, Windows DLL injection); every captured command is handed to the daemon, which passes it to the session's handlers.
 
 A handler is told when the session starts and how its commands are captured, of each command before it runs and once it has run, and when the build ends. A handler that decides runs each command as it is, runs it modified, drops it, or aborts the build; one that does not only observes.
 
-For details on the architecture concepts, runtimes, and the IPC flow, see the [design documentation](../design/architecture) and [Runtime](../design/runtime).
+For details on the architecture concepts, capture backends, and the IPC flow, see the [design documentation](../design/architecture) and [Capture backends](../design/capture-backends).

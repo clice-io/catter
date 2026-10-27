@@ -24,11 +24,11 @@ design:
   label: Design
   items:
     - architecture
-    - runtime
+    - capture-backends
     - file: hook-mechanism
-      label: "inject implementation: hook mechanism"
+      label: "hook backend: hook mechanism"
     - file: ipc-protocol
-      label: "inject implementation: IPC protocol"
+      label: "hook backend: IPC protocol"
     - handler-protocol
 
 dev:

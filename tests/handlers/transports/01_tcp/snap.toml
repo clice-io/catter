@@ -1,6 +1,6 @@
 [test."$ python serve.py"]
 stderr = '''
-start: mode inject
+start: mode hook
 command 1: ['build.mjs']
 command 2: ['child.mjs', 'act-on-me']
 command 3: ['child.mjs', 'leave-me']

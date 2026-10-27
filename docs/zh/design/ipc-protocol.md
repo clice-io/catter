@@ -1,6 +1,6 @@
-# IPC 协议（inject runtime 实现）
+# IPC 协议（hook 后端实现）
 
-> 本文描述 catter 守护进程与向它报告构建命令的一方之间的通信协议：Linux 和 macOS 上是 `catter-proxy`，Windows 上是钩子本身。它是所有 runtime 共用的传输层，目前由 inject runtime 使用；handler 作者通常不需要阅读本文。
+> 本文描述 catter 守护进程与向它报告构建命令的一方之间的通信协议：Linux 和 macOS 上是 `catter-proxy`，Windows 上是钩子本身。协议不指明后端：凡是运行构建的后端，都通过它上报构建的命令，目前是 hook 后端；handler 作者通常不需要阅读本文。
 
 Catter 使用进程间通信在守护进程（`catter`）和它的客户端之间传递信息：Linux 和 macOS 上是每个 `catter-proxy` 实例，每个实例代替一条命令；Windows 上是钩子，它在启动一条命令的那次 `CreateProcess` 调用内部通信。守护进程作为服务端，每个客户端为每条命令连接一次。
 

@@ -40,8 +40,8 @@ handler 是你自己编写的程序，catter 通过一个简单的协议与它�
 
 ## 架构概览
 
-Catter 围绕 **runtime**（运行机制）展开：runtime 是实际捕获构建进程创建行为的机制。默认的 `inject` runtime 通过平台钩子（Linux 的 `LD_PRELOAD`、macOS 的 `DYLD_INSERT_LIBRARIES`、Windows 的 DLL 注入）拦截子进程创建；捕获到的每条命令都会交给守护进程，再由守护进程转给会话的各个 handler。
+Catter 围绕 **捕获后端**（capture backend）展开：捕获后端是 catter 获取构建命令的方式。默认的 `hook` 后端通过平台钩子（Linux 的 `LD_PRELOAD`、macOS 的 `DYLD_INSERT_LIBRARIES`、Windows 的 DLL 注入）拦截子进程创建；捕获到的每条命令都会交给守护进程，再由守护进程转给会话的各个 handler。
 
 handler 会在这些时刻收到通知：会话开始时（同时得知命令以何种方式捕获）、每条命令运行前和运行后，以及构建结束时。做决定的 handler 决定每条命令原样运行、修改后运行、丢弃，还是中止构建；不做决定的 handler 只观察。
 
-关于架构概念、运行机制和 IPC 流程的详细介绍，请参阅[设计文档](../design/architecture)与[运行机制](../design/runtime)。
+关于架构概念、捕获后端和 IPC 流程的详细介绍，请参阅[设计文档](../design/architecture)与[捕获后端](../design/capture-backends)。

@@ -18,7 +18,7 @@ catter tree [options] -- <build-command>
 | `-a, --args <n>`      | 显示 `argv[0]` 之后的前 n 个参数。用 `-1` 保留全部。默认：`-1`。               |
 | `-w, --arg-width <n>` | 将超过该长度的参数从中间截断到该长度，长度按字符（Unicode 码位）计。默认：10。 |
 
-`tree` 也接受所有运行构建的命令共有的选项：`-C`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
+`tree` 也接受所有运行构建的命令共有的选项：`-C`、`--capture`、`--from` 和 handler 的选项（见[配置参考](../guide/configuration.md)）。
 
 ## 输出
 

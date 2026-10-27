@@ -1,19 +1,19 @@
 # 系统架构
 
-Catter 是一个围绕 **runtime**（运行机制）展开的构建过程拦截与分析工具。runtime 是实际捕获进程创建行为的机制：构建系统每发起一次命令调用，runtime 负责把它变成 catter 可处理的事件，并按会话中各个 handler 的决定执行——原样执行、修改、丢弃或中止。
+Catter 是一个围绕 **捕获后端**（capture backend）展开的构建过程拦截与分析工具。捕获后端是 catter 获取构建命令的方式：构建启动的每条命令都会变成 catter 可处理的事件，并按会话中各个 handler 的决定执行——原样执行、修改、丢弃或中止。
 
 handler 作者只需要理解两件事：
 
-1. **runtime 是什么、当前会话用的是哪个** —— 见下文与[运行机制](runtime.md)。
+1. **捕获后端是什么、当前会话用的是哪个** —— 见下文与[捕获后端](capture-backends.md)。
 2. **会话的生命周期** —— 构建级的开始与结束，以及每条命令运行前和运行后。
 
-## Runtime 抽象
+## 捕获后端
 
-不同平台对"拦截进程创建"的可行性差异很大：hook 最全能，但在部分平台受限（例如 macOS 需要特殊开发权限）。因此 catter 把捕获机制抽象为 runtime：一个 runtime 就是一种捕获实现；无论是哪一种，handler 看到的都是它捕获的命令。
+不同平台对"拦截进程创建"的可行性差异很大：在构建的每个进程中加载 hook 最为通用，但有些程序会把它挡在外面（在 macOS 上是 Apple 自带的工具）。因此 catter 把构建命令如何被捕获（即后端）与如何处理这些命令（即会话）分开。每个后端启动构建，并把构建的命令上报给会话；会话让各个 handler 对每条命令做决定，并告诉它们每条命令如何结束。无论由哪个后端上报，handler 看到的都是同样的事件。
 
-catter 用 `inject` 捕获构建；指定 `--from` 时，它不运行构建，而是回放一次录制的构建。handler 从会话的 `initialize` 消息得知是哪一种：其中的 `mode` 为 `inject`，或者为 `replay`，表示录制的构建。
+catter 用 `hook` 后端捕获构建（由 `--capture` 指定）；指定 `--from` 时，它不运行构建，而是回放一次录制的构建。handler 从会话的 `initialize` 消息得知是哪一种：其中的 `mode` 为 `hook`，或者为 `replay`，表示录制的构建。
 
-目前 `inject`（基于 hook）是唯一的捕获机制，`env` 与 `eslogger` 在计划中。各机制的原理、平台限制与能力差异见[运行机制](runtime.md)。
+目前 `hook` 是唯一能捕获构建的后端；`wrapper` 在计划中，它用编译器 shim 覆盖 hook 触及不到的地方。各后端能看到什么、支持什么，见[捕获后端](capture-backends.md)。
 
 ## Handler
 
@@ -25,27 +25,27 @@ catter 用 `inject` 捕获构建；指定 `--from` 时，它不运行构建，�
 sequenceDiagram
     participant Handler
     participant Catter as catter daemon
-    participant Runtime as Runtime (capture mechanism)
+    participant Backend as Capture backend
     participant Build as Build system
 
     Catter->>Handler: initialize (the build, the mode)
     Handler-->>Catter: What it wants to be told
-    Catter->>Runtime: Start the build
+    Catter->>Backend: Start the build
     loop For each captured command
-        Runtime->>Catter: Command event
+        Backend->>Catter: Command event
         Catter->>Handler: command
         Handler-->>Catter: Action (skip / drop / abort / modify / edit)
-        Catter->>Runtime: Execute according to action
-        Runtime->>Catter: Execution result
+        Catter->>Backend: Execute according to action
+        Backend->>Catter: Execution result
         Catter->>Handler: exit
     end
-    Runtime-->>Catter: Build process finished
+    Backend-->>Catter: Build process finished
     Catter->>Handler: finish
 ```
 
 ### 构建级：initialize / finish
 
-**`initialize`** 在构建开始前启动会话：它携带构建命令、构建命令的工作目录和 runtime。handler 在应答中说明它是否对每条命令做决定、想收到哪些事件的通知、想听到哪些命令，以及命令是否携带环境变量和 catter 对它的分析。
+**`initialize`** 在构建开始前启动会话：它携带构建命令、构建命令的工作目录和捕获后端。handler 在应答中说明它是否对每条命令做决定、想收到哪些事件的通知、想听到哪些命令，以及命令是否携带环境变量和 catter 对它的分析。
 
 **`finish`** 在构建结束后到来，携带构建的退出码。handler 在这里写出最终产物。
 
@@ -64,7 +64,7 @@ sequenceDiagram
 1. **handler 层**（handler 决定的）：`skip` / `drop` / `abort` / `modify` / `edit`，语义化、与机制无关。
 2. **协议层**（catter-proxy 执行的，Windows 上则是 hook）：`DROP` / `RUN` / `FAIL`，是具体的执行机制。
 
-会话负责把 handler 层动作映射到协议层动作，不论命令由哪个 runtime 上报：
+会话负责把 handler 层动作映射到协议层动作，不论命令由哪个后端上报：
 
 | handler 动作 | 语义                         | 协议层映射                                           |
 | ------------ | ---------------------------- | ---------------------------------------------------- |
@@ -81,12 +81,12 @@ sequenceDiagram
 
 ## 组件与进程
 
-一次 catter 运行会涉及多个进程与组件，它们都属于 runtime 的实现，handler 作者通常无需关心：
+一次 catter 运行会涉及多个进程与组件，它们都属于 hook 后端，handler 作者通常无需关心：
 
-| 组件                 | 角色                                                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `catter`（守护进程） | 运行会话的各个 handler，通过 IPC 接收命令并返回决策                                                          |
-| `catter-proxy`       | 在 Linux 和 macOS 上代替钩子拦截到的每条命令运行，也代替构建命令运行（catter 通过它启动构建），并中转 IPC    |
-| hook 共享库          | inject runtime 的捕获载体，注入构建进程以拦截进程创建调用；在 Windows 上由它自己询问守护进程，并启动每个程序 |
+| 组件                 | 角色                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `catter`（守护进程） | 运行会话的各个 handler，通过 IPC 接收命令并返回决策                                                       |
+| `catter-proxy`       | 在 Linux 和 macOS 上代替钩子拦截到的每条命令运行，也代替构建命令运行（catter 通过它启动构建），并中转 IPC |
+| hook 共享库          | 由 hook 后端加载到构建的每个进程中，以拦截进程创建调用；在 Windows 上由它自己询问守护进程，并启动每个程序 |
 
-它们是 **inject runtime 的实现细节**，而 runtime 抽象本身才是架构的中心。详见[运行机制](runtime.md)与[钩子机制](hook-mechanism.md)。
+它们是 **hook 后端的实现细节**；后端与会话的分离才是架构的中心。详见[捕获后端](capture-backends.md)与[钩子机制](hook-mechanism.md)。

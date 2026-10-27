@@ -18,7 +18,7 @@ catter tree [options] -- <build-command>
 | `-a, --args <n>`      | Show the first n arguments after `argv[0]`. Use `-1` to keep all. Default: `-1`.                   |
 | `-w, --arg-width <n>` | Cut each longer argument in its middle to this many characters (Unicode code points). Default: 10. |
 
-`tree` also takes the options of every command that runs a build: `-C`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
+`tree` also takes the options of every command that runs a build: `-C`, `--capture`, `--from` and the handlers' (see [Configuration](../guide/configuration.md)).
 
 ## Output
 

@@ -1,6 +1,6 @@
 # catter — Project Guide
 
-catter intercepts the processes a build starts and turns them into a compilation database and other analyses (command trees, target trees, build profiles, fake compilation). A hook library injected into the build (`LD_PRELOAD` / `DYLD_INSERT_LIBRARIES` on Unix, DLL injection on Windows) sends every new process through `catter-proxy` on Unix, which asks the `catter` daemon over IPC what to do with the command; on Windows the hook asks the daemon itself and starts the program as it decides.
+catter intercepts the processes a build starts and turns them into a compilation database and other analyses (command trees, target trees, build profiles, fake compilation). A hook library injected into the build (`LD_PRELOAD` / `DYLD_INSERT_LIBRARIES` on Unix, DLL injection on Windows) sends every new process through `catter-proxy` on Unix, which asks the `catter` daemon over IPC what to do with the command; on Windows the hook asks the daemon itself and starts the program as it decides. That is the `hook` capture backend, which `--capture` names, today the only one; `--from` replays a recorded build instead.
 
 The detailed rules live in the skills under `.claude/skills/`; each skill's description says when to load it. Load it at that moment — don't work from memory.
 

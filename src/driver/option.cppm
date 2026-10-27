@@ -42,6 +42,11 @@ struct SessionOptions {
 
     DECO_CFG_START(required = false)
 
+    DecoKV(names = {"--capture"},
+           meta_var = "<backend>",
+           help = "How the build's commands are captured: hook. [default: hook]")
+    <std::string> capture;
+
     DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"--from", "--from="},
                  meta_var = "<file>",
