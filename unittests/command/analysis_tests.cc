@@ -113,6 +113,14 @@ const Case cases[] = {
      .writes = {"a.ddi"},
      },
     {
+     .label = "cl dependency scan to standard output",
+     .argv = {"cl", "src/a.cppm", "/TP", "/scanDependencies-"},
+     .phase = Phase::Preprocess,
+     .artifact = Artifact::Dependencies,
+     .reads = {"src/a.cppm"},
+     .writes = {},
+     },
+    {
      .label = "cl dependency scan with dashes",
      .argv = {"cl", "src/a.cppm", "-TP", "-scanDependencies", "a.ddi", "-Foa.obj"},
      .phase = Phase::Preprocess,

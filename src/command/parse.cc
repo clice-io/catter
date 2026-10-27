@@ -191,6 +191,8 @@ struct Builder {
                 if(argument.count == 2 && argument.spelling.substr(1) == "scanDependencies") {
                     dependencies = true;
                     output(position, OutputKind::PrimaryArtifact);
+                } else if(argument.spelling.substr(1) == "scanDependencies-") {
+                    dependencies = true;
                 }
                 break;
             default:
