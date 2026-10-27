@@ -50,45 +50,33 @@ std::string working_directory() {
     return cwd;
 }
 
-/// The value of variable `name` in `env`, entries of which are `name=value`.
-std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
-    for(std::string_view entry: env) {
-        if(entry.size() > name.size() && entry[name.size()] == '=' &&
-           kota::sys::env_name_equal(entry.substr(0, name.size()), name)) {
-            return entry.substr(name.size() + 1);
-        }
-    }
-    return std::nullopt;
+/// Whether `entry`, `name=value`, is of variable `name`.
+bool is_entry_of(std::string_view entry, std::string_view name) {
+    return entry.size() > name.size() && entry[name.size()] == '=' &&
+           kota::sys::env_name_equal(entry.substr(0, name.size()), name);
 }
 
-/// Sets variable `name` of `env` to `value`.
-void set_variable(std::vector<std::string>& env, std::string_view name, std::string_view value) {
-    auto entry = std::ranges::find_if(env, [&](std::string_view entry) {
-        return entry.size() > name.size() && entry[name.size()] == '=' &&
-               kota::sys::env_name_equal(entry.substr(0, name.size()), name);
-    });
-    auto assignment = std::format("{}={}", name, value);
+/// The value of variable `name` in `env`.
+std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
+    auto entry =
+        std::ranges::find_if(env, [&](std::string_view entry) { return is_entry_of(entry, name); });
     if(entry == env.end()) {
-        env.push_back(std::move(assignment));
-    } else {
-        *entry = std::move(assignment);
+        return std::nullopt;
     }
+    return std::string_view(*entry).substr(name.size() + 1);
 }
 
 /// The value of variable `name` in `env`, which it leaves out of `env`.
 std::optional<std::string> take_variable(std::vector<std::string>& env, std::string_view name) {
     auto value =
         variable(env, name).transform([](std::string_view value) { return std::string(value); });
-    std::erase_if(env, [&](std::string_view entry) {
-        return entry.size() > name.size() && entry[name.size()] == '=' &&
-               kota::sys::env_name_equal(entry.substr(0, name.size()), name);
-    });
+    std::erase_if(env, [&](std::string_view entry) { return is_entry_of(entry, name); });
     return value;
 }
 
-/// The session that the environment `env` of a program of the build names,
-/// which it leaves out of `env`: catter's variables reach a command only as
-/// catter-proxy starts it.
+/// catter's variables in the environment `env` of a program of the build,
+/// which name the session it reports to, taken out of `env`: they reach a
+/// command only as catter-proxy starts it.
 struct Variables {
     std::string pipe;
 
@@ -120,13 +108,13 @@ Proxied hooked(std::span<const std::string> argv) {
         .args = {argv.begin() + 2, argv.end()},
         .env = environment(),
     };
-    Variables session(cmd.env);
+    Variables variables(cmd.env);
     return {
-        .pipe = session.pipe,
-        .parent = session.parent,
+        .pipe = variables.pipe,
+        .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [pipe = session.pipe](data::command command, data::ipcid_t id) {
+            [pipe = variables.pipe](data::command command, data::ipcid_t id) {
                 return hook_options(std::move(command), id, pipe);
             },
     };
@@ -195,8 +183,8 @@ Proxied wrapped(std::string_view self,
                 std::vector<std::string> args,
                 bool launcher) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
-    Variables session(cmd.env);
-    const std::string shims = session.shims.value_or(std::string(kota::fs::path::parent(self)));
+    Variables variables(cmd.env);
+    const std::string shims = variables.shims.value_or(std::string(kota::fs::path::parent(self)));
     std::optional<std::string> path(variable(cmd.env, "PATH"));
 
     auto real = resolve_past(program, shims, path.value_or(""));
@@ -210,8 +198,8 @@ Proxied wrapped(std::string_view self,
     }
     if(!real) {
         return {
-            .pipe = session.pipe,
-            .parent = session.parent,
+            .pipe = variables.pipe,
+            .parent = variables.parent,
             .error = std::format("`{}` is found nowhere past catter's shims", program),
         };
     }
@@ -220,25 +208,28 @@ Proxied wrapped(std::string_view self,
     if(is_shim(args.front(), shims)) {
         args.front() = *real;
     }
-    const bool build = launcher && !session.parent && !session.pipe.empty();
+    const bool build = launcher && !variables.parent && !variables.pipe.empty();
     if(!build && path) {
         std::string without;
         // Entries PATH was split into join back.
         [[maybe_unused]] auto error = kota::sys::join_paths(without, past_shims(*path, shims));
         assert(!error);
-        set_variable(cmd.env, "PATH", without);
+        std::ranges::replace_if(
+            cmd.env,
+            [](std::string_view entry) { return is_entry_of(entry, "PATH"); },
+            "PATH=" + without);
     }
     cmd.executable = std::move(*real);
     cmd.args = std::move(args);
     return {
-        .pipe = session.pipe,
-        .parent = session.parent,
+        .pipe = variables.pipe,
+        .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [session](data::command command, data::ipcid_t id) {
-                command.env.push_back(std::format("{}={}", env::IPC, session.pipe));
-                if(session.shims) {
-                    command.env.push_back(std::format("{}={}", env::SHIMS, *session.shims));
+            [variables](data::command command, data::ipcid_t id) {
+                command.env.push_back(std::format("{}={}", env::IPC, variables.pipe));
+                if(variables.shims) {
+                    command.env.push_back(std::format("{}={}", env::SHIMS, *variables.shims));
                 }
                 command.env.push_back(std::format("{}={}", env::COMMAND_ID, id));
                 return process_options(command);

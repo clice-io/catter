@@ -33,7 +33,7 @@ struct Session {
     /// The command the process runs, which those it starts are children of.
     std::int32_t id;
 
-    /// The pipe catter listens on, as pipe_name() names it.
+    /// The pipe catter listens on.
     char pipe[64];
 
     /// The command is not to run: the process ends with `exit_code` once the

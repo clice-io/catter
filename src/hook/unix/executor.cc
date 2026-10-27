@@ -60,6 +60,9 @@ std::string resolve_from_search_path(const char* file, std::string_view search_p
 /// The program `file` names, looked for in the PATH of `envp`, or in
 /// confstr(_CS_PATH)'s directories without one, as execvp looks.
 std::string resolve_from_path(const char* file, const char* const envp[]) {
+    if(file == nullptr) {
+        throw Error(EFAULT, "The file of the program is null");
+    }
     // Read here: kota::sys reads the environment under a lock, which a child
     // forked while another thread held it would wait on forever.
     if(auto path = envp == nullptr ? nullptr : get_env_value(envp, "PATH")) {
@@ -277,14 +280,6 @@ std::string path_of(const char* path) {
     return resolve_program(path, {.directories = {""}});
 }
 
-/// The program execvp runs for `file`, looked for on the PATH of `envp`.
-std::string file_of(const char* file, const char* const envp[]) {
-    if(file == nullptr) {
-        throw Error(EFAULT, "The file of the program is null");
-    }
-    return resolve_from_path(file, envp);
-}
-
 /// The arguments of execl and its kind, which end with a null.
 std::vector<const char*> variadic_argv(const char* first, va_list* ap) {
     std::vector<const char*> argv;
@@ -342,13 +337,13 @@ int Executor::execve(const char* path, char* const argv[], char* const envp[]) n
 int Executor::execvp(const char* file, char* const argv[]) noexcept {
     return guarded("execvp", false, [&] {
         auto envp = environment();
-        return run_execve(file_of(file, envp).c_str(), argv, envp, true);
+        return run_execve(resolve_from_path(file, envp).c_str(), argv, envp, true);
     });
 }
 
 int Executor::execvpe(const char* file, char* const argv[], char* const envp[]) noexcept {
     return guarded("execvpe", false, [&] {
-        return run_execve(file_of(file, environment()).c_str(), argv, envp, true);
+        return run_execve(resolve_from_path(file, environment()).c_str(), argv, envp, true);
     });
 }
 
@@ -371,7 +366,7 @@ int Executor::execlp(const char* file, const char* arg, va_list* ap) noexcept {
     return guarded("execlp", false, [&] {
         auto argv = variadic_argv(arg, ap);
         auto envp = environment();
-        return run_execve(file_of(file, envp).c_str(), argv.data(), envp, true);
+        return run_execve(resolve_from_path(file, envp).c_str(), argv.data(), envp, true);
     });
 }
 
@@ -406,7 +401,7 @@ int Executor::posix_spawnp(pid_t* pid,
                            char* const envp[]) noexcept {
     return guarded("posix_spawnp", true, [&] {
         return run_posix_spawn(pid,
-                               file_of(file, environment()).c_str(),
+                               resolve_from_path(file, environment()).c_str(),
                                file_actions,
                                attrp,
                                argv,
@@ -427,7 +422,9 @@ int Executor::run_execve(const char* executable,
     }
     INFO("{} runs through {}", executable, proxy);
     auto env = proxy_environment(envp, session);
-    return original_execve(proxy.c_str(), proxy_argv(proxy, executable, argv).data(), env.data());
+    return original_execve(proxy.c_str(),
+                           proxy_argv(proxy, executable, argv).data(),
+                           env.entries.data());
 }
 
 int Executor::run_posix_spawn(pid_t* pid,
@@ -455,7 +452,7 @@ int Executor::run_posix_spawn(pid_t* pid,
                                 file_actions,
                                 attrp,
                                 proxy_argv(proxy, executable, argv).data(),
-                                env.data());
+                                env.entries.data());
 }
 
 }  // namespace catter::hook

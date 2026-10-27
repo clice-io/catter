@@ -20,10 +20,12 @@ struct RequestTraits<Request<Type>> : Request<Type> {};
 
 namespace catter::ipc {
 
-/// The pipe a build reports its commands to `session` over, while it runs:
-/// each client is a command, which catter-proxy reports, or on Windows the
-/// hook as it starts a program. On Windows catter makes the program the hook
-/// started run as decided, and waits for its exit.
+/// The pipe the build reports its commands to `session` over while it runs, one
+/// for each session so that sessions running at once never meet: a named pipe
+/// on Windows, a socket in catter's data directory elsewhere. Each client is a
+/// command, which catter-proxy reports, or on Windows the hook as it starts a
+/// program; there catter makes the program the hook started run as decided,
+/// and waits for its exit.
 class Server {
 public:
     using Start = kota::function<kota::task<kota::process::exit_status>()>;

@@ -23,10 +23,6 @@ struct Environment {
 
     /// The entries rewritten, which `entries` point into.
     std::list<std::string> owned;
-
-    char* const* data() noexcept {
-        return entries.data();
-    }
 };
 
 /// `envp` as catter-proxy gets it: without the hook among the libraries the

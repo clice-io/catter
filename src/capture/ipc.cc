@@ -228,7 +228,15 @@ kota::task<> Server::ended() {
 
 #endif
 
-Server::Server(Session& session) : session(session), name(pipe_name()) {}
+Server::Server(Session& session) :
+    session(session),
+#ifdef CATTER_WINDOWS
+    name(std::format(R"(\\.\pipe\catter-ipc-{})", kota::sys::pid()))
+#else
+    name(data_path(std::format("ipc-{}.sock", kota::sys::pid())))
+#endif
+{
+}
 
 kota::task<kota::process::exit_status> Server::serve(Start start) {
 #ifndef CATTER_WINDOWS
@@ -247,7 +255,7 @@ kota::task<kota::process::exit_status> Server::serve(Start start) {
     auto build = [](Server& self, Start start) -> kota::task<kota::process::exit_status> {
         // Once the build has ended, or failed to start, no command comes.
         auto stop = make_guard([&]() noexcept {
-            if(auto error = self.acceptor->stop(); error.has_error()) {
+            if(auto error = self.acceptor->stop()) {
                 LOG_ERROR("Failed to stop accepting clients: {}", error.message());
             }
         });

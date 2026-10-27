@@ -39,14 +39,6 @@ std::string data_path(std::string_view name) {
     return path;
 }
 
-std::string pipe_name() {
-#ifdef CATTER_WINDOWS
-    return std::format(R"(\\.\pipe\catter-ipc-{})", kota::sys::pid());
-#else
-    return data_path(std::format("ipc-{}.sock", kota::sys::pid()));
-#endif
-}
-
 std::string program_path(std::string_view name) {
     std::string path;
     if(auto error = kota::sys::executable_path(path)) {

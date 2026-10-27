@@ -284,6 +284,26 @@ ZEST_CASE(execve_without_a_proxy_runs_the_program_itself) {
     ZEXPECT(exec_call.envp == std::vector<std::string>{"LANG=C"});
 }
 
+ZEST_CASE(posix_spawn_without_a_proxy_starts_the_program_itself) {
+    spawn_call.reset(62);
+
+    auto executable = create_executable("lone-spawn-tool");
+    MutableCStrings argv = {"lone-spawn-tool"};
+    MutableCStrings envp = {"LANG=C"};
+
+    ct::Executor executor;
+    executor.init(no_session_env.data(), fake_execve, fake_posix_spawn);
+
+    pid_t pid = 0;
+    auto result =
+        executor.posix_spawn(&pid, executable.c_str(), nullptr, nullptr, argv.data(), envp.data());
+
+    ZEXPECT(result == 62);
+    ZEXPECT(spawn_call.path == executable);
+    ZEXPECT(spawn_call.argv == std::vector<std::string>{"lone-spawn-tool"});
+    ZEXPECT(spawn_call.envp == std::vector<std::string>{"LANG=C"});
+}
+
 ZEST_CASE(execve_without_a_proxy_fails_for_a_missing_program) {
     exec_call.reset(60);
 

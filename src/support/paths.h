@@ -5,7 +5,7 @@
 
 namespace catter {
 
-/// The programs catter installs beside itself, as `program_path` finds them.
+/// catter-proxy, which catter installs beside itself.
 constexpr char PROXY[] = "catter-proxy";
 
 /// The name catter-proxy has among the wrapper backend's shims, where it starts
@@ -35,11 +35,6 @@ inline std::string data_path([[maybe_unused]] std::string_view pipe, std::string
     return path;
 #endif
 }
-
-/// The pipe a session of this process listens on, which no session running at
-/// the same time shares: a named pipe on Windows, a socket in catter's data
-/// directory elsewhere.
-std::string pipe_name();
 
 /// The path of `name` beside this program, where catter's programs and hook
 /// libraries are installed together.

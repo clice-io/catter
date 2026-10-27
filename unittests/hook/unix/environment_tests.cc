@@ -15,7 +15,7 @@ std::string entry(std::string_view name, std::string_view value) {
 }
 
 const char* value_of(ct::Environment& env, std::string_view name) {
-    return ct::get_env_value(env.data(), name);
+    return ct::get_env_value(env.entries.data(), name);
 }
 
 ZEST_SUITE(environment) {
