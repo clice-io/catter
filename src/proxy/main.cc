@@ -2,12 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#if defined(CATTER_LINUX)
-#include <sys/auxv.h>
-#elif defined(CATTER_MAC)
-#include <mach-o/dyld.h>
-#endif
-
 #include "support/config/catter-proxy.h"
 #include "support/config/ipc.h"
 #include "support/config/session.h"
@@ -413,26 +407,6 @@ void init_logger(std::string_view pipe) {
     }
 }
 
-/// The path this program was started by: on Linux and macOS a symlink to it
-/// among the wrapper backend's shims, which kota::sys::executable_path
-/// resolves; on Windows a hard link, which it does not.
-std::string started_by() {
-#if defined(CATTER_WINDOWS)
-    std::string path;
-    [[maybe_unused]] auto error = kota::sys::executable_path(path);
-    return path;
-#elif defined(CATTER_LINUX)
-    return reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
-#elif defined(CATTER_MAC)
-    std::uint32_t size = 0;
-    ::_NSGetExecutablePath(nullptr, &size);
-    std::string path(size, '\0');
-    ::_NSGetExecutablePath(path.data(), &size);
-    path.resize(std::strlen(path.c_str()));
-    return path;
-#endif
-}
-
 int run_proxied(std::span<const std::string> argv, const Proxied& proxied) {
     init_logger(proxied.pipe);
     auto [status] = kota::run(proxy_main(argv, proxied));
@@ -446,8 +420,10 @@ int run(std::span<const std::string> argv) {
     hold_closed_streams();
 
     // Among the wrapper backend's shims, catter-proxy is the launcher, or a
-    // shim by the name of the program it stands in for.
-    const auto self = started_by();
+    // shim by the name of the program it stands in for: the link it was
+    // started by, which kota::sys::executable_path would resolve.
+    std::string self;
+    kota::sys::started_path(self);
 #ifdef CATTER_WINDOWS
     // Windows names a program with its extension, which the role's name has
     // not.
