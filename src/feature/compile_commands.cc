@@ -160,9 +160,11 @@ public:
         compiler_commands.insert(id);
 
         const bool preprocess = analysis->phase == Phase::Preprocess;
-        // What a preprocess writes from its one source to a file, as one with `-o` does.
+        // What a preprocess writes from its one source to a file, as one with `-o` does, but cl's,
+        // which no build tool compiles in two steps.
         std::optional<Preprocessed> made;
-        if(analysis->artifact == Artifact::PreprocessedSource && analysis->writes.size() == 1 &&
+        if(analysis->artifact == Artifact::PreprocessedSource &&
+           analysis->dialect != Dialect::MSVC && analysis->writes.size() == 1 &&
            analysis->writes.front().path != "-" && analysis->writes.front().reads.size() == 1) {
             const auto& write = analysis->writes.front();
             made = Preprocessed{
