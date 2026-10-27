@@ -14,6 +14,9 @@ namespace catter {
 /// opened. Windows numbers no handle as a standard stream: nothing to hold.
 void hold_closed_streams();
 
+/// This process's environment, as a command carries it.
+std::vector<std::string> environment();
+
 /// The options that start `command` as it was captured: its program, argv,
 /// environment and working directory. On Windows its command line is written
 /// from its arguments, as CreateProcess takes it, which runs a batch file too.

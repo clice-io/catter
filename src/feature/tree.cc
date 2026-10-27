@@ -44,10 +44,6 @@ class CmdTree final : public Handler {
 public:
     explicit CmdTree(TreeOptions options) : options(std::move(options)) {}
 
-    kota::task<std::optional<Build>> on_start(Build build) override {
-        co_return build;
-    }
-
     kota::task<Action> on_command(data::ipcid_t id,
                                   std::optional<data::ipcid_t> parent,
                                   data::command command) override {
@@ -62,38 +58,13 @@ public:
         co_return;
     }
 
-    kota::task<> on_exit(data::ipcid_t, data::process_result) override {
-        co_return;
-    }
-
     kota::task<> on_finish(data::process_result result) override {
-        if(result.code != 0) {
-            std::println("Build failed with exit code {}. Printing partial command tree.",
-                         result.code);
-        }
-        if(tree.size() == 0) {
-            std::println("No commands found.");
-            co_return;
-        }
-        const auto cycles = tree.assemble();
-        const auto text = [&](const Tree::Node& node) {
-            return text_of(node.content);
-        };
-        std::print("{}", render(tree, text, max_depth_of(options.depth.as_optional())));
-        if(!cycles.empty()) {
-            std::println("");
-            std::println("Detected command cycles:");
-            for(const auto& cycle: cycles) {
-                const auto names = cycle | std::views::transform([&](data::ipcid_t id) {
-                                       return text_of(tree.find(id)->content);
-                                   }) |
-                                   std::ranges::to<std::vector>();
-                std::println("[cycle] {} -> {}",
-                             names | std::views::join_with(std::string_view(" -> ")) |
-                                 std::ranges::to<std::string>(),
-                             names.front());
-            }
-        }
+        print(
+            tree,
+            [&](const Tree::Node& node) { return text_of(node.content); },
+            max_depth_of(options.depth.as_optional()),
+            result.code,
+            {.nodes = "commands", .node = "command", .tree = "command tree"});
         co_return;
     }
 

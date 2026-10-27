@@ -276,4 +276,47 @@ std::string render(const FlatTree<Id, Content>& tree,
     return out;
 }
 
+/// What a tree's nodes are: `commands`, a `command`, and what they make, a `command tree`.
+struct Words {
+    std::string_view nodes;
+
+    std::string_view node;
+
+    std::string_view tree;
+};
+
+/// Prints `tree` once the build ended with `code`, as `catter tree` and `catter targets` do: as
+/// `render` lays it out, partial when the build failed, then the cycles among its nodes, each
+/// node as `text` gives it.
+template <typename Id, typename Content, typename Text>
+void print(FlatTree<Id, Content>& tree,
+           Text&& text,
+           std::optional<std::uint32_t> max_depth,
+           std::int64_t code,
+           Words words) {
+    if(code != 0) {
+        std::println("Build failed with exit code {}. Printing partial {}.", code, words.tree);
+    }
+    if(tree.size() == 0) {
+        std::println("No {} found.", words.nodes);
+        return;
+    }
+    const auto cycles = tree.assemble();
+    std::print("{}", render(tree, text, max_depth));
+    if(cycles.empty()) {
+        return;
+    }
+    std::println("");
+    std::println("Detected {} cycles:", words.node);
+    for(const auto& cycle: cycles) {
+        const auto names = cycle |
+                           std::views::transform([&](const Id& id) { return text(*tree.find(id)); }) |
+                           std::ranges::to<std::vector>();
+        std::println("[cycle] {} -> {}",
+                     names | std::views::join_with(std::string_view(" -> ")) |
+                         std::ranges::to<std::string>(),
+                     names.front());
+    }
+}
+
 }  // namespace catter::feature

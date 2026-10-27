@@ -1,13 +1,11 @@
 {
     global:
         on_load;
-        on_unload;
 
         execve;
         execv;
         execvpe;
         execvp;
-        execvP;
         execl;
         execlp;
         execle;

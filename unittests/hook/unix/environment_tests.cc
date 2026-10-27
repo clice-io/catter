@@ -1,9 +1,7 @@
-#include <cstddef>
 #include <string>
 #include <string_view>
 #include <kota/zest/zest.h>
 
-#include "hook/unix/env_sanitizer.h"
 #include "hook/unix/environment.h"
 #include "support/hook.h"
 #include "support/messages.h"
@@ -12,56 +10,54 @@ namespace ct = catter::hook;
 
 namespace {
 
-const char* find_entry(char* const* envp, std::string_view key) {
-    for(std::size_t i = 0; envp[i] != nullptr; ++i) {
-        if(ct::is_entry_of(envp[i], key)) {
-            return envp[i];
-        }
-    }
-    return nullptr;
+std::string entry(std::string_view name, std::string_view value) {
+    return std::string(name) + "=" + std::string(value);
 }
 
-ZEST_SUITE(env_sanitizer) {
-ZEST_CASE(removes_injected_keys_and_filters_hook_preload) {
-    std::string keep_lib_1 = "/tmp/libkeep-1.so";
-    std::string keep_lib_2 = "/tmp/libkeep-2.so";
-    std::string hook_lib = "/tmp/";
-    hook_lib += catter::hook::LIBRARY;
+const char* value_of(ct::Environment& env, std::string_view name) {
+    return ct::get_env_value(env.data(), name);
+}
 
-    std::string command_id = std::string(catter::env::COMMAND_ID) + "=42";
-    std::string proxy_path = std::string(catter::env::PROXY) + "=/tmp/catter-proxy";
-    std::string preload =
-        std::string(catter::hook::PRELOAD) + "=" + keep_lib_1 + ":" + hook_lib + ":" + keep_lib_2;
+ZEST_SUITE(environment) {
+ZEST_CASE(catter_proxy_gets_the_session_without_the_hook) {
+    const std::string hook = std::string("/opt/catter/") + catter::hook::LIBRARY;
+    auto ipc = entry(catter::env::IPC, "/tmp/ipc-0.sock");
+    auto command_id = entry(catter::env::COMMAND_ID, "42");
+    auto preload = entry(catter::hook::PRELOAD, "/tmp/libkeep-1.so:" + hook + ":/tmp/libkeep-2.so");
     std::string lang = "LANG=en_US.UTF-8";
+    char* envp[] = {ipc.data(), command_id.data(), preload.data(), lang.data(), nullptr};
+    std::string session[] = {entry(catter::env::IPC, "/tmp/ipc-1.sock"),
+                             entry(catter::env::COMMAND_ID, "7")};
 
-    char* raw_env[] = {command_id.data(), proxy_path.data(), preload.data(), lang.data(), nullptr};
-    auto sanitized = ct::sanitize_environment(raw_env);
-    auto clean_envp = sanitized.data();
+    auto env = ct::proxy_environment(envp, session);
 
-    ZEXPECT(find_entry(clean_envp, catter::env::COMMAND_ID) == nullptr);
-    ZEXPECT(find_entry(clean_envp, catter::env::PROXY) == nullptr);
-
-    auto cleaned_preload = find_entry(clean_envp, catter::hook::PRELOAD);
-    ZEXPECT(cleaned_preload != nullptr);
-    std::string expected_preload =
-        std::string(catter::hook::PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
-    ZEXPECT(std::string_view(cleaned_preload) == expected_preload);
-
-    ZEXPECT(find_entry(clean_envp, "LANG") != nullptr);
+    ZEXPECT(std::string_view(value_of(env, catter::env::IPC)) == "/tmp/ipc-1.sock");
+    ZEXPECT(std::string_view(value_of(env, catter::env::COMMAND_ID)) == "7");
+    ZEXPECT(std::string_view(value_of(env, catter::hook::PRELOAD)) ==
+            "/tmp/libkeep-1.so:/tmp/libkeep-2.so");
+    ZEXPECT(std::string_view(value_of(env, "LANG")) == "en_US.UTF-8");
 };
 
-ZEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
-    std::string hook_lib = "/tmp/";
-    hook_lib += catter::hook::LIBRARY;
-    std::string preload = std::string(catter::hook::PRELOAD) + "=" + hook_lib;
+ZEST_CASE(a_preload_of_the_hook_alone_goes) {
+    auto preload = entry(catter::hook::PRELOAD, std::string("/tmp/") + catter::hook::LIBRARY);
+    char* envp[] = {preload.data(), nullptr};
 
-    char* raw_env[] = {preload.data(), nullptr};
-    auto sanitized = ct::sanitize_environment(raw_env);
-    auto clean_envp = sanitized.data();
+    auto env = ct::proxy_environment(envp, {});
 
-    auto cleaned_preload = find_entry(clean_envp, catter::hook::PRELOAD);
-    ZEXPECT(cleaned_preload == nullptr);
+    ZEXPECT(value_of(env, catter::hook::PRELOAD) == nullptr);
 };
-};  // ZEST_SUITE(env_sanitizer)
+
+#ifdef CATTER_LINUX
+ZEST_CASE(spaces_separate_preloaded_libraries_as_colons_do) {
+    auto preload = entry(catter::hook::PRELOAD,
+                         std::string("/tmp/libkeep.so /tmp/") + catter::hook::LIBRARY);
+    char* envp[] = {preload.data(), nullptr};
+
+    auto env = ct::proxy_environment(envp, {});
+
+    ZEXPECT(std::string_view(value_of(env, catter::hook::PRELOAD)) == "/tmp/libkeep.so");
+};
+#endif
+};  // ZEST_SUITE(environment)
 
 }  // namespace

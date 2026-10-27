@@ -55,8 +55,6 @@ static std::string_view arch_of(std::string_view executable) {
 kota::process::options hook_options(data::command command,
                                     data::ipcid_t id,
                                     std::string_view pipe_name) {
-    LOG_INFO("new command id is: {}", id);
-
 #if defined(CATTER_MAC)
     // dyld ends a program that cannot load a library inserted into it: Apple's
     // own tools, which run as arm64e, and Intel programs under Rosetta. Where
@@ -71,40 +69,22 @@ kota::process::options hook_options(data::command command,
     }
 #endif
 
-    const auto lib_path = program_path(hook::LIBRARY);
-    if(!kota::fs::is_file(lib_path)) {
-        throw cpptrace::runtime_error(
-            std::format("Catter-Proxy Hook library not found at path `{}`", lib_path));
-    }
-
-    bool preload_injected = false;
-    std::string key_preload_prefix = std::string(hook::PRELOAD) + "=";
-    for(auto& env_item: command.env) {
-        if(env_item.starts_with(key_preload_prefix)) {
-            env_item += hook::PRELOAD_SEPARATORS[0] + lib_path;
-            preload_injected = true;
-            break;
-        }
-    }
-
-    if(!preload_injected) {
-        command.env.push_back(std::format("{}={}", hook::PRELOAD, lib_path));
+    const auto library = program_path(hook::LIBRARY);
+    const auto preload = std::string(hook::PRELOAD) + "=";
+    if(auto entry = std::ranges::find_if(command.env,
+                                         [&](std::string_view entry) {
+                                             return entry.starts_with(preload);
+                                         });
+       entry != command.env.end()) {
+        *entry += hook::PRELOAD_SEPARATORS[0] + library;
+    } else {
+        command.env.push_back(preload + library);
     }
     command.env.push_back(std::format("{}={}", env::COMMAND_ID, id));
-    command.env.push_back(std::format("{}={}",
-                                      env::PROXY,
-                                      program_path(PROXY)));
+    command.env.push_back(std::format("{}={}", env::PROXY, program_path(PROXY)));
     command.env.push_back(std::format("{}={}", env::IPC, pipe_name));
-
-    std::string cmd_for_print = "";
-    for(auto& arg: command.args) {
-        cmd_for_print += " " + arg;
-    }
-    LOG_INFO("| -> Catter-Proxy Final Executing command: \n    exe = {} \n    args = {}",
-             command.executable,
-             cmd_for_print);
-
+    LOG_INFO("Command {} runs `{}` with the hook", id, command.executable);
     return process_options(command);
 }
 
-};  // namespace catter
+}  // namespace catter

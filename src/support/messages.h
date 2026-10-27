@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -27,6 +28,9 @@ constexpr char SHIMS[] = "__key_catter_shims_v1";
 
 /// catter-proxy, which the hook starts in place of each program.
 constexpr char PROXY[] = "__key_catter_proxy_path_v1";
+
+/// All of them, which a session sets anew for the build it runs.
+constexpr std::array<std::string_view, 4> VARIABLES = {IPC, COMMAND_ID, SHIMS, PROXY};
 
 }  // namespace catter::env
 

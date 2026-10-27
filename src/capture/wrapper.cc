@@ -20,10 +20,6 @@ namespace {
 constexpr auto PROGRAM_VARIABLES = std::to_array<std::string_view>(
     {"CC", "CXX", "OBJC", "OBJCXX", "CUDACXX", "HIPCXX", "AR", "LD"});
 
-/// The variables the wrapper backend sets for the build command, in place of those catter has.
-constexpr auto SESSION_VARIABLES = std::to_array<std::string_view>(
-    {"PATH", env::COMMAND_ID, env::IPC, env::SHIMS});
-
 #ifdef CATTER_WINDOWS
 /// The tools MSBuild runs, cl's compiler, linker and librarian, each from the directory a property
 /// such as CLToolPath names, which MSBuild takes from the environment.
@@ -319,7 +315,7 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
     std::vector<kota::process::env_var> env;
     for(auto& [name, value]: variables) {
         // The build command has no parent; the session's variables come last.
-        if(std::ranges::any_of(SESSION_VARIABLES, named(name))) {
+        if(named("PATH")(name) || std::ranges::any_of(env::VARIABLES, named(name))) {
             continue;
         }
         if(std::ranges::any_of(PROGRAM_VARIABLES, named(name))) {

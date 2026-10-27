@@ -125,6 +125,14 @@ void hold_closed_streams() {
 #endif
 }
 
+std::vector<std::string> environment() {
+    std::vector<std::string> env;
+    for(const auto& [name, value]: kota::sys::environment()) {
+        env.push_back(std::format("{}={}", name, value));
+    }
+    return env;
+}
+
 kota::process::options process_options(const data::command& command) {
     kota::process::options opts{
         .program = command.executable,

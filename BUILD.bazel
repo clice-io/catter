@@ -114,14 +114,13 @@ cc_binary(
 
 cc_binary(
     name = "bin/catter-proxy",
-    srcs = glob(["src/proxy/*.cc"]),
+    srcs = ["src/proxy/main.cc"],
     copts = MODULE_UNIT_COPTS,
     features = [
         "cpp_modules",
         "generate_dsym_file",
     ],
     linkopts = LINKOPTS,
-    module_interfaces = glob(["src/proxy/*.cppm"]),
     deps = [":capture"],
 )
 

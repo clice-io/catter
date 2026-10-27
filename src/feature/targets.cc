@@ -79,10 +79,6 @@ public:
     explicit TargetTree(TargetsOptions options) :
         max_depth(max_depth_of(options.depth.as_optional())) {}
 
-    kota::task<std::optional<Build>> on_start(Build build) override {
-        co_return build;
-    }
-
     kota::task<Action> on_command(data::ipcid_t id,
                                   std::optional<data::ipcid_t> parent,
                                   data::command command) override {
@@ -111,35 +107,13 @@ public:
         co_return;
     }
 
-    kota::task<> on_exit(data::ipcid_t, data::process_result) override {
-        co_return;
-    }
-
     kota::task<> on_finish(data::process_result result) override {
-        if(result.code != 0) {
-            std::println("Build failed with exit code {}. Printing partial target forest.",
-                         result.code);
-        }
-        if(tree.size() == 0) {
-            std::println("No targets found.");
-            co_return;
-        }
-        const auto cycles = tree.assemble();
-        std::print(
-            "{}",
-            render(tree, [](const Tree::Node& node) { return name_of(node.id); }, max_depth));
-        if(!cycles.empty()) {
-            std::println("");
-            std::println("Detected target cycles:");
-            for(const auto& cycle: cycles) {
-                const auto names =
-                    cycle | std::views::transform(name_of) | std::ranges::to<std::vector>();
-                std::println("[cycle] {} -> {}",
-                             names | std::views::join_with(std::string_view(" -> ")) |
-                                 std::ranges::to<std::string>(),
-                             names.front());
-            }
-        }
+        print(
+            tree,
+            [](const Tree::Node& node) { return name_of(node.id); },
+            max_depth,
+            result.code,
+            {.nodes = "targets", .node = "target", .tree = "target forest"});
         co_return;
     }
 

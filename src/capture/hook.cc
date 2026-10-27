@@ -5,9 +5,10 @@ module;
 #include "support/messages.h"
 #include "support/paths.h"
 
+#include "support/program.h"
+
 #ifdef CATTER_WINDOWS
 #include "support/log.h"
-#include "support/program.h"
 #else
 #include "support/hook.h"
 #endif
@@ -77,8 +78,12 @@ public:
                                                Session& session) const override {
         assert(!build.command.empty());
 #ifndef CATTER_WINDOWS
-        if(auto library = program_path(hook::LIBRARY);
-           library.find_first_of(hook::PRELOAD_SEPARATORS) != std::string::npos) {
+        const auto library = program_path(hook::LIBRARY);
+        if(!kota::fs::is_file(library)) {
+            throw cpptrace::runtime_error(
+                std::format("catter's hook `{}` is missing: reinstall catter", library));
+        }
+        if(library.find_first_of(hook::PRELOAD_SEPARATORS) != std::string::npos) {
             throw cpptrace::runtime_error(std::format(
                 "catter cannot preload its hook `{}` into the build: {} splits paths at {}. Install catter in a directory whose path has none",
                 library,
@@ -88,25 +93,33 @@ public:
 #endif
 
         ipc::Server server(session);
+        auto executable = resolve_program(build.command.front(), build.cwd);
 #ifdef CATTER_WINDOWS
         data::command command{
             .cwd = build.cwd,
-            .executable = resolve_program(build.command.front(), build.cwd),
+            .executable = std::move(executable),
             .args = build.command,
+            .env = environment(),
         };
-        for(const auto& [name, value]: kota::sys::environment()) {
-            command.env.push_back(std::format("{}={}", name, value));
-        }
         co_return co_await server.serve([&, command = std::move(command)]() mutable {
             return run_build(session, std::move(command), server);
         });
 #else
+        // catter-proxy runs the build command with the hook, as it runs each
+        // command the hook starts, but with no parent.
         kota::process::options proxy{
             .program = program_path(PROXY),
-            .args = {"-p", "0", "--ipc", std::string(server.pipe()), "--"},
+            .args = {std::move(executable)},
+            .env = std::vector<kota::process::env_var>(),
             .cwd = build.cwd,
         };
         proxy.args.append_range(build.command);
+        for(auto& [name, value]: kota::sys::environment()) {
+            if(!std::ranges::contains(env::VARIABLES, name)) {
+                proxy.env->push_back({.name = std::move(name), .value = std::move(value)});
+            }
+        }
+        proxy.env->push_back({.name = env::IPC, .value = std::string(server.pipe())});
         co_return co_await server.serve([proxy = std::move(proxy)]() mutable {
             return run_process(std::move(proxy), {.stand_in = true});
         });
