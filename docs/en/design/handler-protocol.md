@@ -27,7 +27,7 @@ Commands of a parallel build overlap: `command` requests can be in flight togeth
 | --------------- | --------------- | ----------------------------------------------------- |
 | `version`       | integer         | The protocol's version: `1`.                          |
 | `session`       | string          | Tells apart the sessions one handler serves over TCP. |
-| `mode`          | string          | The capture backend: `hook`, or `replay`.             |
+| `mode`          | string          | The capture backend: `hook`, `wrapper`, or `replay`.  |
 | `build.command` | OS string array | The build command.                                    |
 | `build.cwd`     | OS string       | Its working directory.                                |
 

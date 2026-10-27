@@ -80,7 +80,8 @@ rules and the pitfalls. The framework is `tools/testing/`
 - On macOS, Apple's own tools (`/bin/sh`, `/usr/bin/make`, `/usr/bin/cc`)
   run without the hook (`src/capture/inject/unix/impl.cc`): what they start
   goes uncaptured, so the macOS blocks of make and Ninja builds carry that
-  `wrong`; node-based capture cases still cover macOS.
+  `wrong`; node-based capture cases still cover macOS, and the `wrapper`
+  test of a build case captures it through shims (`--capture wrapper`).
 - A native stack trace never reaches stdout (only the log): one in a block
   is a regression.
 

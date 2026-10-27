@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+// A program of the case's own beside its compiler, which prints what it was run with.
+console.log(["other/objcopy", ...process.argv.slice(2)].join(" "));

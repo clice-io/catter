@@ -4,7 +4,7 @@ A capture backend is how catter gets a build's commands: it starts the build, an
 
 ## Choosing one
 
-`--capture <backend>` names the backend that captures the build; the default is `hook`, today the only one. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
+`--capture <backend>` names the backend that captures the build: `hook`, the default, or `wrapper`, on Linux and macOS. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
 
 A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build.
 
@@ -29,12 +29,12 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 - **How it works**: it plays the build a file recorded instead of running one: each command, error and exit in the file's order, with the IDs and parent commands the file gives them. The build ends with the exit code the file records.
 - **Actions**: nothing runs, so `skip`, `drop`, `modify` and `edit` change nothing. `abort` ends the replay as it ends a live build: no later event reaches the handlers, and catter exits 1.
 
-### wrapper (planned)
+### wrapper
 
-- **How it works**: compiler shims, put first on the build's `PATH` and named by `CC`, `CXX` and the like, stand in for the compilers: each reports its command and runs the real compiler as decided.
-- **Use cases**: builds the hook cannot reach, such as those run by Apple's own tools on macOS.
-- **Expected limitations**: only the programs it wraps are captured, and a compiler a build runs by a path of its own escapes it; a command's parent is the nearest wrapped program that started it, or the build command.
-- **Status**: not implemented yet.
+- **How it works**: catter puts shims of the compilers, linkers and archivers it knows by their names, each the first of its name on the build's `PATH`, in a directory of the session's own, first on the build's `PATH`. A variable such as `CC`, `CXX` or `AR` that names a program by its path names that program's shim instead, and CMake runs every compile and link through the wrapper backend's launcher (`CMAKE_<LANG>_COMPILER_LAUNCHER` and `CMAKE_<LANG>_LINKER_LAUNCHER`, unless the build sets them). A shim is `catter-proxy`: it reports its command, runs the program it stands in for as decided, the first of its name on `PATH` past the shims, and reports how it ended. The program it runs finds no shims on its `PATH`: a compiler a build cache runs, as ccache runs the one past its own directory, is the compiler, not the shim again.
+- **Platforms**: Linux, macOS.
+- **What it sees**: the programs it has shims of, whatever in the build runs them, Apple's `/usr/bin/make` and `/bin/sh` included. A command's parent is the nearest program with a shim that started it, or the build command; what a compiler starts is not seen.
+- **Limitations**: a build that runs a compiler by the path it found before catter ran, as the `build.ninja` CMake wrote does, escapes the shims: configure it and build it in one session, `catter compile-commands --capture wrapper -- sh -c "cmake -B build && cmake --build build"`. The shims go with the session, so a build configured under the wrapper backend runs only in that session: configure one for catter of its own. A program the build puts first on `PATH` itself, as a toolchain's directory, is found before the shims.
 
 ## Capability matrix
 
@@ -42,7 +42,7 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 | ------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
 | hook    | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
 | replay  | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
-| wrapper | cross-platform          | compiler shims on `PATH`, `CC` / `CXX` | expected all                          | the nearest wrapped program | planned               |
+| wrapper | Linux / macOS           | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
 
 ## Writing handlers for any backend
 

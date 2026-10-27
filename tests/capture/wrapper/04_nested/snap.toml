@@ -1,0 +1,3 @@
+[test."$ catter tree --capture wrapper -- node -e 0"]
+stdout = "catter runs in a build under the wrapper backend, whose shims would stand in for this session's: run it outside that build, or with --capture hook"
+exit = 1

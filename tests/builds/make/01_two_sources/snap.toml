@@ -1,4 +1,4 @@
-[test."$ catter compile-commands -o compile_commands.json -- make"]
+[hook."$ catter compile-commands -o compile_commands.json -- make"]
 stdout = '''
 g++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
 cd src && g++ -DCATTER_TEST=1 -I../include -c util.cc -o ../util.o
@@ -7,7 +7,7 @@ CDB saved to ${WS}/compile_commands.json with 2 entries.
 '''
 exit = 0
 
-[test."$ catter compile-commands -o compile_commands.json -- make".darwin]
+[hook."$ catter compile-commands -o compile_commands.json -- make".darwin]
 wrong = "Apple's make runs without the hook, and what it starts goes uncaptured"
 stdout = '''
 c++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
@@ -17,7 +17,7 @@ CDB saved to ${WS}/compile_commands.json with 0 entries.
 '''
 exit = 0
 
-[test."compile_commands.json"]
+[hook."compile_commands.json"]
 entries = [
     {
         file = "src/main.cc",
@@ -33,6 +33,58 @@ entries = [
     },
 ]
 
-[test."compile_commands.json".darwin]
+[hook."compile_commands.json".darwin]
 wrong = "Apple's make runs without the hook, and what it starts goes uncaptured"
 entries = []
+
+[wrapper."$ catter compile-commands --capture wrapper -o compile_commands.json -- make"]
+stdout = '''
+g++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
+cd src && g++ -DCATTER_TEST=1 -I../include -c util.cc -o ../util.o
+g++ main.o util.o -o hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[wrapper."$ catter compile-commands --capture wrapper -o compile_commands.json -- make".darwin]
+differs = "Apple's make runs c++ for C++ sources, where GNU make runs g++"
+stdout = '''
+c++ -DCATTER_TEST=1 -Iinclude -c src/main.cc -o main.o
+cd src && c++ -DCATTER_TEST=1 -I../include -c util.cc -o ../util.o
+c++ main.o util.o -o hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[wrapper."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-Iinclude", "-c", "src/main.cc", "-o", "main.o"],
+    },
+    {
+        file = "util.cc",
+        directory = "${WS}/src",
+        output = "${WS}/util.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-I../include", "-c", "util.cc", "-o", "../util.o"],
+    },
+]
+
+[wrapper."compile_commands.json".darwin]
+differs = "Apple's make runs c++ for C++ sources, where GNU make runs g++"
+entries = [
+    {
+        file = "src/main.cc",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "-c", "src/main.cc", "-o", "main.o"],
+    },
+    {
+        file = "util.cc",
+        directory = "${WS}/src",
+        output = "${WS}/util.o",
+        arguments = ["c++", "-DCATTER_TEST=1", "-I../include", "-c", "util.cc", "-o", "../util.o"],
+    },
+]

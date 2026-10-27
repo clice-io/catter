@@ -9,7 +9,11 @@ import :capture.backend;
 namespace catter {
 
 std::span<const Backend* const> capture_backends() noexcept {
-    const static std::array<const Backend*, 1> backends = {&hook_backend()};
+#ifdef CATTER_WINDOWS
+    const static std::array backends = {&hook_backend()};
+#else
+    const static std::array backends = {&hook_backend(), &wrapper_backend()};
+#endif
     return backends;
 }
 

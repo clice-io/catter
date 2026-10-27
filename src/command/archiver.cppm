@@ -41,6 +41,10 @@ struct ArchiverAnalysis {
     std::vector<std::string> writes;
 };
 
+/// Whether `executable` is an archiver by its name: `ar`, `llvm-ar` and `gcc-ar`, perhaps after a
+/// target, `x86_64-linux-gnu-ar`, and before a version, `gcc-ar-14`.
+bool is_archiver(std::string_view executable);
+
 /// Analyzes the command that runs `executable` with `argv`, argv[0] included.
 std::expected<ArchiverAnalysis, Error> analyze_archiver(std::string_view executable,
                                                         std::span<const std::string> argv);

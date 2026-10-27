@@ -242,8 +242,8 @@ Domain words with one meaning each — use them only in that meaning:
   the modified command). What the
   daemon then tells catter-proxy, or the Windows hook, to do is the IPC
   protocol's `data::action` (`DROP`, `RUN`, `FAIL`); keep the two apart.
-- **backend**: a way of capturing a build (`Backend`): the hook, or replay
-  of a recorded build.
+- **backend**: a way of capturing a build (`Backend`): the hook, the
+  wrapper (shims), or replay of a recorded build.
 - **payload**: the hook library loaded into the build's processes.
 
 ## Templates, Type Traits & Concepts

@@ -1,6 +1,6 @@
-# IPC Protocol (hook backend implementation)
+# IPC Protocol (hook and wrapper backends)
 
-> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy` on Linux and macOS, the hook itself on Windows. The protocol names no backend: it is what every backend that runs a build reports its commands over, today the hook backend; handler authors usually do not need to read it.
+> This page describes the communication protocol between the catter daemon and what reports the build's commands to it: `catter-proxy` on Linux and macOS, which the hook runs each command through and which the wrapper backend's shims are, and the hook itself on Windows. The protocol names no backend: it is what every backend that runs a build reports its commands over; handler authors usually do not need to read it.
 
 Catter uses inter-process communication between the daemon (`catter`) and its clients: on Linux and macOS each `catter-proxy` instance, which stands in for one command; on Windows the hook, from inside the `CreateProcess` call that starts one command. The daemon acts as a server, and each client connects once per command.
 
@@ -58,7 +58,7 @@ Registers a new process session with the daemon.
 | **Params** | `ipcid_t` (`int32_t`) | The parent session ID                        |
 | **Result** | `ipcid_t` (`int32_t`) | A unique session ID assigned to this command |
 
-The parent ID establishes the parent-child relationship in the session tree. The proxy of the build command, which the daemon starts, sends 0: no command started it. The proxy of a command the hook intercepted sends the ID of the command whose process started it, which the hook reads from the `__key_catter_command_id_v1` environment variable and passes on the proxy's command line. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
+The parent ID establishes the parent-child relationship in the session tree. The proxy of the build command, which the daemon starts, sends 0: no command started it. The proxy of a command the hook intercepted sends the ID of the command whose process started it, which the hook reads from the `__key_catter_command_id_v1` environment variable and passes on the proxy's command line. A shim of the wrapper backend sends the ID in `__key_catter_command_id_v1`, which the shim, or the launcher, that started the program it was run from set to its own command's ID; the launcher of the build command finds none and sends 0. On Windows the hook sends the ID of the command its process runs, which the daemon gave it.
 
 ### MAKE_DECISION
 
@@ -156,7 +156,7 @@ Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
 
-The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached.
+The daemon starts the proxy of the build command, which sends the same messages for the build command, with parent 0, so that the build command reaches the handlers like any other command; it runs the build with the hook attached. Under the wrapper backend the daemon starts the build command through the launcher, `catter-proxy` by another name among the shims, which reports it the same way and runs it with the shims first on its `PATH`; each shim then sends these messages for the program it stands in for.
 
 ### Windows Hook (intercepted command)
 

@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+// A build cache's compiler, as ccache stands in for one by its name: it runs the
+// compiler of its name it finds on PATH past its own directory.
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+const PATH = process.env.PATH.split(path.delimiter)
+    .filter((directory) => path.resolve(directory) !== __dirname)
+    .join(path.delimiter);
+console.log(["cache/cc", ...process.argv.slice(2)].join(" "));
+const result = spawnSync("cc", process.argv.slice(2), {
+    stdio: "inherit",
+    env: { ...process.env, PATH },
+});
+process.exit(result.status ?? 1);

@@ -28,7 +28,7 @@ design:
     - file: hook-mechanism
       label: "hook backend: hook mechanism"
     - file: ipc-protocol
-      label: "hook backend: IPC protocol"
+      label: "IPC protocol"
     - handler-protocol
 
 dev:
