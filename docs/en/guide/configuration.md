@@ -24,15 +24,15 @@ Every run names a command, and its options come after it. `catter --help` lists 
 
 `compile-commands`, `tree`, `targets` and `run` take these options besides their own:
 
-| Option                        | Description                                                                                                                            | Default           |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `-C, --directory <path>`      | The directory the command runs in.                                                                                                     | Current directory |
-| `--capture <backend>`         | How the build's commands are captured: `hook`, or `wrapper` on Linux and macOS. See [Capture backends](../design/capture-backends.md). | `hook`            |
-| `--from <file>`               | Replay the build recorded in this file instead of running one.                                                                         |                   |
-| `--handler <command>`         | Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.                |                   |
-| `--connect <host:port>`       | Connect to a handler listening at the address, on this machine unless `--allow-remote` is given; may be given more than once.          |                   |
-| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                                    |                   |
-| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.                    | `60`              |
+| Option                        | Description                                                                                                                   | Default           |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `-C, --directory <path>`      | The directory the command runs in.                                                                                            | Current directory |
+| `--capture <backend>`         | How the build's commands are captured: `hook` or `wrapper`. See [Capture backends](../design/capture-backends.md).            | `hook`            |
+| `--from <file>`               | Replay the build recorded in this file instead of running one.                                                                |                   |
+| `--handler <command>`         | Start a handler, which decides or observes the build's commands over its stdin and stdout; may be given more than once.       |                   |
+| `--connect <host:port>`       | Connect to a handler listening at the address, on this machine unless `--allow-remote` is given; may be given more than once. |                   |
+| `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                           |                   |
+| `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.           | `60`              |
 
 `--from` takes the place of the build command after `--`: a run gives one or the other. A relative path is from the `-C` directory. A recorded build is not captured: `--from` takes no `--capture`.
 
@@ -51,7 +51,7 @@ catter keeps its logs and the socket of each running session in `$HOME/.catter` 
 ## catter-proxy CLI
 
 ::: warning
-`catter-proxy` is an internal component of catter on Linux and macOS. It is invoked automatically by catter and is not intended for direct use.
+`catter-proxy` is an internal component of catter. It is invoked automatically by catter and is not intended for direct use.
 :::
 
 ```

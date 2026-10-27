@@ -10,17 +10,9 @@ test("hook", async (t) => {
 
 // CMake configured under the wrapper backend runs the compilers through the session's shims,
 // which go with the session: the build is configured and built in one.
-test("wrapper", { except: { win32: "the wrapper backend runs on Linux and macOS" } }, async (t) => {
-    await t.cli([
-        "compile-commands",
-        "--capture",
-        "wrapper",
-        "-o",
-        "compile_commands.json",
-        "--",
-        "sh",
-        "-c",
-        "cmake -S . -B build -G Ninja > /dev/null && cmake --build build -j 1",
-    ]);
+test("wrapper", async (t) => {
+    await t.cli(
+        "compile-commands --capture wrapper -o compile_commands.json -- cmake -P configure_and_build.cmake",
+    );
     t.show("compile_commands.json", t.disk.cdb());
 });

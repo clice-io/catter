@@ -123,22 +123,16 @@ asan_runtime = rule(
     toolchains = use_cc_toolchain(),
 )
 
-def release_packages(programs, unix_programs, payloads):
+def release_packages(programs, payloads):
     """//:package and //:symbols, of the programs (target names) and payloads.
 
     The release archive is catter/{bin/<programs and payloads>, LICENSE},
     stripped, and the symbol package the GSYM of each program, for
     llvm-gsymutil: the programs of these builds are the ones the cases run.
-    `unix_programs` are packaged on Linux and macOS alone.
     """
-    every = programs + unix_programs
-
     pkg_files(
         name = "package_programs",
-        srcs = [":%s.stripped" % program for program in programs] + select({
-            "@platforms//os:windows": [],
-            "//conditions:default": [":%s.stripped" % program for program in unix_programs],
-        }),
+        srcs = [":%s.stripped" % program for program in programs],
         attributes = pkg_attributes(mode = "0755"),
         prefix = "catter/bin",
         renames = select({
@@ -148,7 +142,7 @@ def release_packages(programs, unix_programs, payloads):
             },
             "//conditions:default": {
                 ":%s.stripped" % program: program.rpartition("/")[2]
-                for program in every
+                for program in programs
             },
         }),
     )
@@ -197,7 +191,7 @@ def release_packages(programs, unix_programs, payloads):
 
     # The GSYM of each program, and the dSYM it comes from on macOS.
     # --merged-functions keeps the names of the functions ICF folded.
-    for program in every:
+    for program in programs:
         xclang_debug_symbols(
             name = program + "_symbols",
             binary = ":" + program,
@@ -207,10 +201,7 @@ def release_packages(programs, unix_programs, payloads):
 
     native.filegroup(
         name = "gsym",
-        srcs = [":%s_symbols" % program for program in programs] + select({
-            "@platforms//os:windows": [],
-            "//conditions:default": [":%s_symbols" % program for program in unix_programs],
-        }),
+        srcs = [":%s_symbols" % program for program in programs],
         output_group = "gsym",
         tags = ["manual"],
     )

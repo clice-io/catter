@@ -20,7 +20,9 @@ module;
 
 module catter;
 
+#ifndef CATTER_WINDOWS
 import :capture.inject.hook;
+#endif
 import :proxy.ipc;
 import :proxy.option;
 import :session.process;
@@ -98,6 +100,7 @@ std::string working_directory() {
     return cwd;
 }
 
+#ifndef CATTER_WINDOWS
 /// The command the hook started the proxy for, which runs with the hook, or
 /// what the hook found wrong.
 Proxied hooked(const catter::proxy::ProxyOption& opt) {
@@ -124,6 +127,7 @@ Proxied hooked(const catter::proxy::ProxyOption& opt) {
             },
     };
 }
+#endif
 
 /// The value of variable `name` in `env`, entries of which are `name=value`.
 std::optional<std::string_view> variable(std::span<const std::string> env, std::string_view name) {
@@ -159,12 +163,12 @@ bool is_shim(std::string_view path, std::string_view shims) {
     return has_separator(path) && kota::fs::path::is_within(path, shims);
 }
 
-/// The entries of the list of paths `path_list` but the directory of shims
-/// `shims`, as catter wrote it there.
+/// The entries of the list of paths `path_list` but the directories of shims
+/// under `shims`.
 std::vector<std::string> past_shims(std::string_view path_list, std::string_view shims) {
     std::vector<std::string> directories;
     for(auto directory: kota::sys::split_paths(path_list)) {
-        if(directory != shims) {
+        if(!kota::fs::path::is_within(directory, shims)) {
             directories.emplace_back(directory);
         }
     }
@@ -396,18 +400,27 @@ void init_logger(std::string_view pipe) {
         return;
     }
     try {
-        log::init_logger("catter-proxy.log",
-                         config::session_data_path(pipe, config::PROXY_LOG_PATH),
-                         false);
+#ifdef CATTER_WINDOWS
+        // The session's pipe is a named pipe, in no directory.
+        auto path = data_path(config::PROXY_LOG_PATH);
+#else
+        auto path = config::session_data_path(pipe, config::PROXY_LOG_PATH);
+#endif
+        log::init_logger("catter-proxy.log", path, false);
     } catch(const std::exception&) {
         log::mute_logger();
     }
 }
 
-/// The path this program was started by, a symlink to it among the wrapper
-/// backend's shims, which kota::sys::executable_path resolves.
+/// The path this program was started by: on Linux and macOS a symlink to it
+/// among the wrapper backend's shims, which kota::sys::executable_path
+/// resolves; on Windows a hard link, which it does not.
 std::string started_by() {
-#if defined(CATTER_LINUX)
+#if defined(CATTER_WINDOWS)
+    std::string path;
+    [[maybe_unused]] auto error = kota::sys::executable_path(path);
+    return path;
+#elif defined(CATTER_LINUX)
     return reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
 #elif defined(CATTER_MAC)
     std::uint32_t size = 0;
@@ -434,7 +447,13 @@ int run(std::span<const std::string> argv) {
     // Among the wrapper backend's shims, catter-proxy is the launcher, or a
     // shim by the name of the program it stands in for.
     const auto self = started_by();
-    auto name = kota::fs::path::filename(self);
+#ifdef CATTER_WINDOWS
+    // Windows names a program with its extension, which the role's name has
+    // not.
+    const auto name = kota::fs::path::stem(self);
+#else
+    const auto name = kota::fs::path::filename(self);
+#endif
     if(name == config::LAUNCHER_NAME) {
         std::vector<std::string> args(argv.begin() + 1, argv.end());
         std::string program = args.front();
@@ -445,6 +464,11 @@ int run(std::span<const std::string> argv) {
             argv,
             wrapped(self, self, std::vector<std::string>(argv.begin(), argv.end()), false));
     }
+
+#ifdef CATTER_WINDOWS
+    // The hook on Windows starts each program itself.
+    return -1;
+#else
 
     kota::deco::cli::Command<catter::proxy::Option> cli(
         "Catter Proxy, the tool for receive hook info and send it to catter.");
@@ -461,10 +485,17 @@ int run(std::span<const std::string> argv) {
         })
         .execute(args);
     return ret;
+#endif
 }
 
 }  // namespace
 
 extern "C++" int main(int argc, char* argv[]) {
+#ifdef CATTER_WINDOWS
+    // main's argv is in the ANSI code page, which holds few characters past
+    // ASCII.
+    return run(kota::sys::arguments());
+#else
     return run(std::vector<std::string>(argv, argv + argc));
+#endif
 }

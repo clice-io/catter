@@ -139,8 +139,10 @@ cc_binary(
     ],
     linkopts = LINKOPTS,
     module_interfaces = glob(["src/proxy/*.cppm"]),
-    target_compatible_with = UNIX,
-    deps = [":capture_inject"],
+    deps = select({
+        "@platforms//os:windows": [":session"],
+        "//conditions:default": [":capture_inject"],
+    }),
 )
 
 # Prints the schema the SDKs' protocol types are generated from
@@ -335,14 +337,12 @@ filegroup(
     name = "dist",
     srcs = [
         ":bin/catter",
+        ":bin/catter-proxy",
         ":bin/unittests",
         ":catter-protocol-schema",
     ] + PAYLOADS + select({
         "@platforms//os:windows": [":bin/unittests-hook-windows"],
-        "//conditions:default": [
-            ":bin/catter-proxy",
-            ":bin/unittests-hook-unix",
-        ],
+        "//conditions:default": [":bin/unittests-hook-unix"],
     }) + select({
         "//bazel:asan_macos": [":asan_runtime"],
         "//conditions:default": [],
@@ -357,6 +357,8 @@ release_packages(
         ],
         "//conditions:default": [":hook_unix_payload.stripped"],
     }),
-    programs = ["bin/catter"],
-    unix_programs = ["bin/catter-proxy"],
+    programs = [
+        "bin/catter",
+        "bin/catter-proxy",
+    ],
 )

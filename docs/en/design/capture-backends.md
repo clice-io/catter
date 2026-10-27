@@ -4,7 +4,7 @@ A capture backend is how catter gets a build's commands: it starts the build, an
 
 ## Choosing one
 
-`--capture <backend>` names the backend that captures the build: `hook`, the default, or `wrapper`, on Linux and macOS. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
+`--capture <backend>` names the backend that captures the build: `hook`, the default, or `wrapper`. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
 
 A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build.
 
@@ -31,10 +31,10 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 
 ### wrapper
 
-- **How it works**: catter puts shims of the compilers, linkers and archivers it knows by their names, each the first of its name on the build's `PATH`, in a directory of the session's own, first on the build's `PATH`. A variable such as `CC`, `CXX` or `AR` that names a program by its path names that program's shim instead, and CMake runs every compile and link through the wrapper backend's launcher (`CMAKE_<LANG>_COMPILER_LAUNCHER` and `CMAKE_<LANG>_LINKER_LAUNCHER`, unless the build sets them). A shim is `catter-proxy`: it reports its command, runs the program it stands in for as decided, the first of its name on `PATH` past the shims, and reports how it ended. The program it runs finds no shims on its `PATH`: a compiler a build cache runs, as ccache runs the one past its own directory, is the compiler, not the shim again.
-- **Platforms**: Linux, macOS.
+- **How it works**: before each directory on the build's `PATH`, catter puts one of the session's own, with a shim of each compiler, linker and archiver it knows by its name there: whichever names a build tool looks for, and in whichever order, it finds the program it would without catter, through its shim. A variable such as `CC`, `CXX` or `AR` that names a program by its path names that program's shim instead, and CMake runs every compile and link through the wrapper backend's launcher (`CMAKE_<LANG>_COMPILER_LAUNCHER` and `CMAKE_<LANG>_LINKER_LAUNCHER`); on Windows MSBuild runs `cl.exe`, `link.exe` and `lib.exe` from the shims (`CLToolPath`, `LinkToolPath` and `LibToolPath`), each unless the build sets it. A shim is `catter-proxy`: it reports its command, runs the program it stands in for as decided, and reports how it ended. The program it runs finds no shims on its `PATH`: a compiler a build cache runs, as ccache runs the one past its own directory, is the compiler, not the shim again.
+- **Platforms**: Linux, macOS, Windows.
 - **What it sees**: the programs it has shims of, whatever in the build runs them, Apple's `/usr/bin/make` and `/bin/sh` included. A command's parent is the nearest program with a shim that started it, or the build command; what a compiler starts is not seen.
-- **Limitations**: a build that runs a compiler by the path it found before catter ran, as the `build.ninja` CMake wrote does, escapes the shims: configure it and build it in one session, `catter compile-commands --capture wrapper -- sh -c "cmake -B build && cmake --build build"`. The shims go with the session, so a build configured under the wrapper backend runs only in that session: configure one for catter of its own. A program the build puts first on `PATH` itself, as a toolchain's directory, is found before the shims.
+- **Limitations**: a build that runs a compiler by the path it found before catter ran, as the `build.ninja` CMake wrote does, escapes the shims: configure it and build it in one session, `catter compile-commands --capture wrapper -- sh -c "cmake -B build && cmake --build build"`. The shims go with the session, so a build configured under the wrapper backend runs only in that session: configure one for catter of its own. A program the build puts first on `PATH` itself, as a toolchain's directory, is found before the shims, and one found through a relative entry of `PATH`, which names another directory wherever the build goes, has no shim. On Windows only `.exe` programs have shims, and a project that sets `CLToolPath`, `LinkToolPath` or `LibToolPath` itself, as a toolset other than MSVC's may, runs those tools past them.
 
 ## Capability matrix
 
@@ -42,7 +42,7 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 | ------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
 | hook    | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
 | replay  | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
-| wrapper | Linux / macOS           | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
+| wrapper | Linux / macOS / Windows | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
 
 ## Writing handlers for any backend
 
