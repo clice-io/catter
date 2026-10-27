@@ -9,7 +9,6 @@
 #include "support/messages.h"
 
 namespace ct = catter::hook;
-namespace cfg = catter::config;
 
 namespace {
 
@@ -27,25 +26,25 @@ ZEST_CASE(removes_injected_keys_and_filters_hook_preload) {
     std::string keep_lib_1 = "/tmp/libkeep-1.so";
     std::string keep_lib_2 = "/tmp/libkeep-2.so";
     std::string hook_lib = "/tmp/";
-    hook_lib += cfg::RELATIVE_PATH_OF_HOOK_LIB;
+    hook_lib += catter::hook::LIBRARY;
 
-    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=42";
-    std::string proxy_path = std::string(cfg::KEY_CATTER_PROXY_PATH) + "=/tmp/catter-proxy";
+    std::string command_id = std::string(catter::env::COMMAND_ID) + "=42";
+    std::string proxy_path = std::string(catter::env::PROXY) + "=/tmp/catter-proxy";
     std::string preload =
-        std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + hook_lib + ":" + keep_lib_2;
+        std::string(catter::hook::PRELOAD) + "=" + keep_lib_1 + ":" + hook_lib + ":" + keep_lib_2;
     std::string lang = "LANG=en_US.UTF-8";
 
     char* raw_env[] = {command_id.data(), proxy_path.data(), preload.data(), lang.data(), nullptr};
     auto sanitized = ct::sanitize_environment(raw_env);
     auto clean_envp = sanitized.data();
 
-    ZEXPECT(find_entry(clean_envp, cfg::KEY_CATTER_COMMAND_ID) == nullptr);
-    ZEXPECT(find_entry(clean_envp, cfg::KEY_CATTER_PROXY_PATH) == nullptr);
+    ZEXPECT(find_entry(clean_envp, catter::env::COMMAND_ID) == nullptr);
+    ZEXPECT(find_entry(clean_envp, catter::env::PROXY) == nullptr);
 
-    auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
+    auto cleaned_preload = find_entry(clean_envp, catter::hook::PRELOAD);
     ZEXPECT(cleaned_preload != nullptr);
     std::string expected_preload =
-        std::string(cfg::KEY_PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
+        std::string(catter::hook::PRELOAD) + "=" + keep_lib_1 + ":" + keep_lib_2;
     ZEXPECT(std::string_view(cleaned_preload) == expected_preload);
 
     ZEXPECT(find_entry(clean_envp, "LANG") != nullptr);
@@ -53,14 +52,14 @@ ZEST_CASE(removes_injected_keys_and_filters_hook_preload) {
 
 ZEST_CASE(preload_becomes_empty_when_only_hook_entry_exists) {
     std::string hook_lib = "/tmp/";
-    hook_lib += cfg::RELATIVE_PATH_OF_HOOK_LIB;
-    std::string preload = std::string(cfg::KEY_PRELOAD) + "=" + hook_lib;
+    hook_lib += catter::hook::LIBRARY;
+    std::string preload = std::string(catter::hook::PRELOAD) + "=" + hook_lib;
 
     char* raw_env[] = {preload.data(), nullptr};
     auto sanitized = ct::sanitize_environment(raw_env);
     auto clean_envp = sanitized.data();
 
-    auto cleaned_preload = find_entry(clean_envp, cfg::KEY_PRELOAD);
+    auto cleaned_preload = find_entry(clean_envp, catter::hook::PRELOAD);
     ZEXPECT(cleaned_preload == nullptr);
 };
 };  // ZEST_SUITE(env_sanitizer)

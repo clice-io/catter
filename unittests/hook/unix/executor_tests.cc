@@ -17,7 +17,6 @@
 #include "utils/temp_file_manager.h"
 
 namespace ct = catter::hook;
-namespace cfg = catter::config;
 
 namespace {
 
@@ -168,10 +167,10 @@ ZEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
     auto executable = create_executable("execve-tool");
     MutableCStrings argv = {"execve-tool", "-c", "main.cc"};
 
-    std::string command_id = std::string(cfg::KEY_CATTER_COMMAND_ID) + "=99";
-    std::string proxy_path = std::string(cfg::KEY_CATTER_PROXY_PATH) + "=/tmp/ignored-proxy";
+    std::string command_id = std::string(catter::env::COMMAND_ID) + "=99";
+    std::string proxy_path = std::string(catter::env::PROXY) + "=/tmp/ignored-proxy";
     std::string preload =
-        std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so:/tmp/" + cfg::HOOK_LIB_NAME;
+        std::string(catter::hook::PRELOAD) + "=/tmp/libkeep.so:/tmp/" + catter::hook::LIBRARY;
     std::string lang = "LANG=C";
     MutableCStrings envp = {command_id, proxy_path, preload, lang};
 
@@ -185,12 +184,12 @@ ZEST_CASE(execve_builds_proxy_command_with_sanitized_environment) {
     expect_proxy_command(exec_call, valid_session, executable, "execve-tool");
     ZEXPECT(exec_call.argv.at(9) == "-c");
     ZEXPECT(exec_call.argv.at(10) == "main.cc");
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_PROXY_PATH));
+    ZEXPECT(!has_env_entry(exec_call.envp, catter::env::COMMAND_ID));
+    ZEXPECT(!has_env_entry(exec_call.envp, catter::env::PROXY));
     ZEXPECT(has_env_entry(exec_call.envp, "LANG"));
-    ZEXPECT(has_env_entry(exec_call.envp, cfg::KEY_PRELOAD));
-    ZEXPECT((exec_call.envp.at(0) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so" ||
-             exec_call.envp.at(1) == std::string(cfg::KEY_PRELOAD) + "=/tmp/libkeep.so"));
+    ZEXPECT(has_env_entry(exec_call.envp, catter::hook::PRELOAD));
+    ZEXPECT((exec_call.envp.at(0) == std::string(catter::hook::PRELOAD) + "=/tmp/libkeep.so" ||
+             exec_call.envp.at(1) == std::string(catter::hook::PRELOAD) + "=/tmp/libkeep.so"));
 }
 
 ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
@@ -199,7 +198,7 @@ ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
     auto executable = create_executable("path-tool");
     auto search_path = std::string(kota::fs::path::parent(executable));
     ScopedEnv path_env("PATH", search_path);
-    ScopedEnv command_id(std::string(cfg::KEY_CATTER_COMMAND_ID), "11");
+    ScopedEnv command_id(std::string(catter::env::COMMAND_ID), "11");
 
     MutableCStrings argv = {"path-tool"};
 
@@ -212,7 +211,7 @@ ZEST_CASE(execvp_resolves_with_process_environment_before_sanitizing) {
     ZEXPECT(exec_call.calls == 1);
     expect_proxy_command(exec_call, valid_session, executable, "path-tool");
     ZEXPECT(has_env_entry(exec_call.envp, "PATH"));
-    ZEXPECT(!has_env_entry(exec_call.envp, cfg::KEY_CATTER_COMMAND_ID));
+    ZEXPECT(!has_env_entry(exec_call.envp, catter::env::COMMAND_ID));
 }
 
 ZEST_CASE(execvP_looks_in_the_search_path_it_is_given) {
