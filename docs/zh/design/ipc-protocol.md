@@ -1,6 +1,6 @@
-# IPC 协议（hook 后端实现）
+# IPC 协议（hook 与 wrapper 后端）
 
-> 本文描述 catter 守护进程与向它报告构建命令的一方之间的通信协议：Linux 和 macOS 上是 `catter-proxy`，Windows 上是钩子本身。协议不指明后端：凡是运行构建的后端，都通过它上报构建的命令，目前是 hook 后端；handler 作者通常不需要阅读本文。
+> 本文描述 catter 守护进程与向它报告构建命令的一方之间的通信协议：Linux 和 macOS 上是 `catter-proxy`，钩子通过它运行每条命令，wrapper 后端的 shim（包装程序）也就是它；Windows 上是钩子本身。协议不指明后端：凡是运行构建的后端，都通过它上报构建的命令；handler 作者通常不需要阅读本文。
 
 Catter 使用进程间通信在守护进程（`catter`）和它的客户端之间传递信息：Linux 和 macOS 上是每个 `catter-proxy` 实例，每个实例代替一条命令；Windows 上是钩子，它在启动一条命令的那次 `CreateProcess` 调用内部通信。守护进程作为服务端，每个客户端为每条命令连接一次。
 
@@ -58,7 +58,7 @@ enum class RequestType : uint8_t {
 | **Params** | `ipcid_t`（`int32_t`） | 父进程会话 ID               |
 | **Result** | `ipcid_t`（`int32_t`） | 分配给这条命令的唯一会话 ID |
 
-父 ID 在会话树中建立父子关系。构建命令的代理由守护进程启动，发送 0：没有命令启动它。钩子拦截到的命令的代理发送启动它的那个进程所运行的命令的 ID，钩子从 `__key_catter_command_id_v1` 环境变量读出这个 ID，放在代理的命令行上传给它。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
+父 ID 在会话树中建立父子关系。构建命令的代理由守护进程启动，发送 0：没有命令启动它。钩子拦截到的命令的代理发送启动它的那个进程所运行的命令的 ID，钩子从 `__key_catter_command_id_v1` 环境变量读出这个 ID，放在代理的命令行上传给它。wrapper 后端的 shim 发送 `__key_catter_command_id_v1` 中的 ID：运行这个 shim 的程序由某个 shim 或启动器（launcher）启动，后者把这个变量设为它自己那条命令的 ID；构建命令的启动器找不到这个变量，发送 0。在 Windows 上，钩子发送其所在进程运行的命令的 ID，这个 ID 由守护进程交给它。
 
 ### MAKE_DECISION
 
@@ -156,7 +156,7 @@ Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
 
-守护进程启动构建命令的代理，它为构建命令发送同样的消息，父 ID 为 0，因此构建命令也会像其他命令一样送达各个 handler；它挂载钩子运行构建。
+守护进程启动构建命令的代理，它为构建命令发送同样的消息，父 ID 为 0，因此构建命令也会像其他命令一样送达各个 handler；它挂载钩子运行构建。在 wrapper 后端下，守护进程通过启动器启动构建命令：启动器是放在 shim 之中、换了个名字的 `catter-proxy`，它以同样的方式上报构建命令，并在 `PATH` 最前面放上 shim 来运行它；之后每个 shim 为它所代替的程序发送这些消息。
 
 ### Windows 钩子（被拦截的命令）
 

@@ -11,9 +11,7 @@ handler 作者只需要理解两件事：
 
 不同平台对"拦截进程创建"的可行性差异很大：在构建的每个进程中加载 hook 最为通用，但有些程序会把它挡在外面（在 macOS 上是 Apple 自带的工具）。因此 catter 把构建命令如何被捕获（即后端）与如何处理这些命令（即会话）分开。每个后端启动构建，并把构建的命令上报给会话；会话让各个 handler 对每条命令做决定，并告诉它们每条命令如何结束。无论由哪个后端上报，handler 看到的都是同样的事件。
 
-catter 用 `hook` 后端捕获构建（由 `--capture` 指定）；指定 `--from` 时，它不运行构建，而是回放一次录制的构建。handler 从会话的 `initialize` 消息得知是哪一种：其中的 `mode` 为 `hook`，或者为 `replay`，表示录制的构建。
-
-目前 `hook` 是唯一能捕获构建的后端；`wrapper` 在计划中，它用编译器 shim 覆盖 hook 触及不到的地方。各后端能看到什么、支持什么，见[捕获后端](capture-backends.md)。
+catter 用 `hook` 后端捕获构建，或者用 `--capture` 指定的后端：`wrapper`，它在 Linux 和 macOS 上用编译器 shim 覆盖 hook 触及不到的地方。指定 `--from` 时，它不运行构建，而是回放一次录制的构建。handler 从会话的 `initialize` 消息得知是哪一种：其中的 `mode` 为后端的名字，或者为 `replay`，表示录制的构建。各后端能看到什么、支持什么，见[捕获后端](capture-backends.md)。
 
 ## Handler
 

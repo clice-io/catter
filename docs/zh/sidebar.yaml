@@ -28,7 +28,7 @@ design:
     - file: hook-mechanism
       label: hook 后端：钩子机制
     - file: ipc-protocol
-      label: hook 后端：IPC 协议
+      label: IPC 协议
     - handler-protocol
 
 dev:
