@@ -62,17 +62,17 @@ sequenceDiagram
 "How to handle a command" is expressed at two layers in catter:
 
 1. **Handler layer** (what handlers decide): `skip` / `drop` / `abort` / `modify` / `edit` -- semantic and independent of the mechanism.
-2. **Protocol layer** (what catter-proxy, or on Windows the hook, carries out): `DROP` / `INJECT` / `FAIL` -- the concrete execution mechanics.
+2. **Protocol layer** (what catter-proxy, or on Windows the hook, carries out): `DROP` / `RUN` / `FAIL` -- the concrete execution mechanics.
 
-The runtime driver maps handler-layer actions to protocol-layer actions. The current `inject` runtime mapping:
+The session maps handler-layer actions to protocol-layer actions, whichever runtime reports the commands:
 
-| Handler action | Semantics                                 | Protocol mapping                                                     |
-| -------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| `skip`         | Execute as-is, catter does not intervene  | `INJECT` (run with hooks mounted; descendants can still be captured) |
-| `drop`         | Do not execute; return exit code 0        | `DROP`                                                               |
-| `abort`        | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)       |
-| `modify`       | Execute the command with replacement data | `INJECT` (carrying the modified command)                             |
-| `edit`         | Execute the command with edited arguments | `INJECT` (carrying the edited command)                               |
+| Handler action | Semantics                                 | Protocol mapping                                                  |
+| -------------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| `skip`         | Execute as-is, catter does not intervene  | `RUN` (run with hooks mounted; descendants can still be captured) |
+| `drop`         | Do not execute; return exit code 0        | `DROP`                                                            |
+| `abort`        | Abort the whole build and report an error | `FAIL` (this command and every later one fail without running)    |
+| `modify`       | Execute the command with replacement data | `RUN` (carrying the modified command)                             |
+| `edit`         | Execute the command with edited arguments | `RUN` (carrying the edited command)                               |
 
 Keep in mind:
 

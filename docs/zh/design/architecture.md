@@ -62,17 +62,17 @@ sequenceDiagram
 "如何处理一条命令"在 catter 中分两层表达：
 
 1. **handler 层**（handler 决定的）：`skip` / `drop` / `abort` / `modify` / `edit`，语义化、与机制无关。
-2. **协议层**（catter-proxy 执行的，Windows 上则是 hook）：`DROP` / `INJECT` / `FAIL`，是具体的执行机制。
+2. **协议层**（catter-proxy 执行的，Windows 上则是 hook）：`DROP` / `RUN` / `FAIL`，是具体的执行机制。
 
-runtime 驱动负责把 handler 层动作映射到协议层动作。当前 `inject` runtime 的映射如下：
+会话负责把 handler 层动作映射到协议层动作，不论命令由哪个 runtime 上报：
 
 | handler 动作 | 语义                         | 协议层映射                                           |
 | ------------ | ---------------------------- | ---------------------------------------------------- |
-| `skip`       | 原样执行，catter 不干预      | `INJECT`（挂载 hook 执行，子孙命令仍可捕获）         |
+| `skip`       | 原样执行，catter 不干预      | `RUN`（挂载 hook 执行，子孙命令仍可捕获）            |
 | `drop`       | 不执行，直接返回退出码 0     | `DROP`                                               |
 | `abort`      | 中止整个构建并报错           | `FAIL`（这条命令及之后的每条命令都不运行，直接失败） |
-| `modify`     | 用修改后的命令替换原命令执行 | `INJECT`（携带修改后的命令）                         |
-| `edit`       | 用编辑后的参数执行命令       | `INJECT`（携带编辑后的命令）                         |
+| `modify`     | 用修改后的命令替换原命令执行 | `RUN`（携带修改后的命令）                            |
+| `edit`       | 用编辑后的参数执行命令       | `RUN`（携带编辑后的命令）                            |
 
 需要注意的几点：
 

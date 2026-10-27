@@ -97,7 +97,7 @@ This step is critical. If the hook library remained in `LD_PRELOAD` when `catter
 3. The hook would rewrite it to launch another `catter-proxy`
 4. This creates **infinite recursion**
 
-By stripping the hook from `LD_PRELOAD`, the proxy executes without interception. The proxy re-adds `LD_PRELOAD` only when it launches a command with the `INJECT` action, ensuring the hook is attached to the right processes.
+By stripping the hook from `LD_PRELOAD`, the proxy executes without interception. The proxy re-adds `LD_PRELOAD` only when it launches a command with the `RUN` action, ensuring the hook is attached to the right processes.
 
 ### Recursive Hooking
 
