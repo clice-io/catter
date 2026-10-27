@@ -3,7 +3,6 @@
 #include <format>
 #include <optional>
 #include <ranges>
-#include <span>
 #include <string>
 #include <system_error>
 #include <kota/support/utf16.h>
@@ -19,6 +18,7 @@
 #include "hook/windows/util.h"
 #include "support/config/hook_windows.h"
 #include "support/messages.h"
+#include "support/program.h"
 
 // Use anonymous namespace to avoid exporting symbols
 namespace {
@@ -145,15 +145,8 @@ private:
         std::wstring edited_environment;
         std::wstring edited_current_directory;
         if(command.executable != sent.executable || command.args != sent.args) {
-            // A program named without a path is looked for as CreateProcess
-            // would look for it on the caller's command line.
-            std::string program;
-            kota::sys::windows::join_command_line(program, std::span(&command.executable, 1));
-            std::wstring wide;
-            kota::to_utf16(wide, program);
-            kota::to_utf16(
-                edited_application_name,
-                catter::hook::resolve_program(nullptr, wide.c_str()).value_or(command.executable));
+            kota::to_utf16(edited_application_name,
+                           catter::resolve_program(command.executable, command.cwd));
             application_name = edited_application_name.c_str();
         }
         if(command.args != sent.args) {

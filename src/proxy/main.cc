@@ -9,6 +9,7 @@ module;
 #include "support/messages.h"
 #include "support/output.h"
 #include "support/paths.h"
+#include "support/program.h"
 
 module catter;
 

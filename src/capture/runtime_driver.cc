@@ -5,6 +5,7 @@ module;
 #include "support/config/ipc.h"
 #include "support/messages.h"
 #include "support/paths.h"
+#include "support/program.h"
 
 #ifdef CATTER_WINDOWS
 #include "support/log.h"
