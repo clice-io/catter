@@ -31,7 +31,7 @@ std::span<const Backend* const> capture_backends() noexcept;
 const Backend& hook_backend() noexcept;
 
 /// Runs the build with shims, catter-proxy under the names of the compilers, linkers and
-/// archivers it runs, first on its PATH.
+/// archivers it runs, each before the directory of its program on its PATH.
 const Backend& wrapper_backend() noexcept;
 
 /// Plays a recorded build (see replay.cc) instead of running one: the build

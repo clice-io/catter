@@ -138,7 +138,7 @@ public:
                 names.try_emplace(entry->name, std::move(program), std::move(shim));
             }
         }
-        on_path.emplace(directory, shims.value_or(""));
+        on_path.emplace(directory, shims);
         return shims;
     }
 
@@ -254,8 +254,8 @@ private:
     /// The program PATH finds first under each name catter knows, and its shim.
     std::map<std::string, std::pair<std::string, std::string>, std::less<>> names;
 
-    /// The directory of the shims of each entry of PATH, empty for one without any.
-    std::map<std::string, std::string, std::less<>> on_path;
+    /// The directory of the shims of each entry of PATH, none for one without any.
+    std::map<std::string, std::optional<std::string>, std::less<>> on_path;
 
     /// The directory that stands for each directory of a program a variable names by its path.
     std::map<std::string, std::string, std::less<>> mirrors;

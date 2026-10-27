@@ -24,15 +24,15 @@ catter <command> [options] -- <build-command>
 
 `compile-commands`、`tree`、`targets` 和 `run` 除了各自的选项，还接受以下选项：
 
-| 选项                          | 说明                                                                                                            | 默认值   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------- | -------- |
-| `-C, --directory <path>`      | 命令运行所在的目录。                                                                                            | 当前目录 |
-| `--capture <backend>`         | 构建的命令如何被捕获：`hook`，或者 Linux 和 macOS 上的 `wrapper`。见[捕获后端](../design/capture-backends.md)。 | `hook`   |
-| `--from <file>`               | 回放该文件中录制的构建，而不运行构建。                                                                          |          |
-| `--handler <command>`         | 启动一个 handler，它经自己的 stdin 和 stdout 对构建的命令做决定或观察它们；可多次指定。                         |          |
-| `--connect <host:port>`       | 连接在该地址监听的 handler，未指定 `--allow-remote` 时只限本机；可多次指定。                                    |          |
-| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                                                     |          |
-| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。                                  | `60`     |
+| 选项                          | 说明                                                                                     | 默认值   |
+| ----------------------------- | ---------------------------------------------------------------------------------------- | -------- |
+| `-C, --directory <path>`      | 命令运行所在的目录。                                                                     | 当前目录 |
+| `--capture <backend>`         | 构建的命令如何被捕获：`hook` 或 `wrapper`。见[捕获后端](../design/capture-backends.md)。 | `hook`   |
+| `--from <file>`               | 回放该文件中录制的构建，而不运行构建。                                                   |          |
+| `--handler <command>`         | 启动一个 handler，它经自己的 stdin 和 stdout 对构建的命令做决定或观察它们；可多次指定。  |          |
+| `--connect <host:port>`       | 连接在该地址监听的 handler，未指定 `--allow-remote` 时只限本机；可多次指定。             |          |
+| `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                              |          |
+| `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。           | `60`     |
 
 `--from` 代替 `--` 之后的构建命令：一次运行只能给出两者之一。相对路径从 `-C` 指定的目录算起。录制的构建不经过捕获：`--from` 不接受 `--capture`。
 
@@ -51,7 +51,7 @@ catter 把日志和每个运行中会话的套接字放在 `$HOME/.catter`（Lin
 ## catter-proxy 命令行
 
 ::: warning
-`catter-proxy` 是 catter 在 Linux 和 macOS 上的内部组件，由 catter 自动调用，不需要用户直接使用。
+`catter-proxy` 是 catter 的内部组件，由 catter 自动调用，不需要用户直接使用。
 :::
 
 ```
