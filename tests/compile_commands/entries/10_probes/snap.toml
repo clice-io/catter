@@ -16,18 +16,12 @@ entries = [
 stdout = '''
 conftest.c
 main.c
-CDB saved to ${WS}/compile_commands.json with 2 entries.
+CDB saved to ${WS}/compile_commands.json with 1 entries.
 '''
 exit = 0
 
 [msvc."compile_commands.json"]
 entries = [
-    {
-        file = "conftest.c",
-        directory = "${WS}",
-        output = "${WS}/conftest.o",
-        arguments = ["cl", "/nologo", "/c", "conftest.c", "/Foconftest.o"],
-    },
     {
         file = "main.c",
         directory = "${WS}",
