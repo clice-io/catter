@@ -1,4 +1,4 @@
-[test."$ catter explain -- gcc -c -DX a.c b.c"]
+[test."$ catter explain -- gcc --target=x86_64-linux-gnu -c -DX a.c b.c"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -7,10 +7,12 @@ stdout = '''
     "phase": "compile",
     "artifact": "object",
     "target": {
+        "triple": "x86_64-linux-gnu",
         "os": "linux",
         "objectFormat": "elf",
+        "env": "gnu",
         "artifactModel": "elf",
-        "from": "host-fallback"
+        "from": "argument"
     },
     "sources": [
         "a.c",
@@ -54,6 +56,7 @@ stdout = '''
             "file": "a.c",
             "arguments": [
                 "gcc",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "-DX",
                 "a.c"
@@ -65,6 +68,7 @@ stdout = '''
             "file": "b.c",
             "arguments": [
                 "gcc",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "-DX",
                 "b.c"
@@ -76,7 +80,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter explain -- clang -c -x c a.txt -x c++ b.txt"]
+[test."$ catter explain -- clang --target=x86_64-linux-gnu -c -x c a.txt -x c++ b.txt"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -85,10 +89,12 @@ stdout = '''
     "phase": "compile",
     "artifact": "object",
     "target": {
+        "triple": "x86_64-linux-gnu",
         "os": "linux",
         "objectFormat": "elf",
+        "env": "gnu",
         "artifactModel": "elf",
-        "from": "host-fallback"
+        "from": "argument"
     },
     "sources": [
         "a.txt",
@@ -132,6 +138,7 @@ stdout = '''
             "file": "a.txt",
             "arguments": [
                 "clang",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "-x",
                 "c",
@@ -146,6 +153,7 @@ stdout = '''
             "file": "b.txt",
             "arguments": [
                 "clang",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "-x",
                 "c",
@@ -160,7 +168,7 @@ stdout = '''
 '''
 exit = 0
 
-[test."$ catter explain -- gcc -c @sources.rsp"]
+[test."$ catter explain -- gcc --target=x86_64-linux-gnu -c @sources.rsp"]
 stdout = '''
 {
     "analyzer": "compiler",
@@ -169,16 +177,19 @@ stdout = '''
     "phase": "compile",
     "artifact": "object",
     "target": {
+        "triple": "x86_64-linux-gnu",
         "os": "linux",
         "objectFormat": "elf",
+        "env": "gnu",
         "artifactModel": "elf",
-        "from": "host-fallback"
+        "from": "argument"
     },
     "responseFiles": [
         "sources.rsp"
     ],
     "arguments": [
         "gcc",
+        "--target=x86_64-linux-gnu",
         "-c",
         "a.c",
         "b.c"
@@ -225,6 +236,7 @@ stdout = '''
             "file": "a.c",
             "arguments": [
                 "gcc",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "a.c"
             ],
@@ -235,6 +247,7 @@ stdout = '''
             "file": "b.c",
             "arguments": [
                 "gcc",
+                "--target=x86_64-linux-gnu",
                 "-c",
                 "b.c"
             ],

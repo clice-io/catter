@@ -48,7 +48,6 @@ entries = [
             "/TP",
             "/errorReport:queue",
             "${WS}/src/main.cc",
-            "${WS}/src/util.cc",
         ],
     },
     {
@@ -84,7 +83,6 @@ entries = [
             "/external:W1",
             "/TP",
             "/errorReport:queue",
-            "${WS}/src/main.cc",
             "${WS}/src/util.cc",
         ],
     },
@@ -140,7 +138,6 @@ entries = [
             "/TP",
             "/errorReport:queue",
             "${WS}/src/main.cc",
-            "${WS}/src/util.cc",
         ],
     },
     {
@@ -176,7 +173,6 @@ entries = [
             "/external:W1",
             "/TP",
             "/errorReport:queue",
-            "${WS}/src/main.cc",
             "${WS}/src/util.cc",
         ],
     },
