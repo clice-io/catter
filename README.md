@@ -47,7 +47,7 @@ and make sure the `catter` executable is available on your `PATH`.
 | **Nightly**    | odd minor, e.g. `v0.1.2026102902` | [GitHub pre-releases](https://github.com/clice-io/catter/releases)                                                                             |
 | **Per-commit** | untagged                          | artifacts on the [latest green `main` CI runs](https://github.com/clice-io/catter/actions/workflows/main.yml?query=branch%3Amain+is%3Asuccess) |
 
-Nightly patch numbers encode the UTC time they were tagged as `YYYYMMDDHH` (year, month, day, hour — e.g. `2026102902` is 2026-10-29 02:00 UTC), so newer is always higher; a nightly is published only when `main` gained tested builds, and nightlies older than 30 days or beyond the newest 25 are deleted, but for the newest one. Every published binary is the exact one that passed the full test suites — releases promote CI builds rather than rebuilding.
+Nightly patch numbers encode the UTC time they were tagged as `YYYYMMDDHH` (year, month, day, hour — e.g. `2026102902` is 2026-10-29 02:00 UTC), so newer is always higher; a nightly is published each day `main` gained tested builds, and nightlies older than 30 days or beyond the newest 25 are deleted, but for the newest one. Every published binary is the exact one that passed the full test suites — releases promote CI builds rather than rebuilding.
 
 Generate a compilation database by running your normal build command through
 `catter`:
