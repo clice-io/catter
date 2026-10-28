@@ -470,7 +470,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     }
     const int pid = child->pid();
     processes.start(pid);
-    std::optional<StandIn> stand_in(std::in_place, pid);
+    std::optional<StandIn> stand_in(std::in_place, pid, false);
     const auto line = std::ranges::to<std::string>(build.command | std::views::join_with(' '));
     LOG_INFO("Starting the build command `{}` in {}, traced", line, build.cwd);
 

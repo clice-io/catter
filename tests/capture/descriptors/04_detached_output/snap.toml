@@ -1,0 +1,15 @@
+[hook."$ node build.mjs"]
+stdout = '''
+the daemon said: running
+the daemon stopped: 0
+'''
+exit = 0
+
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+the daemon said: running
+the daemon stopped: 0
+node build.mjs
+└── python daemon.py
+'''
+exit = 0

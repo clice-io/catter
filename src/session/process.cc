@@ -56,6 +56,30 @@ void pass_on(int signum, siginfo_t* info, void*) {
 /// reach a program it starts as that stream.
 std::array<bool, 3> held = {};
 
+/// The descriptors past the standard streams this process was started with,
+/// which the program it stands in for gets.
+std::vector<int> inherited;
+
+/// Lets go of the descriptors the program this process stands in for has
+/// from it: those it was started with past the standard streams, and with
+/// `streams` the standard streams, onto the null device.
+void release_descriptors(bool streams) {
+    for(int fd: inherited) {
+        ::close(fd);
+    }
+    inherited.clear();
+    if(!streams) {
+        return;
+    }
+    const int null = ::open("/dev/null", O_RDWR | O_CLOEXEC);
+    for(int fd = 0; fd < 3; fd += 1) {
+        if(!held[fd]) {
+            ::dup2(null, fd);
+        }
+    }
+    ::close(null);
+}
+
 #endif
 
 /// How a program ended, as a shell reports it: a signal that ended it as 128
@@ -68,7 +92,7 @@ std::int64_t code_of(const kota::process::exit_status& status) {
 
 #ifdef CATTER_WINDOWS
 
-StandIn::StandIn([[maybe_unused]] int pid) {
+StandIn::StandIn([[maybe_unused]] int pid, [[maybe_unused]] bool release_streams) {
     SetConsoleCtrlHandler(outlive_interrupt, TRUE);
 }
 
@@ -78,7 +102,7 @@ StandIn::~StandIn() {
 
 #else
 
-StandIn::StandIn(int pid) {
+StandIn::StandIn(int pid, bool release_streams) {
     stood_in = pid;
     for(std::size_t i = 0; i < SIGNALS.size(); i += 1) {
         ::sigaction(SIGNALS[i], nullptr, &previous[i]);
@@ -91,6 +115,7 @@ StandIn::StandIn(int pid) {
         action.sa_flags = SA_SIGINFO | SA_RESTART;
         ::sigaction(SIGNALS[i], &action, nullptr);
     }
+    release_descriptors(release_streams);
 }
 
 StandIn::~StandIn() {
@@ -101,12 +126,34 @@ StandIn::~StandIn() {
 
 #endif
 
-void hold_closed_streams() {
+void prepare_descriptors() {
 #ifndef CATTER_WINDOWS
     for(int fd = 0; fd < 3; fd += 1) {
         if(::fcntl(fd, F_GETFD) < 0) {
             // The lowest number free is `fd`: the streams below it are open.
             held[fd] = ::open("/dev/null", O_RDWR | O_CLOEXEC) == fd;
+        }
+    }
+#ifdef CATTER_LINUX
+    constexpr std::string_view descriptors = "/proc/self/fd";
+#else
+    constexpr std::string_view descriptors = "/dev/fd";
+#endif
+    auto directory = kota::fs::Directory::open(descriptors);
+    if(!directory) {
+        return;
+    }
+    for(const auto& entry: *directory) {
+        if(!entry.has_value()) {
+            break;
+        }
+        int fd = -1;
+        const auto& name = entry->name;
+        // The directory's own descriptor closes on exec: what exec left open
+        // does not.
+        if(std::from_chars(name.data(), name.data() + name.size(), fd).ec == std::errc() &&
+           fd > 2 && ::fcntl(fd, F_GETFD) == 0) {
+            inherited.push_back(fd);
         }
     }
 #endif
@@ -220,7 +267,7 @@ kota::task<kota::process::exit_status> run_process(kota::process::options opts, 
     }
     std::optional<StandIn> stand_in;
     if(run.stand_in) {
-        stand_in.emplace(spawned->proc.pid());
+        stand_in.emplace(spawned->proc.pid(), run.release_streams);
     }
     if(run.started) {
         run.started(spawned->proc.pid());

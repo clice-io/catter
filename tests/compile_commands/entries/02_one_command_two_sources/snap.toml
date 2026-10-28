@@ -8,13 +8,13 @@ entries = [
         file = "src/main.cc",
         directory = "${WS}",
         output = "${WS}/hello",
-        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/main.cc", "src/util.cc", "-o", "hello"],
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/main.cc", "-o", "hello"],
     },
     {
         file = "src/util.cc",
         directory = "${WS}",
         output = "${WS}/hello",
-        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/main.cc", "src/util.cc", "-o", "hello"],
+        arguments = ["c++", "-DCATTER_TEST=1", "-Iinclude", "src/util.cc", "-o", "hello"],
     },
 ]
 
@@ -33,30 +33,12 @@ entries = [
         file = "src/main.cc",
         directory = "${WS}",
         output = "${WS}/hello.exe",
-        arguments = [
-            "cl",
-            "/nologo",
-            "/EHsc",
-            "/DCATTER_TEST=1",
-            "/Iinclude",
-            "src/main.cc",
-            "src/util.cc",
-            "/Fehello.exe",
-        ],
+        arguments = ["cl", "/nologo", "/EHsc", "/DCATTER_TEST=1", "/Iinclude", "src/main.cc", "/Fehello.exe"],
     },
     {
         file = "src/util.cc",
         directory = "${WS}",
         output = "${WS}/hello.exe",
-        arguments = [
-            "cl",
-            "/nologo",
-            "/EHsc",
-            "/DCATTER_TEST=1",
-            "/Iinclude",
-            "src/main.cc",
-            "src/util.cc",
-            "/Fehello.exe",
-        ],
+        arguments = ["cl", "/nologo", "/EHsc", "/DCATTER_TEST=1", "/Iinclude", "src/util.cc", "/Fehello.exe"],
     },
 ]

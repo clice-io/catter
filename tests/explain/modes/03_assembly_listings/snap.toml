@@ -241,8 +241,7 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Faout/",
-                "a.cc",
-                "b.cc"
+                "a.cc"
             ],
             "output": "${WS}/a.obj"
         },
@@ -254,7 +253,6 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Faout/",
-                "a.cc",
                 "b.cc"
             ],
             "output": "${WS}/b.obj"
@@ -267,8 +265,7 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Faout/",
-                "a.cc",
-                "b.cc"
+                "a.cc"
             ],
             "output": "${WS}/out/a.asm"
         },
@@ -280,7 +277,6 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Faout/",
-                "a.cc",
                 "b.cc"
             ],
             "output": "${WS}/out/b.asm"

@@ -145,8 +145,7 @@ stdout = '''
                 "g++",
                 "-c",
                 "--target=x86_64-linux-gnu",
-                "src/a.cc",
-                "src/b c.cc"
+                "src/a.cc"
             ],
             "output": "${WS}/a.o"
         },
@@ -157,7 +156,6 @@ stdout = '''
                 "g++",
                 "-c",
                 "--target=x86_64-linux-gnu",
-                "src/a.cc",
                 "src/b c.cc"
             ],
             "output": "${WS}/b c.o"

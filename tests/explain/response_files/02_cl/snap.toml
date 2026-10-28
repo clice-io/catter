@@ -64,8 +64,7 @@ stdout = '''
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
                 "/Foout/",
-                "src/a b.cc",
-                "src/c.cc"
+                "src/a b.cc"
             ],
             "output": "${WS}/out/a b.obj"
         },
@@ -79,7 +78,6 @@ stdout = '''
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
                 "/Foout/",
-                "src/a b.cc",
                 "src/c.cc"
             ],
             "output": "${WS}/out/c.obj"
@@ -155,8 +153,7 @@ stdout = '''
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
                 "/Foout/",
-                "src/a b.cc",
-                "src/c.cc"
+                "src/a b.cc"
             ],
             "output": "${WS}/out/a b.obj"
         },
@@ -170,7 +167,6 @@ stdout = '''
                 "/DX=\"1\"",
                 "/DPATH=C:\\tools\\bin",
                 "/Foout/",
-                "src/a b.cc",
                 "src/c.cc"
             ],
             "output": "${WS}/out/c.obj"
