@@ -1,0 +1,9 @@
+genrule(
+    name = "main",
+    srcs = [
+        "include/greet.h",
+        "src/main.c",
+    ],
+    outs = ["main.o"],
+    cmd = "cc -Iinclude -c $(location src/main.c) -o $@",
+)

@@ -3,10 +3,18 @@
 /// listed elsewhere as needing it.
 
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { delimiter, join } from "node:path";
 
-export type Need = "eslogger" | "xcode";
+export type Need = "bazel" | "eslogger" | "xcode";
 
 const PROBES: Record<Need, () => boolean> = {
+    // Bazel, or Bazelisk under its name, on PATH: run, Bazelisk would download
+    // a release.
+    bazel: () =>
+        (process.env["PATH"] ?? "")
+            .split(delimiter)
+            .some((directory) => existsSync(join(directory, "bazel"))),
     // catter runs eslogger as root: sudo must start it without asking for a
     // password, and Endpoint Security must take it as a client. Refused, it
     // exits at once; taken, it runs until the probe ends it.

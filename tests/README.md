@@ -106,11 +106,11 @@ they were started in.
 
 **Test options**:
 
-| Option                   | Means                                                                                                                                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `except: { win32: "…" }` | platforms the test has no meaning on, each with the reason; there it is listed as not applicable                                                                                                                                                  |
-| `needs: ["eslogger"]`    | what the machine must have beside catter (`eslogger`: sudo starts it without a password, and Endpoint Security takes it; `xcode`: Xcode, beside its command line tools); a machine without it lists the test as not run, but on CI, where it runs |
-| `errors: ["…"]`          | the error-level log records the test provokes, as regular expressions; any other fails                                                                                                                                                            |
+| Option                   | Means                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `except: { win32: "…" }` | platforms the test has no meaning on, each with the reason; there it is listed as not applicable                                                                                                                                                                                                       |
+| `needs: ["eslogger"]`    | what the machine must have beside catter (`bazel`: Bazel, or Bazelisk under its name, on PATH; `eslogger`: sudo starts it without a password, and Endpoint Security takes it; `xcode`: Xcode, beside its command line tools); a machine without it lists the test as not run, but on CI, where it runs |
+| `errors: ["…"]`          | the error-level log records the test provokes, as regular expressions; any other fails                                                                                                                                                                                                                 |
 
 ## Output
 
