@@ -14,7 +14,13 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { baseName, expandResponseFiles, isCompiler, isSource, isWrapped } from "../command.ts";
+import {
+    baseName,
+    expandResponseFiles,
+    isCompiler,
+    isWrapped,
+    sourceOperands,
+} from "../command.ts";
 import type { Difference, Places } from "../difference.ts";
 import type { Backend } from "../project.ts";
 import type { Image, Recording } from "../record/images.ts";
@@ -274,16 +280,16 @@ export function checkRecorder(input: RecorderInput): {
     const recorded = new Map<string, { image: Image; entry: boolean }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
-        const sources =
+        const operands =
             isCompiler(args[0] ?? "") && !preprocessesOnly(args)
-                ? args.slice(1).filter((arg) => isSource(arg, image.cwd))
-                : [];
-        if (sources.length === 0) {
+                ? sourceOperands(args, image.cwd)
+                : new Set<number>();
+        if (operands.size === 0) {
             continue;
         }
         stats.compiles += 1;
-        const rest = args.filter((arg, i) => i === 0 || !sources.includes(arg));
-        for (const source of sources) {
+        const rest = args.filter((_, i) => !operands.has(i));
+        for (const source of [...operands].map((i) => args[i] ?? "")) {
             recorded.set(JSON.stringify([rest, image.cwd, path.resolve(image.cwd, source)]), {
                 image,
                 entry: false,
@@ -292,7 +298,8 @@ export function checkRecorder(input: RecorderInput): {
     }
     for (const entry of input.entries) {
         const args = expandResponseFiles(entry.arguments, entry.directory);
-        const rest = args.filter((arg, i) => i === 0 || !isSource(arg, entry.directory));
+        const operands = sourceOperands(args, entry.directory);
+        const rest = args.filter((_, i) => !operands.has(i));
         const slot = recorded.get(
             JSON.stringify([rest, entry.directory, path.resolve(entry.directory, entry.file)]),
         );

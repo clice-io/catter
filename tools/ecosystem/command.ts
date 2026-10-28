@@ -63,13 +63,28 @@ export function withoutDependencyFiles(
     return out;
 }
 
-/// Whether `arg` names a source file that is there now, from `cwd`.
-export function isSource(arg: string, cwd: string): boolean {
-    return (
-        !arg.startsWith("-") &&
-        SOURCE.test(arg) &&
-        fs.statSync(path.resolve(cwd, arg), { throwIfNoEntry: false })?.isFile() === true
-    );
+/// Options whose value, the next argument, names a file that is no source
+/// of the command's: `-include prefix.c` includes the file, `-o a.c` writes
+/// it.
+const FILE_VALUE = new Set(["-o", "-include", "-imacros", "-MF", "-MT", "-MQ"]);
+
+/// The positions of a compiler's arguments that name a source file there
+/// is now, from `cwd`: its operands, not the values of its options.
+export function sourceOperands(args: readonly string[], cwd: string): Set<number> {
+    const sources = new Set<number>();
+    for (let i = 1; i < args.length; i += 1) {
+        const arg = args[i] ?? "";
+        if (FILE_VALUE.has(arg)) {
+            i += 1;
+        } else if (
+            !arg.startsWith("-") &&
+            SOURCE.test(arg) &&
+            fs.statSync(path.resolve(cwd, arg), { throwIfNoEntry: false })?.isFile() === true
+        ) {
+            sources.add(i);
+        }
+    }
+    return sources;
 }
 
 /// Split a command line as a POSIX shell splits words: quotes, and a

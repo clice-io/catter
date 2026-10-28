@@ -6,7 +6,13 @@ import { fileKind } from "./checks/artifacts.ts";
 import { checkHint } from "./checks/hint.ts";
 import { checkRecorder, sameArgs, type Entry } from "./checks/recorder.ts";
 import { syntaxOnly } from "./checks/syntax.ts";
-import { expandResponseFiles, isCompiler, isWrapped, shellSplit } from "./command.ts";
+import {
+    expandResponseFiles,
+    isCompiler,
+    isWrapped,
+    shellSplit,
+    sourceOperands,
+} from "./command.ts";
 import { isKnown, Places } from "./difference.ts";
 import type { JobResult } from "./job.ts";
 import { listJobs, projectNames, readProject, type Job, type Known } from "./project.ts";
@@ -296,6 +302,15 @@ describe("the recorder check", () => {
         });
         expect(result.differences).toEqual([]);
         expect(result.stats.compiles).toBe(2);
+    });
+
+    test("a file an option names is no source of the compile", () => {
+        const dir = tempDir();
+        fs.writeFileSync(path.join(dir, "a.c"), "");
+        fs.writeFileSync(path.join(dir, "prefix.c"), "");
+        expect([
+            ...sourceOperands(["gcc", "-include", "prefix.c", "-c", "a.c", "-o", "a.o"], dir),
+        ]).toEqual([4]);
     });
 
     test("a run that only lists the includes is no compile", () => {
