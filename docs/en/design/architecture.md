@@ -11,7 +11,7 @@ Handler authors only need to understand two things:
 
 "Intercepting process creation" differs greatly in feasibility across platforms: a hook in every process of the build is the most general, but some programs keep it out (on macOS, Apple's own tools). Catter therefore separates how a build's commands are captured, a backend, from what is done with them, the session. Each backend starts the build and reports its commands to the session, which has the handlers decide each and tells them how each ended: the handlers see the same events whichever backend reports them.
 
-catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach, or `eslogger`, on macOS, which only observes the build. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
+catter captures a build with the `hook` backend, or with the one `--capture` names: `wrapper`, compiler shims for where the hook cannot reach, `eslogger`, on macOS, or `ptrace`, on Linux, which only observe the build. Given `--from`, it replays a recorded build instead of running one. A handler learns which from the session's `initialize` message, whose `mode` is the backend's name, or `replay` for a recorded build. What each backend sees and supports is covered in [Capture backends](capture-backends.md).
 
 ## Handlers
 

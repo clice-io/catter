@@ -1,8 +1,15 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "failed to start: EACCES"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+failed to start: EACCES
+node build.mjs
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 failed to start: EACCES
 node build.mjs

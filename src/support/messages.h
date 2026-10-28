@@ -42,7 +42,13 @@ constexpr char DECIDED[] = "__key_catter_decided_v1";
 /// Set for catter-proxy by the hook of a program that reports itself late.
 constexpr char LATE[] = "__key_catter_late_v1";
 
-/// All of them, which a session sets anew for the build it runs.
+/// Set for catter-proxy alone, which then runs the build command the ptrace
+/// backend traces: the socket it tells catter it runs over, waits on until
+/// catter traces it, and tells why the build command did not start. It
+/// removes the variable first.
+constexpr char PTRACE[] = "__key_catter_ptrace_v1";
+
+/// All of them but PTRACE, which a session sets anew for the build it runs.
 constexpr std::array<std::string_view, 6> VARIABLES =
     {IPC, COMMAND_ID, SHIMS, PROXY, DECIDED, LATE};
 

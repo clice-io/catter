@@ -92,3 +92,30 @@ entries = [
         arguments = ["c++", "-DCATTER_TEST=1", "-c", "b.cc", "-o", "b.o"],
     },
 ]
+
+[ptrace."$ catter compile-commands --capture ptrace -o compile_commands.json -- make -j4"]
+stdout = '''
+make -C sub
+make[1]: Entering directory '${WS}/sub'
+g++ -DCATTER_TEST=1 -c a.cc -o a.o
+g++ -DCATTER_TEST=1 -c b.cc -o b.o
+make[1]: Leaving directory '${WS}/sub'
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[ptrace."compile_commands.json"]
+entries = [
+    {
+        file = "a.cc",
+        directory = "${WS}/sub",
+        output = "${WS}/sub/a.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-c", "a.cc", "-o", "a.o"],
+    },
+    {
+        file = "b.cc",
+        directory = "${WS}/sub",
+        output = "${WS}/sub/b.o",
+        arguments = ["g++", "-DCATTER_TEST=1", "-c", "b.cc", "-o", "b.o"],
+    },
+]

@@ -1,11 +1,20 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = '''
 stdout: 1048576 bytes, sha256 fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83
 stderr: 262144 bytes, sha256 5b06f4eca7e8b6b2255bf80cf047ae8aac03f6f0d303ac52e1e42b34ecc63db7
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+stdout: 1048576 bytes, sha256 fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83
+stderr: 262144 bytes, sha256 5b06f4eca7e8b6b2255bf80cf047ae8aac03f6f0d303ac52e1e42b34ecc63db7
+node build.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 stdout: 1048576 bytes, sha256 fbbab289f7f94b25736c58be46a994c441fd02552cc6022352e3d86d2fab7c83
 stderr: 262144 bytes, sha256 5b06f4eca7e8b6b2255bf80cf047ae8aac03f6f0d303ac52e1e42b34ecc63db7

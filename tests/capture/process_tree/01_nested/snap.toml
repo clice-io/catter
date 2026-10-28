@@ -1,8 +1,19 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "3 -> 2 -> 1 -> leaf"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+3 -> 2 -> 1 -> leaf
+node build.mjs
+└── node child.mjs 3
+    └── node child.mjs 2
+        └── node child.mjs 1
+            └── node child.mjs 0
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 3 -> 2 -> 1 -> leaf
 node build.mjs

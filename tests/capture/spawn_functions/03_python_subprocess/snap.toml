@@ -1,4 +1,4 @@
-[test."$ python build.py"]
+[hook."$ python build.py"]
 stdout = '''
 n0 exit 0
 n1 exit 0
@@ -20,7 +20,7 @@ failed to start: No such file or directory
 '''
 exit = 0
 
-[test."$ python build.py".win32]
+[hook."$ python build.py".win32]
 differs = "Windows words the error of a program that does not exist its own way"
 stdout = '''
 n0 exit 0
@@ -43,7 +43,7 @@ failed to start: The system cannot find the file specified
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- python build.py"]
+[hook."$ catter tree -w 1000 -- python build.py"]
 stdout = '''
 n0 exit 0
 n1 exit 0
@@ -82,7 +82,7 @@ python build.py
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- python build.py".win32]
+[hook."$ catter tree -w 1000 -- python build.py".win32]
 differs = "Windows names Python by its own path, and words the error of a program that does not exist its own way"
 stdout = '''
 n0 exit 0
@@ -119,5 +119,44 @@ python build.py
 ├── "${ENV}/python.exe" -c "print('n13')"
 ├── "${ENV}/python.exe" -c "print('n14')"
 └── "${ENV}/python.exe" -c "print('n15')"
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- python build.py"]
+stdout = '''
+n0 exit 0
+n1 exit 0
+n2 exit 0
+n3 exit 0
+n4 exit 0
+n5 exit 0
+n6 exit 0
+n7 exit 0
+n8 exit 0
+n9 exit 0
+n10 exit 0
+n11 exit 0
+n12 exit 0
+n13 exit 0
+n14 exit 0
+n15 exit 0
+failed to start: No such file or directory
+python build.py
+├── ${ENV}/bin/python -c "print('n0')"
+├── ${ENV}/bin/python -c "print('n1')"
+├── ${ENV}/bin/python -c "print('n2')"
+├── ${ENV}/bin/python -c "print('n3')"
+├── ${ENV}/bin/python -c "print('n4')"
+├── ${ENV}/bin/python -c "print('n5')"
+├── ${ENV}/bin/python -c "print('n6')"
+├── ${ENV}/bin/python -c "print('n7')"
+├── ${ENV}/bin/python -c "print('n8')"
+├── ${ENV}/bin/python -c "print('n9')"
+├── ${ENV}/bin/python -c "print('n10')"
+├── ${ENV}/bin/python -c "print('n11')"
+├── ${ENV}/bin/python -c "print('n12')"
+├── ${ENV}/bin/python -c "print('n13')"
+├── ${ENV}/bin/python -c "print('n14')"
+└── ${ENV}/bin/python -c "print('n15')"
 '''
 exit = 0

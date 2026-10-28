@@ -1,0 +1,29 @@
+[aborted."$ catter compile-commands --capture ptrace --abort-on-command-failure -o compile_commands.json -- make -k"]
+stdout = '''
+cc -c broken.c -o broken.o
+cc -c fine.c -o fine.o
+CDB aborting after compiler command 2 exited with code 1.
+'''
+stderr = '''
+broken.c:1:2: error: #error broken
+    1 | #error broken
+      |  ^~~~~
+make: *** [Makefile:7: broken.o] Error 1
+make: Target 'all' not remade because of errors.
+'''
+exit = 1
+
+[aborted."fine.o"]
+value = true
+
+[outlived."$ catter tree --capture ptrace -w 1000 -- sh outlive.sh"]
+stdout = '''
+started
+sh outlive.sh
+└── mkfifo go done
+'''
+exit = 0
+
+[outlived."$ sh -c \"echo > go; cat done\""]
+stdout = "TracerPid:\t0"
+exit = 0

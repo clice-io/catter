@@ -1,8 +1,17 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "ran, exit 0"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+ran, exit 0
+node build.mjs
+└── python -c "import os; os.chdir('gone'); os.rmdir('../gone'); os.execvp('python', ['python', '-c', 'print(\"ran\")'])"
+    └── [capture error] `python -c print("ran")` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 ran, exit 0
 node build.mjs

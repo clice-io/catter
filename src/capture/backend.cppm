@@ -25,6 +25,13 @@ const Backend& wrapper_backend() noexcept;
 const Backend& eslogger_backend() noexcept;
 #endif
 
+#ifdef CATTER_LINUX
+/// Runs the build traced with ptrace, by a thread of catter, which reads each
+/// program a process of the build runs as it execs it, a static program's
+/// included: it only observes them.
+const Backend& ptrace_backend() noexcept;
+#endif
+
 /// Plays a recorded build (see replay.cc) instead of running one: the build
 /// command is the replay file.
 const Backend& replay_backend() noexcept;

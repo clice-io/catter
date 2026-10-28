@@ -28,3 +28,26 @@ test(
         await t.cli("tree -w 1000 -- ./spawn execvpe node child.mjs");
     },
 );
+
+test(
+    "ptrace",
+    { except: { darwin: "the ptrace backend is Linux's", win32: "the ptrace backend is Linux's" } },
+    async (t) => {
+        await t.setup("cc -o spawn spawn.c");
+        for (const [name, program] of functions) {
+            await t.cli([
+                "tree",
+                "--capture",
+                "ptrace",
+                "-w",
+                "1000",
+                "--",
+                "./spawn",
+                name,
+                program,
+                "child.mjs",
+            ]);
+        }
+        await t.cli("tree --capture ptrace -w 1000 -- ./spawn execvpe node child.mjs");
+    },
+);

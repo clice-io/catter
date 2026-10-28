@@ -7,6 +7,9 @@ module;
 #include "support/paths.h"
 
 #ifdef CATTER_LINUX
+#include <fcntl.h>
+#include <unistd.h>
+
 #include "support/hook.h"
 #endif
 
@@ -465,6 +468,41 @@ int run(std::span<const std::string> argv) {
     return run_proxied(wrapped(self, self, {argv.begin(), argv.end()}, false));
 }
 
+#ifdef CATTER_LINUX
+/// The build command the ptrace backend traces, `catter-proxy <program>
+/// <argv>...`, which catter started with `socket`, over which this process
+/// tells catter it runs: once catter traces it, the program runs in its place,
+/// or this process tells catter why it did not start.
+[[noreturn]] void run_traced(int socket, char* argv[]) {
+    kota::sys::unset_env(env::PTRACE);
+    char byte = 1;
+    [[maybe_unused]] auto told = ::write(socket, &byte, 1);
+    while(::read(socket, &byte, 1) < 0 && errno == EINTR) {}
+    ::fcntl(socket, F_SETFD, FD_CLOEXEC);
+    // A name resolve_program found nowhere on PATH is not one in this
+    // directory.
+    errno = ENOENT;
+    if(std::string_view(argv[1]).contains('/')) {
+        ::execve(argv[1], argv + 2, environ);
+    }
+    if(errno == ENOEXEC) {
+        // A file of no format the system knows runs by /bin/sh, as execvp runs
+        // it.
+        std::vector<char*> shell = {const_cast<char*>("/bin/sh"), argv[1]};
+        for(auto arg = argv + 3; *arg != nullptr; arg += 1) {
+            shell.push_back(*arg);
+        }
+        shell.push_back(nullptr);
+        ::execve(shell.front(), shell.data(), environ);
+    }
+    const int error = errno;
+    [[maybe_unused]] auto written = ::write(socket, &error, sizeof(error));
+    // LeakSanitizer, which a Debug catter-proxy runs at its exit, fails under
+    // ptrace.
+    ::_exit(127);
+}
+#endif
+
 }  // namespace
 
 extern "C++" int main(int argc, char* argv[]) {
@@ -473,6 +511,13 @@ extern "C++" int main(int argc, char* argv[]) {
     // ASCII.
     return run(kota::sys::arguments());
 #else
+#ifdef CATTER_LINUX
+    if(std::string socket; kota::sys::get_env(socket, env::PTRACE)) {
+        int fd = -1;
+        std::from_chars(socket.data(), socket.data() + socket.size(), fd);
+        run_traced(fd, argv);
+    }
+#endif
     return run(std::vector<std::string>(argv, argv + argc));
 #endif
 }

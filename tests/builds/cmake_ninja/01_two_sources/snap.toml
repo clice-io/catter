@@ -294,3 +294,54 @@ entries = [
         ],
     },
 ]
+
+[ptrace."$ catter compile-commands --capture ptrace -o compile_commands.json -- cmake --build build -j 1"]
+stdout = '''
+[1/3] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
+[2/3] Building CXX object CMakeFiles/hello.dir/src/util.cc.o
+[3/3] Linking CXX executable hello
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+exit = 0
+
+[ptrace."compile_commands.json"]
+entries = [
+    {
+        file = "${WS}/src/main.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/hello.dir/src/main.cc.o",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
+            "-MD",
+            "-MT",
+            "CMakeFiles/hello.dir/src/main.cc.o",
+            "-MF",
+            "CMakeFiles/hello.dir/src/main.cc.o.d",
+            "-o",
+            "CMakeFiles/hello.dir/src/main.cc.o",
+            "-c",
+            "${WS}/src/main.cc",
+        ],
+    },
+    {
+        file = "${WS}/src/util.cc",
+        directory = "${WS}/build",
+        output = "${WS}/build/CMakeFiles/hello.dir/src/util.cc.o",
+        arguments = [
+            "${ENV}/bin/c++",
+            "-DCATTER_TEST=1",
+            "-I${WS}/include",
+            "-MD",
+            "-MT",
+            "CMakeFiles/hello.dir/src/util.cc.o",
+            "-MF",
+            "CMakeFiles/hello.dir/src/util.cc.o.d",
+            "-o",
+            "CMakeFiles/hello.dir/src/util.cc.o",
+            "-c",
+            "${WS}/src/util.cc",
+        ],
+    },
+]

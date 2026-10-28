@@ -1,4 +1,4 @@
-[test."$ catter tree -w 1000 -- catter-test-no-such-program"]
+[hook."$ catter tree -w 1000 -- catter-test-no-such-program"]
 stdout = '''
 Build failed with exit code 255. Printing partial command tree.
 [capture error] Run `catter-test-no-such-program` failed:
@@ -6,7 +6,7 @@ Process `catter-test-no-such-program` spawn failed, because `no such file or dir
 '''
 exit = 255
 
-[test."$ catter tree -w 1000 -- catter-test-no-such-program".win32]
+[hook."$ catter tree -w 1000 -- catter-test-no-such-program".win32]
 differs = "Windows has no catter-proxy, catter starts the build command itself, and its exit codes are 32 bits"
 stdout = '''
 Build failed with exit code -1. Printing partial command tree.
@@ -14,3 +14,11 @@ Build failed with exit code -1. Printing partial command tree.
 Process `catter-test-no-such-program` spawn failed, because `no such file or directory`
 '''
 exit = 4294967295
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- catter-test-no-such-program"]
+stdout = '''
+Build failed with exit code -1. Printing partial command tree.
+[capture error] Run `catter-test-no-such-program` failed:
+`catter-test-no-such-program` did not start: No such file or directory
+'''
+exit = 255

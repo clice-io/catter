@@ -1,0 +1,8 @@
+[test."$ catter compile-commands --capture ptrace -o compile_commands.json -- sh build.sh"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+exit = 0
+
+[test."compile_commands.json"]
+entries = [
+    { file = "a.c", directory = "${WS}", output = "${WS}/a.o", arguments = ["cc", "-c", "a.c"] },
+]
