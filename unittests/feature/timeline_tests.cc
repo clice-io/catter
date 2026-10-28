@@ -67,6 +67,19 @@ ZEST_CASE(the_spans_of_a_lane_nest_and_overlapping_siblings_share_none) {
     }
 };
 
+ZEST_CASE(a_span_starting_with_its_parent_works_in_its_place) {
+    const std::vector<Span> spans{
+        {.start = 0, .end = 100, .parent = 1},
+        {.start = 0, .end = 100},
+    };
+    const auto activity = feature::activity_of(spans);
+    ZEXPECT(activity.worked == std::vector<std::int64_t>{100, 0});
+    ZEXPECT(activity.working == std::vector<std::pair<std::int64_t, std::uint32_t>>{
+                                    {0,   1},
+                                    {100, 0},
+    });
+};
+
 ZEST_CASE(what_spans_work_adds_up_to_how_many_work_over_time) {
     for(std::uint32_t seed = 0; seed < 20; seed += 1) {
         const auto spans = random_spans(seed);

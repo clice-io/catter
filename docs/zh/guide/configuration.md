@@ -41,7 +41,7 @@ catter <command> [options] -- <build-command>
 
 ### 退出状态
 
-catter 像构建那样结束：以构建的退出码退出；构建被信号结束时，catter 也以同一个信号结束。重放的构建以其文件记录的退出码结束。catter 自身失败时，比如命令行有误、handler 中止了构建或编译数据库无法写入，catter 打印原因并以 1 退出。
+catter 像构建那样结束：以构建的退出码退出；构建被信号结束时，catter 也以同一个信号结束。重放的构建以其文件记录的退出码结束。catter 自身失败时，比如命令行有误、handler 中止了构建，或者编译数据库或 trace 无法写入，catter 打印原因并以 1 退出。
 
 停止 catter 就会停止构建：发给 catter 的 SIGTERM、SIGINT 或 SIGHUP 会转给构建命令，构建命令像直接收到它一样结束，catter 随后像构建那样结束。catter 被杀死时，构建命令随之结束，`eslogger` 下除外。
 

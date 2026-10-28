@@ -91,8 +91,14 @@ Activity activity_of(std::span<const Span> spans) {
     });
 
     Activity activity{.worked = std::vector<std::int64_t>(spans.size())};
+    std::vector<std::vector<std::size_t>> started(spans.size());
+    for(std::size_t i = 0; i < spans.size(); i += 1) {
+        if(spans[i].parent.has_value()) {
+            started[*spans[i].parent].push_back(i);
+        }
+    }
     // Of each span, whether it runs, the spans it started that run, whether it counts among those
-    // of its parent, which runs as it starts, and since when it works.
+    // of its parent, and since when it works.
     std::vector<bool> running(spans.size());
     std::vector<std::uint32_t> children(spans.size());
     std::vector<bool> counted(spans.size());
@@ -120,7 +126,16 @@ Activity activity_of(std::span<const Span> spans) {
                     }
                     children[*parent] += 1;
                 }
-                work(i, time);
+                // A span may start as late as one it started, when they start at once.
+                for(const auto child: started[i]) {
+                    if(running[child] && !counted[child]) {
+                        counted[child] = true;
+                        children[i] += 1;
+                    }
+                }
+                if(children[i] == 0) {
+                    work(i, time);
+                }
                 continue;
             }
             running[i] = false;
