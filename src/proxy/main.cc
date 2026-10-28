@@ -454,12 +454,13 @@ int run(std::span<const std::string> argv) {
 
 #ifdef CATTER_LINUX
 /// The build command the ptrace backend traces, `catter-proxy <program>
-/// <argv>...`, which catter started with `socket`: once catter traces this
-/// process, the program runs in its place, or this process tells catter why it
-/// did not start.
+/// <argv>...`, which catter started with `socket`, over which this process
+/// tells catter it runs: once catter traces it, the program runs in its place,
+/// or this process tells catter why it did not start.
 [[noreturn]] void run_traced(int socket, char* argv[]) {
     kota::sys::unset_env(env::PTRACE);
-    char byte;
+    char byte = 1;
+    [[maybe_unused]] auto told = ::write(socket, &byte, 1);
     while(::read(socket, &byte, 1) < 0 && errno == EINTR) {}
     ::fcntl(socket, F_SETFD, FD_CLOEXEC);
     // A name resolve_program found nowhere on PATH is not one in this

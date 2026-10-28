@@ -264,6 +264,14 @@ private:
 };
 
 void Tracer::run() {
+    // catter-proxy may be in its own exec until it says it runs, which the
+    // tracer would see as the build command.
+    char running = 0;
+    while(::read(socket, &running, 1) < 0 && errno == EINTR) {}
+    if(running == 0) {
+        post(Done{.error = std::format("{} ended before it ran the build command", PROXY)});
+        return;
+    }
     if(::ptrace(PTRACE_SEIZE, build, nullptr, reinterpret_cast<void*>(OPTIONS)) != 0) {
         post(Done{.error = denied(build, errno)});
         return;

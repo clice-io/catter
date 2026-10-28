@@ -30,8 +30,9 @@ constexpr char SHIMS[] = "__key_catter_shims_v1";
 constexpr char PROXY[] = "__key_catter_proxy_path_v1";
 
 /// Set for catter-proxy alone, which then runs the build command the ptrace
-/// backend traces: the socket it waits on until catter traces it, and tells
-/// why the build command did not start. It removes the variable first.
+/// backend traces: the socket it tells catter it runs over, waits on until
+/// catter traces it, and tells why the build command did not start. It
+/// removes the variable first.
 constexpr char PTRACE[] = "__key_catter_ptrace_v1";
 
 /// All of them but PTRACE, which a session sets anew for the build it runs.
