@@ -8,11 +8,14 @@ module catter:session.process;
 
 namespace catter {
 
-/// Holds each standard stream this process was started without, which nothing
-/// it opens then takes the number of; the program it stands in for gets it
-/// closed (`RunOptions::stand_in`). Called first in main, before anything is
-/// opened. Windows numbers no handle as a standard stream: nothing to hold.
-void hold_closed_streams();
+/// Readies the descriptors this process was started with for the program it
+/// stands in for (`RunOptions::stand_in`), which gets them as this process got
+/// them: it holds each standard stream it was started without, which nothing
+/// it opens then takes the number of, and the program gets it closed; and it
+/// notes those past the standard streams, which it lets go of once the
+/// program runs. Called first in main, before anything is opened. Windows
+/// numbers no handle as a standard stream: nothing to do.
+void prepare_descriptors();
 
 /// This process's environment, as a command carries it.
 std::vector<std::string> environment();
@@ -41,8 +44,17 @@ struct RunOptions {
     /// build and catter-proxy for each command: the program starts with the
     /// signals as exec leaves them, a signal another process sends this one
     /// goes on to it, and the program ends when this process is killed, but
-    /// on macOS, where nothing ends a child with its parent.
+    /// on macOS, where nothing ends a child with its parent. On POSIX, once the
+    /// program runs, this process holds none of the descriptors it was
+    /// started with past the standard streams: one it held would keep open a
+    /// pipe whose end the program closes, which Java's launcher waits for of
+    /// each program it starts.
     bool stand_in = false;
+
+    /// With `stand_in`, on POSIX, this process lets go of its standard streams
+    /// too, onto the null device, as catter-proxy does, which shows nothing: a
+    /// daemon closes its output to tell its starter it runs, as Gradle's does.
+    bool release_streams = false;
 
     /// Told the program's pid once it runs.
     std::function<void(int)> started;

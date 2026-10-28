@@ -27,7 +27,7 @@ void report(std::string_view message) noexcept {
 }
 
 int run(std::span<const std::string> argv) {
-    hold_closed_streams();
+    prepare_descriptors();
 #ifdef CATTER_WINDOWS
     SetConsoleOutputCP(CP_UTF8);
 #endif

@@ -123,7 +123,33 @@ JSON entry(std::string_view cwd,
 std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analysis) {
     std::vector<JSON> entries;
     auto add = [&](const Read& source, std::optional<std::string> output) {
-        entries.push_back(entry(cwd, source.path, analysis.expansion.argv, std::move(output)));
+        const auto& argv = analysis.expansion.argv;
+        std::vector<bool> removed(argv.size());
+        const auto remove = [&](const Argument& argument) {
+            std::ranges::fill_n(removed.begin() + argument.index, argument.count, true);
+        };
+        for(const auto& read: analysis.reads) {
+            if(&read != &source && read.role == InputRole::Source) {
+                remove(analysis.arguments[read.location.argument]);
+            }
+        }
+        // A `-x` names the language of the inputs after it: one only the other sources follow
+        // names none, which clang warns of.
+        bool any_after = false;
+        bool left_after = false;
+        for(const auto& argument: analysis.arguments | std::views::reverse) {
+            if(argument.id == option::clang::ID_INPUT) {
+                any_after = true;
+                left_after = left_after || !removed[argument.index];
+            } else if(argument.id == option::clang::ID_x && any_after && !left_after) {
+                remove(argument);
+            }
+        }
+        const auto own = std::views::iota(0uz, argv.size()) |
+                         std::views::filter([&](std::size_t i) { return !removed[i]; }) |
+                         std::views::transform([&](std::size_t i) { return argv[i]; }) |
+                         std::ranges::to<std::vector>();
+        entries.push_back(entry(cwd, source.path, own, std::move(output)));
     };
     std::vector<bool> written(analysis.reads.size());
     for(const auto& write: analysis.writes) {

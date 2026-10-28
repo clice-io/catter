@@ -520,3 +520,62 @@ stdout = '''
 }
 '''
 exit = 0
+
+[test."$ catter explain -- clang --target=arm64-apple-darwin -c -x c++ -ivfsstatcache SDK.sdkstatcache a.cc"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "arm64-apple-darwin",
+        "os": "darwin",
+        "objectFormat": "macho",
+        "artifactModel": "macho",
+        "from": "argument"
+    },
+    "sources": [
+        "a.cc"
+    ],
+    "reads": [
+        "a.cc"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.cc"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang",
+                "--target=arm64-apple-darwin",
+                "-c",
+                "-x",
+                "c++",
+                "-ivfsstatcache",
+                "SDK.sdkstatcache",
+                "a.cc"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0

@@ -276,7 +276,7 @@ kota::task<exit_status> run(data::action action,
                             data::ipcid_t id,
                             const Proxied& proxied,
                             [[maybe_unused]] Connection& connection) {
-    RunOptions stand_in{.stand_in = true};
+    RunOptions stand_in{.stand_in = true, .release_streams = true};
 #ifdef CATTER_MAC
     stand_in.started = [&](int pid) {
         connection.program = pid;
@@ -324,7 +324,8 @@ kota::task<exit_status> report(const Proxied& proxied, Connection& connection) n
                 std::format(
                     "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
                     line));
-            co_return co_await run_process(process_options(command), {.stand_in = true});
+            co_return co_await run_process(process_options(command),
+                                           {.stand_in = true, .release_streams = true});
         }
 
         auto [id, action] = co_await connection.request<ipc::RequestType::MAKE_DECISION>(
@@ -368,7 +369,8 @@ kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
             co_return exit_status{.code = -1};
         }
         try {
-            co_return co_await run_process(process_options(proxied.command), {.stand_in = true});
+            co_return co_await run_process(process_options(proxied.command),
+                                           {.stand_in = true, .release_streams = true});
         } catch(const std::exception& ex) {
             LOG_ERROR("{}", ex.what());
             co_return exit_status{.code = -1};
@@ -415,7 +417,7 @@ int run_proxied(const Proxied& proxied) {
 /// the program the hook was asked to start, and among the wrapper backend's
 /// shims as the launcher or as the program a shim is named after.
 int run(std::span<const std::string> argv) {
-    hold_closed_streams();
+    prepare_descriptors();
 
     // The link this program was started by, which kota::sys::executable_path
     // would resolve.
