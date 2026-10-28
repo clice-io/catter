@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "name": "ninja compiling three sources at once, then archiving two and linking",
+  "cwd": ".",
+  "events": [
+    {
+      "id": 1,
+      "exe": "ninja",
+      "argv": ["ninja", "-j", "3"],
+      "execution": { "code": 0, "start": 0, "duration": 2600000 }
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "-c", "a.cc", "-o", "a.o"],
+      "execution": { "code": 0, "start": 10000, "duration": 2000000 }
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "-c", "b.cc", "-o", "b.o"],
+      "execution": { "code": 0, "start": 20000, "duration": 500000 }
+    },
+    {
+      "id": 4,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "-c", "c.cc", "-o", "c.o"],
+      "execution": { "code": 0, "start": 30000, "duration": 1000000 }
+    },
+    {
+      "id": 5,
+      "parent": 1,
+      "exe": "ar",
+      "argv": ["ar", "rcs", "libbc.a", "b.o", "c.o"],
+      "execution": { "code": 0, "start": 1050000, "duration": 50000 }
+    },
+    {
+      "id": 6,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "a.o", "libbc.a", "-o", "app"],
+      "execution": { "code": 0, "start": 2100000, "duration": 400000 }
+    }
+  ],
+  "finish": { "code": 0 }
+}

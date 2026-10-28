@@ -114,11 +114,18 @@ kota::task<> Server::Client::answer(kota::pipe pipe) {
 
     peer.on_request(
         Finish::method,
-        [&](const Context&, const Finish::Params& result) -> kota::ipc::RequestResult<Finish> {
+        [&](const Context&, const Finish::Params& params) -> kota::ipc::RequestResult<Finish> {
 #ifdef CATTER_MAC
             running.reset();
 #endif
-            co_await server.session.exited(id, result);
+            const std::chrono::steady_clock::time_point started{
+                std::chrono::microseconds(params.started)};
+            co_await server.session.exited(id,
+                                           {
+                                               .code = params.code,
+                                               .start = server.session.time_of(started).count(),
+                                               .duration = params.duration,
+                                           });
             co_return nullptr;
         });
 
@@ -211,7 +218,9 @@ kota::task<> Server::Client::wait_started() {
             std::format("Failed to wait for `{}`: {}", executable, status.error().message()))));
         co_return;
     }
-    co_await server.session.exited(id, result_of(*status, began));
+    auto result = result_of(*status, began);
+    result.start = server.session.time_of(began).count();
+    co_await server.session.exited(id, result);
     release();
     program.reset();
 }

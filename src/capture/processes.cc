@@ -46,7 +46,9 @@ std::vector<BuildProcesses::Ended> BuildProcesses::exit(std::uint64_t key,
     }
     std::vector<Ended> ended;
     for(const auto& run: found->second.commands | std::views::reverse) {
-        ended.push_back({.id = run.id, .result = result_of(status, time - run.started)});
+        auto result = result_of(status, time - run.started);
+        result.start = (run.started - origin).count();
+        ended.push_back({.id = run.id, .result = result});
     }
     members.erase(found);
     return ended;

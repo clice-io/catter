@@ -279,16 +279,7 @@ std::vector<JSON> CompilationDatabase::entries() const {
 }
 
 const std::string& CompilationDatabase::save() const {
-    auto created = kota::fs::create_directories(kota::fs::path::parent(file));
-    auto error = created.has_value()
-                     ? kota::fs::write_file_atomic(file, to_json(dyn::Array(entries())))
-                     : created.error();
-    if(error) {
-        throw cpptrace::runtime_error(
-            std::format("Failed to write the compilation database `{}`: {}",
-                        file,
-                        error.message()));
-    }
+    save_file(file, to_json(dyn::Array(entries())), "compilation database");
     return file;
 }
 

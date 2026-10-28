@@ -1,0 +1,39 @@
+[hook."$ catter profile -q -- node build.mjs"]
+stdout = "ran, exit 0"
+exit = 0
+
+[hook."trace.json"]
+process = "node build.mjs"
+"lane 1" = [
+    { depth = 0, name = "node", command = "node build.mjs", cwd = "${WS}", exit = 0, id = 1 },
+    {
+        depth = 1,
+        name = "python",
+        command = "python -c \"import os; os.chdir('gone'); os.rmdir('../gone'); os.execvp('python', ['python', '-c', 'print(\\\"ran\\\")'])\"",
+        cwd = "${WS}",
+        exit = 0,
+        id = 2,
+        parent = 1,
+    },
+]
+running = [1, 0]
+
+[ptrace."$ catter profile -q --capture ptrace -- node build.mjs"]
+stdout = "ran, exit 0"
+exit = 0
+
+[ptrace."trace.json"]
+process = "node build.mjs"
+"lane 1" = [
+    { depth = 0, name = "node", command = "node build.mjs", cwd = "${WS}", exit = 0, id = 1 },
+    {
+        depth = 1,
+        name = "python",
+        command = "python -c \"import os; os.chdir('gone'); os.rmdir('../gone'); os.execvp('python', ['python', '-c', 'print(\\\"ran\\\")'])\"",
+        cwd = "${WS}",
+        exit = 0,
+        id = 2,
+        parent = 1,
+    },
+]
+running = [1, 0]

@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "name": "a shell leaving a program running, a failure, a program catter knows nothing of, one that takes no time, one it could not capture, one that never ends, one whose parent is not of the build and two naming each other as parent",
+  "cwd": ".",
+  "events": [
+    {
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"],
+      "execution": { "code": 2, "start": 0, "duration": 2000000 }
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "exe": "sh",
+      "argv": ["sh", "-c", "daemon &"],
+      "execution": { "code": 0, "start": 100000, "duration": 100000 }
+    },
+    {
+      "id": 3,
+      "parent": 2,
+      "exe": "daemon",
+      "argv": ["daemon"],
+      "execution": { "code": 0, "start": 150000, "duration": 1500000 }
+    },
+    {
+      "id": 4,
+      "parent": 1,
+      "exe": "false",
+      "argv": ["false"],
+      "execution": { "code": 1, "start": 300000, "duration": 10000 }
+    },
+    {
+      "id": 5,
+      "parent": 1,
+      "exe": "mytool",
+      "argv": ["mytool", "--name", "a b", ""],
+      "execution": { "code": 0, "start": 400000, "duration": 0 }
+    },
+    {
+      "id": 6,
+      "exe": "",
+      "argv": [],
+      "error": { "parent": 1, "message": "`gone` runs in a working directory catter cannot read" }
+    },
+    {
+      "id": 7,
+      "parent": 1,
+      "exe": "server",
+      "argv": ["server"]
+    },
+    {
+      "id": 8,
+      "parent": 99,
+      "exe": "orphan",
+      "argv": ["orphan"],
+      "execution": { "code": 0, "start": 600000, "duration": 100000 }
+    },
+    {
+      "id": 9,
+      "parent": 10,
+      "exe": "first",
+      "argv": ["first"],
+      "execution": { "code": 0, "start": 700000, "duration": 50000 }
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "exe": "second",
+      "argv": ["second"],
+      "execution": { "code": 0, "start": 710000, "duration": 20000 }
+    }
+  ],
+  "finish": { "code": 2 }
+}

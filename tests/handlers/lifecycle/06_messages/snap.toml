@@ -12,7 +12,7 @@ stderr = '''
 initialize: request
 command: notification 1
 command: notification 2
-exit: notification 2
+exit: notification {"id": 2, "code": 0, "start": 1500, "duration": 250000}
 finish: request
 '''
 exit = 0

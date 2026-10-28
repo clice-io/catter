@@ -353,11 +353,18 @@ kota::task<exit_status> report(const Proxied& proxied, Connection& connection) n
             {.parent = proxied.parent, .command = command});
         const auto start = std::chrono::steady_clock::now();
         auto status = co_await run(std::move(action), id, proxied, connection);
+        const auto result = result_of(status, start);
 
         // A command can outlive its session (a build server): its result
         // stands, though catter is gone.
         try {
-            co_await connection.request<ipc::RequestType::FINISH>(result_of(status, start));
+            co_await connection.request<ipc::RequestType::FINISH>({
+                .code = result.code,
+                .started =
+                    std::chrono::duration_cast<std::chrono::microseconds>(start.time_since_epoch())
+                        .count(),
+                .duration = result.duration,
+            });
         } catch(const std::exception& ex) {
             LOG_WARN("Command {} ended after its session: {}", id, ex.what());
         }

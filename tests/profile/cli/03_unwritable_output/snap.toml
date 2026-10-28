@@ -1,0 +1,12 @@
+[test."$ catter profile -o taken --from events.json"]
+stdout = "Failed to write the trace `${WS}/taken`: Is a directory"
+exit = 1
+
+[test."$ catter profile -o taken --from events.json".win32]
+differs = "Windows refuses to replace a directory with a file as access denied"
+stdout = "Failed to write the trace `${WS}/taken`: Permission denied"
+exit = 1
+
+[test."$ catter profile -o taken/kept.txt/trace.json --from events.json"]
+stdout = "Failed to write the trace `${WS}/taken/kept.txt/trace.json`: File exists"
+exit = 1

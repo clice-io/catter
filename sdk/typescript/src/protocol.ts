@@ -110,6 +110,7 @@ export interface CaptureError {
 export interface Exit {
     id: number;
     code: number;
+    start: number;
     duration: number;
 }
 

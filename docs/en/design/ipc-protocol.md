@@ -113,16 +113,17 @@ This is used when the proxy cannot capture its command (a shim finds no program 
 
 Reports that a command has completed execution.
 
-**Params** -- `process_result`:
+**Params**:
 
-| Field      | Type      | Description                                                           |
-| ---------- | --------- | --------------------------------------------------------------------- |
-| `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
-| `duration` | `int64_t` | How long the program ran, in microseconds                             |
+| Field      | Type      | Description                                                                                                                    |
+| ---------- | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended                                                          |
+| `started`  | `int64_t` | When the program started, on the steady clock, which every process of the machine reads alike, in microseconds since its epoch |
+| `duration` | `int64_t` | How long the program ran, in microseconds                                                                                      |
 
 **Result**: `null` (no response payload)
 
-After the daemon receives this request, it tells the session's handlers the result (the handler protocol's `exit`). The proxy then disconnects. The Windows hook does not send it: the daemon learns the exit code from the process itself.
+After the daemon receives this request, it tells the session's handlers how the command ran (the handler protocol's `exit`), with when it started as the time since the session started. The proxy then disconnects. The Windows hook does not send it: the daemon learns the exit code from the process itself.
 
 ### STARTED
 
@@ -154,7 +155,7 @@ Daemon -> Proxy:  {id, action {type, cmd}}
 [Proxy starts the command, or drops it]
 Proxy -> Daemon:  started(pid)              (macOS, a notification)
 [Proxy waits for the command]
-Proxy -> Daemon:  FINISH(process_result)
+Proxy -> Daemon:  FINISH(code, started, duration)
 Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
@@ -225,12 +226,6 @@ struct command {
     std::string executable;            // Resolved executable path
     std::vector<std::string> args;     // Argument array
     std::vector<std::string> env;      // Environment (KEY=VALUE entries)
-};
-
-// Result of executing a command
-struct process_result {
-    int64_t code = -1;                 // Exit code
-    int64_t duration = 0;              // How long it ran, in microseconds
 };
 
 // Decision returned by the daemon

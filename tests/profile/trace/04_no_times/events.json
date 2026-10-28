@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "name": "a build recorded without times",
+  "cwd": ".",
+  "events": [
+    {
+      "id": 1,
+      "exe": "make",
+      "argv": ["make"],
+      "execution": { "code": 0 }
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "-c", "main.cc", "-o", "main.o"],
+      "execution": { "code": 0 }
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "exe": "c++",
+      "argv": ["c++", "main.o", "-o", "app"],
+      "execution": { "code": 0 }
+    }
+  ],
+  "finish": { "code": 0 }
+}

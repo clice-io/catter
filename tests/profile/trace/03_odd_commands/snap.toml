@@ -1,0 +1,105 @@
+[test."$ catter profile --from events.json"]
+stdout = '''
+`gone` runs in a working directory catter cannot read
+Profiled 8 commands in 2.0 s: 1.8 ran at once on average, 3 at most.
+Slowest:
+   1.9 s  make
+   1.5 s  daemon
+  100 ms  orphan
+   50 ms  sh
+   30 ms  first
+Left out of the trace: 1 command catter could not capture.
+Left out of the trace: 1 command that did not end before the build did.
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 2
+
+[test."trace.json"]
+displayTimeUnit = "ms"
+traceEvents = [
+    { name = "process_name", ph = "M", pid = 1, args = { name = "events.json" } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 2, args = { name = "lane 1" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 2, args = { sort_index = 1 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 3, args = { name = "lane 2" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 3, args = { sort_index = 2 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 4, args = { name = "lane 3" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 4, args = { sort_index = 3 } },
+    {
+        name = "make",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 2000000,
+        args = { command = "make", cwd = "${WS}", exit = 2, id = 1 },
+    },
+    {
+        name = "sh",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 100000,
+        dur = 100000,
+        args = { command = 'sh -c "daemon &"', cwd = "${WS}", exit = 0, id = 2, parent = 1 },
+    },
+    {
+        name = "daemon",
+        ph = "X",
+        pid = 1,
+        tid = 3,
+        ts = 150000,
+        dur = 1500000,
+        args = { command = "daemon", cwd = "${WS}", exit = 0, id = 3, parent = 2 },
+    },
+    {
+        name = "false",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 300000,
+        dur = 10000,
+        args = { command = "false", cwd = "${WS}", exit = 1, id = 4, parent = 1 },
+    },
+    {
+        name = "mytool",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 400000,
+        dur = 0,
+        args = { command = 'mytool --name "a b" ""', cwd = "${WS}", exit = 0, id = 5, parent = 1 },
+    },
+    {
+        name = "orphan",
+        ph = "X",
+        pid = 1,
+        tid = 4,
+        ts = 600000,
+        dur = 100000,
+        args = { command = "orphan", cwd = "${WS}", exit = 0, id = 8, parent = 99 },
+    },
+    {
+        name = "first",
+        ph = "X",
+        pid = 1,
+        tid = 4,
+        ts = 700000,
+        dur = 50000,
+        args = { command = "first", cwd = "${WS}", exit = 0, id = 9, parent = 10 },
+    },
+    {
+        name = "second",
+        ph = "X",
+        pid = 1,
+        tid = 4,
+        ts = 710000,
+        dur = 20000,
+        args = { command = "second", cwd = "${WS}", exit = 0, id = 10, parent = 9 },
+    },
+    { name = "running", ph = "C", pid = 1, ts = 0, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 200000, args = { commands = 2 } },
+    { name = "running", ph = "C", pid = 1, ts = 600000, args = { commands = 3 } },
+    { name = "running", ph = "C", pid = 1, ts = 750000, args = { commands = 2 } },
+    { name = "running", ph = "C", pid = 1, ts = 1650000, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 2000000, args = { commands = 0 } },
+]

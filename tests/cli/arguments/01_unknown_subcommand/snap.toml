@@ -11,6 +11,7 @@ Commands:
   compile-commands  Generate a compile_commands.json file from captured compiler commands.
   tree              Render captured commands as a command tree.
   targets           Render captured build targets as a flat target forest.
+  profile           Write the timeline of the build's commands as a trace for Perfetto.
   explain           Print how catter analyzes the command after --, without running it.
   run               Run the build with handlers alone, which decide on and observe its commands.
 
@@ -31,6 +32,7 @@ Commands:
   compile-commands  Generate a compile_commands.json file from captured compiler commands.
   tree              Render captured commands as a command tree.
   targets           Render captured build targets as a flat target forest.
+  profile           Write the timeline of the build's commands as a trace for Perfetto.
   explain           Print how catter analyzes the command after --, without running it.
   run               Run the build with handlers alone, which decide on and observe its commands.
 

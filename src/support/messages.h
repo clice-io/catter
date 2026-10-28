@@ -68,6 +68,9 @@ struct command {
 struct process_result {
     std::int64_t code = -1;
 
+    /// When the program started, in microseconds since the session did.
+    std::int64_t start = 0;
+
     /// How long the program ran, in microseconds.
     std::int64_t duration = 0;
 };
@@ -132,9 +135,17 @@ struct Request<RequestType::REPORT_ERROR> {
     constexpr inline static std::string_view method = "report_error";
 };
 
+/// How the command's program ran: its exit code, as `data::process_result` has it, when it
+/// started, on the steady clock, which every process of the machine reads alike, in microseconds
+/// since the clock's epoch, and how long it ran, in microseconds.
 template <>
 struct Request<RequestType::FINISH> {
-    using Params = data::process_result;
+    struct Params {
+        std::int64_t code;
+        std::int64_t started;
+        std::int64_t duration;
+    };
+
     using Result = std::nullptr_t;
     constexpr inline static std::string_view method = "finish";
 };

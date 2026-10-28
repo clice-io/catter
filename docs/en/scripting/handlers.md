@@ -33,7 +33,7 @@ This suits a handler run under a debugger, or one that serves several builds in 
 | `--allow-remote`              | Let `--connect` reach a handler on another machine.                                                                           |         |
 | `--handler-timeout <seconds>` | How long catter waits for a handler to answer, and to exit once the session is over; `0` waits as long as it takes.           | `60`    |
 
-`run` runs the build with handlers alone. `compile-commands`, `tree` and `targets` take these options too, and run the handlers after their built-in.
+`run` runs the build with handlers alone. `compile-commands`, `tree`, `targets` and `profile` take these options too, and run the handlers after their built-in.
 
 ## The SDKs
 

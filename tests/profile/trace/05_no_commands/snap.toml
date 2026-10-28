@@ -1,0 +1,12 @@
+[test."$ catter profile --from events.json"]
+stdout = '''
+Profiled 0 commands in 0 ms: 0.0 ran at once on average, 0 at most.
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0
+
+[test."trace.json"]
+displayTimeUnit = "ms"
+traceEvents = [
+    { name = "process_name", ph = "M", pid = 1, args = { name = "events.json" } },
+]

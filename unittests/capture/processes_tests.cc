@@ -13,13 +13,14 @@ using namespace catter;
 namespace {
 
 /// A build whose processes keep their keys as they exec, as pids do, and
-/// whose events come a second apart: what each tells, as a line.
+/// whose events come a second apart, from the session's start at 100 s: what
+/// each tells, as a line.
 struct Recorder {
     data::ipcid_t last_id = 0;
 
-    BuildProcesses processes{[this] { return last_id += 1; }};
+    BuildProcesses processes{[this] { return last_id += 1; }, std::chrono::seconds(100)};
 
-    std::chrono::seconds now{};
+    std::chrono::seconds now{100};
 
     std::vector<std::string> told;
 
@@ -37,8 +38,9 @@ struct Recorder {
     void exit(std::uint64_t pid, kota::process::exit_status status) {
         now += std::chrono::seconds(1);
         for(const auto& ended: processes.exit(pid, status, now)) {
-            told.push_back(std::format("{} ended {} after {}s",
+            told.push_back(std::format("{} started at {}s, ended {} after {}s",
                                        ended.id,
+                                       ended.result.start / 1'000'000,
                                        ended.result.code,
                                        ended.result.duration / 1'000'000));
         }
@@ -68,10 +70,10 @@ ZEST_CASE(a_command_is_a_child_of_the_one_its_process_ran) {
                               R"(2 < 1: ["sh", "-c", "exec cc -c a.c"])",
                               R"(3 < 2: ["cc", "-c", "a.c"])",
                               R"(4 < 3: ["cc1", "a.c"])",
-                              "4 ended 0 after 1s",
-                              "3 ended 1 after 3s",
-                              "2 ended 1 after 4s",
-                              "1 ended 2 after 6s",
+                              "4 started at 4s, ended 0 after 1s",
+                              "3 started at 3s, ended 1 after 3s",
+                              "2 started at 2s, ended 1 after 4s",
+                              "1 started at 1s, ended 2 after 6s",
                           });
 }
 
@@ -99,7 +101,7 @@ ZEST_CASE(leaves_out_other_processes) {
     build.exit(10, {.term_signal = 9});
     ZEXPECT(build.told == std::vector<std::string>{
                               R"(1 < -: ["make"])",
-                              "1 ended 137 after 1s",
+                              "1 started at 3s, ended 137 after 1s",
                           });
 }
 

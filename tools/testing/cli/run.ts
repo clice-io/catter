@@ -286,6 +286,7 @@ function findOuterPlaces(): [string, string][] {
     for (const [name, variable] of [
         ["${MSVC}", "VCToolsInstallDir"],
         ["${WINSDK}", "WindowsSdkDir"],
+        ["${VS}", "VSINSTALLDIR"],
     ] as const) {
         const dir = env[variable];
         if (dir !== undefined && dir !== "") {
@@ -368,6 +369,10 @@ const XMAKE_PROBE = /\$\{TMP\}\/\.xmake#\/#\/_[0-9a-f]{32}/g;
 const GO_BUILD_DIR = /\$\{TMP\}\/go-build\d+/g;
 const GO_RANDOM_SEED = /-frandom-seed=[\w-]{20}/g;
 
+/// The temporary files GCC's driver passes between its stages, named at
+/// random: `${TMP}/ccOyQ1i2.s`.
+const GCC_TEMPORARY = /\$\{TMP\}\/cc[A-Za-z0-9]{6}\./g;
+
 /// The version of the macOS SDK and of the deployment target, which every
 /// update of the runner's Xcode changes: `MacOSX15.5.sdk`,
 /// `arm64-apple-macos15.5`.
@@ -395,6 +400,7 @@ export function normalize(text: string, places: Places): string {
         .replace(XMAKE_PROBE, "${TMP}/.xmake#/#/_#")
         .replace(GO_BUILD_DIR, "${TMP}/go-build#")
         .replace(GO_RANDOM_SEED, "-frandom-seed=#")
+        .replace(GCC_TEMPORARY, "${TMP}/cc#.")
         .replace(/\b\d+(\.\d+)?(ms|s)\b/g, "#$2")
         .split("\n")
         .map((line) => line.trimEnd())

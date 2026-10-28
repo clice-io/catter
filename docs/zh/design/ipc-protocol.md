@@ -113,16 +113,17 @@ enum class RequestType : uint8_t {
 
 报告命令执行完成。
 
-**Params** -- `process_result`：
+**Params**：
 
-| 字段       | 类型      | 说明                                          |
-| ---------- | --------- | --------------------------------------------- |
-| `code`     | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号 |
-| `duration` | `int64_t` | 程序运行的时长，单位为微秒                    |
+| 字段       | 类型      | 说明                                                                                                                        |
+| ---------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `code`     | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号                                                                               |
+| `started`  | `int64_t` | 程序启动的时刻：稳定时钟（steady clock）的读数，同一台机器上的每个进程读到的都一样，单位为微秒，从该时钟的起点（epoch）算起 |
+| `duration` | `int64_t` | 程序运行的时长，单位为微秒                                                                                                  |
 
 **Result**: `null`（无响应负载）
 
-守护进程收到此请求后，把结果告知会话的各个 handler（即 handler 协议中的 `exit`）。随后代理断开连接。Windows 钩子不发送它：守护进程从进程本身得知退出码。
+守护进程收到此请求后，把命令的运行情况告知会话的各个 handler（即 handler 协议中的 `exit`），并附上命令的启动时刻，换算为从会话开始算起的时间。随后代理断开连接。Windows 钩子不发送它：守护进程从进程本身得知退出码。
 
 ### STARTED
 
@@ -154,7 +155,7 @@ Daemon -> Proxy:  {id, action {type, cmd}}
 [Proxy starts the command, or drops it]
 Proxy -> Daemon:  started(pid)              (macOS, a notification)
 [Proxy waits for the command]
-Proxy -> Daemon:  FINISH(process_result)
+Proxy -> Daemon:  FINISH(code, started, duration)
 Daemon -> Proxy:  null
 [Proxy disconnects]
 ```
@@ -225,12 +226,6 @@ struct command {
     std::string executable;            // Resolved executable path
     std::vector<std::string> args;     // Argument array
     std::vector<std::string> env;      // Environment (KEY=VALUE entries)
-};
-
-// Result of executing a command
-struct process_result {
-    int64_t code = -1;                 // Exit code
-    int64_t duration = 0;              // How long it ran, in microseconds
 };
 
 // Decision returned by the daemon

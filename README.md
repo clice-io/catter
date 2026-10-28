@@ -27,7 +27,7 @@ Although its initial motivation was to record compilation commands to generate a
 
 - **Perform "Fake" Compilations**: Instead of forwarding compilation tasks to the actual compiler, `catter` can generate fake placeholder object files. This allows the build system to proceed with its tasks without performing a full, time-consuming compilation. This way, you can obtain a complete CDB without waiting for the entire build process to finish. **Note**: If the build involves code generators, those tools must still be genuinely built. `catter` can automatically analyze dependencies to ensure that only these essential tools are compiled, achieving a true minimal build.
 
-- **Profile the Build Process**: Due to issues in the build system's design or poorly written build scripts, the actual degree of build parallelism can be very low. We can capture process information (start times, durations, parent-child relationships) and render it visually, allowing users to inspect the build's parallelism and performance bottlenecks in real-time in a browser.
+- **Profile the Build Process**: Due to issues in the build system's design or poorly written build scripts, the actual degree of build parallelism can be very low. `catter profile` records when each command started, how long it ran and which command started it, and writes a trace you open in Perfetto or `chrome://tracing` to inspect the build's parallelism, its critical path and its slowest steps.
 
 - **Patch the Build Process with Custom Handlers**: Users can write their own handlers, in Python, TypeScript or any language that speaks catter's protocol, to patch any command during the build process. This gives you the power to dynamically modify arguments, redirect commands, or inject custom logic into your build without altering the original build files.
 
@@ -60,6 +60,13 @@ For CMake projects, wrap the build step in the same way:
 
 ```bash
 catter compile-commands -o compile_commands.json -- cmake --build build
+```
+
+To see the build's timeline, profile it, and open the `trace.json` it writes in
+[Perfetto](https://ui.perfetto.dev):
+
+```bash
+catter profile -- make -j8
 ```
 
 The general command format is:

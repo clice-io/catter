@@ -15,14 +15,15 @@ Every run names a command, and its options come after it. `catter --help` lists 
 | `compile-commands` | Generate a `compile_commands.json` file from captured compiler commands. See [Compilation Database](../features/compilation-database.md). |
 | `tree`             | Render captured commands as a command tree. See [Command Tree](../features/command-tree.md).                                              |
 | `targets`          | Render captured build targets as a flat target forest. See [Target Tree](../features/target-tree.md).                                     |
+| `profile`          | Write the timeline of the build's commands as a trace for Perfetto. See [Build Profiling](../features/build-profiling.md).                |
 | `explain`          | Print how catter analyzes the command after `--`, without running it. See [Explain](../features/explain.md).                              |
 | `run`              | Run the build with handlers alone, which decide on and observe its commands. See [Handlers](../scripting/handlers.md).                    |
 
-`compile-commands`, `tree` and `targets` each run a built-in on the build, together with the [handlers](../scripting/handlers.md) the command line names, if any. `run` runs the handlers alone, and needs at least one.
+`compile-commands`, `tree`, `targets` and `profile` each run a built-in on the build, together with the [handlers](../scripting/handlers.md) the command line names, if any. `run` runs the handlers alone, and needs at least one.
 
 ### Options
 
-`compile-commands`, `tree`, `targets` and `run` take these options besides their own:
+`compile-commands`, `tree`, `targets`, `profile` and `run` take these options besides their own:
 
 | Option                        | Description                                                                                                                                                 | Default           |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -40,7 +41,7 @@ Every run names a command, and its options come after it. `catter --help` lists 
 
 ### Exit status
 
-catter ends as the build did: with the build's exit code, or, when a signal ended the build, by the same signal. A replayed build ends with the exit code its file records. When catter itself fails, as when the command line is wrong, a handler aborts the build or the compilation database cannot be written, catter prints why and exits with 1.
+catter ends as the build did: with the build's exit code, or, when a signal ended the build, by the same signal. A replayed build ends with the exit code its file records. When catter itself fails, as when the command line is wrong, a handler aborts the build or the compilation database or the trace cannot be written, catter prints why and exits with 1.
 
 Stopping catter stops the build: a SIGTERM, SIGINT or SIGHUP sent to catter goes on to the build command, which ends as it would if it were sent to it, and catter then ends as the build did. A build command ends with catter when catter is killed, but under `eslogger`.
 

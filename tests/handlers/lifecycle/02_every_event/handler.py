@@ -24,7 +24,10 @@ class Handler(catter.Handler):
         print(f"error {error.id}: parent {error.parent}, {error.message}")
 
     def on_exit(self, exit):
-        print(f"exit {exit.id}: code {exit.code}, took {exit.duration // 1000}ms")
+        print(
+            f"exit {exit.id}: code {exit.code}, started at {exit.start // 1000}ms, "
+            f"took {exit.duration // 1000}ms"
+        )
 
     def on_finish(self, finish):
         print(f"finish: code {finish.code}")

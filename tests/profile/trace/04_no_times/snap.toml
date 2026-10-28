@@ -1,0 +1,54 @@
+[test."$ catter profile --from events.json"]
+stdout = '''
+Profiled 3 commands in 0 ms: 0.0 ran at once on average, 0 at most.
+Critical path, 0 ms: c++ main.cc 0 ms
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0
+
+[test."trace.json"]
+displayTimeUnit = "ms"
+traceEvents = [
+    { name = "process_name", ph = "M", pid = 1, args = { name = "events.json" } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 1, args = { name = "critical path" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 1, args = { sort_index = 0 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 2, args = { name = "lane 1" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 2, args = { sort_index = 1 } },
+    {
+        name = "make",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 0,
+        args = { command = "make", cwd = "${WS}", exit = 0, id = 1 },
+    },
+    {
+        name = "c++ main.cc",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 0,
+        cat = "compile",
+        args = {
+            command = "c++ -c main.cc -o main.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 2,
+            parent = 1,
+            writes = ["${WS}/main.o"],
+        },
+    },
+    {
+        name = "c++ app",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 0,
+        cat = "link",
+        args = { command = "c++ main.o -o app", cwd = "${WS}", exit = 0, id = 3, parent = 1, writes = ["${WS}/app"] },
+    },
+    { name = "c++ main.cc", ph = "X", pid = 1, tid = 1, ts = 0, dur = 0, args = { id = 2 } },
+]

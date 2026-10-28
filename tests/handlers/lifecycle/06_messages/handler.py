@@ -1,7 +1,7 @@
 # A handler that speaks the protocol itself, without the SDK, and prints each
 # message catter sends it: its method, whether it is a request, and the id of
-# its command. It decides when given "decides", and else observes the
-# commands and their exits.
+# its command, or for an exit, all it tells. It decides when given "decides",
+# and else observes the commands and their exits.
 import json
 import sys
 
@@ -27,8 +27,9 @@ def answer(message, result):
 
 while (message := read()) is not None:
     kind = "request" if "id" in message else "notification"
-    command = message.get("params", {}).get("id", "")
-    print(f"{message['method']}: {kind} {command}".rstrip(), file=sys.stderr, flush=True)
+    params = message.get("params", {})
+    told = json.dumps(params) if message["method"] == "exit" else params.get("id", "")
+    print(f"{message['method']}: {kind} {told}".rstrip(), file=sys.stderr, flush=True)
     if message["method"] == "initialize":
         events = {"command": not decides, "error": False, "exit": not decides}
         answer(message, {"decides": decides, "events": events, "env": False, "analysis": False})

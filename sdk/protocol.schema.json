@@ -1182,6 +1182,11 @@
                     "minimum": -9223372036854775808,
                     "maximum": 9223372036854775807
                 },
+                "start": {
+                    "type": "integer",
+                    "minimum": -9223372036854775808,
+                    "maximum": 9223372036854775807
+                },
                 "duration": {
                     "type": "integer",
                     "minimum": -9223372036854775808,
@@ -1191,6 +1196,7 @@
             "required": [
                 "id",
                 "code",
+                "start",
                 "duration"
             ]
         },

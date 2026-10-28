@@ -14,9 +14,17 @@ namespace catter {
 
 namespace {
 
-/// How a command or the build ended.
+/// How the build ended.
 struct ReplayResult {
     std::int64_t code;
+};
+
+/// How a command ran: when it started, in microseconds since the session did, how long it ran,
+/// in microseconds, and how it ended.
+struct ReplayExecution {
+    std::int64_t code;
+    std::optional<std::int64_t> start;
+    std::optional<std::int64_t> duration;
 };
 
 /// Why catter could not capture a replayed command.
@@ -38,7 +46,7 @@ struct ReplayEvent {
     std::string exe;
     std::vector<std::string> argv;
     std::optional<std::vector<std::string>> env;
-    std::optional<ReplayResult> execution;
+    std::optional<ReplayExecution> execution;
     std::optional<ReplayError> error;
 };
 
@@ -79,8 +87,12 @@ std::optional<data::ipcid_t> parent_of(std::optional<data::ipcid_t> parent) {
     return parent;
 }
 
-data::process_result to_process_result(const ReplayResult& result) {
-    return {.code = result.code};
+data::process_result to_process_result(const ReplayExecution& execution) {
+    return {
+        .code = execution.code,
+        .start = execution.start.value_or(0),
+        .duration = execution.duration.value_or(0),
+    };
 }
 
 ReplayFile parse_replay_file(std::string_view path) {

@@ -1,0 +1,242 @@
+[test."$ catter profile -q -- cmake --build build -j 1"]
+stdout = '''
+[1/3] Building CXX object CMakeFiles/util.dir/src/util.cc.o
+[2/3] Building CXX object CMakeFiles/util.dir/src/twice.cc.o
+[3/3] Linking CXX static library libutil.a
+'''
+exit = 0
+
+[test."$ catter profile -q -- cmake --build build -j 1".win32]
+differs = "CMake builds with MSVC on Windows, which makes .obj and .lib files, and Ninja prints Windows paths"
+stdout = '''
+[1/3] Building CXX object CMakeFiles\util.dir\src\util.cc.obj
+[2/3] Building CXX object CMakeFiles\util.dir\src\twice.cc.obj
+[3/3] Linking CXX static library util.lib
+'''
+exit = 0
+
+[test."trace.json"]
+process = "cmake --build build -j 1"
+"lane 1" = [
+    { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
+    { depth = 1, name = "ninja", command = "${ENV}/bin/ninja -j 1", cwd = "${WS}/build", exit = 0, id = 2, parent = 1 },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"${ENV}/bin/c++ -DCATTER_TEST=1 -I${WS}/include  -MD -MT CMakeFiles/util.dir/src/util.cc.o -MF CMakeFiles/util.dir/src/util.cc.o.d -o CMakeFiles/util.dir/src/util.cc.o -c '${WS}/src/util.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 3,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "c++ util.cc",
+        cat = "compile",
+        command = '${ENV}/bin/c++ -DCATTER_TEST=1 "-I${WS}/include" -MD -MT CMakeFiles/util.dir/src/util.cc.o -MF CMakeFiles/util.dir/src/util.cc.o.d -o CMakeFiles/util.dir/src/util.cc.o -c "${WS}/src/util.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 4,
+        parent = 3,
+        writes = ["${WS}/build/CMakeFiles/util.dir/src/util.cc.o"],
+        target = ["${WS}/build/libutil.a"],
+    },
+    {
+        depth = 4,
+        name = "cc1plus",
+        command = '${ENV}/bin/../libexec/gcc/x86_64-conda-linux-gnu/14.2.0/cc1plus -quiet -I "${WS}/include" -iprefix ${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/ -isysroot ${ENV}/bin/../x86_64-conda-linux-gnu/sysroot -MD CMakeFiles/util.dir/src/util.cc.d -MF CMakeFiles/util.dir/src/util.cc.o.d -MT CMakeFiles/util.dir/src/util.cc.o -D_GNU_SOURCE -D CATTER_TEST=1 "${WS}/src/util.cc" -quiet -dumpdir CMakeFiles/util.dir/src/ -dumpbase util.cc.cc -dumpbase-ext .cc -mtune=generic -march=x86-64 -o ${TMP}/cc#.s',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 5,
+        parent = 4,
+    },
+    {
+        depth = 4,
+        name = "as",
+        command = '${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../x86_64-conda-linux-gnu/bin/as -I "${WS}/include" --64 -o CMakeFiles/util.dir/src/util.cc.o ${TMP}/cc#.s',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 6,
+        parent = 4,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"${ENV}/bin/c++ -DCATTER_TEST=1 -I${WS}/include  -MD -MT CMakeFiles/util.dir/src/twice.cc.o -MF CMakeFiles/util.dir/src/twice.cc.o.d -o CMakeFiles/util.dir/src/twice.cc.o -c '${WS}/src/twice.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 7,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "c++ twice.cc",
+        cat = "compile",
+        command = '${ENV}/bin/c++ -DCATTER_TEST=1 "-I${WS}/include" -MD -MT CMakeFiles/util.dir/src/twice.cc.o -MF CMakeFiles/util.dir/src/twice.cc.o.d -o CMakeFiles/util.dir/src/twice.cc.o -c "${WS}/src/twice.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 8,
+        parent = 7,
+        writes = ["${WS}/build/CMakeFiles/util.dir/src/twice.cc.o"],
+        target = ["${WS}/build/libutil.a"],
+    },
+    {
+        depth = 4,
+        name = "cc1plus",
+        command = '${ENV}/bin/../libexec/gcc/x86_64-conda-linux-gnu/14.2.0/cc1plus -quiet -I "${WS}/include" -iprefix ${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/ -isysroot ${ENV}/bin/../x86_64-conda-linux-gnu/sysroot -MD CMakeFiles/util.dir/src/twice.cc.d -MF CMakeFiles/util.dir/src/twice.cc.o.d -MT CMakeFiles/util.dir/src/twice.cc.o -D_GNU_SOURCE -D CATTER_TEST=1 "${WS}/src/twice.cc" -quiet -dumpdir CMakeFiles/util.dir/src/ -dumpbase twice.cc.cc -dumpbase-ext .cc -mtune=generic -march=x86-64 -o ${TMP}/cc#.s',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 9,
+        parent = 8,
+    },
+    {
+        depth = 4,
+        name = "as",
+        command = '${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../x86_64-conda-linux-gnu/bin/as -I "${WS}/include" --64 -o CMakeFiles/util.dir/src/twice.cc.o ${TMP}/cc#.s',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 10,
+        parent = 8,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = '/bin/sh -c ": && ${ENV}/bin/cmake -E rm -f libutil.a && /usr/bin/ar qc libutil.a  CMakeFiles/util.dir/src/util.cc.o CMakeFiles/util.dir/src/twice.cc.o && /usr/bin/ranlib libutil.a && :"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 11,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "cmake",
+        command = "${ENV}/bin/cmake -E rm -f libutil.a",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 12,
+        parent = 11,
+    },
+    {
+        depth = 3,
+        name = "ar libutil.a",
+        cat = "archive",
+        command = "/usr/bin/ar qc libutil.a CMakeFiles/util.dir/src/util.cc.o CMakeFiles/util.dir/src/twice.cc.o",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 13,
+        parent = 11,
+        writes = ["${WS}/build/libutil.a"],
+    },
+    {
+        depth = 3,
+        name = "ranlib",
+        command = "/usr/bin/ranlib libutil.a",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 14,
+        parent = 11,
+    },
+]
+running = [1, 0]
+
+[test."trace.json".darwin]
+wrong = "Ninja runs each command through Apple's /bin/sh, which runs without the hook, and what it starts goes uncaptured"
+process = "cmake --build build -j 1"
+"lane 1" = [
+    { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
+    { depth = 1, name = "ninja", command = "${ENV}/bin/ninja -j 1", cwd = "${WS}/build", exit = 0, id = 2, parent = 1 },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"/usr/bin/c++ -DCATTER_TEST=1 -I${WS}/include -arch arm64 -MD -MT CMakeFiles/util.dir/src/util.cc.o -MF CMakeFiles/util.dir/src/util.cc.o.d -o CMakeFiles/util.dir/src/util.cc.o -c '${WS}/src/util.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 3,
+        parent = 2,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"/usr/bin/c++ -DCATTER_TEST=1 -I${WS}/include -arch arm64 -MD -MT CMakeFiles/util.dir/src/twice.cc.o -MF CMakeFiles/util.dir/src/twice.cc.o.d -o CMakeFiles/util.dir/src/twice.cc.o -c '${WS}/src/twice.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 4,
+        parent = 2,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = '/bin/sh -c ": && ${ENV}/bin/cmake -E rm -f libutil.a && /usr/bin/ar qc libutil.a  CMakeFiles/util.dir/src/util.cc.o CMakeFiles/util.dir/src/twice.cc.o && /usr/bin/ranlib libutil.a && ${ENV}/bin/cmake -E touch libutil.a && :"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 5,
+        parent = 2,
+    },
+]
+running = [1, 0]
+
+[test."trace.json".win32]
+wrong = "the library is made by lib.exe, whose inputs and output catter does not analyze: no target for the compiles"
+process = "cmake --build build -j 1"
+"lane 1" = [
+    { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
+    {
+        depth = 1,
+        name = "ninja.exe",
+        command = '"${VS}/Common7/IDE/COMMON~1/MICROS~1/CMake/Ninja/ninja.exe" -j 1',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 2,
+        parent = 1,
+    },
+    {
+        depth = 2,
+        name = "cl.exe util.cc",
+        cat = "compile",
+        command = '"${MSVC}/bin/Hostx64/x64/cl.exe" /nologo /TP -DCATTER_TEST=1 "-I${WS}/include" /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\util.dir\src\util.cc.obj /FdCMakeFiles\util.dir\util.pdb /FS -c "${WS}/src/util.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 3,
+        parent = 2,
+        writes = ["${WS}/build/CMakeFiles/util.dir/src/util.cc.obj"],
+    },
+    {
+        depth = 2,
+        name = "cl.exe twice.cc",
+        cat = "compile",
+        command = '"${MSVC}/bin/Hostx64/x64/cl.exe" /nologo /TP -DCATTER_TEST=1 "-I${WS}/include" /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\util.dir\src\twice.cc.obj /FdCMakeFiles\util.dir\util.pdb /FS -c "${WS}/src/twice.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 4,
+        parent = 2,
+        writes = ["${WS}/build/CMakeFiles/util.dir/src/twice.cc.obj"],
+    },
+    {
+        depth = 2,
+        name = "cmd.exe",
+        command = 'C:\Windows\System32\cmd.exe /C "cd . && ${MSVC}/bin/Hostx64/x64/lib.exe /nologo /machine:x64 /out:util.lib CMakeFiles\\util.dir\\src\\util.cc.obj CMakeFiles\\util.dir\\src\\twice.cc.obj && cd ."',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 5,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "lib.exe",
+        command = '"${MSVC}/bin/Hostx64/x64/lib.exe" /nologo /machine:x64 /out:util.lib CMakeFiles\util.dir\src\util.cc.obj CMakeFiles\util.dir\src\twice.cc.obj',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 6,
+        parent = 5,
+    },
+    {
+        depth = 4,
+        name = "LINK",
+        command = 'LINK /LIB /nologo /machine:x64 /out:util.lib CMakeFiles\util.dir\src\util.cc.obj CMakeFiles\util.dir\src\twice.cc.obj',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 7,
+        parent = 6,
+    },
+]
+running = [1, 0]

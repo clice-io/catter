@@ -18,6 +18,17 @@ export interface Change {
 /// other field follows them.
 const ENTRY_FIELDS = ["file", "directory", "output", "arguments", "command"];
 
+/// An event of a trace `catter profile` writes, as far as a test reads it.
+interface TraceEvent {
+    name: string;
+    ph: string;
+    cat?: string;
+    tid?: number;
+    ts?: number;
+    dur?: number;
+    args?: Table;
+}
+
 function orderEntry(entry: Record<string, unknown>): Table {
     const keys = [
         ...ENTRY_FIELDS.filter((key) => key in entry),
@@ -132,5 +143,80 @@ export class Disk {
             .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
             .map(({ entry }) => entry);
         return { entries: sorted };
+    }
+
+    /// A JSON file as a test shows it, every string normalized; `absent` when
+    /// there is no such file, the text itself when it is no JSON.
+    json(file: string): Value {
+        if (!this.exists(file)) {
+            return { absent: true };
+        }
+        const text = this.read(file);
+        let value: Value;
+        try {
+            value = JSON.parse(text) as Value;
+        } catch {
+            return { text };
+        }
+        return mapText(value, this.normalize);
+    }
+
+    /// A trace of `catter profile` as a test shows it without its times,
+    /// which differ from run to run: its process; under the name of each lane,
+    /// in order, the commands there in the order they start, each with how
+    /// deep it runs within the others there in place of its times; and the
+    /// counts of its `running` counter in order. Its critical path, which
+    /// follows the times, is left out. `absent` when there is no such file.
+    trace(file = "trace.json"): Table {
+        if (!this.exists(file)) {
+            return { absent: true };
+        }
+        const { traceEvents } = JSON.parse(this.read(file)) as { traceEvents: TraceEvent[] };
+        const shown: Record<string, Value> = {};
+        const lanes = new Map<number, string>();
+        for (const event of traceEvents) {
+            if (event.ph !== "M") {
+                continue;
+            }
+            const value = event.args?.["name"];
+            const name = typeof value === "string" ? value : "";
+            if (event.name === "process_name") {
+                shown["process"] = name;
+            } else if (event.name === "thread_name" && name !== "critical path") {
+                lanes.set(event.tid ?? 0, name);
+            }
+        }
+        const timed = (event: TraceEvent) => ({
+            event,
+            start: event.ts ?? 0,
+            end: (event.ts ?? 0) + (event.dur ?? 0),
+        });
+        for (const [tid, lane] of [...lanes].sort(([a], [b]) => a - b)) {
+            const ends: number[] = [];
+            const commands: Table[] = [];
+            const sorted = traceEvents
+                .filter((event) => event.ph === "X" && event.tid === tid)
+                .map(timed)
+                .sort((a, b) => a.start - b.start || b.end - a.end);
+            for (const { event, start, end } of sorted) {
+                while (ends.length > 0 && (ends.at(-1) ?? 0) <= start) {
+                    ends.pop();
+                }
+                commands.push({
+                    depth: ends.length,
+                    name: event.name,
+                    ...(event.cat === undefined ? {} : { cat: event.cat }),
+                    ...event.args,
+                });
+                ends.push(end);
+            }
+            shown[lane] = commands;
+        }
+        shown["running"] = traceEvents
+            .filter((event) => event.ph === "C")
+            .map(timed)
+            .sort((a, b) => a.start - b.start)
+            .map(({ event }) => event.args?.["commands"] ?? 0);
+        return mapText(shown, this.normalize) as Table;
     }
 }
