@@ -17,19 +17,14 @@ constexpr std::string_view PROGRAM = "tool.exe";
 constexpr std::string_view PROGRAM = "tool";
 #endif
 
-/// `name` under `directory`.
-std::string under(std::string_view directory, std::string_view name) {
-    std::string path(directory);
-    kota::fs::path::push(path, name);
-    return path;
-}
-
 /// A directory of the test's own, with `PROGRAM` in `bin`.
 struct Directory {
     TempFileManager files;
 
     explicit Directory(std::string_view name) : files(name) {
-        files.create(under("bin", PROGRAM));
+        std::string program;
+        kota::fs::path::push(program, "bin", PROGRAM);
+        files.create(program);
     }
 };
 
@@ -39,14 +34,16 @@ ZEST_SUITE(program_tests) {
 
 ZEST_CASE(path_is_taken_from_the_directory_given) {
     Directory directory("catter-program-path");
-    const auto name = under("bin", PROGRAM);
+    std::string name;
+    kota::fs::path::push(name, "bin", PROGRAM);
 
     ZEXPECT(resolve_program(name, directory.files.root.path()) == directory.files.path(name));
 };
 
 ZEST_CASE(path_found_nowhere_is_the_name_itself) {
     Directory directory("catter-program-missing");
-    const auto name = under("bin", "catter-no-such-program");
+    std::string name;
+    kota::fs::path::push(name, "bin", "catter-no-such-program");
 
     ZEXPECT(resolve_program(name, directory.files.root.path()) == name);
 };
@@ -56,8 +53,10 @@ ZEST_CASE(name_is_looked_for_in_the_directory_given_as_the_current_one) {
     Directory directory("catter-program-name");
 
     const auto bin = directory.files.path("bin");
+    std::string program;
+    kota::fs::path::push(program, bin, PROGRAM);
 
-    ZEXPECT(resolve_program(PROGRAM, bin) == under(bin, PROGRAM));
+    ZEXPECT(resolve_program(PROGRAM, bin) == program);
 };
 #endif
 
