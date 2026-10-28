@@ -15,7 +15,9 @@
       "exe": "cc",
       "argv": ["cc", "-c", "a.c"],
       "execution": {
-        "code": 0
+        "code": 0,
+        "start": 1500,
+        "duration": 250000
       }
     },
     {

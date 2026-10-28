@@ -115,10 +115,11 @@ enum class RequestType : uint8_t {
 
 **Params** -- `process_result`：
 
-| 字段       | 类型      | 说明                                          |
-| ---------- | --------- | --------------------------------------------- |
-| `code`     | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号 |
-| `duration` | `int64_t` | 程序运行的时长，单位为微秒                    |
+| 字段       | 类型      | 说明                                                |
+| ---------- | --------- | --------------------------------------------------- |
+| `code`     | `int64_t` | 进程退出码；被信号结束的进程为 128 加信号编号       |
+| `start`    | `int64_t` | `0`，守护进程会把它换成自己告诉代理运行该命令的时刻 |
+| `duration` | `int64_t` | 程序运行的时长，单位为微秒                          |
 
 **Result**: `null`（无响应负载）
 
@@ -230,6 +231,7 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
+    int64_t start = 0;                 // When it started, in microseconds since the session did
     int64_t duration = 0;              // How long it ran, in microseconds
 };
 

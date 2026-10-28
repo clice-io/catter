@@ -24,7 +24,8 @@ struct ProfileOptions {
                  help = "List the n commands that took the longest. [default: 5]")
     <std::int64_t> top = 5;
 
-    DecoFlag(names = {"-q", "--quiet"}, help = "Print no summary.")
+    DecoFlag(names = {"-q", "--quiet"},
+             help = "Print no summary, nor why catter could not capture a command.")
     quiet = false;
 
     DECO_CFG_END()

@@ -33,7 +33,7 @@ catter run --connect 127.0.0.1:9000 -- make
 | `--allow-remote`              | 允许 `--connect` 连接其他机器上的 handler。                                             |        |
 | `--handler-timeout <seconds>` | catter 等待 handler 应答、以及会话结束后等待它退出的时长；`0` 表示一直等下去。          | `60`   |
 
-`run` 只用 handler 运行构建。`compile-commands`、`tree` 和 `targets` 也接受这些选项，在各自的内置功能之后运行 handler。
+`run` 只用 handler 运行构建。`compile-commands`、`tree`、`targets` 和 `profile` 也接受这些选项，在各自的内置功能之后运行 handler。
 
 ## SDK
 

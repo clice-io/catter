@@ -17,23 +17,6 @@ namespace catter::feature {
 
 namespace {
 
-/// `argument` as a command line shows it: as it is when plain, else as a JSON string.
-std::string quote_argument(std::string_view argument) {
-    const auto plain = !argument.empty() && std::ranges::all_of(argument, [](char c) {
-        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-               std::string_view(R"(_@%+=:,./\-)").contains(c);
-    });
-    return plain ? std::string(argument) : quote(argument);
-}
-
-std::string command_line(const data::command& command) {
-    if(command.args.empty()) {
-        return quote_argument(command.executable);
-    }
-    return command.args | std::views::transform(quote_argument) | std::views::join_with(' ') |
-           std::ranges::to<std::string>();
-}
-
 /// `label:` and the values a line each, or that none is.
 std::string list(std::string_view label, std::span<const std::string> values) {
     if(values.empty()) {

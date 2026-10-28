@@ -2,6 +2,8 @@ module;
 
 #include "modules/prelude.h"
 
+#include "support/messages.h"
+
 module catter;
 
 import :feature.json;
@@ -15,12 +17,21 @@ struct Config {
     constexpr static auto invalid_utf8 = kota::codec::invalid_utf8::Replace;
 };
 
+/// `argument` as a command line shows it: as it is when plain, else as a JSON string.
+std::string quote_argument(std::string_view argument) {
+    const auto plain = !argument.empty() && std::ranges::all_of(argument, [](char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+               std::string_view(R"(_@%+=:,./\-)").contains(c);
+    });
+    return plain ? std::string(argument) : quote(argument);
+}
+
 }  // namespace
 
 std::string to_json(const JSON& value, Layout layout) {
     auto compact = kota::codec::json::to_string<Config>(value);
     assert(compact.has_value());
-    if(layout == Layout::Line) {
+    if(!layout.pretty) {
         return std::move(*compact);
     }
     auto pretty = kota::codec::json::prettify(*compact);
@@ -49,6 +60,23 @@ std::string quote(std::string_view text) {
     }
     out += '"';
     return out;
+}
+
+std::string command_line(const data::command& command) {
+    if(command.args.empty()) {
+        return quote_argument(command.executable);
+    }
+    return command.args | std::views::transform(quote_argument) | std::views::join_with(' ') |
+           std::ranges::to<std::string>();
+}
+
+void save_file(std::string_view file, std::string_view text, std::string_view what) {
+    auto created = kota::fs::create_directories(kota::fs::path::parent(file));
+    auto error = created.has_value() ? kota::fs::write_file_atomic(file, text) : created.error();
+    if(error) {
+        throw cpptrace::runtime_error(
+            std::format("Failed to write the {} `{}`: {}", what, file, error.message()));
+    }
 }
 
 }  // namespace catter::feature

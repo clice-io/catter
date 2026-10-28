@@ -74,10 +74,6 @@ private:
 
     data::ipcid_t id;
 
-    /// When catter-proxy starts the command's program, on the session's clock: as it is told
-    /// what to do.
-    std::int64_t start = 0;
-
 #ifdef CATTER_WINDOWS
     std::optional<data::ipcid_t> parent;
 
@@ -116,15 +112,22 @@ kota::task<> Server::Client::answer(kota::pipe pipe) {
             co_return nullptr;
         });
 
-    peer.on_request(Finish::method,
-                    [&](const Context&, Finish::Params result) -> kota::ipc::RequestResult<Finish> {
+    peer.on_request(
+        Finish::method,
+        [&](const Context&, const Finish::Params& params) -> kota::ipc::RequestResult<Finish> {
 #ifdef CATTER_MAC
-                        running.reset();
+            running.reset();
 #endif
-                        result.start = start;
-                        co_await server.session.exited(id, result);
-                        co_return nullptr;
-                    });
+            const std::chrono::steady_clock::time_point started{
+                std::chrono::microseconds(params.started)};
+            co_await server.session.exited(id,
+                                           {
+                                               .code = params.code,
+                                               .start = server.session.time_of(started).count(),
+                                               .duration = params.duration,
+                                           });
+            co_return nullptr;
+        });
 
 #ifdef CATTER_WINDOWS
     peer.on_request(
@@ -154,7 +157,6 @@ kota::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params par
     parent = params.parent;
 #endif
     auto action = co_await server.session.decide(id, params.parent, std::move(params.command));
-    start = server.session.time_of(std::chrono::steady_clock::now()).count();
 #ifdef CATTER_WINDOWS
     decided = action.type;
     executable = action.cmd.executable;

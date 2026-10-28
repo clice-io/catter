@@ -98,8 +98,9 @@ an error.
   `value`, a table as it is.
 - `t.disk` reads and changes the copy: `read`, `write`, `edit`, `rm`,
   `list`, `exists`, `json(file)`, a JSON file as it shows, `cdb(file)`, a
-  compilation database as it shows, and `trace(file)`, a trace of `catter
-profile` without its times, each thread's commands nested as they ran.
+  compilation database as it shows, and `trace(file)`, a trace of
+  `catter profile` as it shows without its times and the critical path,
+  which follows them: each lane's commands nested as they ran.
 
 A command is a string split as a POSIX shell splits plain words and quotes,
 or a list of words; no shell runs it. Each takes `{ env, cwd, input }`.

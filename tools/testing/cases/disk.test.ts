@@ -13,44 +13,56 @@ describe("Disk.trace", () => {
         }
     });
 
-    function disk(trace: unknown): Disk {
+    function disk(files: Record<string, string>): Disk {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), "catter-disk-"));
         dirs.push(root);
-        fs.writeFileSync(path.join(root, "trace.json"), JSON.stringify(trace));
+        for (const [name, text] of Object.entries(files)) {
+            fs.writeFileSync(path.join(root, name), text);
+        }
         return new Disk(root, new StepRecord(), (text) => text);
     }
 
-    function thread(tid: number, name: string): unknown {
-        return { name: "thread_name", ph: "M", pid: 1, tid, args: { name } };
+    function metadata(name: string, args: Record<string, unknown>, tid?: number): unknown {
+        return { name, ph: "M", pid: 1, ...(tid === undefined ? {} : { tid }), args };
     }
 
-    function command(tid: number, name: string, ts: number, dur: number, exit = 0): unknown {
-        return { name, ph: "X", pid: 1, tid, ts, dur, args: { exit } };
+    function command(tid: number, name: string, ts: number, dur: number, id: number): unknown {
+        return { name, ph: "X", pid: 1, tid, ts, dur, args: { exit: 0, id } };
     }
 
-    test("shows each thread's commands nested, without their times", () => {
+    test("shows each lane's commands nested, without their times or the critical path", () => {
         const trace = {
             traceEvents: [
-                thread(3, "lane 2"),
-                thread(2, "lane 1"),
-                command(3, "cc b.c", 20, 10),
-                command(2, "sh", 5, 30, 1),
-                command(2, "make", 0, 100),
-                command(2, "cc a.c", 5, 30, 1),
-                command(2, "cc1", 10, 0),
-                command(2, "ld", 35, 5),
+                metadata("process_name", { name: "make" }),
+                metadata("thread_name", { name: "critical path" }, 1),
+                metadata("thread_name", { name: "lane 2" }, 3),
+                metadata("thread_name", { name: "lane 1" }, 2),
+                command(1, "cc a.c", 5, 30, 3),
+                command(3, "cc b.c", 20, 10, 4),
+                command(2, "sh", 5, 30, 2),
+                command(2, "make", 0, 100, 1),
+                { ...(command(2, "cc a.c", 5, 30, 3) as object), cat: "compile" },
+                command(2, "cc1", 10, 0, 5),
+                command(2, "ld", 35, 5, 6),
+                { name: "running", ph: "C", pid: 1, ts: 20, args: { commands: 2 } },
                 { name: "running", ph: "C", pid: 1, ts: 0, args: { commands: 1 } },
             ],
         };
-        expect(disk(trace).trace()).toEqual({
-            "lane 1": ["make", "  sh exit 1", "    cc a.c exit 1", "      cc1", "  ld"],
-            "lane 2": ["cc b.c"],
+        expect(disk({ "trace.json": JSON.stringify(trace) }).trace()).toEqual({
+            process: "make",
+            "lane 1": [
+                { depth: 0, name: "make", exit: 0, id: 1 },
+                { depth: 1, name: "sh", exit: 0, id: 2 },
+                { depth: 2, name: "cc a.c", cat: "compile", exit: 0, id: 3 },
+                { depth: 3, name: "cc1", exit: 0, id: 5 },
+                { depth: 1, name: "ld", exit: 0, id: 6 },
+            ],
+            "lane 2": [{ depth: 0, name: "cc b.c", exit: 0, id: 4 }],
+            running: [1, 2],
         });
     });
 
     test("shows a missing trace as absent", () => {
-        const root = fs.mkdtempSync(path.join(os.tmpdir(), "catter-disk-"));
-        dirs.push(root);
-        expect(new Disk(root, new StepRecord(), (text) => text).trace()).toEqual({ absent: true });
+        expect(disk({}).trace()).toEqual({ absent: true });
     });
 });

@@ -113,17 +113,17 @@ This is used when the proxy cannot capture its command (a shim finds no program 
 
 Reports that a command has completed execution.
 
-**Params** -- `process_result`:
+**Params**:
 
-| Field      | Type      | Description                                                           |
-| ---------- | --------- | --------------------------------------------------------------------- |
-| `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
-| `start`    | `int64_t` | `0`, which the daemon replaces with when it told the proxy to run it  |
-| `duration` | `int64_t` | How long the program ran, in microseconds                             |
+| Field      | Type      | Description                                                                                                                    |
+| ---------- | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended                                                          |
+| `started`  | `int64_t` | When the program started, on the steady clock, which every process of the machine reads alike, in microseconds since its epoch |
+| `duration` | `int64_t` | How long the program ran, in microseconds                                                                                      |
 
 **Result**: `null` (no response payload)
 
-After the daemon receives this request, it tells the session's handlers the result (the handler protocol's `exit`). The proxy then disconnects. The Windows hook does not send it: the daemon learns the exit code from the process itself.
+After the daemon receives this request, it tells the session's handlers the result (the handler protocol's `exit`), its start as the time since the session started. The proxy then disconnects. The Windows hook does not send it: the daemon learns the exit code from the process itself.
 
 ### STARTED
 

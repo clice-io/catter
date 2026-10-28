@@ -22,10 +22,11 @@ const ENTRY_FIELDS = ["file", "directory", "output", "arguments", "command"];
 interface TraceEvent {
     name: string;
     ph: string;
+    cat?: string;
     tid?: number;
     ts?: number;
     dur?: number;
-    args?: { name?: string; exit?: number };
+    args?: Table;
 }
 
 function orderEntry(entry: Record<string, unknown>): Table {
@@ -160,49 +161,61 @@ export class Disk {
         return mapText(value, this.normalize);
     }
 
-    /// A trace of `catter profile` as a test shows it without its times, which
-    /// differ from run to run: under the name of each of its threads, in the
-    /// order of their ids, the commands there in the order they start, each
-    /// indented by how deep it runs within the others there, and followed by
-    /// its exit code when it failed; `absent` when there is no such file.
+    /// A trace of `catter profile` as a test shows it without its times,
+    /// which differ from run to run: its process; under the name of each lane,
+    /// in order, the commands there in the order they start, each with how
+    /// deep it runs within the others there in place of its times; and the
+    /// counts of its `running` counter in order. Its critical path, which
+    /// follows the times, is left out. `absent` when there is no such file.
     trace(file = "trace.json"): Table {
         if (!this.exists(file)) {
             return { absent: true };
         }
         const { traceEvents } = JSON.parse(this.read(file)) as { traceEvents: TraceEvent[] };
-        const names = new Map<number, string>();
-        const threads = new Map<number, TraceEvent[]>();
+        const shown: Record<string, Value> = {};
+        const lanes = new Map<number, string>();
         for (const event of traceEvents) {
-            const tid = event.tid ?? 0;
-            if (event.ph === "M" && event.name === "thread_name") {
-                names.set(tid, event.args?.name ?? "");
-            } else if (event.ph === "X") {
-                threads.set(tid, [...(threads.get(tid) ?? []), event]);
+            if (event.ph !== "M") {
+                continue;
+            }
+            const name = String(event.args?.["name"] ?? "");
+            if (event.name === "process_name") {
+                shown["process"] = name;
+            } else if (event.name === "thread_name" && name !== "critical path") {
+                lanes.set(event.tid ?? 0, name);
             }
         }
-        const shown: Record<string, Value> = {};
-        for (const [tid, events] of [...threads].sort(([a], [b]) => a - b)) {
+        const timed = (event: TraceEvent) => ({
+            event,
+            start: event.ts ?? 0,
+            end: (event.ts ?? 0) + (event.dur ?? 0),
+        });
+        for (const [tid, lane] of [...lanes].sort(([a], [b]) => a - b)) {
             const ends: number[] = [];
-            const lines: string[] = [];
-            const sorted = events
-                .map((event) => ({
-                    event,
-                    start: event.ts ?? 0,
-                    end: (event.ts ?? 0) + (event.dur ?? 0),
-                }))
+            const commands: Table[] = [];
+            const sorted = traceEvents
+                .filter((event) => event.ph === "X" && event.tid === tid)
+                .map(timed)
                 .sort((a, b) => a.start - b.start || b.end - a.end);
             for (const { event, start, end } of sorted) {
                 while (ends.length > 0 && (ends.at(-1) ?? 0) <= start) {
                     ends.pop();
                 }
-                const exit = event.args?.exit ?? 0;
-                lines.push(
-                    `${"  ".repeat(ends.length)}${event.name}${exit === 0 ? "" : ` exit ${String(exit)}`}`,
-                );
+                commands.push({
+                    depth: ends.length,
+                    name: event.name,
+                    ...(event.cat === undefined ? {} : { cat: event.cat }),
+                    ...event.args,
+                });
                 ends.push(end);
             }
-            shown[names.get(tid) ?? String(tid)] = lines;
+            shown[lane] = commands;
         }
+        shown["running"] = traceEvents
+            .filter((event) => event.ph === "C")
+            .map(timed)
+            .sort((a, b) => a.start - b.start)
+            .map(({ event }) => event.args?.["commands"] ?? 0);
         return mapText(shown, this.normalize) as Table;
     }
 }

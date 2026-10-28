@@ -75,24 +75,13 @@ std::optional<Analysis> analyze(const data::command& command) {
     return std::nullopt;
 }
 
-/// `args` on one line, an argument quoted when it holds a blank, a quote or a backslash.
-std::string line_of(std::span<const std::string> args) {
-    return args | std::views::transform([](const std::string& argument) {
-               return argument.empty() ||
-                              argument.find_first_of(" \t\n\v\f\r\"'\\") != std::string::npos
-                          ? quote(argument)
-                          : kota::replace_invalid_utf8(argument);
-           }) |
-           std::views::join_with(' ') | std::ranges::to<std::string>();
-}
-
 /// `time`, in microseconds, as the summary shows it: in milliseconds under a second, else in
 /// seconds.
 std::string format_time(std::int64_t time) {
     if(time < 1'000'000) {
-        return std::format("{}ms", time / 1'000);
+        return std::format("{} ms", time / 1'000);
     }
-    return std::format("{:.1f}s", static_cast<double>(time) / 1e6);
+    return std::format("{:.1f} s", static_cast<double>(time) / 1e6);
 }
 
 /// `count` commands, in words.
@@ -128,6 +117,9 @@ struct Command {
 
     /// Whether it is part of a command catter analyzes.
     bool inside = false;
+
+    /// Whether catter could not capture it after all, as when its program could not start.
+    bool uncaptured = false;
 
     /// How it ran, once it has.
     std::optional<data::process_result> result;
@@ -177,10 +169,15 @@ Timeline timeline_of(std::span<const Command> commands) {
         return found == positions.end() ? std::nullopt : std::optional(found->second);
     };
     for(const auto* command: timeline.commands) {
+        // A replayed build may name a command as its own parent.
+        auto parent = position_of(command->parent);
+        if(parent == timeline.spans.size()) {
+            parent.reset();
+        }
         timeline.spans.push_back({
             .start = command->result->start,
             .end = command->result->start + command->result->duration,
-            .parent = position_of(command->parent),
+            .parent = parent,
         });
     }
     timeline.lanes = lanes_of(timeline.spans);
@@ -348,11 +345,15 @@ std::string trace_of(const Timeline& timeline, std::string_view process) {
         });
     }
 
-    return std::format("{{\"displayTimeUnit\":\"ms\",\"traceEvents\":[\n{}\n]}}\n",
-                       events | std::views::transform([](const JSON& event) {
-                           return to_json(event, Layout::Line);
-                       }) | std::views::join_with(std::string_view(",\n")) |
-                           std::ranges::to<std::string>());
+    const auto lines =
+        events |
+        std::views::transform([](const JSON& event) { return to_json(event, {.pretty = false}); }) |
+        std::views::join_with(std::string_view(",\n")) | std::ranges::to<std::string>();
+    return std::format(R"({{"displayTimeUnit":"ms","traceEvents":[
+{}
+]}}
+)",
+                       lines);
 }
 
 /// Writes the timeline of the build's commands as a trace, and prints what it shows.
@@ -362,7 +363,7 @@ public:
 
     kota::task<std::optional<Build>> on_start(Build build) override {
         kota::fs::path::resolve(output, *options.output, build.cwd);
-        process = line_of(build.command);
+        process = command_line({.args = build.command});
         co_return build;
     }
 
@@ -375,7 +376,7 @@ public:
             .id = id,
             .parent = parent,
             .name = kota::replace_invalid_utf8(kota::fs::path::filename(program)),
-            .line = line_of(command.args),
+            .line = command_line(command),
             .inside = descendants.left_out(id),
         };
         if(auto analysis = entry.inside ? std::nullopt : analyze(command)) {
@@ -396,27 +397,29 @@ public:
 
     kota::task<> on_error(data::ipcid_t id,
                           [[maybe_unused]] std::optional<data::ipcid_t> parent,
-                          [[maybe_unused]] std::string message) override {
+                          std::string message) override {
         descendants.add(id, std::nullopt);
+        if(auto found = positions.find(id); found != positions.end()) {
+            commands[found->second].uncaptured = true;
+        }
         uncaptured += 1;
+        if(!*options.quiet) {
+            std::println("{}", kota::replace_invalid_utf8(message));
+        }
         co_return;
     }
 
     kota::task<> on_exit(data::ipcid_t id, data::process_result result) override {
-        commands[positions.at(id)].result = result;
+        // A backend that only observes the build tells the exit of a command it could not capture.
+        if(auto found = positions.find(id); found != positions.end()) {
+            commands[found->second].result = result;
+        }
         co_return;
     }
 
     kota::task<> on_finish([[maybe_unused]] data::process_result result) override {
         const auto timeline = timeline_of(commands);
-        auto created = kota::fs::create_directories(kota::fs::path::parent(output));
-        auto error = created.has_value()
-                         ? kota::fs::write_file_atomic(output, trace_of(timeline, process))
-                         : created.error();
-        if(error) {
-            throw cpptrace::runtime_error(
-                std::format("Failed to write the trace `{}`: {}", output, error.message()));
-        }
+        save_file(output, trace_of(timeline, process), "trace");
         if(!*options.quiet) {
             print(timeline);
         }
@@ -490,9 +493,14 @@ private:
             std::println("Left out of the trace: {} catter could not capture.",
                          commands_of(uncaptured));
         }
-        if(const auto unfinished = commands.size() - timeline.commands.size(); unfinished != 0) {
+        if(const auto unfinished = std::ranges::count_if(commands,
+                                                         [](const Command& command) {
+                                                             return !command.result.has_value() &&
+                                                                    !command.uncaptured;
+                                                         });
+           unfinished != 0) {
             std::println("Left out of the trace: {} that did not end before the build did.",
-                         commands_of(unfinished));
+                         commands_of(static_cast<std::size_t>(unfinished)));
         }
         std::println("Trace saved to {}: open it in https://ui.perfetto.dev or chrome://tracing.",
                      output);

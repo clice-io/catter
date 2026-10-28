@@ -15,7 +15,7 @@ catter 用 `hook` 后端捕获构建，或者用 `--capture` 指定的后端：`
 
 ## Handler
 
-会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令运行的内置功能（如果有的话；`compile-commands`、`tree`、`targets`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置功能在前，其余按命令行中的顺序排列。
+会话中的 handler 对各条命令做决定，并接收会话事件的通知。它们包括命令运行的内置功能（如果有的话；`compile-commands`、`tree`、`targets`、`profile`），它在 catter 内部运行，以及通过 `--handler` 或 `--connect` 指定的 [handler](../scripting/handlers.md)，即 catter 用 [handler 协议](handler-protocol.md)与之通信的程序。这些 handler 组成一条链：内置功能在前，其余按命令行中的顺序排列。
 
 ## 会话生命周期
 

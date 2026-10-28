@@ -15,14 +15,15 @@ catter <command> [options] -- <build-command>
 | `compile-commands` | 根据捕获的编译器命令生成 `compile_commands.json` 文件。见[编译数据库](../features/compilation-database.md)。 |
 | `tree`             | 把捕获的命令渲染为命令树。见[命令树](../features/command-tree.md)。                                          |
 | `targets`          | 把捕获的构建目标渲染为扁平的目标森林。见[目标树](../features/target-tree.md)。                               |
+| `profile`          | 把构建中各条命令的时间线写成供 Perfetto 使用的 trace。见[构建分析](../features/build-profiling.md)。         |
 | `explain`          | 打印 catter 如何分析 `--` 之后的命令，而不运行它。见[命令分析](../features/explain.md)。                     |
 | `run`              | 只用 handler 运行构建，由它们对构建的命令做决定或观察它们。见 [Handler](../scripting/handlers.md)。          |
 
-`compile-commands`、`tree` 和 `targets` 各自在构建上运行一个内置功能，命令行指定的 [handler](../scripting/handlers.md)（如果有的话）与它一起运行。`run` 只运行 handler，至少要指定一个。
+`compile-commands`、`tree`、`targets` 和 `profile` 各自在构建上运行一个内置功能，命令行指定的 [handler](../scripting/handlers.md)（如果有的话）与它一起运行。`run` 只运行 handler，至少要指定一个。
 
 ### 选项
 
-`compile-commands`、`tree`、`targets` 和 `run` 除了各自的选项，还接受以下选项：
+`compile-commands`、`tree`、`targets`、`profile` 和 `run` 除了各自的选项，还接受以下选项：
 
 | 选项                          | 说明                                                                                                                                    | 默认值   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------- |

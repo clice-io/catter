@@ -315,7 +315,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
                     [&](int pid) {
                         build_pid = pid;
                         processes.emplace([&] { return session.new_id(); },
-                                          microseconds_of(mach_absolute_time()) -
+                                          eslogger::microseconds_of(mach_absolute_time()) -
                                               session.time_of(std::chrono::steady_clock::now()));
                     },
             });
