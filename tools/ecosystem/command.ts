@@ -24,12 +24,6 @@ export function isWrapped(program: string): boolean {
     return isCompiler(program) || LINKER_OR_ARCHIVER.test(baseName(program));
 }
 
-/// A compile of sources to objects: a compiler with `-c` (`/c` for cl).
-export function isCompile(args: readonly string[]): boolean {
-    const [program, ...rest] = args;
-    return program !== undefined && isCompiler(program) && rest.some((arg) => arg === "-c" || arg === "/c");
-}
-
 /// Options that only write what a source depends on (`-MD -MF a.d`):
 /// they change no compile.
 const DEPENDENCY_FILES = new Set(["-MD", "-MMD", "-MP", "-M", "-MM"]);

@@ -5,7 +5,8 @@
 /// catter's own processes (catter, catter-proxy, the wrapper's shims) and
 /// the handler's are dropped from the recording, and each exec's parent is
 /// its nearest ancestor left: catter's model of a command's parent. Under
-/// the hook the two trees match one to one, by argv; under the wrapper
+/// the hook the two trees match one to one, by argv (a script's as the
+/// kernel runs it, behind its interpreter); under the wrapper
 /// catter sees only the programs its shims stand in for, so each of its
 /// commands is among the recorder's, under the nearest one it reported too,
 /// and every compiler, linker or archiver the build itself started is among
@@ -13,7 +14,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { expandResponseFiles, isCompile, isSource, isWrapped } from "../command.ts";
+import { baseName, expandResponseFiles, isCompiler, isSource, isWrapped } from "../command.ts";
 import type { Difference, Places } from "../difference.ts";
 import type { Backend } from "../project.ts";
 import type { Image, Recording } from "../record/images.ts";
@@ -55,6 +56,22 @@ function resolved(file: string): string {
     } catch {
         return file;
     }
+}
+
+/// Whether the recorder's `recorded` is catter's `args`: the same, or a
+/// script's run as the kernel records it, its interpreter (and the
+/// interpreter's one argument) before the script's path and the arguments.
+export function sameArgs(recorded: readonly string[], args: readonly string[]): boolean {
+    if (recorded.length === args.length) {
+        return recorded.every((arg, i) => arg === args[i]);
+    }
+    const tail = args.length - 1;
+    const extra = recorded.length - args.length;
+    if (extra < 1 || extra > 2 || tail < 0) {
+        return false;
+    }
+    const script = recorded[extra] ?? "";
+    return baseName(script) === baseName(args[0] ?? "") && recorded.slice(extra + 1).every((arg, i) => arg === args[i + 1]);
 }
 
 function under(file: string, dirs: readonly string[]): boolean {
@@ -133,8 +150,14 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
             const key = JSON.stringify([image.args, image.cwd]);
             free.set(key, [...(free.get(key) ?? []), image]);
         }
+        const used = new Set<number>();
         for (const command of session.commands) {
-            const image = free.get(JSON.stringify([command.args, command.cwd]))?.shift();
+            const image =
+                free.get(JSON.stringify([command.args, command.cwd]))?.find((each) => !used.has(each.id)) ??
+                kept.find((each) => !used.has(each.id) && each.cwd === command.cwd && sameArgs(each.args, command.args));
+            if (image !== undefined) {
+                used.add(image.id);
+            }
             if (image === undefined) {
                 add("extra", `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw`);
             } else {
@@ -169,7 +192,7 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
         const match = (catParent: number | null, recParent: number | null) => {
             const free = [...(recChildren.get(recParent) ?? [])];
             for (const command of catChildren.get(catParent) ?? []) {
-                const same = free.filter((image) => image.args.length === command.args.length && image.args.every((arg, i) => arg === command.args[i]));
+                const same = free.filter((image) => sameArgs(image.args, command.args));
                 const pick = same.find((image) => image.cwd === command.cwd) ?? same[0];
                 if (pick === undefined) {
                     add("extra", `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw there`);
@@ -192,15 +215,16 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
     stats.matched = imageOf.size;
 
     // The compiles the recorder saw against catter's database: an entry for
-    // each source that is still there, each entry a recorded compile's.
+    // each source a compiler named that is still there, each entry a
+    // recorded compile's.
     const recorded = new Map<string, { count: number; image: Image }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
-        if (!isCompile(args)) {
+        const sources = isCompiler(args[0] ?? "") ? args.slice(1).filter((arg) => isSource(arg, image.cwd)) : [];
+        if (sources.length === 0) {
             continue;
         }
         stats.compiles += 1;
-        const sources = args.slice(1).filter((arg) => isSource(arg, image.cwd));
         const rest = args.filter((arg, i) => i === 0 || !sources.includes(arg));
         for (const source of sources) {
             const key = JSON.stringify([rest, image.cwd, path.resolve(image.cwd, source)]);

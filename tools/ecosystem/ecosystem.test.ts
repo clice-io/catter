@@ -4,9 +4,9 @@ import * as path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { fileKind } from "./checks/artifacts.ts";
 import { checkHint } from "./checks/hint.ts";
-import { checkRecorder, type Entry } from "./checks/recorder.ts";
+import { checkRecorder, sameArgs, type Entry } from "./checks/recorder.ts";
 import { syntaxOnly } from "./checks/syntax.ts";
-import { expandResponseFiles, isCompile, isWrapped, shellSplit } from "./command.ts";
+import { expandResponseFiles, isCompiler, isWrapped, shellSplit } from "./command.ts";
 import { isKnown, Places } from "./difference.ts";
 import { listJobs, projectNames, readProject, type Known } from "./project.ts";
 import { parseAudit } from "./record/audit.ts";
@@ -149,6 +149,13 @@ describe("the recorder check", () => {
         expect(result.stats).toMatchObject({ kept: 3, commands: 3, matched: 2 });
     });
 
+    test("a script runs behind its interpreter", () => {
+        expect(sameArgs(["/env/bin/python3.14", "/env/bin/meson", "compile", "-C", "b"], ["meson", "compile", "-C", "b"])).toBe(true);
+        expect(sameArgs(["/bin/sh", "-e", "./configure", "--x"], ["./configure", "--x"])).toBe(true);
+        expect(sameArgs(["/bin/sh", "./other", "--x"], ["./configure", "--x"])).toBe(false);
+        expect(sameArgs(["cc", "-c", "a.c"], ["cc", "-c", "b.c"])).toBe(false);
+    });
+
     test("under the wrapper, what a compiler driver starts is the driver's", () => {
         const result = checkRecorder({
             ...base,
@@ -194,9 +201,9 @@ describe("command lines", () => {
         expect(shellSplit(`cc -DA=\\"b\\" "-DC=d e" 'f\\g' -c x.c`)).toEqual(["cc", '-DA="b"', "-DC=d e", "f\\g", "-c", "x.c"]);
     });
 
-    test("compiles and the programs the wrapper stands in for, by name", () => {
-        expect(isCompile(["/usr/bin/x86_64-linux-gnu-gcc-13", "-c", "a.c"])).toBe(true);
-        expect(isCompile(["gcc", "a.o", "-o", "a"])).toBe(false);
+    test("compilers and the programs the wrapper stands in for, by name", () => {
+        expect(isCompiler("/usr/bin/x86_64-linux-gnu-gcc-13")).toBe(true);
+        expect(isCompiler("/usr/libexec/gcc/x86_64-linux-gnu/13/cc1plus")).toBe(false);
         expect(isWrapped("/usr/bin/ld.gold")).toBe(true);
         expect(isWrapped("/usr/bin/make")).toBe(false);
     });
