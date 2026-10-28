@@ -1,4 +1,4 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = '''
 exit(0) -> 0
 exit(1) -> 1
@@ -7,7 +7,21 @@ exit(255) -> 255
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+exit(0) -> 0
+exit(1) -> 1
+exit(3) -> 3
+exit(255) -> 255
+node build.mjs
+├── node -e process.exit(0)
+├── node -e process.exit(1)
+├── node -e process.exit(3)
+└── node -e process.exit(255)
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 exit(0) -> 0
 exit(1) -> 1

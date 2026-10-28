@@ -23,14 +23,14 @@ Commands of a parallel build overlap: `command` requests can be in flight togeth
 
 ### `initialize`
 
-| Field           | Type            | Description                                                                                                                                                                                                       |
-| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `version`       | integer         | The protocol's version: `1`.                                                                                                                                                                                      |
-| `session`       | string          | Tells apart the sessions one handler serves over TCP.                                                                                                                                                             |
-| `mode`          | string          | The capture backend: `hook`, `wrapper`, `eslogger`, or `replay`.                                                                                                                                                  |
-| `decisions`     | boolean         | Each command waits for the answer of a handler that decides: false under a backend that only observes them, `eslogger`, which refuses such a handler. Under `replay` the answers change nothing, as nothing runs. |
-| `build.command` | OS string array | The build command.                                                                                                                                                                                                |
-| `build.cwd`     | OS string       | Its working directory.                                                                                                                                                                                            |
+| Field           | Type            | Description                                                                                                                                                                                                                   |
+| --------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`       | integer         | The protocol's version: `1`.                                                                                                                                                                                                  |
+| `session`       | string          | Tells apart the sessions one handler serves over TCP.                                                                                                                                                                         |
+| `mode`          | string          | The capture backend: `hook`, `wrapper`, `eslogger`, `ptrace`, or `replay`.                                                                                                                                                    |
+| `decisions`     | boolean         | Each command waits for the answer of a handler that decides: false under a backend that only observes them, `eslogger` or `ptrace`, which refuses such a handler. Under `replay` the answers change nothing, as nothing runs. |
+| `build.command` | OS string array | The build command.                                                                                                                                                                                                            |
+| `build.cwd`     | OS string       | Its working directory.                                                                                                                                                                                                        |
 
 The result:
 

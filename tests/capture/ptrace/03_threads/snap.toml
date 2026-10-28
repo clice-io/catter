@@ -1,0 +1,15 @@
+[test."$ catter tree --capture ptrace -w 1000 -- ./spawn spawn"]
+stdout = '''
+started by spawn
+./spawn spawn
+└── node child.mjs spawn
+'''
+exit = 0
+
+[test."$ catter tree --capture ptrace -w 1000 -- ./spawn exec"]
+stdout = '''
+started by exec
+./spawn exec
+└── node child.mjs exec
+'''
+exit = 0

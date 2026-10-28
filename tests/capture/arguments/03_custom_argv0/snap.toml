@@ -1,8 +1,16 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "custom-argv0"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+custom-argv0
+node build.mjs
+└── custom-argv0 child.mjs
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 custom-argv0
 node build.mjs

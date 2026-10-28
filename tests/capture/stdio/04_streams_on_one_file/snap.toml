@@ -1,4 +1,29 @@
-[test."$ node run.mjs"]
+[hook."$ node run.mjs"]
+stdout = '''
+node build.mjs, exit 0:
+build: stdout is a file, stderr is a file
+child: stdout is a file, stderr is a file
+child: stdout 1
+child: stderr 1
+child: stdout 2
+child: stderr 2
+child: stdout 3
+child: stderr 3
+catter, exit 0:
+build: stdout is a file, stderr is a file
+child: stdout is a file, stderr is a file
+child: stdout 1
+child: stderr 1
+child: stdout 2
+child: stderr 2
+child: stdout 3
+child: stderr 3
+node build.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[ptrace."$ node run.mjs --capture ptrace"]
 stdout = '''
 node build.mjs, exit 0:
 build: stdout is a file, stderr is a file

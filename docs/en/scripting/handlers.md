@@ -2,7 +2,7 @@
 
 A handler is a program that catter tells about the commands a build starts. A handler that **decides** answers each command before it runs: run it as it is, run another command in its place, drop it, or abort the build. A handler that does not decide only **observes**: it is told, and the build never waits for it.
 
-Under a [capture backend](../design/capture-backends.md) that only observes the build, `eslogger`, each command runs before catter hears of it, and catter refuses a handler that decides before the build starts. The session's start tells (`decisions`): a handler that can do without deciding sets `decides` there.
+Under a [capture backend](../design/capture-backends.md) that only observes the build, `eslogger` or `ptrace`, each command has started by the time catter hears of it, and catter refuses a handler that decides before the build starts. The session's start tells (`decisions`): a handler that can do without deciding sets `decides` there.
 
 catter speaks to a handler over a small protocol (see [Handler protocol](../design/handler-protocol.md)), so a handler can be written in any language. The SDKs for Python and TypeScript do the protocol for you.
 
@@ -151,7 +151,7 @@ The handlers form a chain, in a fixed order: the built-in first, then the handle
 
 ## When a handler fails
 
-A handler that aborts the build, raises in a callback, exits, writes what the protocol does not allow, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). A command that has started runs on: under a backend that only observes the build (`eslogger`), every command has started by the time catter hears of it, and the build runs on to its end. Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
+A handler that aborts the build, raises in a callback, exits, writes what the protocol does not allow, or does not answer within `--handler-timeout` ends the session: the command it was deciding, and every command the build starts after it, fail without running (exit code 1). A command that has started runs on: under a backend that only observes the build (`eslogger`, `ptrace`), every command has started by the time catter hears of it, and the build runs on to its end. Once the build has ended, catter ends the handlers' input without a `finish` (`on_finish` does not run), prints what happened and exits 1:
 
 ```
 Handler `python handler.py` did not answer command 12 within 60 s

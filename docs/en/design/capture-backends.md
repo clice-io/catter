@@ -4,7 +4,7 @@ A capture backend is how catter gets a build's commands: it starts the build, an
 
 ## Choosing one
 
-`--capture <backend>` names the backend that captures the build: `hook`, the default, `wrapper`, or `eslogger`, on macOS. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
+`--capture <backend>` names the backend that captures the build: `hook`, the default, `wrapper`, `eslogger`, on macOS, or `ptrace`, on Linux. `--from <file>` replays a recorded build instead of running one: a recorded build is not captured, so `--from` takes no `--capture`, and a name no backend has is an error too. Both are reported before anything runs.
 
 A handler learns the backend from the session's `initialize` message, whose `mode` is its name, or `replay` for a recorded build, and whose `decisions` says whether the build's commands wait for the handlers' decisions.
 
@@ -37,6 +37,19 @@ A handler learns the backend from the session's `initialize` message, whose `mod
   - macOS ends no program with the one that started it: a build catter stands in for ends on SIGTERM, SIGINT and SIGHUP, which catter passes on, but not when catter is killed.
   - What catter reads of a command's files, such as its response files (`@file`), it reads once the command has run, or is running: a file the build removes once the command has run, as Ninja does a response file, may be gone.
 
+### ptrace (Linux)
+
+- **How it works**: catter runs the build traced, as a debugger follows a program: the kernel stops each process of the build as it starts a process or a thread, runs a program and ends, and catter reads the program it runs, its arguments, environment and working directory from `/proc` before the process goes on. catter follows the build's processes from the build command's, as under `eslogger`: each program a process of the build runs is a command, whose parent is the program its process ran before it, or the command whose process forked its own. A program runs once the handlers have been told of its command, whose files they read as they are then, but which no decision changes: catter never changes what a process runs.
+- **Platforms**: Linux.
+- **What it needs**: a system that lets a program trace its own children: `kernel.yama.ptrace_scope` 0 or 1, as most distributions set it, and in a container a profile that allows `ptrace`, as Docker's default does on Linux 4.8 and later. Where the system does not, catter says why before the build starts.
+- **What it sees**: every program the build's processes run, a static program's and one a program starts without the C library included, as Go programs start theirs. A script is a command as the system runs it: its arguments are the interpreter its `#!` line names, the line's argument if it has one, then the script and the script's arguments. A process the build does not start itself, as a server started before the build, is not seen, and neither is a program that fails to start.
+- **Actions**: none; a handler that decides is refused.
+- **Costs**: no program starts in a command's place, and catter is told of no system call: the kernel stops a process of the build as it starts a process or a thread, runs a program and ends, and as a signal reaches it, while catter reads what it is told; a program waits at its start until the handlers have been told of its command. A make build of 1500 compiles took about an eighth longer than without catter, where the hook backend took a third longer.
+- **Limitations**:
+  - Unless catter runs as root, a traced program runs without the privileges its file grants (set-user-ID, set-group-ID or capabilities), as it would under any debugger: `sudo` fails. catter warns of each such program; a build that needs one runs under `hook`.
+  - A process has one tracer: a program of the build that traces another program of the build, as gdb, strace or a crash reporter does, fails to. So does LeakSanitizer, which a program built with AddressSanitizer runs at its exit: it fails, saying that LeakSanitizer does not work under ptrace, unless `ASAN_OPTIONS=detect_leaks=0` turns it off.
+  - catter ends with the build command: a process the build leaves running then, as a build server, runs on untraced, and what it starts later is not seen.
+
 ### replay (`--from`)
 
 - **How it works**: it plays the build a file recorded instead of running one: each command, error and exit in the file's order, with the IDs and parent commands the file gives them. The build ends with the exit code the file records.
@@ -55,6 +68,7 @@ A handler learns the backend from the session's `initialize` message, whose `mod
 | -------- | ----------------------- | -------------------------------------- | ------------------------------------- | --------------------------- | --------------------- |
 | hook     | Linux / macOS / Windows | a hook in every process of the build   | `skip` `drop` `abort` `modify` `edit` | the process that started it | implemented (default) |
 | eslogger | macOS                   | Endpoint Security, through `eslogger`  | none: it only observes                | the process that started it | implemented           |
+| ptrace   | Linux                   | ptrace, as a debugger follows programs | none: it only observes                | the process that started it | implemented           |
 | replay   | any                     | a recorded build (`--from`)            | only `abort` takes effect             | as recorded                 | implemented           |
 | wrapper  | Linux / macOS / Windows | compiler shims on `PATH`, `CC` / `CXX` | `skip` `drop` `abort` `modify` `edit` | the nearest wrapped program | implemented           |
 

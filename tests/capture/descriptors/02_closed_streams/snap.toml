@@ -1,11 +1,11 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = '''
 stdin a socket, stdout closed, stderr a socket
 stdin closed, stdout closed, stderr a socket
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 stdin a socket, stdout closed, stderr a socket
 stdin closed, stdout closed, stderr a socket
@@ -17,7 +17,26 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ node catter.mjs"]
+[hook."$ node catter.mjs"]
+stdout = '''
+stdin closed, stdout closed, stderr a socket
+catter exit 0
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
+stdout = '''
+stdin a socket, stdout closed, stderr a socket
+stdin closed, stdout closed, stderr a socket
+node build.mjs
+├── python -c "import os; [os.close(fd) for fd in (1,)]; os.execv(\"./report\", [\"./report\"])"
+│   └── ./report
+└── python -c "import os; [os.close(fd) for fd in (0, 1,)]; os.execv(\"./report\", [\"./report\"])"
+    └── ./report
+'''
+exit = 0
+
+[ptrace."$ node catter.mjs --capture ptrace"]
 stdout = '''
 stdin closed, stdout closed, stderr a socket
 catter exit 0

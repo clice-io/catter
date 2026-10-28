@@ -1,8 +1,8 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "with space 中文"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 with space 中文
 node build.mjs
@@ -10,11 +10,19 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs".win32]
+[hook."$ catter tree -w 1000 -- node build.mjs".win32]
 differs = "tree quotes a Windows path, which holds a space"
 stdout = '''
 with space 中文
 node build.mjs
 └── node "${WS}/child.mjs"
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
+stdout = '''
+with space 中文
+node build.mjs
+└── node ${WS}/child.mjs
 '''
 exit = 0

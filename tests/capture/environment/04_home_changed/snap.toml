@@ -1,4 +1,4 @@
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 ran, exit 0
 node build.mjs
@@ -6,5 +6,16 @@ node build.mjs
 '''
 exit = 0
 
-[test."home/"]
+[hook."home/"]
+value = []
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
+stdout = '''
+ran, exit 0
+node build.mjs
+└── node -e "console.log('ran')"
+'''
+exit = 0
+
+[ptrace."home/"]
 value = []

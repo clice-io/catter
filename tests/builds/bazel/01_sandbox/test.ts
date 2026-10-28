@@ -10,3 +10,16 @@ test("hook", { except: { win32: "Bazel runs no action in a sandbox on Windows" }
     );
     t.show("compile_commands.json", t.disk.cdb());
 });
+
+// A Bazel server the build starts runs on once the build has ended, untraced.
+test(
+    "ptrace",
+    { except: { darwin: "the ptrace backend is Linux's", win32: "the ptrace backend is Linux's" } },
+    async (t) => {
+        await t.setup("bazel --version");
+        await t.cli(
+            "compile-commands --capture ptrace -o compile_commands.json -- bazel --output_base=out build //:main",
+        );
+        t.show("compile_commands.json", t.disk.cdb());
+    },
+);

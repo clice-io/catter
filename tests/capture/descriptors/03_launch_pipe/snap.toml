@@ -10,3 +10,12 @@ started
     └── cat
 '''
 exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- ./launch cat"]
+stdout = '''
+started
+./launch cat
+└── ./launch helper cat
+    └── cat
+'''
+exit = 0

@@ -1,8 +1,16 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "30000 characters, all x: true"
 exit = 0
 
-[test."$ catter tree -w 20 -- node build.mjs"]
+[hook."$ catter tree -w 20 -- node build.mjs"]
+stdout = '''
+30000 characters, all x: true
+node build.mjs
+└── node child.mjs xxxxxxxx....xxxxxxxx
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 20 -- node build.mjs"]
 stdout = '''
 30000 characters, all x: true
 node build.mjs

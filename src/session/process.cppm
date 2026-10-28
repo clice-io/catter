@@ -4,6 +4,10 @@ module;
 
 #include "support/messages.h"
 
+#ifndef CATTER_WINDOWS
+#include <signal.h>
+#endif
+
 module catter:session.process;
 
 namespace catter {
@@ -35,6 +39,11 @@ data::process_result result_of(const kota::process::exit_status& status,
 data::process_result result_of(const kota::process::exit_status& status,
                                std::chrono::steady_clock::time_point started);
 
+#ifndef CATTER_WINDOWS
+/// How a program ended, as its wait status `status` tells.
+kota::process::exit_status exit_status_of(int status);
+#endif
+
 /// Ends this process as `status` says a program ended: by the same signal, or
 /// with the same exit code, which it returns for main to return.
 int exit_like(const kota::process::exit_status& status);
@@ -58,6 +67,33 @@ struct RunOptions {
 
     /// Told the program's pid once it runs.
     std::function<void(int)> started;
+};
+
+/// `opts` for a program this process stands in for (RunOptions::stand_in).
+kota::process::options standing_in(kota::process::options opts);
+
+/// While it lives, this process stands in for the program process `pid` runs,
+/// which it started with the options standing_in gives: the signals that ask
+/// this process to stop go on to the program, whose exit it waits for; on
+/// Windows this process waits out an interrupt for it. On POSIX it lets go of
+/// the descriptors the program got from it, as RunOptions says, its standard
+/// streams with `release_streams`.
+class StandIn {
+public:
+    StandIn(int pid, bool release_streams);
+
+    StandIn(const StandIn&) = delete;
+    StandIn& operator= (const StandIn&) = delete;
+
+    ~StandIn();
+
+#ifndef CATTER_WINDOWS
+
+private:
+    constexpr static std::array SIGNALS = {SIGHUP, SIGINT, SIGTERM};
+
+    std::array<struct sigaction, SIGNALS.size()> previous{};
+#endif
 };
 
 /// Starts a program as `opts` say; the task waits for its exit.
