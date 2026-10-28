@@ -395,6 +395,7 @@ class CaptureError:
 class Exit:
     id: int
     code: int
+    start: int
     duration: int
 
     @staticmethod
@@ -402,6 +403,7 @@ class Exit:
         return Exit(
             id=data["id"],
             code=data["code"],
+            start=data["start"],
             duration=data["duration"],
         )
 
@@ -409,6 +411,7 @@ class Exit:
         data: dict[str, Any] = {}
         data["id"] = self.id
         data["code"] = self.code
+        data["start"] = self.start
         data["duration"] = self.duration
         return data
 

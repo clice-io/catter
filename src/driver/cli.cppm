@@ -13,6 +13,7 @@ enum class Subcommand : std::uint8_t {
     CompileCommands,
     Tree,
     Targets,
+    Profile,
     Explain,
     Run,
 };

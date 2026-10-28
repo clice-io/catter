@@ -17,6 +17,11 @@ data::ipcid_t Session::new_id() noexcept {
     return last_id;
 }
 
+std::chrono::microseconds
+    Session::time_of(std::chrono::steady_clock::time_point time) const noexcept {
+    return std::chrono::duration_cast<std::chrono::microseconds>(time - started);
+}
+
 kota::task<data::action> Session::decide(data::ipcid_t id,
                                          std::optional<data::ipcid_t> parent,
                                          data::command command) {
@@ -89,10 +94,10 @@ kota::task<kota::process::exit_status> run_session(Handler& handler,
         co_return kota::process::exit_status{};
     }
     Session session(handler);
-    const auto start = std::chrono::steady_clock::now();
     auto status = co_await backend.run(*started, session);
     session.rethrow();
-    co_await handler.on_finish(result_of(status, start));
+    co_await handler.on_finish(
+        result_of(status, session.time_of(std::chrono::steady_clock::now())));
     co_return status;
 }
 

@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "name": "a chain of eight steps, each reading what the one before it wrote",
+  "cwd": ".",
+  "events": [
+    {
+      "id": 1,
+      "exe": "make",
+      "argv": [
+        "make"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 0,
+        "duration": 9000000
+      }
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-c",
+        "a.cc",
+        "-o",
+        "a.o"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 100000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "exe": "ar",
+      "argv": [
+        "ar",
+        "rcs",
+        "liba.a",
+        "a.o"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 1200000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 4,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "liba.a",
+        "-o",
+        "libb.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 2300000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 5,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "libb.so",
+        "-o",
+        "libc.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 3400000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 6,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "libc.so",
+        "-o",
+        "libd.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 4500000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 7,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "libd.so",
+        "-o",
+        "libe.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 5600000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 8,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "libe.so",
+        "-o",
+        "libf.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 6700000,
+        "duration": 1000000
+      }
+    },
+    {
+      "id": 9,
+      "parent": 1,
+      "exe": "c++",
+      "argv": [
+        "c++",
+        "-shared",
+        "libf.so",
+        "-o",
+        "libg.so"
+      ],
+      "execution": {
+        "code": 0,
+        "start": 7800000,
+        "duration": 1000000
+      }
+    }
+  ],
+  "finish": {
+    "code": 0
+  }
+}

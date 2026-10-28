@@ -434,7 +434,11 @@ kota::task<> RemoteHandler::on_error(data::ipcid_t id,
 
 kota::task<> RemoteHandler::on_exit(data::ipcid_t id, data::process_result result) {
     if(told.erase(id) != 0) {
-        notify("exit", protocol::Exit{.id = id, .code = result.code, .duration = result.duration});
+        notify("exit",
+               protocol::Exit{.id = id,
+                              .code = result.code,
+                              .start = result.start,
+                              .duration = result.duration});
     }
     co_return;
 }

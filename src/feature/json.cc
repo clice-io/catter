@@ -17,9 +17,12 @@ struct Config {
 
 }  // namespace
 
-std::string to_json(const JSON& value) {
+std::string to_json(const JSON& value, Layout layout) {
     auto compact = kota::codec::json::to_string<Config>(value);
     assert(compact.has_value());
+    if(layout == Layout::Line) {
+        return std::move(*compact);
+    }
     auto pretty = kota::codec::json::prettify(*compact);
     assert(pretty.has_value());
     return std::move(*pretty);

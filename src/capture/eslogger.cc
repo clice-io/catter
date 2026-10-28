@@ -307,16 +307,18 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     kota::process::exit_status status;
     std::string error;
     try {
-        status =
-            co_await run_process(std::move(options),
-                                 {
-                                     .stand_in = true,
-                                     .started =
-                                         [&](int pid) {
-                                             build_pid = pid;
-                                             processes.emplace([&] { return session.new_id(); });
-                                         },
-                                 });
+        status = co_await run_process(
+            std::move(options),
+            {
+                .stand_in = true,
+                .started =
+                    [&](int pid) {
+                        build_pid = pid;
+                        processes.emplace([&] { return session.new_id(); },
+                                          microseconds_of(mach_absolute_time()) -
+                                              session.time_of(std::chrono::steady_clock::now()));
+                    },
+            });
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());

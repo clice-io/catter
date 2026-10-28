@@ -68,6 +68,10 @@ struct command {
 struct process_result {
     std::int64_t code = -1;
 
+    /// When the program started, in microseconds since the session did: catter sets it, which
+    /// what reports a command over the session's pipe does not know.
+    std::int64_t start = 0;
+
     /// How long the program ran, in microseconds.
     std::int64_t duration = 0;
 };

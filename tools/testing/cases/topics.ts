@@ -11,6 +11,7 @@ export const TOPICS: Readonly<Record<string, "engine" | "builtin" | "command">> 
     compile_commands: "builtin",
     tree: "builtin",
     targets: "builtin",
+    profile: "builtin",
     explain: "builtin",
     cli: "command",
 };

@@ -28,8 +28,10 @@ public:
         data::process_result result;
     };
 
-    /// Of a build whose commands take their ids from `new_id`.
-    explicit BuildProcesses(std::function<data::ipcid_t()> new_id) : new_id(std::move(new_id)) {}
+    /// Of a build whose commands take their ids from `new_id`, and whose session
+    /// started at `origin` on the backend's clock.
+    BuildProcesses(std::function<data::ipcid_t()> new_id, std::chrono::microseconds origin) :
+        new_id(std::move(new_id)), origin(origin) {}
 
     /// Process `key` is the build command's, which it execs next.
     void start(std::uint64_t key);
@@ -75,6 +77,8 @@ private:
 
 private:
     std::function<data::ipcid_t()> new_id;
+
+    std::chrono::microseconds origin;
 
     std::unordered_map<std::uint64_t, Member> members;
 };

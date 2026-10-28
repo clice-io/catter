@@ -22,6 +22,10 @@ public:
     /// The id of a new command.
     data::ipcid_t new_id() noexcept;
 
+    /// `time` on the session's clock, which `process_result::start` reads: since the session
+    /// started.
+    std::chrono::microseconds time_of(std::chrono::steady_clock::time_point time) const noexcept;
+
     /// What the handlers decide for command `id`, which `parent` started, none
     /// for the build command: it runs as it is unless they change it, and a
     /// command that is not to run keeps it as it was sent.
@@ -50,6 +54,8 @@ private:
     std::exception_ptr error;
 
     data::ipcid_t last_id = 0;
+
+    std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
 };
 
 /// A way to capture a build: it starts the build, and reports each command the

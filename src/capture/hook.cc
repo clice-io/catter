@@ -39,7 +39,9 @@ kota::task<kota::process::exit_status> run_build(Session& session,
     if(decision.type != data::action::RUN) {
         const kota::process::exit_status status{.code =
                                                     decision.type == data::action::DROP ? 0 : 1};
-        co_await session.exited(id, result_of(status, std::chrono::microseconds{}));
+        auto result = result_of(status, std::chrono::microseconds{});
+        result.start = session.time_of(std::chrono::steady_clock::now()).count();
+        co_await session.exited(id, result);
         co_return status;
     }
 
@@ -50,7 +52,8 @@ kota::task<kota::process::exit_status> run_build(Session& session,
         const auto status =
             co_await run_process(hook_options(std::move(decision.cmd), id, server.pipe()),
                                  {.stand_in = true});
-        const auto result = result_of(status, start);
+        auto result = result_of(status, start);
+        result.start = session.time_of(start).count();
         co_await server.ended();
         co_await session.exited(id, result);
         co_return status;

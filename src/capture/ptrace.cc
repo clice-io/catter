@@ -452,7 +452,9 @@ private:
 private:
     Session& session;
 
-    BuildProcesses processes{[this] { return session.new_id(); }};
+    /// On the tracer's clock, the steady clock's from its epoch.
+    BuildProcesses processes{[this] { return session.new_id(); },
+                             -session.time_of(std::chrono::steady_clock::time_point())};
 
     /// What the tracer told, which the session has not been told yet.
     std::deque<Event> events;

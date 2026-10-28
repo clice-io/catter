@@ -36,9 +36,9 @@ tests/<topic>/<subtopic>/NN_name/
   arguments that are not UTF-8, the analysis of commands, the TypeScript
   SDK).
 - **Builtins**, what a built-in answers on the commands it saw:
-  `compile_commands`, `tree`, `targets`, and `explain` (how catter analyzes
-  one command, which it does not run: the compiler, its mode and target, the
-  files it reads and writes).
+  `compile_commands`, `tree`, `targets`, `profile` (the trace of the build's
+  timeline), and `explain` (how catter analyzes one command, which it does
+  not run: the compiler, its mode and target, the files it reads and writes).
 - **Command**, catter's own command line: `cli` (arguments, replay files,
   the data directory, sessions).
 
@@ -97,7 +97,9 @@ an error.
 - `t.show(label, value)` adds a block: text, lines or a number under
   `value`, a table as it is.
 - `t.disk` reads and changes the copy: `read`, `write`, `edit`, `rm`,
-  `list`, `exists`, and `cdb(file)`, a compilation database as it shows.
+  `list`, `exists`, `json(file)`, a JSON file as it shows, `cdb(file)`, a
+  compilation database as it shows, and `trace(file)`, a trace of `catter
+profile` without its times, each thread's commands nested as they ran.
 
 A command is a string split as a POSIX shell splits plain words and quotes,
 or a list of words; no shell runs it. Each takes `{ env, cwd, input }`.
