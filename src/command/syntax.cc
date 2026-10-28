@@ -12,6 +12,9 @@ namespace {
 constexpr auto gcc_separate =
     std::to_array<std::string_view>({"-aux-info", "-dumpbase", "-dumpbase-ext", "-wrapper"});
 
+/// Those of Apple's clang, which LLVM's clang lacks.
+constexpr auto clang_separate = std::to_array<std::string_view>({"-ivfsstatcache"});
+
 /// Those of cl, its options of C++ modules, with either prefix.
 constexpr auto cl_separate = std::to_array<std::string_view>({
     "/ifcMap",
@@ -31,7 +34,8 @@ constexpr auto cl_separate = std::to_array<std::string_view>({
 Syntax syntax_of(Compiler compiler, Dialect dialect) {
     using namespace option::clang;
     switch(dialect) {
-        case Dialect::Clang: return {.table = &table(), .visibility = DefaultVis};
+        case Dialect::Clang:
+            return {.table = &table(), .visibility = DefaultVis, .separate = clang_separate};
         case Dialect::GCC:
             return {.table = &table(), .visibility = DefaultVis, .separate = gcc_separate};
         case Dialect::MSVC:

@@ -2,3 +2,4 @@ gcc -c -
 cl /nologo /c a.cc /link /out:a.exe
 gcc -c foo.c -dumpbase xx.c
 gcc -wrapper echo,foo.c -c bar.c
+clang --target=arm64-apple-darwin -c -x c++ -ivfsstatcache SDK.sdkstatcache a.cc

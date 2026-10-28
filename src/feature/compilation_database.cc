@@ -128,7 +128,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
         for(const auto& read: analysis.reads) {
             if(&read != &source && read.role == InputRole::Source) {
                 const auto& argument = analysis.arguments[read.location.argument];
-                std::fill_n(others.begin() + argument.index, argument.count, true);
+                std::ranges::fill_n(others.begin() + argument.index, argument.count, true);
             }
         }
         const auto own = std::views::iota(0uz, argv.size()) |
