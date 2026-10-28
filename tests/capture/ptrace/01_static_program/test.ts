@@ -1,7 +1,8 @@
 import { test } from "@catter/tools/testing";
 
 // A static program starts the compiler: the hook, which only a dynamic
-// program loads, misses it; the ptrace backend sees it.
+// program loads, misses the exec, and the compiler reports itself once the
+// hook loads into it; the ptrace backend sees the exec.
 test(
     "hook",
     {
