@@ -1,0 +1,31 @@
+[test."$ catter profile -q -- cmake --build build -j 1"]
+stdout = '''
+[1/4] Building CXX object CMakeFiles/util.dir/src/util.cc.o
+[2/4] Linking CXX static library libutil.a
+[3/4] Building CXX object CMakeFiles/hello.dir/src/main.cc.o
+[4/4] Linking CXX executable hello
+'''
+exit = 0
+
+[test."trace.json"]
+"critical path" = ["c++ util.cc", "ar libutil.a", "c++ hello"]
+"lane 1" = [
+    "cmake",
+    "  ninja",
+    "    sh",
+    "      c++ util.cc",
+    "        cc1plus",
+    "        as",
+    "    sh",
+    "      cmake",
+    "      ar libutil.a",
+    "      ranlib",
+    "    sh",
+    "      c++ main.cc",
+    "        cc1plus",
+    "        as",
+    "    sh",
+    "      c++ hello",
+    "        collect2",
+    "          ld",
+]

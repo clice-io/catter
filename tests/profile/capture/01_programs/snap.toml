@@ -1,0 +1,15 @@
+[hook."$ catter profile -q -- node build.mjs"]
+exit = 0
+
+[hook."trace.json"]
+"lane 1" = ["node"]
+"lane 2" = ["node", "node exit 3", "node"]
+"lane 3" = ["node"]
+
+[ptrace."$ catter profile -q --capture ptrace -- node build.mjs"]
+exit = 0
+
+[ptrace."trace.json"]
+"lane 1" = ["node"]
+"lane 2" = ["node", "node exit 3", "node"]
+"lane 3" = ["node"]

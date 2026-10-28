@@ -15,7 +15,7 @@ catter captures a build with the `hook` backend, or with the one `--capture` nam
 
 ## Handlers
 
-A session's handlers decide on its commands and are told of its events. They are the built-in the command runs, if any (`compile-commands`, `tree`, `targets`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in first, then the others in the order of the command line.
+A session's handlers decide on its commands and are told of its events. They are the built-in the command runs, if any (`compile-commands`, `tree`, `targets`, `profile`), which runs inside catter, and the [handlers](../scripting/handlers.md) given with `--handler` or `--connect`: programs that catter speaks the [handler protocol](handler-protocol.md) to. The handlers form a chain: the built-in first, then the others in the order of the command line.
 
 ## Session lifecycle
 

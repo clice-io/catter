@@ -1,0 +1,14 @@
+[test."$ catter profile -q --from events.json"]
+exit = 0
+
+[test."$ catter profile -q -C sub --from ../events.json"]
+exit = 0
+
+[test."$ catter profile -q -o out/build.json --from events.json"]
+exit = 0
+
+[test."$ catter profile -q --output=other.json --from events.json"]
+exit = 0
+
+[test.files]
+value = ["events.json", "other.json", "out/build.json", "sub/trace.json", "trace.json"]

@@ -1,0 +1,136 @@
+[test."$ catter profile --from events.json"]
+stdout = '''
+Profiled 6 commands in #s: 1.6 ran at once on average, 3 at most.
+Critical path, #s: c++ a.cc #s > c++ app #ms
+Slowest:
+   #s  c++ a.cc
+   #s  c++ c.cc
+  #ms  c++ b.cc
+  #ms  c++ app
+  #ms  ninja
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0
+
+[test."trace.json"]
+displayTimeUnit = "ms"
+traceEvents = [
+    { name = "process_name", ph = "M", pid = 1, args = { name = "events.json" } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 1, args = { name = "critical path" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 1, args = { sort_index = 0 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 2, args = { name = "lane 1" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 2, args = { sort_index = 1 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 3, args = { name = "lane 2" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 3, args = { sort_index = 2 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 4, args = { name = "lane 3" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 4, args = { sort_index = 3 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 5, args = { name = "lane 4" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 5, args = { sort_index = 4 } },
+    {
+        name = "ninja",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 2600000,
+        args = { command = "ninja -j 3", cwd = "${WS}", exit = 0, id = 1 },
+    },
+    {
+        name = "c++ a.cc",
+        ph = "X",
+        pid = 1,
+        tid = 3,
+        ts = 10000,
+        dur = 2000000,
+        cat = "compile",
+        args = {
+            command = "c++ -c a.cc -o a.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 2,
+            parent = 1,
+            writes = ["${WS}/a.o"],
+            target = ["${WS}/app"],
+        },
+    },
+    {
+        name = "c++ b.cc",
+        ph = "X",
+        pid = 1,
+        tid = 4,
+        ts = 20000,
+        dur = 500000,
+        cat = "compile",
+        args = {
+            command = "c++ -c b.cc -o b.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 3,
+            parent = 1,
+            writes = ["${WS}/b.o"],
+            target = ["${WS}/libbc.a"],
+        },
+    },
+    {
+        name = "c++ c.cc",
+        ph = "X",
+        pid = 1,
+        tid = 5,
+        ts = 30000,
+        dur = 1000000,
+        cat = "compile",
+        args = {
+            command = "c++ -c c.cc -o c.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 4,
+            parent = 1,
+            writes = ["${WS}/c.o"],
+            target = ["${WS}/libbc.a"],
+        },
+    },
+    {
+        name = "ar libbc.a",
+        ph = "X",
+        pid = 1,
+        tid = 4,
+        ts = 1050000,
+        dur = 50000,
+        cat = "archive",
+        args = {
+            command = "ar rcs libbc.a b.o c.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 5,
+            parent = 1,
+            writes = ["${WS}/libbc.a"],
+        },
+    },
+    {
+        name = "c++ app",
+        ph = "X",
+        pid = 1,
+        tid = 3,
+        ts = 2100000,
+        dur = 400000,
+        cat = "link",
+        args = {
+            command = "c++ a.o libbc.a -o app",
+            cwd = "${WS}",
+            exit = 0,
+            id = 6,
+            parent = 1,
+            writes = ["${WS}/app"],
+        },
+    },
+    { name = "c++ a.cc", ph = "X", pid = 1, tid = 1, ts = 10000, dur = 2000000, args = { id = 2 } },
+    { name = "c++ app", ph = "X", pid = 1, tid = 1, ts = 2100000, dur = 400000, args = { id = 6 } },
+    { name = "running", ph = "C", pid = 1, ts = 0, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 20000, args = { commands = 2 } },
+    { name = "running", ph = "C", pid = 1, ts = 30000, args = { commands = 3 } },
+    { name = "running", ph = "C", pid = 1, ts = 520000, args = { commands = 2 } },
+    { name = "running", ph = "C", pid = 1, ts = 1030000, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 1050000, args = { commands = 2 } },
+    { name = "running", ph = "C", pid = 1, ts = 1100000, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 2600000, args = { commands = 0 } },
+]

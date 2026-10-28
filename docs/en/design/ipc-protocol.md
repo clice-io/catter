@@ -118,6 +118,7 @@ Reports that a command has completed execution.
 | Field      | Type      | Description                                                           |
 | ---------- | --------- | --------------------------------------------------------------------- |
 | `code`     | `int64_t` | Process exit code; 128 and the signal's number for one a signal ended |
+| `start`    | `int64_t` | `0`, which the daemon replaces with when it told the proxy to run it  |
 | `duration` | `int64_t` | How long the program ran, in microseconds                             |
 
 **Result**: `null` (no response payload)
@@ -230,6 +231,7 @@ struct command {
 // Result of executing a command
 struct process_result {
     int64_t code = -1;                 // Exit code
+    int64_t start = 0;                 // When it started, in microseconds since the session did
     int64_t duration = 0;              // How long it ran, in microseconds
 };
 

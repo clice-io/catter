@@ -1,0 +1,99 @@
+[test."$ catter profile --from events.json"]
+stdout = '''
+Profiled 7 commands in #s: 1.0 ran at once on average, 1 at most.
+Critical path, #ms: c++ main.cc #ms > c++ app #ms
+Slowest:
+  #ms  c++ main.cc
+  #ms  c++ app
+  #ms  make
+   #ms  sh
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0
+
+[test."trace.json"]
+displayTimeUnit = "ms"
+traceEvents = [
+    { name = "process_name", ph = "M", pid = 1, args = { name = "events.json" } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 1, args = { name = "critical path" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 1, args = { sort_index = 0 } },
+    { name = "thread_name", ph = "M", pid = 1, tid = 2, args = { name = "lane 1" } },
+    { name = "thread_sort_index", ph = "M", pid = 1, tid = 2, args = { sort_index = 1 } },
+    {
+        name = "make",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 0,
+        dur = 1000000,
+        args = { command = "make", cwd = "${WS}", exit = 0, id = 1 },
+    },
+    {
+        name = "sh",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 100000,
+        dur = 500000,
+        args = { command = 'sh -c "c++ -c main.cc -o main.o"', cwd = "${WS}", exit = 0, id = 2, parent = 1 },
+    },
+    {
+        name = "c++ main.cc",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 110000,
+        dur = 480000,
+        cat = "compile",
+        args = {
+            command = "c++ -c main.cc -o main.o",
+            cwd = "${WS}",
+            exit = 0,
+            id = 3,
+            parent = 2,
+            writes = ["${WS}/main.o"],
+            target = ["${WS}/app"],
+        },
+    },
+    {
+        name = "cc1plus",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 120000,
+        dur = 400000,
+        args = { command = "cc1plus main.cc -o main.s", cwd = "${WS}", exit = 0, id = 4, parent = 3 },
+    },
+    {
+        name = "as",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 530000,
+        dur = 50000,
+        args = { command = "as main.s -o main.o", cwd = "${WS}", exit = 0, id = 5, parent = 3 },
+    },
+    {
+        name = "c++ app",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 650000,
+        dur = 300000,
+        cat = "link",
+        args = { command = "c++ main.o -o app", cwd = "${WS}", exit = 0, id = 6, parent = 1, writes = ["${WS}/app"] },
+    },
+    {
+        name = "ld",
+        ph = "X",
+        pid = 1,
+        tid = 2,
+        ts = 700000,
+        dur = 200000,
+        args = { command = "ld main.o -o app", cwd = "${WS}", exit = 0, id = 7, parent = 6 },
+    },
+    { name = "c++ main.cc", ph = "X", pid = 1, tid = 1, ts = 110000, dur = 480000, args = { id = 3 } },
+    { name = "c++ app", ph = "X", pid = 1, tid = 1, ts = 650000, dur = 300000, args = { id = 6 } },
+    { name = "running", ph = "C", pid = 1, ts = 0, args = { commands = 1 } },
+    { name = "running", ph = "C", pid = 1, ts = 1000000, args = { commands = 0 } },
+]

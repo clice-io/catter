@@ -105,8 +105,8 @@ ZEST_CASE(the_spans_of_a_lane_nest_and_overlapping_siblings_share_none) {
                 if(lanes[a] != lanes[b] || !overlap(spans[a], spans[b])) {
                     continue;
                 }
-                ZEXPECT(within(spans[a], spans[b]) || within(spans[b], spans[a]));
-                ZEXPECT(!spans[a].parent.has_value() || spans[a].parent != spans[b].parent);
+                ZEXPECT((within(spans[a], spans[b]) || within(spans[b], spans[a])));
+                ZEXPECT((!spans[a].parent.has_value() || spans[a].parent != spans[b].parent));
             }
         }
     }
@@ -143,7 +143,8 @@ ZEST_CASE(what_spans_work_adds_up_to_how_many_work_over_time) {
         ZEXPECT(activity.working.back().second == 0);
         ZEXPECT(working == std::ranges::fold_left(activity.worked, std::int64_t(0), std::plus()));
         for(std::size_t i = 0; i < spans.size(); i += 1) {
-            ZEXPECT(0 <= activity.worked[i] && activity.worked[i] <= spans[i].end - spans[i].start);
+            ZEXPECT(0 <= activity.worked[i]);
+            ZEXPECT(activity.worked[i] <= spans[i].end - spans[i].start);
         }
     }
 };

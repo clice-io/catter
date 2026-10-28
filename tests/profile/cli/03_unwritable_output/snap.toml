@@ -1,0 +1,3 @@
+[test."$ catter profile -o taken --from events.json"]
+stdout = "Failed to write the trace `${WS}/taken`: Is a directory"
+exit = 1

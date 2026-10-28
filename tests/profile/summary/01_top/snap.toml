@@ -1,0 +1,18 @@
+[test."$ catter profile --top 2 --from events.json"]
+stdout = '''
+Profiled 6 commands in #s: 1.6 ran at once on average, 3 at most.
+Critical path, #s: c++ a.cc #s > c++ app #ms
+Slowest:
+  #s  c++ a.cc
+  #s  c++ c.cc
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0
+
+[test."$ catter profile --top=0 --from events.json"]
+stdout = '''
+Profiled 6 commands in #s: 1.6 ran at once on average, 3 at most.
+Critical path, #s: c++ a.cc #s > c++ app #ms
+Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
+'''
+exit = 0

@@ -1,0 +1,9 @@
+[test."$ catter profile -q --from events.json"]
+exit = 0
+
+[test."trace.json"]
+"critical path" = ["c++ a.cc", "c++ app"]
+"lane 1" = ["ninja"]
+"lane 2" = ["c++ a.cc", "c++ app"]
+"lane 3" = ["c++ b.cc", "ar libbc.a"]
+"lane 4" = ["c++ c.cc"]

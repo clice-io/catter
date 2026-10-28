@@ -8,12 +8,12 @@ stderr = '''
 start: version 1, mode hook, decisions True, build ['node', 'build.mjs'] in ., session of 16 characters
 command 1: parent None, args ['build.mjs'], in ., env None
 command 2: parent 1, args ['-e', 'process.exit(3)'], in ., env None
-exit 2: code 3, took #ms
+exit 2: code 3, started at #ms, took #ms
 command 3: parent 1, args ['-e', 'process.abort()'], in ., env None
-exit 3: code 134, took #ms
+exit 3: code 134, started at #ms, took #ms
 command 4: parent 1, args ['-e', '0'], in sub, env None
-exit 4: code 0, took #ms
-exit 1: code 0, took #ms
+exit 4: code 0, started at #ms, took #ms
+exit 1: code 0, started at #ms, took #ms
 finish: code 0
 served
 '''
@@ -50,12 +50,12 @@ stderr = '''
 start: version 1, mode ptrace, decisions False, build ['node', 'build.mjs'] in ., session of 16 characters
 command 1: parent None, args ['build.mjs'], in ., env None
 command 2: parent 1, args ['-e', 'process.exit(3)'], in ., env None
-exit 2: code 3, took #ms
+exit 2: code 3, started at #ms, took #ms
 command 3: parent 1, args ['-e', 'process.abort()'], in ., env None
-exit 3: code 134, took #ms
+exit 3: code 134, started at #ms, took #ms
 command 4: parent 1, args ['-e', '0'], in sub, env None
-exit 4: code 0, took #ms
-exit 1: code 0, took #ms
+exit 4: code 0, started at #ms, took #ms
+exit 1: code 0, started at #ms, took #ms
 finish: code 0
 served
 '''
@@ -66,7 +66,7 @@ stderr = '''
 start: version 1, mode replay, decisions True, build ['events.json'] in ., session of 16 characters
 command 1: parent None, args ['all'], in ., env None
 command 2: parent 1, args ['-c', 'a.c'], in ., env None
-exit 2: code 1, took #ms
+exit 2: code 1, started at #ms, took #ms
 error 3: parent 1, could not capture
 finish: code 2
 served

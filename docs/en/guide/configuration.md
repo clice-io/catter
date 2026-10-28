@@ -15,14 +15,15 @@ Every run names a command, and its options come after it. `catter --help` lists 
 | `compile-commands` | Generate a `compile_commands.json` file from captured compiler commands. See [Compilation Database](../features/compilation-database.md). |
 | `tree`             | Render captured commands as a command tree. See [Command Tree](../features/command-tree.md).                                              |
 | `targets`          | Render captured build targets as a flat target forest. See [Target Tree](../features/target-tree.md).                                     |
+| `profile`          | Write the timeline of the build's commands as a trace for Perfetto. See [Build Profiling](../features/build-profiling.md).                |
 | `explain`          | Print how catter analyzes the command after `--`, without running it. See [Explain](../features/explain.md).                              |
 | `run`              | Run the build with handlers alone, which decide on and observe its commands. See [Handlers](../scripting/handlers.md).                    |
 
-`compile-commands`, `tree` and `targets` each run a built-in on the build, together with the [handlers](../scripting/handlers.md) the command line names, if any. `run` runs the handlers alone, and needs at least one.
+`compile-commands`, `tree`, `targets` and `profile` each run a built-in on the build, together with the [handlers](../scripting/handlers.md) the command line names, if any. `run` runs the handlers alone, and needs at least one.
 
 ### Options
 
-`compile-commands`, `tree`, `targets` and `run` take these options besides their own:
+`compile-commands`, `tree`, `targets`, `profile` and `run` take these options besides their own:
 
 | Option                        | Description                                                                                                                                                 | Default           |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |

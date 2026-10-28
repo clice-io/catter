@@ -30,9 +30,9 @@ By capturing linker commands, catter can reconstruct the dependency graph betwee
 
 Instead of forwarding compilation to the real compiler, catter will be able to generate placeholder object files. This lets the build system run to completion without actually compiling, producing a complete CDB in a fraction of the time. Code generators (like `tablegen`) are still built normally -- catter analyzes dependencies to determine the minimal set of tools that must be genuinely compiled.
 
-### Build Profiling (Planned)
+### Build Profiling
 
-Capture process timing, durations, and parent-child relationships during a build. The data can be rendered visually in a browser, letting you analyze parallelism and identify bottlenecks.
+Catter records when each command of a build started, how long it ran and which command started it, and writes them as a trace you open in Perfetto or `chrome://tracing`, to see how parallel the build really is and where its time goes.
 
 ### Custom Handlers
 
