@@ -31,7 +31,11 @@ export function readDatabase(file: string): Entry[] {
 
 function keyOf(entry: Entry): string {
     const output = entry.output === undefined ? "" : path.resolve(entry.directory, entry.output);
-    return JSON.stringify([path.resolve(entry.directory), path.resolve(entry.directory, entry.file), output]);
+    return JSON.stringify([
+        path.resolve(entry.directory),
+        path.resolve(entry.directory, entry.file),
+        output,
+    ]);
 }
 
 /// Where two argument lists part, for a detail: the arguments around the
@@ -41,7 +45,8 @@ function parting(a: readonly string[], b: readonly string[], places: Places): st
     while (i < a.length && i < b.length && a[i] === b[i]) {
         i += 1;
     }
-    const around = (args: readonly string[]) => places.label(args.slice(Math.max(0, i - 1), i + 3), 120);
+    const around = (args: readonly string[]) =>
+        places.label(args.slice(Math.max(0, i - 1), i + 3), 120);
     return `at argument ${i}: catter has ${around(a)}, the build's ${around(b)}`;
 }
 
@@ -51,8 +56,13 @@ function parting(a: readonly string[], b: readonly string[], places: Places): st
 /// build's names one of catter's shims (a build configured under the
 /// wrapper backend records the shim as its compiler).
 function comparable(entry: Entry, shims: readonly string[]): string[] {
-    const [program = "", ...rest] = withoutDependencyFiles(expandResponseFiles(entry.arguments, entry.directory));
-    return [shims.some((dir) => program.startsWith(dir + path.sep)) ? baseName(program) : program, ...rest];
+    const [program = "", ...rest] = withoutDependencyFiles(
+        expandResponseFiles(entry.arguments, entry.directory),
+    );
+    return [
+        shims.some((dir) => program.startsWith(dir + path.sep)) ? baseName(program) : program,
+        ...rest,
+    ];
 }
 
 export function checkHint(input: {
@@ -82,7 +92,10 @@ export function checkHint(input: {
         const other = same?.shift();
         const file = path.resolve(entry.directory, entry.file);
         if (other === undefined) {
-            add("catter-only", `the build's database has no entry of ${file}${entry.output === undefined ? "" : ` to ${entry.output}`}`);
+            add(
+                "catter-only",
+                `the build's database has no entry of ${file}${entry.output === undefined ? "" : ` to ${entry.output}`}`,
+            );
             continue;
         }
         const its = comparable(other, [input.home]);
@@ -96,7 +109,10 @@ export function checkHint(input: {
     }
     for (const left of theirs.values()) {
         for (const entry of left) {
-            add("build-only", `catter's database has no entry of ${path.resolve(entry.directory, entry.file)}${entry.output === undefined ? "" : ` to ${entry.output}`}`);
+            add(
+                "build-only",
+                `catter's database has no entry of ${path.resolve(entry.directory, entry.file)}${entry.output === undefined ? "" : ` to ${entry.output}`}`,
+            );
         }
     }
     return differences;

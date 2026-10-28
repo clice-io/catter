@@ -78,6 +78,7 @@ detail = "…"
   A step is an argv. `${JOBS}` reads the machine's core count, `${TREE}`
   the build's tree, `${WORK}` a scratch directory beside it (Bazel's output
   root).
+
 - **Jobs.** A job is a build on one platform, `<project>/<build>`, which
   runs each of its backends in turn; one runner each.
 

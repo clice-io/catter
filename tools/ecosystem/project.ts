@@ -118,7 +118,12 @@ function steps(table: Table, key: string, where: string): Step[] {
     });
 }
 
-function oneOf<T extends string>(value: string, choices: readonly T[], what: string, where: string): T {
+function oneOf<T extends string>(
+    value: string,
+    choices: readonly T[],
+    what: string,
+    where: string,
+): T {
     if (!(choices as readonly string[]).includes(value)) {
         fail(where, `${what} ${value} is none of ${choices.join(", ")}`);
     }
@@ -136,7 +141,19 @@ function only(table: Table, keys: readonly string[], where: string): void {
 function readBuild(name: string, table: Table, dir: string, where: string): Build {
     only(
         table,
-        ["about", "platforms", "backends", "packages", "tree", "env", "prepare", "configure", "build", "scan", "hint"],
+        [
+            "about",
+            "platforms",
+            "backends",
+            "packages",
+            "tree",
+            "env",
+            "prepare",
+            "configure",
+            "build",
+            "scan",
+            "hint",
+        ],
         where,
     );
     const platforms = strings(table["platforms"] ?? ["linux"], "platforms", where).map((each) =>
@@ -157,7 +174,10 @@ function readBuild(name: string, table: Table, dir: string, where: string): Buil
         fail(where, "env must be a table of strings");
     }
     const tree = string(table, "tree", where);
-    if (tree !== undefined && !fs.statSync(path.join(dir, tree), { throwIfNoEntry: false })?.isDirectory()) {
+    if (
+        tree !== undefined &&
+        !fs.statSync(path.join(dir, tree), { throwIfNoEntry: false })?.isDirectory()
+    ) {
         fail(where, `tree ${tree} is no directory of the project's`);
     }
     const build = steps(table, "build", where);
@@ -195,7 +215,9 @@ function readKnown(table: Table, builds: readonly Build[], where: string): Known
         why: required(table, "why", where),
         ...(build === undefined ? {} : { build }),
         ...(backend === undefined ? {} : { backend: oneOf(backend, BACKENDS, "backend", where) }),
-        ...(platform === undefined ? {} : { platform: oneOf(platform, PLATFORMS, "platform", where) }),
+        ...(platform === undefined
+            ? {}
+            : { platform: oneOf(platform, PLATFORMS, "platform", where) }),
         check: oneOf(required(table, "check", where), CHECKS, "check", where),
         kind: required(table, "kind", where),
         detail: new RegExp(required(table, "detail", where)),
@@ -223,8 +245,8 @@ export function readProject(name: string, dir = path.join(ECOSYSTEM_DIR, name)):
     if (repository !== undefined && archive !== undefined) {
         fail(where, "a project comes from a repository or an archive, not both");
     }
-    const builds = Object.entries((table["builds"] ?? {}) as Record<string, Table>).map(([build, entry]) =>
-        readBuild(build, entry, dir, `${where} [builds.${build}]`),
+    const builds = Object.entries((table["builds"] ?? {}) as Record<string, Table>).map(
+        ([build, entry]) => readBuild(build, entry, dir, `${where} [builds.${build}]`),
     );
     if (builds.length === 0) {
         fail(where, "no builds");
@@ -251,7 +273,11 @@ export function readProject(name: string, dir = path.join(ECOSYSTEM_DIR, name)):
 export function projectNames(): string[] {
     return fs
         .readdirSync(ECOSYSTEM_DIR, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(ECOSYSTEM_DIR, entry.name, "project.toml")))
+        .filter(
+            (entry) =>
+                entry.isDirectory() &&
+                fs.existsSync(path.join(ECOSYSTEM_DIR, entry.name, "project.toml")),
+        )
         .map((entry) => entry.name)
         .sort();
 }
@@ -295,7 +321,9 @@ export function findBuild(job: string): { project: Project; build: Build } {
     const project = readProject(name);
     const build = project.builds.find((each) => each.name === buildName);
     if (build === undefined) {
-        throw new Error(`${name} has no build ${buildName}: ${project.builds.map((each) => each.name).join(", ")}`);
+        throw new Error(
+            `${name} has no build ${buildName}: ${project.builds.map((each) => each.name).join(", ")}`,
+        );
     }
     return { project, build };
 }

@@ -14,7 +14,15 @@ import { checkHint, readDatabase } from "./checks/hint.ts";
 import { checkRecorder, type Entry, type RecorderStats } from "./checks/recorder.ts";
 import { checkSyntax, type SyntaxStats } from "./checks/syntax.ts";
 import { isKnown, Places, quote, type Difference } from "./difference.ts";
-import { currentPlatform, findBuild, type Backend, type Build, type Known, type Platform, type Step } from "./project.ts";
+import {
+    currentPlatform,
+    findBuild,
+    type Backend,
+    type Build,
+    type Known,
+    type Platform,
+    type Step,
+} from "./project.ts";
 import { AuditRecorder } from "./record/audit.ts";
 import { NoRecorder, type Recorder, type RecorderName } from "./record/recorder.ts";
 import { StraceRecorder } from "./record/strace.ts";
@@ -63,17 +71,28 @@ export interface JobResult {
 
 /// The places a step's words and the build's environment name.
 function expand(word: string, places: { tree: string; work: string; jobs: number }): string {
-    return word.replaceAll("${TREE}", places.tree).replaceAll("${WORK}", places.work).replaceAll("${JOBS}", String(places.jobs));
+    return word
+        .replaceAll("${TREE}", places.tree)
+        .replaceAll("${WORK}", places.work)
+        .replaceAll("${JOBS}", String(places.jobs));
 }
 
 /// Run `command` to its end, its output appended to `log`; killed with
 /// everything it started once `timeout` passed.
-function runLogged(command: readonly string[], options: { cwd: string; env: NodeJS.ProcessEnv; log: string; timeout: number }): Promise<number | null> {
+function runLogged(
+    command: readonly string[],
+    options: { cwd: string; env: NodeJS.ProcessEnv; log: string; timeout: number },
+): Promise<number | null> {
     const [program = "", ...args] = command;
     fs.appendFileSync(options.log, `$ ${command.map(quote).join(" ")}\n`);
     const fd = fs.openSync(options.log, "a");
     return new Promise((resolve) => {
-        const child = spawn(program, args, { cwd: options.cwd, env: options.env, stdio: ["ignore", fd, fd], detached: true });
+        const child = spawn(program, args, {
+            cwd: options.cwd,
+            env: options.env,
+            stdio: ["ignore", fd, fd],
+            detached: true,
+        });
         // Hang detection: a bound only a build stuck forever reaches.
         const timer = setTimeout(() => {
             fs.appendFileSync(options.log, `\nkilled after ${options.timeout / 60_000} minutes\n`);
@@ -98,18 +117,27 @@ const STEP_TIMEOUT = 120 * 60_000;
 
 class SetupError extends Error {}
 
-async function runSteps(steps: readonly Step[], what: string, options: { cwd: string; env: NodeJS.ProcessEnv; log: string }, places: { tree: string; work: string; jobs: number }): Promise<void> {
+async function runSteps(
+    steps: readonly Step[],
+    what: string,
+    options: { cwd: string; env: NodeJS.ProcessEnv; log: string },
+    places: { tree: string; work: string; jobs: number },
+): Promise<void> {
     for (const step of steps) {
         const command = step.map((word) => expand(word, places));
         const status = await runLogged(command, { ...options, timeout: STEP_TIMEOUT });
         if (status !== 0) {
-            throw new SetupError(`${what} step ${command.map(quote).join(" ")} failed (${status ?? "killed"}); its output is in ${options.log}`);
+            throw new SetupError(
+                `${what} step ${command.map(quote).join(" ")} failed (${status ?? "killed"}); its output is in ${options.log}`,
+            );
         }
     }
 }
 
 function tail(file: string, lines = 30): string {
-    return fs.existsSync(file) ? fs.readFileSync(file, "utf8").trimEnd().split("\n").slice(-lines).join("\n") : "";
+    return fs.existsSync(file)
+        ? fs.readFileSync(file, "utf8").trimEnd().split("\n").slice(-lines).join("\n")
+        : "";
 }
 
 function makeRecorder(name: RecorderName, work: string, tree: string): Recorder {
@@ -123,7 +151,13 @@ function makeRecorder(name: RecorderName, work: string, tree: string): Recorder 
     }
 }
 
-async function runBackend(job: string, build: Build, backend: Backend, source: string, options: JobOptions): Promise<BackendResult> {
+async function runBackend(
+    job: string,
+    build: Build,
+    backend: Backend,
+    source: string,
+    options: JobOptions,
+): Promise<BackendResult> {
     const root = path.join(options.dir, ...job.split("/"), backend);
     const out = path.join(options.out, backend);
     fs.rmSync(root, { recursive: true, force: true });
@@ -136,15 +170,28 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
     const home = path.join(fs.realpathSync.native(out), "home");
     const env: NodeJS.ProcessEnv = {
         ...process.env,
-        ...Object.fromEntries(Object.entries(build.env).map(([name, value]) => [name, expand(value, places)])),
+        ...Object.fromEntries(
+            Object.entries(build.env).map(([name, value]) => [name, expand(value, places)]),
+        ),
     };
     const log = path.join(out, "build.log");
     const repro = `CATTER_EXECUTABLE=${quote(options.catter)} node tools/ecosystem/run.ts ${job} --backend ${backend} --dir ${quote(options.dir)}`;
-    const result: BackendResult = { backend, recorder: options.recorder, entries: 0, differences: [], repro };
+    const result: BackendResult = {
+        backend,
+        recorder: options.recorder,
+        entries: 0,
+        differences: [],
+        repro,
+    };
     const spell = new Places({ tree, work, home, catter: path.dirname(options.catter) });
     const prepared = async (into: string) => {
         copyTree(source, into);
-        await runSteps(build.prepare, "prepare", { cwd: into, env, log }, { ...places, tree: into });
+        await runSteps(
+            build.prepare,
+            "prepare",
+            { cwd: into, env, log },
+            { ...places, tree: into },
+        );
     };
 
     try {
@@ -160,9 +207,18 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
         return result;
     }
 
-    const steps = [...(backend === "wrapper" ? build.configure : []), ...build.build].map((step) => step.map((word) => expand(word, places)));
+    const steps = [...(backend === "wrapper" ? build.configure : []), ...build.build].map((step) =>
+        step.map((word) => expand(word, places)),
+    );
     const [only] = steps;
-    const command = steps.length === 1 && only !== undefined ? only : [process.execPath, path.join(REPO_ROOT, "tools", "ecosystem", "steps.ts"), JSON.stringify(steps)];
+    const command =
+        steps.length === 1 && only !== undefined
+            ? only
+            : [
+                  process.execPath,
+                  path.join(REPO_ROOT, "tools", "ecosystem", "steps.ts"),
+                  JSON.stringify(steps),
+              ];
     const cdb = path.join(out, "compile_commands.json");
     const events = path.join(out, "events.jsonl");
     const handler = path.join(REPO_ROOT, "tools", "ecosystem", "handler.ts");
@@ -170,7 +226,18 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
     const recorder = makeRecorder(options.recorder, work, tree);
     recorder.start();
     result.exit = await runLogged(
-        recorder.wrap([options.catter, "compile-commands", "--capture", backend, "-o", cdb, "--handler", `${process.execPath} ${handler} ${events}`, "--", ...command]),
+        recorder.wrap([
+            options.catter,
+            "compile-commands",
+            "--capture",
+            backend,
+            "-o",
+            cdb,
+            "--handler",
+            `${process.execPath} ${handler} ${events}`,
+            "--",
+            ...command,
+        ]),
         { cwd: tree, env: { ...env, CATTER_HOME: home }, log, timeout: STEP_TIMEOUT },
     );
     const recording = await recorder.stop();
@@ -194,7 +261,12 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
         const plain = path.join(root, "plain");
         try {
             await prepared(plain);
-            await runSteps([...build.configure, ...build.build], "plain build", { cwd: plain, env, log: path.join(out, "plain.log") }, { ...places, tree: plain });
+            await runSteps(
+                [...build.configure, ...build.build],
+                "plain build",
+                { cwd: plain, env, log: path.join(out, "plain.log") },
+                { ...places, tree: plain },
+            );
         } catch (error) {
             if (!(error instanceof SetupError)) {
                 throw error;
@@ -204,7 +276,10 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
         } finally {
             fs.rmSync(plain, { recursive: true, force: true });
         }
-        catter("exit", `catter exited ${result.exit ?? "killed"}, the build without it 0:\n${tail(log)}`);
+        catter(
+            "exit",
+            `catter exited ${result.exit ?? "killed"}, the build without it 0:\n${tail(log)}`,
+        );
     }
     if (session.finish === undefined) {
         catter("no-finish", "the handler was never told that the build ended");
@@ -216,12 +291,15 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
         catter("log-error", record.message.split("\n")[0] ?? "");
     }
     const targetsHome = path.join(out, "targets-home");
-    const targets = await runLogged([options.catter, "targets", "--from", path.join(out, "replay.json")], {
-        cwd: tree,
-        env: { ...process.env, CATTER_HOME: targetsHome },
-        log: path.join(out, "targets.txt"),
-        timeout: STEP_TIMEOUT,
-    });
+    const targets = await runLogged(
+        [options.catter, "targets", "--from", path.join(out, "replay.json")],
+        {
+            cwd: tree,
+            env: { ...process.env, CATTER_HOME: targetsHome },
+            log: path.join(out, "targets.txt"),
+            timeout: STEP_TIMEOUT,
+        },
+    );
     if (targets !== 0) {
         catter("targets", `catter targets --from replay.json exited ${targets ?? "killed"}`);
     }
@@ -249,7 +327,14 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
     const syntax = await checkSyntax({ entries, session, places: spell });
     add(syntax.differences);
     result.syntax = syntax.stats;
-    add(checkHint({ entries, hint: build.hint === undefined ? undefined : path.join(tree, build.hint), home, places: spell }));
+    add(
+        checkHint({
+            entries,
+            hint: build.hint === undefined ? undefined : path.join(tree, build.hint),
+            home,
+            places: spell,
+        }),
+    );
     return result;
 }
 
@@ -270,13 +355,19 @@ export async function runJob(job: string, options: JobOptions): Promise<JobResul
     const seen = new Set<Known>();
     for (const backend of backends) {
         console.log(`== ${job} under ${backend}`);
-        const ran = await runBackend(job, build, backend, source, { ...options, out: path.join(options.out) });
+        const ran = await runBackend(job, build, backend, source, {
+            ...options,
+            out: path.join(options.out),
+        });
         const where = { build: build.name, backend, platform };
         for (const difference of ran.differences) {
             const known = project.known.find((each) => isKnown(each, difference, where));
             if (known !== undefined) {
                 seen.add(known);
-                difference.known = { ...(known.issue === undefined ? {} : { issue: known.issue }), why: known.why };
+                difference.known = {
+                    ...(known.issue === undefined ? {} : { issue: known.issue }),
+                    why: known.why,
+                };
             }
         }
         result.backends.push(ran);

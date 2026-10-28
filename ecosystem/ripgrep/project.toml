@@ -11,3 +11,9 @@ prepare = [
     ["cargo", "+1.90.0", "fetch", "--locked"],
 ]
 build = [["cargo", "+1.90.0", "build", "--release", "--locked", "--offline", "--features", "pcre2", "-j", "${JOBS}"]]
+
+[[known]]
+why = "rustc writes each crate's rlib, an ar archive, itself: catter analyzes no rustc command"
+check = "artifacts"
+kind = "archive-without-command"
+detail = "^no link or archive command of catter's writes <tree>/target/release/deps/lib\\w+-[0-9a-f]+\\.rlib$"

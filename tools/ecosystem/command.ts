@@ -6,8 +6,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-const COMPILER = /^(?:.*-)?(?:gcc|g\+\+|clang|clang\+\+|cc|c\+\+|cl|clang-cl|nvcc)(?:-[\d.]+)?(?:\.exe)?$/i;
-const LINKER_OR_ARCHIVER = /^(?:.*-)?(?:ar|ranlib|ld|ld\.bfd|ld\.gold|ld\.lld|lld|lld-link|llvm-ar|llvm-lib|lib|link)(?:-[\d.]+)?(?:\.exe)?$/i;
+const COMPILER =
+    /^(?:.*-)?(?:gcc|g\+\+|clang|clang\+\+|cc|c\+\+|cl|clang-cl|nvcc)(?:-[\d.]+)?(?:\.exe)?$/i;
+const LINKER_OR_ARCHIVER =
+    /^(?:.*-)?(?:ar|ranlib|ld|ld\.bfd|ld\.gold|ld\.lld|lld|lld-link|llvm-ar|llvm-lib|lib|link)(?:-[\d.]+)?(?:\.exe)?$/i;
 const SOURCE = /\.(?:c|cc|cpp|cxx|c\+\+|m|mm|cu|s|S|sx)$/;
 
 export function baseName(program: string): string {
@@ -31,12 +33,19 @@ const DEPENDENCY_FILES_WITH_VALUE = new Set(["-MF", "-MT", "-MQ"]);
 
 /// The arguments without the options that only write dependency files, and
 /// without `dropped`, options taking a value, joined or not.
-export function withoutDependencyFiles(args: readonly string[], dropped: readonly string[] = []): string[] {
+export function withoutDependencyFiles(
+    args: readonly string[],
+    dropped: readonly string[] = [],
+): string[] {
     const withValue = [...DEPENDENCY_FILES_WITH_VALUE, ...dropped];
     const out: string[] = [];
     for (let i = 0; i < args.length; i += 1) {
         const arg = args[i] ?? "";
-        if (DEPENDENCY_FILES.has(arg) || arg.startsWith("-Wp,-MD,") || arg.startsWith("-Wp,-MMD,")) {
+        if (
+            DEPENDENCY_FILES.has(arg) ||
+            arg.startsWith("-Wp,-MD,") ||
+            arg.startsWith("-Wp,-MMD,")
+        ) {
             continue;
         }
         if (withValue.includes(arg)) {
@@ -53,7 +62,11 @@ export function withoutDependencyFiles(args: readonly string[], dropped: readonl
 
 /// Whether `arg` names a source file that is there now, from `cwd`.
 export function isSource(arg: string, cwd: string): boolean {
-    return !arg.startsWith("-") && SOURCE.test(arg) && fs.statSync(path.resolve(cwd, arg), { throwIfNoEntry: false })?.isFile() === true;
+    return (
+        !arg.startsWith("-") &&
+        SOURCE.test(arg) &&
+        fs.statSync(path.resolve(cwd, arg), { throwIfNoEntry: false })?.isFile() === true
+    );
 }
 
 /// Split a command line as a POSIX shell splits words: quotes, and a

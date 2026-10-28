@@ -44,7 +44,7 @@ function cString(text: string, start: number): [string, number] {
 export function straceStrings(text: string): (string | string[])[] {
     const items: (string | string[])[] = [];
     let array: string[] | undefined;
-    for (let i = 0; i < text.length; ) {
+    for (let i = 0; i < text.length;) {
         const char = text[i];
         if (char === '"') {
             const [value, next] = cString(text, i);
@@ -101,7 +101,11 @@ export function parseStrace(dir: string, cwd: string): ImageBuilder {
     for (const call of calls) {
         const pid = processOf(call.tid);
         const ok = call.result !== "?" && Number(call.result) >= 0;
-        if (["clone", "clone3", "fork", "vfork"].includes(call.name) && ok && Number(call.result) > 0) {
+        if (
+            ["clone", "clone3", "fork", "vfork"].includes(call.name) &&
+            ok &&
+            Number(call.result) > 0
+        ) {
             const child = Number(call.result);
             if (call.args.includes("CLONE_THREAD")) {
                 threadOf.set(child, pid);

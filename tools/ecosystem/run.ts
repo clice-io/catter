@@ -62,7 +62,11 @@ if (values.list === true) {
         dir,
         out,
         catter: path.resolve(catter),
-        recorder: choice(values.recorder ?? (process.platform === "linux" ? "auditd" : "none"), RECORDERS, "recorder"),
+        recorder: choice(
+            values.recorder ?? (process.platform === "linux" ? "auditd" : "none"),
+            RECORDERS,
+            "recorder",
+        ),
         backends: (values.backend ?? []).map((each) => choice(each, BACKENDS, "backend")),
         jobs: defaultJobs(),
     });

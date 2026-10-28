@@ -17,10 +17,18 @@ import type { Entry } from "./recorder.ts";
 /// a compiler that does not take GCC's options (cl, nvcc).
 export function syntaxOnly(args: readonly string[]): string[] | undefined {
     const [program, ...rest] = args;
-    if (program === undefined || !isCompiler(program) || /^(?:cl|clang-cl|nvcc)(?:\.exe)?$/i.test(baseName(program))) {
+    if (
+        program === undefined ||
+        !isCompiler(program) ||
+        /^(?:cl|clang-cl|nvcc)(?:\.exe)?$/i.test(baseName(program))
+    ) {
         return undefined;
     }
-    return [program, ...withoutDependencyFiles(rest, ["-o"]).filter((arg) => arg !== "-c"), "-fsyntax-only"];
+    return [
+        program,
+        ...withoutDependencyFiles(rest, ["-o"]).filter((arg) => arg !== "-c"),
+        "-fsyntax-only",
+    ];
 }
 
 function environment(env: readonly string[]): NodeJS.ProcessEnv {
@@ -78,11 +86,20 @@ export async function checkSyntax(input: {
                 stats.gone += 1;
                 continue;
             }
-            const output = entry.output === undefined ? undefined : path.resolve(entry.directory, entry.output);
+            const output =
+                entry.output === undefined
+                    ? undefined
+                    : path.resolve(entry.directory, entry.output);
             const command =
                 (output === undefined ? undefined : byOutput.get(output)) ??
                 input.session.commands.find(
-                    (each) => each.cwd === entry.directory && each.args.some((arg) => path.resolve(each.cwd, arg) === path.resolve(entry.directory, entry.file)),
+                    (each) =>
+                        each.cwd === entry.directory &&
+                        each.args.some(
+                            (arg) =>
+                                path.resolve(each.cwd, arg) ===
+                                path.resolve(entry.directory, entry.file),
+                        ),
                 );
             stats.checked += 1;
             const [program = "", ...rest] = args;
@@ -96,12 +113,19 @@ export async function checkSyntax(input: {
                 stats.passed += 1;
                 continue;
             }
-            const why = result.error?.message ?? result.stderr.split("\n").find((line) => /error/i.test(line)) ?? `exit ${result.status ?? result.signal}`;
+            const why =
+                result.error?.message ??
+                result.stderr.split("\n").find((line) => /error/i.test(line)) ??
+                `exit ${result.status ?? result.signal}`;
             differences.push({
                 check: "syntax",
                 kind: "fails",
-                detail: input.places.spell(`${path.resolve(entry.directory, entry.file)}: ${why.trim()}`),
-                repro: input.places.spell(`cd ${quote(entry.directory)} && ${args.map(quote).join(" ")}`),
+                detail: input.places.spell(
+                    `${path.resolve(entry.directory, entry.file)}: ${why.trim()}`,
+                ),
+                repro: input.places.spell(
+                    `cd ${quote(entry.directory)} && ${args.map(quote).join(" ")}`,
+                ),
             });
         }
     };

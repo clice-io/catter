@@ -71,27 +71,47 @@ export function sameArgs(recorded: readonly string[], args: readonly string[]): 
         return false;
     }
     const script = recorded[extra] ?? "";
-    return baseName(script) === baseName(args[0] ?? "") && recorded.slice(extra + 1).every((arg, i) => arg === args[i + 1]);
+    return (
+        baseName(script) === baseName(args[0] ?? "") &&
+        recorded.slice(extra + 1).every((arg, i) => arg === args[i + 1])
+    );
 }
 
 function under(file: string, dirs: readonly string[]): boolean {
     return dirs.some((dir) => file === dir || file.startsWith(dir + path.sep));
 }
 
-export function checkRecorder(input: RecorderInput): { differences: Difference[]; stats: RecorderStats } {
+export function checkRecorder(input: RecorderInput): {
+    differences: Difference[];
+    stats: RecorderStats;
+} {
     const { recording, session, places } = input;
     const differences: Difference[] = [];
     const add = (kind: string, detail: string, repro?: string) => {
-        differences.push({ check: "recorder", kind, detail: places.spell(detail), ...(repro === undefined ? {} : { repro }) });
+        differences.push({
+            check: "recorder",
+            kind,
+            detail: places.spell(detail),
+            ...(repro === undefined ? {} : { repro }),
+        });
     };
-    const stats: RecorderStats = { recorded: 0, kept: 0, commands: session.commands.length, matched: 0, compiles: 0 };
+    const stats: RecorderStats = {
+        recorded: 0,
+        kept: 0,
+        commands: session.commands.length,
+        matched: 0,
+        compiles: 0,
+    };
     if (recording.lost > 0) {
         add("lost", `the recorder lost ${recording.lost} events: what it lacks proves nothing`);
     }
 
     const images = recording.images;
-    const parentOf = (image: Image): Image | undefined => (image.parent === null ? undefined : images[image.parent]);
-    const isCatter = (image: Image) => path.basename(image.exe) === path.basename(input.catter) && resolved(image.exe) === input.catter;
+    const parentOf = (image: Image): Image | undefined =>
+        image.parent === null ? undefined : images[image.parent];
+    const isCatter = (image: Image) =>
+        path.basename(image.exe) === path.basename(input.catter) &&
+        resolved(image.exe) === input.catter;
     const top = images.find((image) => isCatter(image) && !ancestors(image).some(isCatter));
     function ancestors(image: Image): Image[] {
         const chain: Image[] = [];
@@ -121,13 +141,15 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
     };
     const ownDirs = input.own.map(resolved);
     const isOwn = (image: Image) =>
-        ["catter", "catter-proxy"].includes(path.basename(image.exe)) || under(resolved(image.exe), ownDirs);
+        ["catter", "catter-proxy"].includes(path.basename(image.exe)) ||
+        under(resolved(image.exe), ownDirs);
     const run = images.filter(runs);
     const kept = run.filter((image) => !isOwn(image));
     const keptIds = new Set(kept.map((image) => image.id));
     stats.recorded = run.length;
     stats.kept = kept.length;
-    const keptParent = (image: Image): number | null => ancestors(image).find((each) => keptIds.has(each.id))?.id ?? null;
+    const keptParent = (image: Image): number | null =>
+        ancestors(image).find((each) => keptIds.has(each.id))?.id ?? null;
 
     const recChildren = new Map<number | null, Image[]>();
     for (const image of kept) {
@@ -153,13 +175,23 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
         const used = new Set<number>();
         for (const command of session.commands) {
             const image =
-                free.get(JSON.stringify([command.args, command.cwd]))?.find((each) => !used.has(each.id)) ??
-                kept.find((each) => !used.has(each.id) && each.cwd === command.cwd && sameArgs(each.args, command.args));
+                free
+                    .get(JSON.stringify([command.args, command.cwd]))
+                    ?.find((each) => !used.has(each.id)) ??
+                kept.find(
+                    (each) =>
+                        !used.has(each.id) &&
+                        each.cwd === command.cwd &&
+                        sameArgs(each.args, command.args),
+                );
             if (image !== undefined) {
                 used.add(image.id);
             }
             if (image === undefined) {
-                add("extra", `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw`);
+                add(
+                    "extra",
+                    `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw`,
+                );
             } else {
                 imageOf.set(command.id, image);
             }
@@ -173,7 +205,10 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
             const nearest = ancestors(image).find((each) => commandOf.has(each.id));
             const expected = nearest === undefined ? null : (commandOf.get(nearest.id) ?? null);
             if (expected !== command.parent) {
-                add("parent", `catter gave ${describe(command.args, command.cwd)} another parent than the recorder's nearest command`);
+                add(
+                    "parent",
+                    `catter gave ${describe(command.args, command.cwd)} another parent than the recorder's nearest command`,
+                );
             }
         }
         for (const image of kept) {
@@ -195,19 +230,28 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
                 const same = free.filter((image) => sameArgs(image.args, command.args));
                 const pick = same.find((image) => image.cwd === command.cwd) ?? same[0];
                 if (pick === undefined) {
-                    add("extra", `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw there`);
+                    add(
+                        "extra",
+                        `catter reported ${describe(command.args, command.cwd)}, which the recorder never saw there`,
+                    );
                     continue;
                 }
                 free.splice(free.indexOf(pick), 1);
                 imageOf.set(command.id, pick);
                 if (pick.cwd !== command.cwd) {
-                    add("cwd", `catter gave ${describe(command.args, command.cwd)} another directory than ${pick.cwd}`);
+                    add(
+                        "cwd",
+                        `catter gave ${describe(command.args, command.cwd)} another directory than ${pick.cwd}`,
+                    );
                 }
                 match(command.id, pick.id);
             }
             for (const image of free) {
                 const below = subtree(image);
-                add("missed", `catter missed ${describe(image.args, image.cwd)}${below > 0 ? ` and the ${below} commands it started` : ""}`);
+                add(
+                    "missed",
+                    `catter missed ${describe(image.args, image.cwd)}${below > 0 ? ` and the ${below} commands it started` : ""}`,
+                );
             }
         };
         match(null, null);
@@ -220,7 +264,9 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
     const recorded = new Map<string, { count: number; image: Image }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
-        const sources = isCompiler(args[0] ?? "") ? args.slice(1).filter((arg) => isSource(arg, image.cwd)) : [];
+        const sources = isCompiler(args[0] ?? "")
+            ? args.slice(1).filter((arg) => isSource(arg, image.cwd))
+            : [];
         if (sources.length === 0) {
             continue;
         }
@@ -235,10 +281,17 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
     for (const entry of input.entries) {
         const args = expandResponseFiles(entry.arguments, entry.directory);
         const rest = args.filter((arg, i) => i === 0 || !isSource(arg, entry.directory));
-        const key = JSON.stringify([rest, entry.directory, path.resolve(entry.directory, entry.file)]);
+        const key = JSON.stringify([
+            rest,
+            entry.directory,
+            path.resolve(entry.directory, entry.file),
+        ]);
         const slot = recorded.get(key);
         if (slot === undefined || slot.count === 0) {
-            add("entry-without-compile", `the entry of ${entry.file} is no compile the recorder saw: ${places.label(entry.arguments)} [in ${entry.directory}]`);
+            add(
+                "entry-without-compile",
+                `the entry of ${entry.file} is no compile the recorder saw: ${places.label(entry.arguments)} [in ${entry.directory}]`,
+            );
         } else {
             slot.count -= 1;
         }

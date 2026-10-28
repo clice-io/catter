@@ -38,11 +38,31 @@ describe("projects", () => {
     });
 
     test("a known difference is as narrow as its fields", () => {
-        const known: Known = { why: "w", check: "artifacts", kind: "object-without-entry", backend: "hook", detail: /\.lo$/ };
-        const difference = { check: "artifacts" as const, kind: "object-without-entry", detail: "no entry has the output <tree>/a.lo" };
-        expect(isKnown(known, difference, { build: "b", backend: "hook", platform: "linux" })).toBe(true);
-        expect(isKnown(known, difference, { build: "b", backend: "wrapper", platform: "linux" })).toBe(false);
-        expect(isKnown(known, { ...difference, detail: "<tree>/a.o" }, { build: "b", backend: "hook", platform: "linux" })).toBe(false);
+        const known: Known = {
+            why: "w",
+            check: "artifacts",
+            kind: "object-without-entry",
+            backend: "hook",
+            detail: /\.lo$/,
+        };
+        const difference = {
+            check: "artifacts" as const,
+            kind: "object-without-entry",
+            detail: "no entry has the output <tree>/a.lo",
+        };
+        expect(isKnown(known, difference, { build: "b", backend: "hook", platform: "linux" })).toBe(
+            true,
+        );
+        expect(
+            isKnown(known, difference, { build: "b", backend: "wrapper", platform: "linux" }),
+        ).toBe(false);
+        expect(
+            isKnown(
+                known,
+                { ...difference, detail: "<tree>/a.o" },
+                { build: "b", backend: "hook", platform: "linux" },
+            ),
+        ).toBe(false);
     });
 });
 
@@ -83,7 +103,16 @@ describe("auditd", () => {
 
     test("execs with their arguments and directory, under the run's key alone", () => {
         const images = parseAudit(log, key).images;
-        expect(images).toEqual([{ id: 0, parent: null, pid: 101, exe: "/usr/bin/gcc", args: ["gcc", "-DX=a b", "-cx.c", "-o"], cwd: "/w/é dir" }]);
+        expect(images).toEqual([
+            {
+                id: 0,
+                parent: null,
+                pid: 101,
+                exe: "/usr/bin/gcc",
+                args: ["gcc", "-DX=a b", "-cx.c", "-o"],
+                cwd: "/w/é dir",
+            },
+        ]);
     });
 });
 
@@ -98,7 +127,10 @@ describe("strace", () => {
                 `1.2 clone(child_stack=NULL, flags=CLONE_CHILD_SETTID|SIGCHLD) = 11`,
             ].join("\n"),
         );
-        fs.writeFileSync(path.join(dir, "t.11"), `1.3 execve("/usr/bin/cc", ["cc", "-c", "a\\303\\251.c"], 0x0 /* 3 vars */) = 0\n`);
+        fs.writeFileSync(
+            path.join(dir, "t.11"),
+            `1.3 execve("/usr/bin/cc", ["cc", "-c", "a\\303\\251.c"], 0x0 /* 3 vars */) = 0\n`,
+        );
         const images = parseStrace(dir, "/w").images;
         expect(images.map((image) => [image.exe, image.args, image.cwd, image.parent])).toEqual([
             ["/usr/bin/make", ["make", "-C", "sub"], "/w", null],
@@ -111,7 +143,16 @@ describe("the recorder check", () => {
     const catter = "/opt/catter/bin/catter";
     function session(commands: Partial<Command>[]): Session {
         return {
-            commands: commands.map((command, i) => ({ id: i + 1, parent: null, cwd: "/w", exe: "", args: [], env: [], analysis: null, ...command })),
+            commands: commands.map((command, i) => ({
+                id: i + 1,
+                parent: null,
+                cwd: "/w",
+                exe: "",
+                args: [],
+                env: [],
+                analysis: null,
+                ...command,
+            })),
             errors: [],
             finish: 0,
         };
@@ -126,7 +167,13 @@ describe("the recorder check", () => {
         return { images: builder.images, lost: 0 };
     }
     const places = new Places({ tree: "/w" });
-    const base = { entries: [] as Entry[], catter, own: ["/opt/catter/bin"], handler: "/repo/handler.ts", places };
+    const base = {
+        entries: [] as Entry[],
+        catter,
+        own: ["/opt/catter/bin"],
+        handler: "/repo/handler.ts",
+        places,
+    };
 
     test("under the hook, catter's own processes are dropped and the trees match", () => {
         const result = checkRecorder({
@@ -140,7 +187,11 @@ describe("the recorder check", () => {
                 [6, 5, "/usr/bin/cc", ["cc", "-c", "a.c"]],
                 [7, 4, "/usr/bin/true", ["true"]],
             ]),
-            session: session([{ args: ["make"] }, { parent: 1, args: ["cc", "-c", "a.c"] }, { parent: 2, args: ["cc1"] }]),
+            session: session([
+                { args: ["make"] },
+                { parent: 1, args: ["cc", "-c", "a.c"] },
+                { parent: 2, args: ["cc1"] },
+            ]),
         });
         expect(result.differences.map((each) => [each.kind, each.detail])).toEqual([
             ["extra", "catter reported cc1 [in <tree>], which the recorder never saw there"],
@@ -150,8 +201,15 @@ describe("the recorder check", () => {
     });
 
     test("a script runs behind its interpreter", () => {
-        expect(sameArgs(["/env/bin/python3.14", "/env/bin/meson", "compile", "-C", "b"], ["meson", "compile", "-C", "b"])).toBe(true);
-        expect(sameArgs(["/bin/sh", "-e", "./configure", "--x"], ["./configure", "--x"])).toBe(true);
+        expect(
+            sameArgs(
+                ["/env/bin/python3.14", "/env/bin/meson", "compile", "-C", "b"],
+                ["meson", "compile", "-C", "b"],
+            ),
+        ).toBe(true);
+        expect(sameArgs(["/bin/sh", "-e", "./configure", "--x"], ["./configure", "--x"])).toBe(
+            true,
+        );
         expect(sameArgs(["/bin/sh", "./other", "--x"], ["./configure", "--x"])).toBe(false);
         expect(sameArgs(["cc", "-c", "a.c"], ["cc", "-c", "b.c"])).toBe(false);
     });
@@ -169,7 +227,9 @@ describe("the recorder check", () => {
             ]),
             session: session([{ args: ["cc", "-c", "a.c"] }]),
         });
-        expect(result.differences.map((each) => [each.kind, each.detail])).toEqual([["missed", "catter missed /usr/bin/ar rcs liba.a [in <tree>]"]]);
+        expect(result.differences.map((each) => [each.kind, each.detail])).toEqual([
+            ["missed", "catter missed /usr/bin/ar rcs liba.a [in <tree>]"],
+        ]);
     });
 });
 
@@ -198,7 +258,14 @@ describe("artifacts", () => {
 
 describe("command lines", () => {
     test("a database's command splits as a shell splits it", () => {
-        expect(shellSplit(`cc -DA=\\"b\\" "-DC=d e" 'f\\g' -c x.c`)).toEqual(["cc", '-DA="b"', "-DC=d e", "f\\g", "-c", "x.c"]);
+        expect(shellSplit(`cc -DA=\\"b\\" "-DC=d e" 'f\\g' -c x.c`)).toEqual([
+            "cc",
+            '-DA="b"',
+            "-DC=d e",
+            "f\\g",
+            "-c",
+            "x.c",
+        ]);
     });
 
     test("compilers and the programs the wrapper stands in for, by name", () => {
@@ -211,11 +278,32 @@ describe("command lines", () => {
     test("response files are read in", () => {
         const dir = tempDir();
         fs.writeFileSync(path.join(dir, "args.rsp"), `-DX "-I/a b"\n-c`);
-        expect(expandResponseFiles(["cc", "@args.rsp", "x.c", "@missing"], dir)).toEqual(["cc", "-DX", "-I/a b", "-c", "x.c", "@missing"]);
+        expect(expandResponseFiles(["cc", "@args.rsp", "x.c", "@missing"], dir)).toEqual([
+            "cc",
+            "-DX",
+            "-I/a b",
+            "-c",
+            "x.c",
+            "@missing",
+        ]);
     });
 
     test("an entry checks its code without writing its object or dependencies", () => {
-        expect(syntaxOnly(["c++", "-DX", "-MD", "-MT", "a.o", "-MF", "a.o.d", "-o", "a.o", "-c", "a.cc"])).toEqual(["c++", "-DX", "a.cc", "-fsyntax-only"]);
+        expect(
+            syntaxOnly([
+                "c++",
+                "-DX",
+                "-MD",
+                "-MT",
+                "a.o",
+                "-MF",
+                "a.o.d",
+                "-o",
+                "a.o",
+                "-c",
+                "a.cc",
+            ]),
+        ).toEqual(["c++", "-DX", "a.cc", "-fsyntax-only"]);
         expect(syntaxOnly(["cl", "/c", "a.cc"])).toBeUndefined();
     });
 });
@@ -228,18 +316,46 @@ describe("the hint check", () => {
             hint,
             JSON.stringify([
                 { directory: dir, file: "a.c", output: "a.o", command: "cc -DX -c a.c -o a.o" },
-                { directory: dir, file: "d.c", output: "d.o", command: "/home/catter/shims-1/1/cc -c d.c -o d.o" },
+                {
+                    directory: dir,
+                    file: "d.c",
+                    output: "d.o",
+                    command: "/home/catter/shims-1/1/cc -c d.c -o d.o",
+                },
                 { directory: dir, file: "b.c", output: "b.o", command: "cc -c b.c -o b.o" },
             ]),
         );
         const entries: Entry[] = [
-            { directory: dir, file: "a.c", output: "a.o", arguments: ["cc", "-DY", "-c", "a.c", "-o", "a.o"] },
-            { directory: dir, file: "c.c", output: "c.o", arguments: ["cc", "-c", "c.c", "-o", "c.o"] },
-            { directory: dir, file: "d.c", output: "d.o", arguments: ["/usr/bin/cc", "-MD", "-MF", "d.o.d", "-c", "d.c", "-o", "d.o"] },
+            {
+                directory: dir,
+                file: "a.c",
+                output: "a.o",
+                arguments: ["cc", "-DY", "-c", "a.c", "-o", "a.o"],
+            },
+            {
+                directory: dir,
+                file: "c.c",
+                output: "c.o",
+                arguments: ["cc", "-c", "c.c", "-o", "c.o"],
+            },
+            {
+                directory: dir,
+                file: "d.c",
+                output: "d.o",
+                arguments: ["/usr/bin/cc", "-MD", "-MF", "d.o.d", "-c", "d.c", "-o", "d.o"],
+            },
         ];
-        const found = checkHint({ entries, hint, home: "/home/catter", places: new Places({ tree: dir }) });
+        const found = checkHint({
+            entries,
+            hint,
+            home: "/home/catter",
+            places: new Places({ tree: dir }),
+        });
         expect(found.map((each) => [each.kind, each.detail])).toEqual([
-            ["arguments", "<tree>/a.c: at argument 1: catter has cc -DY -c a.c, the build's cc -DX -c a.c"],
+            [
+                "arguments",
+                "<tree>/a.c: at argument 1: catter has cc -DY -c a.c, the build's cc -DX -c a.c",
+            ],
             ["catter-only", "the build's database has no entry of <tree>/c.c to c.o"],
             ["build-only", "catter's database has no entry of <tree>/b.c to b.o"],
         ]);

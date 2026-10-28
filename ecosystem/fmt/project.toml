@@ -60,3 +60,64 @@ build = [
     ["bazel", "--output_user_root=${WORK}/bazel", "shutdown"],
 ]
 scan = ["bazel-out"]
+
+[[known]]
+why = "catter leaves out the compiles of CMake's checks, run in CMakeScratch and CMakeTmp when CMake configures under catter (catter#117)"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "recorder"
+kind = "no-entry"
+detail = "\\[in <tree>/build/(?:[\\w/]+/)?CMakeFiles/(?:CMakeScratch/TryCompile-\\w+|CMakeTmp)\\]$"
+
+[[known]]
+why = "CMake copies the program of its compiler ABI check out of the scratch directory where it was linked"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "artifacts"
+kind = "linked-without-command"
+detail = "^no link or archive command of catter's writes <tree>/build/CMakeFiles/[\\d.]+/CMakeDetermineCompilerABI_CXX\\.bin$"
+
+[[known]]
+why = "CMake's Makefile generator writes an entry's output relative to the top build directory, not to the entry's own: catter's entries of the compiles run in build/test pair with none of its"
+build = "cmake-make"
+check = "hint"
+kind = "catter-only"
+detail = "^the build's database has no entry of <tree>/\\S+ to <tree>/build/test/\\S+$"
+
+[[known]]
+why = "CMake's Makefile generator writes an entry's output relative to the top build directory, not to the entry's own: its entries of the compiles run in build/test pair with none of catter's"
+build = "cmake-make"
+check = "hint"
+kind = "build-only"
+detail = "^catter's database has no entry of <tree>/\\S+ to test/\\S+$"
+
+[[known]]
+issue = "10-28#5"
+why = "bazelisk, a static Go binary, execs the Bazel client without libc, where the hook does not see it"
+build = "bazel"
+check = "recorder"
+kind = "missed"
+detail = "^catter missed \\S+/bazelisk/downloads/\\S+/bin/bazel "
+
+[[known]]
+issue = "10-28#5"
+why = "catter, missing the Bazel client bazelisk execs, reports the server's daemonize under bazelisk"
+build = "bazel"
+check = "recorder"
+kind = "extra"
+detail = "^catter reported daemonize "
+
+[[known]]
+issue = "10-28#4"
+why = "each compile's sources are symlinks in a sandbox Bazel removes after the action: catter leaves out every entry as a probe's"
+build = "bazel"
+check = "artifacts"
+kind = "object-without-entry"
+detail = "^no entry has the output <work>/bazel/\\w+/execroot/_main/bazel-out/\\S+\\.pic\\.o$"
+
+[[known]]
+why = "the link writes into the action's sandbox, which Bazel moves its outputs out of"
+build = "bazel"
+check = "artifacts"
+kind = "linked-without-command"
+detail = "^no link or archive command of catter's writes <work>/bazel/\\w+/execroot/_main/bazel-out/k8-fastbuild/bin/hello$"

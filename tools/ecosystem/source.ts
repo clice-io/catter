@@ -13,13 +13,18 @@ import { ECOSYSTEM_DIR, type Build, type Project } from "./project.ts";
 function run(command: string, args: readonly string[], cwd: string): void {
     const result = spawnSync(command, args, { cwd, stdio: ["ignore", "inherit", "inherit"] });
     if (result.status !== 0) {
-        throw new Error(`${[command, ...args].join(" ")} in ${cwd}: ${result.error?.message ?? `exit ${result.status ?? result.signal}`}`);
+        throw new Error(
+            `${[command, ...args].join(" ")} in ${cwd}: ${result.error?.message ?? `exit ${result.status ?? result.signal}`}`,
+        );
     }
 }
 
 function fetchCommit(repository: string, commit: string, target: string): void {
     if (fs.existsSync(path.join(target, ".git"))) {
-        const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: target, encoding: "utf8" }).stdout.trim();
+        const head = spawnSync("git", ["rev-parse", "HEAD"], {
+            cwd: target,
+            encoding: "utf8",
+        }).stdout.trim();
         if (head === commit) {
             return;
         }

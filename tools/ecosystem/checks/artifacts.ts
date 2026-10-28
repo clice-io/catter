@@ -34,7 +34,10 @@ export function fileKind(head: Buffer, name: string): FileKind | undefined {
             return type === 1 ? "object" : [2, 6, 8].includes(type) ? "linked" : undefined;
         }
     }
-    if (head.toString("latin1", 0, 4) === "BC\xc0\xde" || (head.length >= 4 && head.readUInt32LE(0) === 0x0b17c0de)) {
+    if (
+        head.toString("latin1", 0, 4) === "BC\xc0\xde" ||
+        (head.length >= 4 && head.readUInt32LE(0) === 0x0b17c0de)
+    ) {
         return "object";
     }
     if (head.toString("latin1", 0, 2) === "MZ") {
@@ -128,9 +131,14 @@ export function checkArtifacts(input: {
     const relocatable = new Set<string>();
     for (const command of input.session.commands) {
         const analysis = command.analysis;
-        if (analysis?.kind === "compiler" && ["link", "archive", "relocatable-link"].includes(analysis.phase)) {
+        if (
+            analysis?.kind === "compiler" &&
+            ["link", "archive", "relocatable-link"].includes(analysis.phase)
+        ) {
             for (const write of analysis.writes) {
-                const file = real(path.resolve(command.cwd, typeof write.path === "string" ? write.path : ""));
+                const file = real(
+                    path.resolve(command.cwd, typeof write.path === "string" ? write.path : ""),
+                );
                 (analysis.phase === "relocatable-link" ? relocatable : linked).add(file);
             }
         } else if (analysis?.kind === "archiver") {
@@ -166,7 +174,10 @@ export function checkArtifacts(input: {
         } else {
             stats[kind === "archive" ? "archives" : "linked"] += 1;
             if (!linked.has(file) && !linkedInodes.has(inode(file))) {
-                add(kind === "archive" ? "archive-without-command" : "linked-without-command", `no link or archive command of catter's writes ${file}`);
+                add(
+                    kind === "archive" ? "archive-without-command" : "linked-without-command",
+                    `no link or archive command of catter's writes ${file}`,
+                );
             }
         }
     }

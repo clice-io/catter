@@ -50,7 +50,10 @@ export class Places {
 
     /// A command line for a detail, spelled before it is cut to `width`.
     label(args: readonly string[], width = 240): string {
-        return label(args.map((arg) => this.spell(arg)), width);
+        return label(
+            args.map((arg) => this.spell(arg)),
+            width,
+        );
     }
 }
 

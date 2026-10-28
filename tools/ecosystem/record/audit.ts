@@ -148,7 +148,17 @@ export class AuditRecorder implements Recorder {
         this.offset = Number(sudo(["stat", "-c", "%s", LOG]).trim());
         this.lost = lostCount();
         sudo(["auditctl", "-b", "65536", "-r", "0"]);
-        sudo(["auditctl", "-a", "always,exit", "-F", "arch=b64", "-S", "execve,execveat", "-k", this.key]);
+        sudo([
+            "auditctl",
+            "-a",
+            "always,exit",
+            "-F",
+            "arch=b64",
+            "-S",
+            "execve,execveat",
+            "-k",
+            this.key,
+        ]);
         sudo([
             "auditctl",
             "-a",
@@ -172,7 +182,10 @@ export class AuditRecorder implements Recorder {
         for (let attempt = 0; ; attempt += 1) {
             spawnSync("/bin/true", [marker]);
             log = sudo(["tail", "-c", `+${this.offset + 1}`, LOG]);
-            if (log.includes(Buffer.from(marker).toString("hex").toUpperCase()) || log.includes(`"${marker}"`)) {
+            if (
+                log.includes(Buffer.from(marker).toString("hex").toUpperCase()) ||
+                log.includes(`"${marker}"`)
+            ) {
                 break;
             }
             if (attempt === 60) {

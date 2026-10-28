@@ -25,3 +25,10 @@ about = "its own configure script, which probes the compiler with programs it re
 backends = ["hook", "wrapper"]
 configure = [["./configure"]]
 build = [["make", "-j", "${JOBS}", "test"]]
+
+[[known]]
+why = "zlib's Makefile compiles each shared object to objs/<name>.o, then moves it to <name>.lo: the entry names the object the compile wrote"
+build = "configure"
+check = "artifacts"
+kind = "object-without-entry"
+detail = "^no entry has the output <tree>/\\w+\\.lo$"
