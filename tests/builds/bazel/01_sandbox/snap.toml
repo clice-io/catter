@@ -22,3 +22,18 @@ entries = [
 [hook."compile_commands.json".darwin]
 wrong = "Apple's /bin/sh, which runs npm's Bazelisk, and Apple's sandbox-exec, which runs Bazel's actions, run without the hook: the compile goes uncaptured"
 entries = []
+
+[ptrace."$ catter compile-commands --capture ptrace -o compile_commands.json -- bazel --output_base=out build //:main"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+stderr = "OpenJDK 64-Bit Server VM warning: Options -Xverify:none and -noverify were deprecated in JDK 13 and will likely be removed in a future release."
+exit = 0
+
+[ptrace."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.c",
+        directory = "${WS}/out/sandbox/processwrapper-sandbox/1/execroot/_main",
+        output = "${WS}/out/sandbox/processwrapper-sandbox/1/execroot/_main/bazel-out/k8-fastbuild/bin/main.o",
+        arguments = ["cc", "-Iinclude", "-c", "src/main.c", "-o", "bazel-out/k8-fastbuild/bin/main.o"],
+    },
+]
