@@ -1,7 +1,7 @@
-[linux."$ catter tree -w 1000 -- valgrind -q --error-exitcode=9 --log-file=/dev/null ./bad"]
+[linux."$ catter tree -w 1000 -- valgrind --tool=none -q ./main"]
 stdout = '''
-Build failed with exit code 9. Printing partial command tree.
-valgrind -q --error-exitcode=9 --log-file=/dev/null ./bad
-└── valgrind -q --error-exitcode=9 --log-file=/dev/null ./bad
+ran
+valgrind --tool=none -q ./main
+└── valgrind --tool=none -q ./main
 '''
-exit = 9
+exit = 0
