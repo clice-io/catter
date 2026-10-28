@@ -116,13 +116,11 @@ public:
     kota::task<kota::process::exit_status> run(const Build& build,
                                                Session& session) const override {
         assert(build.command.size() == 1);
-        auto path = build.cwd;
-        kota::fs::path::push(path, build.command.front());
-        kota::fs::path::normalize(path);
+        std::string path;
+        kota::fs::path::resolve(path, build.command.front(), build.cwd);
         const auto replay = parse_replay_file(path);
-        std::string base(kota::fs::path::parent(path));
-        kota::fs::path::push(base, replay.cwd.value_or("."));
-        kota::fs::path::normalize(base);
+        std::string base;
+        kota::fs::path::resolve(base, replay.cwd.value_or("."), kota::fs::path::parent(path));
         for(const auto& event: replay.events) {
             if(event.error.has_value()) {
                 co_await session.uncaptured(event.id,
@@ -130,9 +128,8 @@ public:
                                             event.error->message);
                 continue;
             }
-            auto cwd = base;
-            kota::fs::path::push(cwd, event.cwd.value_or("."));
-            kota::fs::path::normalize(cwd);
+            std::string cwd;
+            kota::fs::path::resolve(cwd, event.cwd.value_or("."), base);
             co_await session.decide(event.id,
                                     parent_of(event.parent),
                                     data::command{

@@ -31,7 +31,8 @@ class CompilationDatabase {
 public:
     /// The database whose file the user names `path`, from the working directory `cwd`, or the
     /// file the symlinks there lead to; with `inherit`, the entries of that file. Throws for a path
-    /// that is no file, and with `inherit` for a file that cannot be read or holds no database.
+    /// that is no file or whose symlinks cannot be followed, such as a loop of them, and with
+    /// `inherit` for a file that cannot be read or holds no database.
     CompilationDatabase(std::string_view path, std::string cwd, bool inherit);
 
     /// Adds an entry: `directory`, `file`, `arguments` and perhaps `output`.

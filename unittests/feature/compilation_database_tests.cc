@@ -2,8 +2,6 @@ module;
 
 #include "modules/prelude.h"
 
-#include "utils/temp_file_manager.h"
-
 module catter;
 
 import :feature.compilation_database;
@@ -19,17 +17,19 @@ ZEST_SUITE_ATTRS(serial = true);
 ZEST_CASE(unreadable_database_is_not_replaced) {
     std::string temp_dir;
     ZASSERT(!kota::sys::temp_dir(temp_dir));
-    std::string root;
-    ZASSERT(!kota::fs::create_temp_directory(root, temp_dir, "catter-ut-"));
-    TempFileManager temp(root);
-    ZASSERT(!temp.create("compile_commands.json",
-                         R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])"));
-    const auto file = temp.path("compile_commands.json");
+    auto root = kota::fs::TempDirectory::create(temp_dir, "catter-ut-");
+    ZASSERT(root.has_value());
+    std::string file(root->path());
+    kota::fs::path::push(file, "compile_commands.json");
+    ZASSERT(
+        !kota::fs::write_file(file, R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])"));
     ZASSERT(!kota::fs::set_permissions(file, 0200));
 
     bool thrown = false;
     try {
-        feature::CompilationDatabase database("compile_commands.json", temp.root, true);
+        feature::CompilationDatabase database("compile_commands.json",
+                                              std::string(root->path()),
+                                              true);
     } catch(const std::exception&) {
         thrown = true;
     }
@@ -43,27 +43,53 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
 ZEST_CASE(a_symlinked_database_stays_a_symlink) {
     std::string temp_dir;
     ZASSERT(!kota::sys::temp_dir(temp_dir));
-    std::string root;
-    ZASSERT(!kota::fs::create_temp_directory(root, temp_dir, "catter-ut-"));
-    TempFileManager temp(root);
-    ZASSERT(kota::fs::create_directory(temp.path("build")).has_value());
+    auto root = kota::fs::TempDirectory::create(temp_dir, "catter-ut-");
+    ZASSERT(root.has_value());
+    std::string link(root->path());
+    kota::fs::path::push(link, "compile_commands.json");
+    std::string target(root->path());
+    kota::fs::path::push(target, "build");
+    ZASSERT(kota::fs::create_directory(target).has_value());
+    kota::fs::path::push(target, "compile_commands.json");
     // The file the link names does not exist yet, as in a clean checkout.
-    ZASSERT(!kota::fs::create_symlink("build/compile_commands.json",
-                                      temp.path("compile_commands.json")));
+    ZASSERT(!kota::fs::create_symlink("build/compile_commands.json", link));
 
-    feature::CompilationDatabase database("compile_commands.json", temp.root, true);
+    feature::CompilationDatabase database("compile_commands.json", std::string(root->path()), true);
     database.add(feature::JSON(kota::codec::dyn::Object{
-        {"directory", temp.root                    },
+        {"directory", root->path()                 },
         {"file",      "a.c"                        },
         {"arguments", kota::codec::dyn::Array{"cc"}},
     }));
-    ZEXPECT(database.save() == temp.path("build/compile_commands.json"));
-    auto link = kota::fs::symlink_status(temp.path("compile_commands.json"));
-    ZASSERT(link.has_value());
-    ZEXPECT(link->type == kota::fs::FileType::Symlink);
-    auto target = kota::fs::status(temp.path("build/compile_commands.json"));
-    ZASSERT(target.has_value());
-    ZEXPECT(target->size > 0);
+    ZEXPECT(database.save() == target);
+    auto linked = kota::fs::symlink_status(link);
+    ZASSERT(linked.has_value());
+    ZEXPECT(linked->type == kota::fs::FileType::Symlink);
+    auto saved = kota::fs::status(target);
+    ZASSERT(saved.has_value());
+    ZEXPECT(saved->size > 0);
+};
+
+ZEST_CASE(a_loop_of_symlinks_is_no_database) {
+    std::string temp_dir;
+    ZASSERT(!kota::sys::temp_dir(temp_dir));
+    auto root = kota::fs::TempDirectory::create(temp_dir, "catter-ut-");
+    ZASSERT(root.has_value());
+    std::string link(root->path());
+    kota::fs::path::push(link, "compile_commands.json");
+    ZASSERT(!kota::fs::create_symlink("compile_commands.json", link));
+
+    bool thrown = false;
+    try {
+        feature::CompilationDatabase database("compile_commands.json",
+                                              std::string(root->path()),
+                                              false);
+    } catch(const std::exception&) {
+        thrown = true;
+    }
+    ZEXPECT(thrown);
+    auto linked = kota::fs::symlink_status(link);
+    ZASSERT(linked.has_value());
+    ZEXPECT(linked->type == kota::fs::FileType::Symlink);
 };
 #endif
 

@@ -11,7 +11,6 @@ import :feature.compilation_database;
 import :feature.compile_commands;
 import :feature.descendants;
 import :feature.json;
-import :feature.path;
 import :session.handler;
 
 namespace catter::feature {
@@ -182,14 +181,15 @@ public:
                 .cwd = command.cwd,
                 .analysis = *analysis,
                 .read = write.reads.front(),
-                .file = absolute_path(command.cwd, write.path),
             };
+            kota::fs::path::resolve(made->file, write.path, command.cwd);
             preprocessed.insert_or_assign(made->file, *made);
             preprocesses.emplace(id, made->file);
         }
         for(auto& entry: entries_of(command.cwd, *analysis)) {
             const auto& object = entry.as_object();
-            auto source = absolute_path(command.cwd, object.find("file")->as_string());
+            std::string source;
+            kota::fs::path::resolve(source, object.find("file")->as_string(), command.cwd);
             const auto* output = object.find("output");
             auto from = preprocessed.find(source);
             if(from != preprocessed.end() && analysis->artifact == Artifact::Object &&
@@ -198,7 +198,7 @@ public:
                 const auto& read = by.analysis.reads[by.read];
                 entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
                 consumed.insert(by.id);
-                source = absolute_path(by.cwd, read.path);
+                kota::fs::path::resolve(source, read.path, by.cwd);
             } else if(!preprocess) {
                 compiled.insert(source);
             }
@@ -214,7 +214,9 @@ public:
         }
         for(const auto& write: analysis->writes) {
             if(write.path != "-") {
-                written.insert(absolute_path(command.cwd, write.path));
+                std::string file;
+                kota::fs::path::resolve(file, write.path, command.cwd);
+                written.insert(std::move(file));
             }
         }
         co_return Action{};
