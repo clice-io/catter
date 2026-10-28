@@ -92,7 +92,6 @@ kind = "build-only"
 detail = "^catter's database has no entry of <tree>/\\S+ to test/\\S+$"
 
 [[known]]
-issue = "10-28#5"
 why = "bazelisk, a static Go binary, execs the Bazel client without libc, where the hook does not see it"
 build = "bazel"
 check = "recorder"
@@ -100,7 +99,6 @@ kind = "missed"
 detail = "^catter missed \\S+/bazelisk/downloads/\\S+/bin/bazel "
 
 [[known]]
-issue = "10-28#5"
 why = "catter, missing the Bazel client bazelisk execs, reports the server's daemonize under bazelisk"
 build = "bazel"
 check = "recorder"
@@ -108,7 +106,6 @@ kind = "extra"
 detail = "^catter reported daemonize "
 
 [[known]]
-issue = "10-28#4"
 why = "each compile's sources are symlinks in a sandbox Bazel removes after the action: catter leaves out every entry as a probe's"
 build = "bazel"
 check = "artifacts"

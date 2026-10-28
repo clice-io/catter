@@ -154,7 +154,8 @@ project that shows one lists it as known.
 A `[[known]]` table of the project names a difference already understood:
 its `check`, `kind` and a regular expression its `detail` matches, narrowed
 by `build` and `backend` when given, with `why` for the reader
-and, when catter is wrong, the `issue` it is recorded as. A difference
+and, when catter is wrong and an issue of the repository records it, that
+`issue` (`catter#N`). A difference
 where the build system's database is the wrong one, or that the build
 itself makes (a Makefile renaming the objects it compiles), has a `why`
 alone. One is as narrow as its difference: a pattern matching a whole kind
