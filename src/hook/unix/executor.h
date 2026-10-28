@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdarg>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <spawn.h>
 
@@ -63,6 +65,15 @@ public:
                      char* const argv[],
                      char* const envp[]) noexcept;
 
+#ifdef CATTER_LINUX
+    /// Restarts this process through catter-proxy, as its hook would have
+    /// started it, when no catter-proxy started its exec as a decided
+    /// command's (env::DECIDED): an exec the hook did not see started it, as a
+    /// static program's or Go's does, with `argv`. Removes env::DECIDED from
+    /// this process's environment. Returns when this process runs on.
+    void restart_undecided(int argc, char* argv[]) noexcept;
+#endif
+
 private:
     /// `shell_fallback`: the libc function this stands for runs a file of no
     /// executable format with /bin/sh, as execvp does.
@@ -90,5 +101,14 @@ private:
 
     PosixSpawnFn* original_posix_spawn = nullptr;
 };
+
+#ifdef CATTER_LINUX
+/// Whether `decided`, env::DECIDED's value, stands for the exec of this
+/// process, whose parent is `parent` and whose argv is `argv`: catter-proxy
+/// `parent` started it with arguments past argv[0] that `argv` ends with, as
+/// it ends with them when the kernel runs it through an interpreter, or as a
+/// command reported late.
+bool is_decided(std::string_view decided, pid_t parent, std::span<char* const> argv) noexcept;
+#endif
 
 }  // namespace catter::hook

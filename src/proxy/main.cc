@@ -6,6 +6,10 @@ module;
 #include "support/messages.h"
 #include "support/paths.h"
 
+#ifdef CATTER_LINUX
+#include "support/hook.h"
+#endif
+
 module catter;
 
 #ifndef CATTER_WINDOWS
@@ -85,8 +89,13 @@ struct Variables {
     /// it.
     std::optional<std::string> shims;
 
+    /// The hook of a program no catter-proxy started restarts it through this
+    /// one, as a command reported late.
+    bool late;
+
     explicit Variables(std::vector<std::string>& env) :
-        pipe(take_variable(env, env::IPC).value_or("")), shims(take_variable(env, env::SHIMS)) {
+        pipe(take_variable(env, env::IPC).value_or("")), shims(take_variable(env, env::SHIMS)),
+        late(take_variable(env, env::LATE).has_value()) {
         if(auto id = take_variable(env, env::COMMAND_ID)) {
             data::ipcid_t value = 0;
             if(std::from_chars(id->data(), id->data() + id->size(), value).ec == std::errc()) {
@@ -113,8 +122,24 @@ Proxied hooked(std::span<const std::string> argv) {
         .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [pipe = variables.pipe](data::command command, data::ipcid_t id) {
-                return hook_options(std::move(command), id, pipe);
+            [pipe = variables.pipe, late = variables.late](data::command command,
+                                                           data::ipcid_t id) {
+#ifdef CATTER_LINUX
+                // The hook of a program it restarted as a command reported
+                // late checks the program's parent alone: it does not restart
+                // it again.
+                auto decided = std::to_string(kota::sys::pid());
+                if(!late) {
+                    const auto args = std::span(command.args)
+                                          .subspan(std::min<std::size_t>(command.args.size(), 1));
+                    decided += std::format(":{}:{:x}", args.size(), hook::arguments_hash(args));
+                }
+#endif
+                auto options = hook_options(std::move(command), id, pipe);
+#ifdef CATTER_LINUX
+                options.env->push_back({.name = env::DECIDED, .value = std::move(decided)});
+#endif
+                return options;
             },
     };
 }

@@ -17,8 +17,15 @@
 #include <kota/sys/env.h>
 #include <kota/sys/process.h>
 
+#ifdef CATTER_LINUX
+#include <charconv>
+#include <sys/auxv.h>
+#include <sys/stat.h>
+#endif
+
 #include "hook/unix/debug.h"
 #include "hook/unix/environment.h"
+#include "support/hook.h"
 #include "support/messages.h"
 
 namespace catter::hook {
@@ -305,7 +312,48 @@ std::vector<char*> proxy_argv(std::string& proxy,
     return args;
 }
 
+#ifdef CATTER_LINUX
+/// The program this process runs: the file its exec named, but for a script
+/// or a format binfmt_misc runs, whose interpreter runs.
+std::string running_program() {
+    const auto* named = reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
+    struct stat file{};
+    struct stat image{};
+    if(::stat(named, &file) == 0 && ::stat("/proc/self/exe", &image) == 0 &&
+       file.st_dev == image.st_dev && file.st_ino == image.st_ino) {
+        return named;
+    }
+    std::string path;
+    if(auto error = kota::sys::executable_path(path)) {
+        throw Error(error.value(), "failed to read the program this process runs");
+    }
+    return path;
+}
+#endif
+
 }  // namespace
+
+#ifdef CATTER_LINUX
+bool is_decided(std::string_view decided, pid_t parent, std::span<char* const> argv) noexcept {
+    const auto* end = decided.data() + decided.size();
+    pid_t pid = 0;
+    auto [rest, error] = std::from_chars(decided.data(), end, pid);
+    if(error != std::errc() || pid != parent) {
+        return false;
+    }
+    if(rest == end) {
+        return true;
+    }
+    std::size_t count = 0;
+    std::uint64_t hash = 0;
+    auto counted = std::from_chars(rest + 1, end, count);
+    if(*rest != ':' || counted.ec != std::errc() || counted.ptr == end || *counted.ptr != ':' ||
+       std::from_chars(counted.ptr + 1, end, hash, 16).ec != std::errc()) {
+        return false;
+    }
+    return argv.size() > count && arguments_hash(argv.last(count)) == hash;
+}
+#endif
 
 void Executor::init(const char* const envp[],
                     ExecveFn* execve,
@@ -409,6 +457,34 @@ int Executor::posix_spawnp(pid_t* pid,
                                POSIX_SPAWNP_SHELL_FALLBACK);
     });
 }
+
+#ifdef CATTER_LINUX
+void Executor::restart_undecided(int argc, char* argv[]) noexcept {
+    if(proxy.empty()) {
+        return;
+    }
+    const char* decided = get_env_value(environment(), env::DECIDED);
+    const bool started =
+        decided != nullptr &&
+        is_decided(decided, ::getppid(), std::span(argv, static_cast<std::size_t>(argc)));
+    ::unsetenv(env::DECIDED);
+    // ld.so run as the program, as `ld.so <program>` does, takes its own
+    // arguments out of argv: the hook cannot tell its exec, nor start it again.
+    if(started || ::getauxval(AT_BASE) == 0) {
+        return;
+    }
+    guarded("restart", false, [&] {
+        const auto program = running_program();
+        INFO("{} was started undecided: it restarts through {}", program, proxy);
+        auto variables = session;
+        variables.push_back(std::format("{}=1", env::LATE));
+        auto env = proxy_environment(environment(), variables);
+        return original_execve(proxy.c_str(),
+                               proxy_argv(proxy, program.c_str(), argv).data(),
+                               env.entries.data());
+    });
+}
+#endif
 
 int Executor::run_execve(const char* executable,
                          const char* const argv[],

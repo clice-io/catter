@@ -35,6 +35,15 @@ nodejs = "==24.4.0"
 cmake = "==4.1.2"
 ninja = "==1.13.1"
 
+# The Go the cases build with on Linux (tests/builds/go): its `go` is static,
+# and starts the compilers of cgo without libc.
+[feature.dev.target.linux-64.dependencies]
+go = { version = "==1.27.3", build = "nocgo*" }
+
+[feature.dev.target.win-64.tasks.unit-test]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
+cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
+
 [feature.dev.tasks]
 check-doc-translations = "node tools/docs/translations.ts check"
 report-doc-translations = "node tools/docs/translations.ts report"
@@ -66,10 +75,6 @@ depends-on = [
     { task = "unit-test", args = ["{{ type }}"] },
     { task = "cases-test", args = ["{{ type }}"] },
 ]
-
-[feature.dev.target.win-64.tasks.unit-test]
-args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
-cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
 
 # ============================================================================== #
 #                                    FORMAT                                      #

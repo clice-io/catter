@@ -1,0 +1,22 @@
+[linux."$ catter tree -w 1000 -- ./script.sh one"]
+stdout = '''
+started with ["one"]
+./script.sh one
+└── node child.mjs one
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- ./plain two"]
+stdout = '''
+started with ["two"]
+./plain two
+└── node child.mjs two
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- /lib64/ld-linux-x86-64.so.2 ${ENV}/bin/node child.mjs three"]
+stdout = '''
+started with ["three"]
+/lib64/ld-linux-x86-64.so.2 ${ENV}/bin/node child.mjs three
+'''
+exit = 0

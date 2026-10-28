@@ -1,0 +1,37 @@
+[hook."$ catter compile-commands -o compile_commands.json -- go build -o hello ."]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+exit = 0
+
+[hook."compile_commands.json"]
+entries = [
+    {
+        file = "greet.c",
+        directory = "${WS}",
+        output = "${TMP}/go-build#/b001/_x003.o",
+        arguments = [
+            "${ENV}/bin/gcc",
+            "-I",
+            "${WS}",
+            "-fPIC",
+            "-m64",
+            "-pthread",
+            "-Wl,--no-gc-sections",
+            "-fmessage-length=0",
+            "-ffile-prefix-map=${TMP}/go-build#/b001=${TMP}/go-build",
+            "-gno-record-gcc-switches",
+            "-I",
+            "${TMP}/go-build#/b001/",
+            "-O2",
+            "-g",
+            "-frandom-seed=#",
+            "-o",
+            "${TMP}/go-build#/b001/_x003.o",
+            "-c",
+            "greet.c",
+        ],
+    },
+]
+
+[hook."$ ./hello"]
+stdout = "hello again"
+exit = 0

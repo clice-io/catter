@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
@@ -23,6 +24,22 @@ constexpr char LIBRARY[] = "libcatter-hook-unix.dylib";
 constexpr char PRELOAD[] = "DYLD_INSERT_LIBRARIES";
 constexpr char PRELOAD_SEPARATORS[] = ":";
 constexpr char PRELOAD_SEPARATORS_NAMED[] = "colons";
+#endif
+
+#ifdef CATTER_LINUX
+/// The hash of `arguments`, which env::DECIDED names, FNV-1a's of each with a
+/// NUL after it.
+template <typename Arguments>
+std::uint64_t arguments_hash(const Arguments& arguments) noexcept {
+    std::uint64_t hash = 0xcbf29ce484222325;
+    for(const auto& argument: arguments) {
+        for(char c: std::string_view(argument)) {
+            hash = (hash ^ static_cast<unsigned char>(c)) * 0x100000001b3;
+        }
+        hash *= 0x100000001b3;
+    }
+    return hash;
+}
 #endif
 
 #ifdef CATTER_WINDOWS

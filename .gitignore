@@ -25,9 +25,10 @@ node_modules
 *.dylib
 *.dll
 
-# Fortran module files
+# Fortran module files, but Go's
 *.mod
 *.smod
+!go.mod
 
 # Compiled Static libraries
 *.lai
