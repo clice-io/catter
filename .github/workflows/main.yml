@@ -67,9 +67,11 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - '.github/actions/**'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/test.yml'
-              - '.github/workflows/test-target.yml'
+              # Every workflow, not only those of the build: the nightly
+              # tags the newest packaged commit, and GitHub refuses
+              # GITHUB_TOKEN a tag on a commit whose workflows differ from
+              # main's.
+              - '.github/workflows/**'
 
   lint:
     needs: changes

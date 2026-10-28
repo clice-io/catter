@@ -53,6 +53,12 @@ Otherwise fix main and dispatch it again, `gh workflow run nightly.yml`
 approval like any release trigger. When main has built nothing for 30 days
 (docs-only commits), every package has expired and each run fails to pick:
 `gh workflow run main.yml` builds main's tip, and the next run promotes it.
+A nightly can tag only a commit whose `.github/workflows/` are main's:
+GitHub refuses `GITHUB_TOKEN` any other, since a tag makes its commit's
+workflows runnable. Every change to them builds (`main.yml`'s path filter),
+so the pick lacks them only while that change's `main` run is red or still
+running; the nightly, dry runs included, then fails before tagging, naming
+the cause: rerun that run green, or wait for it.
 
 ## Stable release (manual, even minor)
 

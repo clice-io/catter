@@ -126,6 +126,15 @@ jobs:
             echo "::error::no green main run at or past the newest release has live package artifacts"
             exit 1
           fi
+          # A tag makes its commit's workflows runnable, so GitHub refuses
+          # GITHUB_TOKEN a tag on a commit whose workflows are not main's.
+          # Every change to them builds (main.yml's path filter): a pick
+          # without them means that build is still running or red.
+          if [ "$(git rev-parse "$COMMIT:.github/workflows")" \
+            != "$(git rev-parse "HEAD:.github/workflows")" ]; then
+            echo "::error::$COMMIT, the newest packaged commit, predates a change to .github/workflows on main, and GITHUB_TOKEN cannot tag it: a nightly waits for main's run on that change to be green"
+            exit 1
+          fi
           echo "Promoting $COMMIT"
           echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
 
