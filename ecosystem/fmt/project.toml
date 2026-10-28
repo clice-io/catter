@@ -62,12 +62,12 @@ build = [
 scan = ["bazel-out"]
 
 [[known]]
-why = "catter leaves out the compiles of CMake's checks, run in CMakeScratch and CMakeTmp when CMake configures under catter (catter#117)"
+why = "catter leaves out the compiles CMake runs in its CMakeFiles directories to identify and check the compiler, when CMake configures under catter (catter#117)"
 build = "cmake-ninja"
 backend = "wrapper"
 check = "recorder"
 kind = "no-entry"
-detail = "\\[in <tree>/build/(?:[\\w/]+/)?CMakeFiles/(?:CMakeScratch/TryCompile-\\w+|CMakeTmp)\\]$"
+detail = "\\[in <tree>/build/(?:[\\w/]+/)?CMakeFiles/[\\w./-]+\\]$"
 
 [[known]]
 why = "CMake copies the program of its compiler ABI check out of the scratch directory where it was linked"
