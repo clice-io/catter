@@ -126,9 +126,9 @@ Activity activity_of(std::span<const Span> spans) {
                     }
                     children[*parent] += 1;
                 }
-                // A span may start as late as one it started, when they start at once.
+                // A span may start after one it started, when they start at once.
                 for(const auto child: started[i]) {
-                    if(running[child] && !counted[child]) {
+                    if(running[child] && !counted[child] && spans[child].start == time) {
                         counted[child] = true;
                         children[i] += 1;
                     }

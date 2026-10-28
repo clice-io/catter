@@ -51,13 +51,12 @@
     {
       "id": 4,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "liba.a",
-        "-o",
-        "libb.so"
+        "ar",
+        "rcs",
+        "libb.a",
+        "liba.a"
       ],
       "execution": {
         "code": 0,
@@ -68,13 +67,12 @@
     {
       "id": 5,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "libb.so",
-        "-o",
-        "libc.so"
+        "ar",
+        "rcs",
+        "libc.a",
+        "libb.a"
       ],
       "execution": {
         "code": 0,
@@ -85,13 +83,12 @@
     {
       "id": 6,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "libc.so",
-        "-o",
-        "libd.so"
+        "ar",
+        "rcs",
+        "libd.a",
+        "libc.a"
       ],
       "execution": {
         "code": 0,
@@ -102,13 +99,12 @@
     {
       "id": 7,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "libd.so",
-        "-o",
-        "libe.so"
+        "ar",
+        "rcs",
+        "libe.a",
+        "libd.a"
       ],
       "execution": {
         "code": 0,
@@ -119,13 +115,12 @@
     {
       "id": 8,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "libe.so",
-        "-o",
-        "libf.so"
+        "ar",
+        "rcs",
+        "libf.a",
+        "libe.a"
       ],
       "execution": {
         "code": 0,
@@ -136,13 +131,12 @@
     {
       "id": 9,
       "parent": 1,
-      "exe": "c++",
+      "exe": "ar",
       "argv": [
-        "c++",
-        "-shared",
-        "libf.so",
-        "-o",
-        "libg.so"
+        "ar",
+        "rcs",
+        "libg.a",
+        "libf.a"
       ],
       "execution": {
         "code": 0,
