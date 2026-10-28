@@ -1,0 +1,12 @@
+[posix."$ ./launch cat"]
+stdout = "started"
+exit = 0
+
+[posix."$ catter tree -w 1000 -- ./launch cat"]
+stdout = '''
+started
+./launch cat
+└── ./launch helper cat
+    └── cat
+'''
+exit = 0
