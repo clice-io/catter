@@ -118,8 +118,8 @@ directory) and `<catter>` (its directory).
   under the nearest one it reported too (`parent`), and every compiler,
   linker and archiver the build itself started, by name, is among its
   commands (`missed`); one a compiler driver started is the driver's. Then
-  the compiles the recorder saw (a compiler, by name, naming a source, and
-  not only preprocessing it: `-E`, `-M`, `-MM`) against the database: each source still there has an entry (`no-entry`),
+  the compiles the recorder saw (a compiler, by name, naming a source)
+  against the database: each source still there has an entry (`no-entry`),
   and each entry is a recorded compile's (`entry-without-compile`). A recording that
   lost events says so (`lost`).
 - **artifacts**: the files the build wrote under `scan`, by their magic:
@@ -140,6 +140,14 @@ directory) and `<catter>` (its directory).
   the build ended (`no-finish`), it captures every command
   (`capture-error`), its logs hold no error (`log-error`), and
   `catter targets --from` reads the replay (`targets`).
+
+The references are simple on purpose, and three things they cannot tell
+from a defect: a build that preprocesses a source and compiles it too
+(`no-entry` for the preprocess, which catter's entry of the compile stands
+for), one that compiles several sources to one object
+(`object-in-several-entries`), and two alike commands run side by side
+whose descendants differ (paired the wrong way: `extra` and `missed`). A
+project that shows one lists it as known.
 
 ### Known differences
 

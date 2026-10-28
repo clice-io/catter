@@ -64,13 +64,6 @@ function resolved(file: string): string {
     }
 }
 
-/// Whether a compiler's arguments only preprocess, or only list what the
-/// sources include (`-E`, `-M`, `-MM`): no compile, which catter's entry of
-/// the source's compile stands for.
-function preprocessesOnly(args: readonly string[]): boolean {
-    return args.some((arg) => arg === "-E" || arg === "-M" || arg === "-MM");
-}
-
 /// Whether the recorder's `recorded` is catter's `args`: the same, or a
 /// script's run as the kernel records it, its interpreter (and the
 /// interpreter's one argument) before the script's path and the arguments.
@@ -280,10 +273,9 @@ export function checkRecorder(input: RecorderInput): {
     const recorded = new Map<string, { image: Image; entry: boolean }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
-        const operands =
-            isCompiler(args[0] ?? "") && !preprocessesOnly(args)
-                ? sourceOperands(args, image.cwd)
-                : new Set<number>();
+        const operands = isCompiler(args[0] ?? "")
+            ? sourceOperands(args, image.cwd)
+            : new Set<number>();
         if (operands.size === 0) {
             continue;
         }

@@ -313,56 +313,6 @@ describe("the recorder check", () => {
         ]).toEqual([4]);
     });
 
-    test("a run that only lists the includes is no compile", () => {
-        const dir = tempDir();
-        fs.writeFileSync(path.join(dir, "a.c"), "");
-        const builder = new ImageBuilder();
-        builder.exec(1, 0, catter, ["catter"], dir);
-        builder.fork(1, 2);
-        builder.exec(2, 1, "/usr/bin/gcc", ["gcc", "-MM", "a.c"], dir);
-        builder.fork(1, 3);
-        builder.exec(3, 1, "/usr/bin/gcc", ["gcc", "-c", "a.c", "-o", "a.o"], dir);
-        const result = checkRecorder({
-            ...base,
-            places: new Places({ tree: dir }),
-            backend: "hook",
-            recording: { images: builder.build(), lost: 0 },
-            session: {
-                commands: [
-                    {
-                        id: 1,
-                        parent: null,
-                        cwd: dir,
-                        exe: "",
-                        args: ["gcc", "-MM", "a.c"],
-                        env: [],
-                        analysis: null,
-                    },
-                    {
-                        id: 2,
-                        parent: null,
-                        cwd: dir,
-                        exe: "",
-                        args: ["gcc", "-c", "a.c", "-o", "a.o"],
-                        env: [],
-                        analysis: null,
-                    },
-                ],
-                errors: [],
-                finish: 0,
-            },
-            entries: [
-                {
-                    directory: dir,
-                    file: "a.c",
-                    output: "a.o",
-                    arguments: ["gcc", "-c", "a.c", "-o", "a.o"],
-                },
-            ],
-        });
-        expect(result.differences).toEqual([]);
-    });
-
     test("catter's own programs are dropped by name, not by the directory they sit in", () => {
         const result = checkRecorder({
             ...base,
