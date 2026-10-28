@@ -4,6 +4,6 @@
 #error "CATTER_TEST must be defined by the build system"
 #endif
 
-int main() {
-    return answer() == 42 ? 0 : 1;
+int twice() {
+    return answer() * 2;
 }

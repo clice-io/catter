@@ -369,14 +369,8 @@ const GO_BUILD_DIR = /\$\{TMP\}\/go-build\d+/g;
 const GO_RANDOM_SEED = /-frandom-seed=[\w-]{20}/g;
 
 /// The temporary files GCC's driver passes between its stages, named at
-/// random, `${TMP}/ccOyQ1i2.s`, and those MSVC's linker passes its tools, by
-/// a GUID, `${TMP}/lnk{9E634631-AEA7-41D6-9BAF-EB8BA6C39912}.tmp`.
+/// random: `${TMP}/ccOyQ1i2.s`.
 const GCC_TEMPORARY = /\$\{TMP\}\/cc[A-Za-z0-9]{6}\./g;
-const MSVC_LINK_TEMPORARY = /\$\{TMP\}\/lnk\{[0-9A-F-]{36}\}\./g;
-
-/// The directory of the Windows SDK's tools, named by its version, in its
-/// 8.3 name too: `${WINSDK}/bin/10.0.26100.0`, `${WINSDK}/bin/100261~1.0`.
-const WINSDK_VERSION = /\$\{WINSDK\}\/bin\/[^/\s"']+/g;
 
 /// The version of the macOS SDK and of the deployment target, which every
 /// update of the runner's Xcode changes: `MacOSX15.5.sdk`,
@@ -406,8 +400,6 @@ export function normalize(text: string, places: Places): string {
         .replace(GO_BUILD_DIR, "${TMP}/go-build#")
         .replace(GO_RANDOM_SEED, "-frandom-seed=#")
         .replace(GCC_TEMPORARY, "${TMP}/cc#.")
-        .replace(MSVC_LINK_TEMPORARY, "${TMP}/lnk#.")
-        .replace(WINSDK_VERSION, "${WINSDK}/bin/#")
         .replace(/\b\d+(\.\d+)?(ms|s)\b/g, "#$2")
         .split("\n")
         .map((line) => line.trimEnd())

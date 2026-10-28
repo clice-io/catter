@@ -8,7 +8,7 @@ stdout = '''
 exit = 0
 
 [test."$ catter profile -q -- cmake --build build -j 1".win32]
-differs = "CMake builds with MSVC on Windows, which makes .obj, .lib and .exe files, and Ninja prints Windows paths"
+differs = "CMake builds with MSVC on Windows, which makes .obj and .lib files, and Ninja prints Windows paths"
 stdout = '''
 [1/4] Building CXX object CMakeFiles\util.dir\src\util.cc.obj
 [2/4] Linking CXX static library util.lib
@@ -225,7 +225,7 @@ process = "cmake --build build -j 1"
 running = [1, 0]
 
 [test."trace.json".win32]
-wrong = "the library and the executable are made by lib.exe and link.exe, whose inputs and output catter does not analyze: no target for the compiles"
+wrong = "the library is made by lib.exe, whose inputs and output catter does not analyze: no target for the compiles"
 process = "cmake --build build -j 1"
 "lane 1" = [
     { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
