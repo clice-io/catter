@@ -1,8 +1,9 @@
 import { test } from "@catter/tools/testing";
 
 // A Go program built without cgo is static, and starts programs from
-// whichever of its threads runs the goroutine: the hook misses the compiler
-// it starts, the ptrace backend sees it.
+// whichever of its threads runs the goroutine: the hook misses the exec, and
+// the compiler reports itself once the hook loads into it; the ptrace backend
+// sees the exec.
 const elsewhere =
     "a Go program starts programs there through the system's library, which has the hook";
 

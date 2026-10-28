@@ -71,13 +71,14 @@ These variables are set automatically by catter at runtime. They are documented 
 
 ### Unix (Linux / macOS)
 
-| Variable                        | Purpose                                |
-| ------------------------------- | -------------------------------------- |
-| `__key_catter_proxy_path_v1`    | Path to the `catter-proxy` executable  |
-| `__key_catter_command_id_v1`    | IPC command identifier                 |
-| `__key_catter_ipc_v1`           | The pipe of the catter session         |
-| `LD_PRELOAD` (Linux)            | Injects the catter hook shared library |
-| `DYLD_INSERT_LIBRARIES` (macOS) | Injects the catter hook shared library |
+| Variable                          | Purpose                                          |
+| --------------------------------- | ------------------------------------------------ |
+| `__key_catter_proxy_path_v1`      | Path to the `catter-proxy` executable            |
+| `__key_catter_command_id_v1`      | IPC command identifier                           |
+| `__key_catter_ipc_v1`             | The pipe of the catter session                   |
+| `__key_catter_decided_v1` (Linux) | The exec `catter-proxy` started the program with |
+| `LD_PRELOAD` (Linux)              | Injects the catter hook shared library           |
+| `DYLD_INSERT_LIBRARIES` (macOS)   | Injects the catter hook shared library           |
 
 ### Windows
 

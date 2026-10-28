@@ -8,6 +8,7 @@
 #include <cstring>
 #include <exception>
 #include <format>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -17,8 +18,15 @@
 #include <kota/sys/env.h>
 #include <kota/sys/process.h>
 
+#ifdef CATTER_LINUX
+#include <optional>
+#include <sys/auxv.h>
+#include <kota/fs/status.h>
+#endif
+
 #include "hook/unix/debug.h"
 #include "hook/unix/environment.h"
+#include "support/hook.h"
 #include "support/messages.h"
 
 namespace catter::hook {
@@ -305,6 +313,28 @@ std::vector<char*> proxy_argv(std::string& proxy,
     return args;
 }
 
+#ifdef CATTER_LINUX
+/// The program to start this process again with: the file its exec named, but
+/// for a script or a format binfmt_misc runs, the interpreter, which runs, and
+/// for a name of this process's own (`/proc/self/exe`, `/dev/fd/3` of
+/// fexecve), which would name catter-proxy then. None for a program that has
+/// no name outside its process, as a deleted file or a memfd has.
+std::optional<std::string> restartable_program() {
+    std::string image;
+    if(kota::sys::executable_path(image) || !kota::fs::is_file(image)) {
+        return std::nullopt;
+    }
+    const std::string_view named = reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
+    if(named.starts_with("/proc/") || named.starts_with("/dev/fd/")) {
+        return image;
+    }
+    if(auto same = kota::fs::equivalent(named, image); same && *same) {
+        return std::string(named);
+    }
+    return image;
+}
+#endif
+
 }  // namespace
 
 void Executor::init(const char* const envp[],
@@ -409,6 +439,42 @@ int Executor::posix_spawnp(pid_t* pid,
                                POSIX_SPAWNP_SHELL_FALLBACK);
     });
 }
+
+#ifdef CATTER_LINUX
+void Executor::restart_undecided(int argc, char* argv[]) noexcept {
+    if(proxy.empty()) {
+        return;
+    }
+    const char* decided = get_env_value(environment(), env::DECIDED);
+    const bool started =
+        decided != nullptr &&
+        is_decided(decided, ::getppid(), std::span(argv, static_cast<std::size_t>(argc)));
+    ::unsetenv(env::DECIDED);
+    // ld.so run as the program, as `ld.so <program>` does, takes its own
+    // arguments out of argv: the hook cannot tell its exec, nor start it again.
+    // valgrind runs the program inside its own process, which no exec of the
+    // program's started, and which a restart would leave; it preloads its core
+    // into the program.
+    const char* preload = get_env_value(environment(), PRELOAD);
+    if(started || ::getauxval(AT_BASE) == 0 ||
+       (preload != nullptr && std::string_view(preload).contains("/vgpreload_core-"))) {
+        return;
+    }
+    guarded("restart", false, [&] {
+        const auto program = restartable_program();
+        if(!program) {
+            return 0;
+        }
+        INFO("{} was started undecided: it restarts through {}", *program, proxy);
+        auto variables = session;
+        variables.push_back(std::format("{}=1", env::LATE));
+        auto env = proxy_environment(environment(), variables);
+        return original_execve(proxy.c_str(),
+                               proxy_argv(proxy, program->c_str(), argv).data(),
+                               env.entries.data());
+    });
+}
+#endif
 
 int Executor::run_execve(const char* executable,
                          const char* const argv[],

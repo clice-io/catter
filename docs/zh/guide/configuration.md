@@ -71,13 +71,14 @@ catter-proxy <program> <argv>...
 
 ### Unix（Linux / macOS）
 
-| 变量                             | 用途                            |
-| -------------------------------- | ------------------------------- |
-| `__key_catter_proxy_path_v1`     | `catter-proxy` 可执行文件的路径 |
-| `__key_catter_command_id_v1`     | IPC 命令标识符                  |
-| `__key_catter_ipc_v1`            | catter 会话的管道               |
-| `LD_PRELOAD`（Linux）            | 注入 catter 钩子共享库          |
-| `DYLD_INSERT_LIBRARIES`（macOS） | 注入 catter 钩子共享库          |
+| 变量                               | 用途                                 |
+| ---------------------------------- | ------------------------------------ |
+| `__key_catter_proxy_path_v1`       | `catter-proxy` 可执行文件的路径      |
+| `__key_catter_command_id_v1`       | IPC 命令标识符                       |
+| `__key_catter_ipc_v1`              | catter 会话的管道                    |
+| `__key_catter_decided_v1`（Linux） | `catter-proxy` 启动程序时所用的 exec |
+| `LD_PRELOAD`（Linux）              | 注入 catter 钩子共享库               |
+| `DYLD_INSERT_LIBRARIES`（macOS）   | 注入 catter 钩子共享库               |
 
 ### Windows
 

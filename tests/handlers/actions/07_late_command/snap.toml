@@ -1,0 +1,10 @@
+[linux."$ catter run --handler \"python handler.py\" -- ./launch fork node child.mjs act-on-me"]
+stdout = 'started with ["act-on-me","added-by-handler"]'
+exit = 0
+
+[linux."$ catter run --handler \"python handler.py\" -- ./launch fork node child.mjs drop-me"]
+exit = 0
+
+[linux."$ catter run --handler \"python handler.py\" -- ./launch fork node child.mjs leave-me"]
+stdout = 'started with ["leave-me"]'
+exit = 0

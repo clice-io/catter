@@ -35,6 +35,10 @@ nodejs = "==24.4.0"
 cmake = "==4.1.2"
 ninja = "==1.13.1"
 
+[feature.dev.target.win-64.tasks.unit-test]
+args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
+cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
+
 [feature.dev.tasks]
 check-doc-translations = "node tools/docs/translations.ts check"
 report-doc-translations = "node tools/docs/translations.ts report"
@@ -67,9 +71,13 @@ depends-on = [
     { task = "cases-test", args = ["{{ type }}"] },
 ]
 
-[feature.dev.target.win-64.tasks.unit-test]
-args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
-cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
+# What only the cases run, on Linux: the Go they build with (tests/builds/go),
+# whose `go` is static and starts the compilers of cgo without libc, and
+# valgrind, which runs a program inside its own process
+# (tests/capture/raw_exec).
+[feature.cases.target.linux-64.dependencies]
+go = { version = "==1.27.3", build = "nocgo*" }
+valgrind = "==3.27.1"
 
 # ============================================================================== #
 #                                    FORMAT                                      #
@@ -119,7 +127,7 @@ meson = "==1.12.1"
 make = "==4.4.1"
 
 [environments]
-dev = ["dev"]
+dev = ["dev", "cases"]
 ecosystem = { features = ["dev", "ecosystem"], no-default-feature = true }
 format = { features = ["format"], no-default-feature = true }
 

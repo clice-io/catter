@@ -1,0 +1,33 @@
+[linux."$ catter tree -w 1000 -- ./launch fork node child.mjs"]
+stdout = '''
+started with []
+./launch fork node child.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- ./launch exec node child.mjs"]
+stdout = '''
+started with []
+./launch exec node child.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- ./launch fork ./script.sh x"]
+stdout = '''
+started with ["x"]
+./launch fork ./script.sh x
+└── /bin/sh ./script.sh x
+    └── node child.mjs x
+'''
+exit = 0
+
+[linux."$ catter compile-commands -o compile_commands.json -- ./launch fork cc -c main.c"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 1 entries."
+exit = 0
+
+[linux."compile_commands.json"]
+entries = [
+    { file = "main.c", directory = "${WS}", output = "${WS}/main.o", arguments = ["cc", "-c", "main.c"] },
+]

@@ -1,0 +1,24 @@
+[linux."$ catter tree -w 1000 -- ./launch fork ${ENV}/bin/node child.mjs"]
+stdout = '''
+started with []
+./launch fork ${ENV}/bin/node child.mjs
+└── ${ENV}/bin/node child.mjs
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- ./launch exec ${ENV}/bin/node child.mjs"]
+stdout = '''
+started with []
+./launch exec ${ENV}/bin/node child.mjs
+└── ${ENV}/bin/node child.mjs
+'''
+exit = 0
+
+[linux."$ catter tree -w 1000 -- ./launch self ${ENV}/bin/node child.mjs"]
+stdout = '''
+started with []
+./launch self ${ENV}/bin/node child.mjs
+└── ./launch exec ${ENV}/bin/node child.mjs
+    └── ${ENV}/bin/node child.mjs
+'''
+exit = 0

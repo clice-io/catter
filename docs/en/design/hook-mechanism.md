@@ -48,16 +48,18 @@ The hook library is loaded via the dynamic linker's constructor mechanism (`on_l
 
 1. Sets up logging (in debug builds, to `log/catter-hook.log` in the catter data directory)
 2. Calls `Executor::init()` with the environment and the real `execve` / `posix_spawn` function pointers (`dlsym(RTLD_NEXT, ...)` on Linux, direct system symbols on macOS)
+3. On Linux, calls `Executor::restart_undecided()`, which starts the process again through `catter-proxy` when no `catter-proxy` started its exec (below)
 
 ### Environment Variables
 
 The hook reads session information from these environment variables, which the proxy sets when it runs its command with the hook (`RUN`), the command ID being that command's own:
 
-| Variable                     | Purpose                                    |
-| ---------------------------- | ------------------------------------------ |
-| `__key_catter_proxy_path_v1` | Absolute path to the `catter-proxy` binary |
-| `__key_catter_command_id_v1` | The ID of the command the process runs     |
-| `__key_catter_ipc_v1`        | The pipe of the catter session             |
+| Variable                     | Purpose                                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `__key_catter_proxy_path_v1` | Absolute path to the `catter-proxy` binary                                                   |
+| `__key_catter_command_id_v1` | The ID of the command the process runs                                                       |
+| `__key_catter_ipc_v1`        | The pipe of the catter session                                                               |
+| `__key_catter_decided_v1`    | On Linux, the exec `catter-proxy` started the process with, which the hook removes once read |
 
 ### Interception Flow
 
@@ -111,6 +113,16 @@ make
 ```
 
 Every process in this tree inherits `LD_PRELOAD` and gets hooked. Each invocation goes through `catter-proxy`, which asks the daemon what to do. The build system is completely unaware of the interception.
+
+### Programs Started Without the Hook (Linux)
+
+A static program loads no hook, and Go's runtime makes its system calls itself: the programs they start, as bazelisk starts Bazel and `go build` starts the C compiler of cgo, come from an exec the hook never sees. `LD_PRELOAD` still reaches them, and the hook loads into each, which then reports itself:
+
+1. `catter-proxy` gives each program it starts as decided `__key_catter_decided_v1`: its own pid, and the number and a hash of the arguments past `argv[0]`. The kernel keeps those last in `argv` when it runs a script through its interpreter, as `catter-proxy` does when it runs a file of no format through `/bin/sh`.
+2. The hook's constructor takes the variable out of the environment, so that it stands for one exec, and compares it with its own process: its parent is that `catter-proxy`, and its `argv` ends with those arguments.
+3. A process that matches runs on. One that does not, a child a program of the build started, or a program that replaced the one `catter-proxy` started, starts again as `catter-proxy` with its own program (the file its exec named, or the interpreter that runs a script), `argv` and environment, and `__key_catter_late_v1`. `catter-proxy` reports it as any command, the child of the command its `__key_catter_command_id_v1` names, and runs it as decided. Run, the program restarts with the hook, its variable naming only `catter-proxy`'s pid, so that it does not start again; dropped, it does not run, and ends with exit code 0.
+
+The program's own code has not run then: only the constructors of the libraries it links run, and they run again when it restarts. Some processes are not restarted: one that runs the dynamic loader as its program (`ld.so <program>`), whose `argv` has lost the loader's own arguments; a program valgrind runs inside its own process, which a restart would take out of valgrind; a program with no file outside its process, as a deleted file or fexecve's memfd. A static program that replaces itself with another program whose arguments end with its own, as one started with no arguments does with any, is reported as itself.
 
 ---
 

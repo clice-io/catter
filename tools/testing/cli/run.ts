@@ -59,6 +59,11 @@ const DROPPED = [
     "NINJA_STATUS",
     // Git Bash's: xmake takes the host for MSYS and builds with MinGW.
     "MSYSTEM",
+    // Go's, which the C compiles of cgo take their flags from.
+    "GOFLAGS",
+    "CGO_CFLAGS",
+    "CGO_CPPFLAGS",
+    "CGO_LDFLAGS",
 ];
 
 /// The environment of a Visual Studio developer prompt for x64, which
@@ -357,6 +362,12 @@ const NATIVE_FRAMES = /(?:^#\d+ +0x[0-9a-f]+ .*(?:\n|$))+/gm;
 const XMAKE_PROBE_DIR = /\$\{TMP\}\/\.xmake\d*\/\d{6}/g;
 const XMAKE_PROBE = /\$\{TMP\}\/\.xmake#\/#\/_[0-9a-f]{32}/g;
 
+/// The directory Go builds a package in, named at random,
+/// `${TMP}/go-build1234567890`, and the seed it gives the C compiler of cgo,
+/// which hashes paths of the machine: `-frandom-seed=GMAlp4QLNI7GNQtEJQiZ`.
+const GO_BUILD_DIR = /\$\{TMP\}\/go-build\d+/g;
+const GO_RANDOM_SEED = /-frandom-seed=[\w-]{20}/g;
+
 /// The version of the macOS SDK and of the deployment target, which every
 /// update of the runner's Xcode changes: `MacOSX15.5.sdk`,
 /// `arm64-apple-macos15.5`.
@@ -382,6 +393,8 @@ export function normalize(text: string, places: Places): string {
         .replace(MACOS_VERSION, "$1#")
         .replace(XMAKE_PROBE_DIR, "${TMP}/.xmake#/#")
         .replace(XMAKE_PROBE, "${TMP}/.xmake#/#/_#")
+        .replace(GO_BUILD_DIR, "${TMP}/go-build#")
+        .replace(GO_RANDOM_SEED, "-frandom-seed=#")
         .replace(/\b\d+(\.\d+)?(ms|s)\b/g, "#$2")
         .split("\n")
         .map((line) => line.trimEnd())

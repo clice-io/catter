@@ -63,6 +63,15 @@ public:
                      char* const argv[],
                      char* const envp[]) noexcept;
 
+#ifdef CATTER_LINUX
+    /// Restarts this process through catter-proxy, as its hook would have
+    /// started it, when no catter-proxy started its exec as a decided
+    /// command's (env::DECIDED): an exec the hook did not see started it, as a
+    /// static program's or Go's does, with `argv`. Removes env::DECIDED from
+    /// this process's environment. Returns when this process runs on.
+    void restart_undecided(int argc, char* argv[]) noexcept;
+#endif
+
 private:
     /// `shell_fallback`: the libc function this stands for runs a file of no
     /// executable format with /bin/sh, as execvp does.

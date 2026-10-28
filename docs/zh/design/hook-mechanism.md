@@ -48,16 +48,18 @@ dyld 会终止无法加载插入库的程序，而钩子是按 catter 自身的�
 
 1. 设置日志（调试构建下输出到 catter 数据目录下的 `log/catter-hook.log`）
 2. 以环境和真实的 `execve` / `posix_spawn` 函数指针调用 `Executor::init()`（Linux 上经 `dlsym(RTLD_NEXT, ...)`，macOS 上直接引用系统符号）
+3. 在 Linux 上调用 `Executor::restart_undecided()`：如果进程的 exec 不是 `catter-proxy` 启动的，就经 `catter-proxy` 重新启动这个进程（见下文）
 
 ### 环境变量
 
 钩子从以下环境变量中读取会话信息。代理带着钩子运行它的命令（`RUN`）时设置这些变量，其中的命令 ID 就是这条命令自己的 ID：
 
-| 变量                         | 用途                                |
-| ---------------------------- | ----------------------------------- |
-| `__key_catter_proxy_path_v1` | `catter-proxy` 二进制文件的绝对路径 |
-| `__key_catter_command_id_v1` | 进程所运行命令的 ID                 |
-| `__key_catter_ipc_v1`        | catter 会话的管道                   |
+| 变量                         | 用途                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `__key_catter_proxy_path_v1` | `catter-proxy` 二进制文件的绝对路径                                     |
+| `__key_catter_command_id_v1` | 进程所运行命令的 ID                                                     |
+| `__key_catter_ipc_v1`        | catter 会话的管道                                                       |
+| `__key_catter_decided_v1`    | 在 Linux 上，`catter-proxy` 启动进程时所用的 exec，钩子读到后即将其移除 |
 
 ### 拦截流程
 
@@ -111,6 +113,16 @@ make
 ```
 
 这棵进程树中的每个进程都继承了 `LD_PRELOAD`，因此都会被钩住。每次调用都会经过 `catter-proxy`，由守护进程决定如何处理。构建系统完全无法感知到拦截的存在。
+
+### 不经钩子启动的程序（Linux）
+
+静态程序不加载钩子，Go 的运行时自己发起系统调用：它们启动的程序（例如 bazelisk 启动 Bazel，`go build` 启动 cgo 的 C 编译器）来自钩子看不到的 exec。`LD_PRELOAD` 仍会传到这些程序，钩子照样加载进每一个，然后由它们自行上报：
+
+1. `catter-proxy` 给它按决定启动的每个程序设置 `__key_catter_decided_v1`：它自己的 pid，以及 `argv[0]` 之后参数的个数和哈希。内核经解释器运行脚本时，这些参数仍留在 `argv` 末尾；`catter-proxy` 经 `/bin/sh` 运行没有可执行格式的文件时也是如此。
+2. 钩子的构造函数把这个变量从环境中取出，让它只对应一次 exec，再拿它与自己的进程比对：父进程是那个 `catter-proxy`，且 `argv` 以那些参数结尾。
+3. 比对一致的进程照常运行。不一致的进程（构建中某个程序启动的子进程，或替换掉 `catter-proxy` 所启动程序的程序）会以 `catter-proxy` 的身份重新启动，带上自己的程序（exec 所指的文件，脚本则为运行它的解释器）、`argv`、环境以及 `__key_catter_late_v1`。`catter-proxy` 像对待其他命令一样上报它，作为 `__key_catter_command_id_v1` 所指命令的子命令，并按决定运行。决定运行时，程序带着钩子重新启动，这时它的变量只写 `catter-proxy` 的 pid，因此不会再次重启；被丢弃时，程序不运行，以退出码 0 结束。
+
+此时程序自己的代码还没有运行：运行过的只有它所链接的库的构造函数，重启后它们会再运行一次。有些进程不会重启：以动态加载器为程序运行的进程（`ld.so <program>`），其 `argv` 已去掉加载器自己的参数；valgrind 在自己的进程中运行的程序，重启会让它脱离 valgrind；在进程之外没有对应文件的程序，例如已删除的文件或 fexecve 的 memfd。静态程序如果用另一个程序替换掉自身，而新程序的参数以它自己的参数结尾（不带参数启动的静态程序换成任何程序都是如此），上报的仍是它自己。
 
 ---
 

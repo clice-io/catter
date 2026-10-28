@@ -22,7 +22,7 @@ handler 从会话的 `initialize` 消息得知后端：其中的 `mode` 是后�
 
 - **原理**：将钩子库加载到构建的每个进程中，拦截进程创建（Linux 和 macOS 上的 `execve` / `posix_spawn` 族，Windows 上的 `CreateProcess`）。在 Linux 和 macOS 上，每条命令随后通过 `catter-proxy` 运行：它向 catter 询问如何处理命令，按决定运行命令，并为它加载钩子；在 Windows 上，钩子自己询问 catter，并按 catter 的决定启动程序。参见[钩子机制](hook-mechanism.md)和 [IPC 协议](ipc-protocol.md)。
 - **平台**：Linux、macOS、Windows。
-- **捕获范围**：构建的每个进程及启动该进程的命令，但无法加载钩子的程序所启动的进程除外：这样的程序本身仍会上报，并按决定运行，只是不带钩子。在 macOS 上，这类程序是 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`），以及在 Rosetta 下运行的 Intel 程序；Apple 自带的工具以 arm64e 运行，系统完整性保护（System Integrity Protection）会移除其中的钩子。在 Windows 上，这类程序是 32 位（x86）程序。Windows 程序以其他账户启动的程序则完全看不到。
+- **捕获范围**：构建的每个进程及启动该进程的命令，但无法加载钩子的程序所启动的进程除外：这样的程序本身仍会上报，并按决定运行，只是不带钩子。在 macOS 上，这类程序是 Apple 自带的工具（`/bin/sh`、`/usr/bin/make`），以及在 Rosetta 下运行的 Intel 程序；Apple 自带的工具以 arm64e 运行，系统完整性保护（System Integrity Protection）会移除其中的钩子。在 Windows 上，这类程序是 32 位（x86）程序。Windows 程序以其他账户启动的程序则完全看不到。在 Linux 上，静态程序或 Go 用自己的 exec 启动的程序，钩子看不到这次 exec；钩子加载进这样的程序后，它会自行上报，作为 catter 捕获到的最近一条命令的子命令，并按决定运行：它经 `catter-proxy` 重新启动，被丢弃时以退出码 0 结束。静态程序如果用另一个程序替换掉自身，而新程序的参数以它自己的参数结尾（不带参数启动的静态程序换成任何程序都是如此），上报的仍是它自己；valgrind 在自己的进程中运行的程序会留在那里运行，不会上报。
 - 构建及其命令直接使用 catter 自己的标准输入、标准输出和标准错误：它们直接写到终端，颜色不丢，输出顺序也和写入时一致。
 
 ### eslogger（macOS）

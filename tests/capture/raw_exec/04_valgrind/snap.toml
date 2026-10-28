@@ -1,0 +1,7 @@
+[linux."$ catter tree -w 1000 -- valgrind --tool=none -q ./main"]
+stdout = '''
+ran
+valgrind --tool=none -q ./main
+└── valgrind --tool=none -q ./main
+'''
+exit = 0

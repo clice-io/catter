@@ -29,6 +29,19 @@ constexpr char SHIMS[] = "__key_catter_shims_v1";
 /// catter-proxy, which the hook starts in place of each program.
 constexpr char PROXY[] = "__key_catter_proxy_path_v1";
 
+/// On Linux, the exec catter-proxy started the program of a command catter
+/// decided with, which the hook in the program checks its own against:
+/// catter-proxy's pid, then the number and the hash of the arguments past
+/// argv[0] (`hook::arguments_hash`), or the pid alone for a command reported
+/// late. A program whose exec does not match, which an exec the hook did not
+/// see started, as a static program's or Go's, reports itself late: it
+/// restarts through catter-proxy. The hook removes it once read, so that it
+/// stands for one exec.
+constexpr char DECIDED[] = "__key_catter_decided_v1";
+
+/// Set for catter-proxy by the hook of a program that reports itself late.
+constexpr char LATE[] = "__key_catter_late_v1";
+
 /// Set for catter-proxy alone, which then runs the build command the ptrace
 /// backend traces: the socket it tells catter it runs over, waits on until
 /// catter traces it, and tells why the build command did not start. It
@@ -36,7 +49,8 @@ constexpr char PROXY[] = "__key_catter_proxy_path_v1";
 constexpr char PTRACE[] = "__key_catter_ptrace_v1";
 
 /// All of them but PTRACE, which a session sets anew for the build it runs.
-constexpr std::array<std::string_view, 4> VARIABLES = {IPC, COMMAND_ID, SHIMS, PROXY};
+constexpr std::array<std::string_view, 6> VARIABLES =
+    {IPC, COMMAND_ID, SHIMS, PROXY, DECIDED, LATE};
 
 }  // namespace catter::env
 

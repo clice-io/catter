@@ -44,9 +44,10 @@ catter::hook::Executor executor;
 
 }  // namespace
 
-extern "C" EXPORT_SYMBOL void on_load() __attribute__((constructor));
+// glibc gives a constructor argc and argv.
+extern "C" EXPORT_SYMBOL void on_load(int argc, char* argv[]) __attribute__((constructor));
 
-extern "C" EXPORT_SYMBOL void on_load() {
+extern "C" EXPORT_SYMBOL void on_load([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     if(loaded.exchange(true)) {
         return;
     }
@@ -69,6 +70,7 @@ extern "C" EXPORT_SYMBOL void on_load() {
     executor.init(catter::hook::environment(),
                   reinterpret_cast<catter::hook::ExecveFn*>(dlsym(RTLD_NEXT, "execve")),
                   reinterpret_cast<catter::hook::PosixSpawnFn*>(dlsym(RTLD_NEXT, "posix_spawn")));
+    executor.restart_undecided(argc, argv);
 #endif
     errno = 0;
 }

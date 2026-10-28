@@ -1,7 +1,9 @@
 #include <cerrno>
 #include <cstdlib>
+#include <format>
 #include <initializer_list>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -433,5 +435,49 @@ ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) 
 }
 
 };  // ZEST_SUITE(executor)
+
+#ifdef CATTER_LINUX
+/// Whether the exec of a process whose parent is `parent` and whose argv is
+/// `argv` is the one `token` stands for.
+bool matches(std::string_view token, pid_t parent, std::initializer_list<std::string_view> argv) {
+    MutableCStrings strings(argv);
+    return catter::hook::is_decided(token, parent, std::span(strings.data(), argv.size()));
+}
+
+/// env::DECIDED as catter-proxy `pid` writes it for a program it starts with
+/// `argv`.
+std::string decided(pid_t pid, std::vector<std::string_view> argv) {
+    return catter::hook::decided_exec(pid, argv);
+}
+
+ZEST_SUITE(exec_decided) {
+
+ZEST_CASE(the_program_catter_proxy_started) {
+    ZEXPECT(matches(decided(100, {"cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
+}
+
+ZEST_CASE(a_script_the_kernel_runs_through_its_interpreter) {
+    ZEXPECT(matches(decided(100, {"./build.sh", "x"}), 100, {"/bin/sh", "./build.sh", "x"}));
+}
+
+ZEST_CASE(a_program_catter_proxy_did_not_start) {
+    ZEXPECT(!matches(decided(100, {"cc", "-c", "a.c"}), 101, {"cc", "-c", "a.c"}));
+}
+
+ZEST_CASE(a_program_the_started_one_execs_with_other_arguments) {
+    ZEXPECT(!matches(decided(100, {"sh", "-c", "cc -c a.c"}), 100, {"cc", "-c", "a.c"}));
+}
+
+ZEST_CASE(a_program_the_started_one_execs_with_the_rest_of_its_arguments) {
+    ZEXPECT(!matches(decided(100, {"env", "cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
+}
+
+ZEST_CASE(a_command_reported_late) {
+    ZEXPECT(matches(catter::hook::decided_exec(100), 100, {"cc", "-c", "a.c"}));
+    ZEXPECT(!matches(catter::hook::decided_exec(100), 101, {"cc", "-c", "a.c"}));
+}
+
+};  // ZEST_SUITE(exec_decided)
+#endif
 
 }  // namespace

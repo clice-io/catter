@@ -9,6 +9,8 @@ module;
 #ifdef CATTER_LINUX
 #include <fcntl.h>
 #include <unistd.h>
+
+#include "support/hook.h"
 #endif
 
 module catter;
@@ -90,8 +92,13 @@ struct Variables {
     /// it.
     std::optional<std::string> shims;
 
+    /// The hook of a program no catter-proxy started restarts it through this
+    /// one, as a command reported late.
+    bool late;
+
     explicit Variables(std::vector<std::string>& env) :
-        pipe(take_variable(env, env::IPC).value_or("")), shims(take_variable(env, env::SHIMS)) {
+        pipe(take_variable(env, env::IPC).value_or("")), shims(take_variable(env, env::SHIMS)),
+        late(take_variable(env, env::LATE).has_value()) {
         if(auto id = take_variable(env, env::COMMAND_ID)) {
             data::ipcid_t value = 0;
             if(std::from_chars(id->data(), id->data() + id->size(), value).ec == std::errc()) {
@@ -118,8 +125,17 @@ Proxied hooked(std::span<const std::string> argv) {
         .parent = variables.parent,
         .command = std::move(cmd),
         .launch =
-            [pipe = variables.pipe](data::command command, data::ipcid_t id) {
-                return hook_options(std::move(command), id, pipe);
+            [pipe = variables.pipe, late = variables.late](data::command command,
+                                                           data::ipcid_t id) {
+#ifdef CATTER_LINUX
+                auto decided = late ? hook::decided_exec(kota::sys::pid())
+                                    : hook::decided_exec(kota::sys::pid(), command.args);
+#endif
+                auto options = hook_options(std::move(command), id, pipe);
+#ifdef CATTER_LINUX
+                options.env->push_back({.name = env::DECIDED, .value = std::move(decided)});
+#endif
+                return options;
             },
     };
 }
