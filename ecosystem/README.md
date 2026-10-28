@@ -118,8 +118,8 @@ directory) and `<catter>` (its directory).
   under the nearest one it reported too (`parent`), and every compiler,
   linker and archiver the build itself started, by name, is among its
   commands (`missed`); one a compiler driver started is the driver's. Then
-  the compiles the recorder saw (a compiler, by name, naming a source)
-  against the database: each source still there has an entry (`no-entry`),
+  the compiles the recorder saw (a compiler, by name, naming a source, and
+  not only preprocessing it: `-E`, `-M`, `-MM`) against the database: each source still there has an entry (`no-entry`),
   and each entry is a recorded compile's (`entry-without-compile`). A recording that
   lost events says so (`lost`).
 - **artifacts**: the files the build wrote under `scan`, by their magic:

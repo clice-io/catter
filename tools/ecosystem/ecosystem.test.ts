@@ -85,6 +85,19 @@ describe("images", () => {
         ]);
     });
 
+    test("a child runs what its parent ran when it forked, not what it runs next", () => {
+        const builder = new ImageBuilder();
+        builder.exec(10, 1, "/bin/sh", ["sh"], "/w");
+        builder.fork(10, 11);
+        builder.exec(10, 1, "/usr/bin/ar", ["ar"], "/w");
+        builder.exec(11, 10, "/usr/bin/cc", ["cc"], "/w");
+        expect(parents(builder)).toEqual([
+            ["sh", null],
+            ["ar", 0],
+            ["cc", 0],
+        ]);
+    });
+
     test("a double fork keeps the daemon under what forked it", () => {
         const builder = new ImageBuilder();
         builder.exec(10, 1, "/usr/bin/bazel", ["bazel", "build"], "/w");
@@ -283,6 +296,77 @@ describe("the recorder check", () => {
         });
         expect(result.differences).toEqual([]);
         expect(result.stats.compiles).toBe(2);
+    });
+
+    test("a run that only lists the includes is no compile", () => {
+        const dir = tempDir();
+        fs.writeFileSync(path.join(dir, "a.c"), "");
+        const builder = new ImageBuilder();
+        builder.exec(1, 0, catter, ["catter"], dir);
+        builder.fork(1, 2);
+        builder.exec(2, 1, "/usr/bin/gcc", ["gcc", "-MM", "a.c"], dir);
+        builder.fork(1, 3);
+        builder.exec(3, 1, "/usr/bin/gcc", ["gcc", "-c", "a.c", "-o", "a.o"], dir);
+        const result = checkRecorder({
+            ...base,
+            places: new Places({ tree: dir }),
+            backend: "hook",
+            recording: { images: builder.build(), lost: 0 },
+            session: {
+                commands: [
+                    {
+                        id: 1,
+                        parent: null,
+                        cwd: dir,
+                        exe: "",
+                        args: ["gcc", "-MM", "a.c"],
+                        env: [],
+                        analysis: null,
+                    },
+                    {
+                        id: 2,
+                        parent: null,
+                        cwd: dir,
+                        exe: "",
+                        args: ["gcc", "-c", "a.c", "-o", "a.o"],
+                        env: [],
+                        analysis: null,
+                    },
+                ],
+                errors: [],
+                finish: 0,
+            },
+            entries: [
+                {
+                    directory: dir,
+                    file: "a.c",
+                    output: "a.o",
+                    arguments: ["gcc", "-c", "a.c", "-o", "a.o"],
+                },
+            ],
+        });
+        expect(result.differences).toEqual([]);
+    });
+
+    test("catter's own programs are dropped by name, not by the directory they sit in", () => {
+        const result = checkRecorder({
+            ...base,
+            catter: "/usr/bin/catter",
+            own: ["/home/catter"],
+            backend: "hook",
+            recording: (() => {
+                const builder = new ImageBuilder();
+                builder.exec(1, 0, "/usr/bin/catter", ["catter"], "/w");
+                builder.fork(1, 2);
+                builder.exec(2, 1, "/usr/bin/catter-proxy", ["catter-proxy"], "/w");
+                builder.fork(2, 3);
+                builder.exec(3, 2, "/usr/bin/make", ["make"], "/w");
+                return { images: builder.build(), lost: 0 };
+            })(),
+            session: session([{ args: ["make"] }]),
+        });
+        expect(result.differences).toEqual([]);
+        expect(result.stats).toMatchObject({ kept: 1, matched: 1 });
     });
 
     test("a script runs behind its interpreter", () => {

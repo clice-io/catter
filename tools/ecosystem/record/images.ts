@@ -19,65 +19,80 @@ export interface Recording {
     lost: number;
 }
 
-interface Exec {
-    pid: number;
-    ppid: number;
-    exe: string;
-    args: string[];
-    cwd: string;
-}
+type Event =
+    | { kind: "fork"; parent: number; child: number }
+    | { kind: "exec"; pid: number; ppid: number; exe: string; args: string[]; cwd: string };
+
+/// What a process runs: an image, or, before it execs, what process `from`
+/// ran when it forked it.
+type Running = { image: number } | { from: number };
 
 /// The images of a recorder's forks and execs, in the order it logged them.
-/// A recorder may log a fork after what the child did next (auditd logs each
-/// system call as it returns, on whichever CPU), so the parents are resolved
-/// once every fork is known: an exec's process is followed up through the
-/// processes that forked it, past those that never exec'd (a subshell, the
-/// middle of a daemon's double fork), to the nearest that ran an image.
+/// A process's own events come in order, so a fork shows what its parent
+/// ran then; a child's exec may come before the fork that made it (auditd
+/// logs each system call as it returns, on whichever CPU), so an exec's
+/// parent is resolved once every fork is read. An exec whose fork never
+/// shows takes what its parent process ran at the exec.
 export class ImageBuilder {
-    private readonly forkedBy = new Map<number, number>();
-    private readonly execs: Exec[] = [];
+    private readonly events: Event[] = [];
 
     fork(parent: number, child: number): void {
-        if (!this.forkedBy.has(child)) {
-            this.forkedBy.set(child, parent);
-        }
+        this.events.push({ kind: "fork", parent, child });
     }
 
     /// An exec of `pid`, whose parent process was `ppid` when it exec'd.
     exec(pid: number, ppid: number, exe: string, args: string[], cwd: string): void {
-        this.execs.push({ pid, ppid, exe, args, cwd });
+        this.events.push({ kind: "exec", pid, ppid, exe, args, cwd });
     }
 
     build(): Image[] {
-        const images: Image[] = [];
         const current = new Map<number, number>();
-        for (const exec of this.execs) {
-            let parent = current.get(exec.pid);
-            if (parent === undefined) {
-                const seen = new Set<number>();
-                for (
-                    let at: number | undefined = this.forkedBy.get(exec.pid) ?? exec.ppid;
-                    at !== undefined && !seen.has(at);
-                    at = this.forkedBy.get(at)
-                ) {
-                    seen.add(at);
-                    parent = current.get(at);
-                    if (parent !== undefined) {
-                        break;
-                    }
+        const forked = new Map<number, Running>();
+        const running = (pid: number): Running => {
+            const image = current.get(pid);
+            return image === undefined ? { from: pid } : { image };
+        };
+        const execs: { image: Image; parent: Running; fallback: Running }[] = [];
+        for (const event of this.events) {
+            if (event.kind === "fork") {
+                if (!forked.has(event.child)) {
+                    forked.set(event.child, running(event.parent));
                 }
+                continue;
             }
             const image: Image = {
-                id: images.length,
-                parent: parent ?? null,
-                pid: exec.pid,
-                exe: exec.exe,
-                args: exec.args,
-                cwd: exec.cwd,
+                id: execs.length,
+                parent: null,
+                pid: event.pid,
+                exe: event.exe,
+                args: event.args,
+                cwd: event.cwd,
             };
-            images.push(image);
-            current.set(exec.pid, image.id);
+            execs.push({ image, parent: running(event.pid), fallback: running(event.ppid) });
+            current.set(event.pid, image.id);
         }
-        return images;
+        const resolve = (start: Running, fallback: Running): number | null => {
+            const seen = new Set<number>();
+            for (let at: Running | undefined = start; at !== undefined;) {
+                if ("image" in at) {
+                    return at.image;
+                }
+                if (seen.has(at.from)) {
+                    return null;
+                }
+                seen.add(at.from);
+                const next = forked.get(at.from);
+                if (next === undefined && at === start && start !== fallback) {
+                    at = fallback;
+                } else {
+                    at = next;
+                }
+            }
+            return null;
+        };
+        return execs.map(({ image, parent, fallback }) => ({
+            ...image,
+            parent: resolve(parent, fallback),
+        }));
     }
 }

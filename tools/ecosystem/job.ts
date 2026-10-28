@@ -316,7 +316,7 @@ async function runBackend(
             entries,
             backend,
             catter: fs.realpathSync.native(options.catter),
-            own: [path.dirname(options.catter), home],
+            own: [home],
             handler,
             places: spell,
         });

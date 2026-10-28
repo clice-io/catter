@@ -34,8 +34,8 @@ export interface RecorderInput {
     backend: Backend;
     /// The catter that ran, resolved.
     catter: string;
-    /// The directories whose programs are catter's own: its own, its data
-    /// directory (the shims).
+    /// The directories whose programs are catter's own beside catter and
+    /// catter-proxy themselves: its data directory, which holds the shims.
     own: readonly string[];
     /// The handler's script, whose process and what it starts are dropped.
     handler: string;
@@ -56,6 +56,13 @@ function resolved(file: string): string {
     } catch {
         return file;
     }
+}
+
+/// Whether a compiler's arguments only preprocess, or only list what the
+/// sources include (`-E`, `-M`, `-MM`): no compile, which catter's entry of
+/// the source's compile stands for.
+function preprocessesOnly(args: readonly string[]): boolean {
+    return args.some((arg) => arg === "-E" || arg === "-M" || arg === "-MM");
 }
 
 /// Whether the recorder's `recorded` is catter's `args`: the same, or a
@@ -267,9 +274,10 @@ export function checkRecorder(input: RecorderInput): {
     const recorded = new Map<string, { image: Image; entry: boolean }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
-        const sources = isCompiler(args[0] ?? "")
-            ? args.slice(1).filter((arg) => isSource(arg, image.cwd))
-            : [];
+        const sources =
+            isCompiler(args[0] ?? "") && !preprocessesOnly(args)
+                ? args.slice(1).filter((arg) => isSource(arg, image.cwd))
+                : [];
         if (sources.length === 0) {
             continue;
         }
