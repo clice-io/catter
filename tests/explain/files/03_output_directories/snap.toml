@@ -49,8 +49,7 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Fo:out/",
-                "a.cc",
-                "b.cc"
+                "a.cc"
             ],
             "output": "${WS}/out/a.obj"
         },
@@ -62,7 +61,6 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Fo:out/",
-                "a.cc",
                 "b.cc"
             ],
             "output": "${WS}/out/b.obj"

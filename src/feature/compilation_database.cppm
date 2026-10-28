@@ -11,7 +11,7 @@ namespace catter::feature {
 
 /// The entries of the compiler command run in `cwd` that `analysis` is of: one for each file it
 /// writes from a source, and one without an output for a source it writes nothing from, or
-/// only preprocesses.
+/// only preprocesses. An entry's arguments are the command's without its other sources.
 std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analysis);
 
 /// The entry of the compile of `source` the preprocess of gcc or clang run in `cwd` that

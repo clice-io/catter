@@ -1,0 +1,5 @@
+gcc --target=x86_64-linux-gnu -c -DX a.c b.c
+clang --target=x86_64-linux-gnu -c -x c a.txt -x c++ b.txt
+gcc --target=x86_64-linux-gnu -c @sources.rsp
+cl /nologo /c a.cc /Tcb.txt /Tp c.txt
+clang-cl /c a.cc b.cc /Fo:out/
