@@ -12,7 +12,7 @@ body:
     attributes:
       label: catter version
       description: The release you downloaded, or the commit you built from.
-      placeholder: e.g. v0.1.0-alpha.4
+      placeholder: e.g. v0.1.2026102902
     validations:
       required: true
 

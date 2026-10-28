@@ -11,13 +11,28 @@ on:
       release_tag:
         type: string
         required: true
+      # The tag's commit, which a dry run names before the tag exists.
+      commit:
+        type: string
+        default: ""
+      dry_run:
+        type: boolean
+        default: false
   # Re-promote an existing tag, e.g. after rerunning its commit's build.
   workflow_dispatch:
     inputs:
       release_tag:
-        description: The tag to release (e.g., v1.0.0)
+        description: The tag to release (e.g., v0.2.0)
         type: string
         required: true
+      commit:
+        description: The tag's commit, for a dry run before the tag exists
+        type: string
+        default: ""
+      dry_run:
+        description: Download and name the packages, upload nothing
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,6 +44,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ inputs.release_tag }}
+      COMMIT: ${{ inputs.commit }}
       # The targets test.yml packages.
       TARGETS: x86_64-unknown-linux-gnu aarch64-apple-darwin x86_64-w64-mingw32 aarch64-w64-mingw32
     steps:
@@ -37,7 +53,7 @@ jobs:
         run: |
           # Resolve the tag itself rather than trusting GITHUB_SHA, which is
           # the branch tip for a manual dispatch.
-          SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          SHA=${COMMIT:-$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)}
           # A tag pushed right after its commit lands on main arrives while
           # that commit's main run is still building, or before GitHub has
           # even registered it; wait for it. A commit that never reached main
@@ -107,11 +123,13 @@ jobs:
           ls -l pkg
 
       - name: Upload assets to a draft release
+        if: ${{ !inputs.dry_run }}
         run: |
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             FLAGS="--draft --generate-notes"
-            # Tags like v0.1.0-alpha.4 are prereleases.
-            if [[ "$TAG" == *-* ]]; then
+            # Odd minors are the nightlies' (v0.1.2026102902), pre-releases.
+            MINOR=$(cut -d. -f2 <<< "$TAG")
+            if [ $((MINOR % 2)) -eq 1 ]; then
               FLAGS="$FLAGS --prerelease"
             fi
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \

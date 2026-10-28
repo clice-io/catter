@@ -1,0 +1,286 @@
+name: nightly
+
+# Nightly pre-release channel (odd-minor versions): if main gained tested
+# builds since the last nightly, tag the newest packaged commit as
+# vX.<odd>.YYYYMMDDHH on the odd minor above the newest release, promote its
+# CI packages, and publish it as a GitHub pre-release.
+# Old nightlies are pruned after 30 days or beyond the newest 25; stable
+# (even-minor) releases are never touched.
+# A dry run picks the commit, versions it, writes the notes and downloads and
+# names its packages, then stops before the tag, and only lists what it would
+# prune: on request, and on every PR that changes this workflow or publish.yml.
+on:
+  schedule:
+    - cron: "43 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Stop before tagging, publishing or pruning anything
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/nightly.yml
+      - .github/workflows/publish.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.pick.outputs.commit }}
+      publish: ${{ steps.version.outputs.publish }}
+      dry_run: ${{ steps.version.outputs.dry_run }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Pick the commit to promote
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The tag must point at the exact commit the promoted binaries
+          # were built from, so pick the newest main commit whose green run
+          # still has a live package artifact for every target (the same
+          # set publish.yml refuses to promote without): path-filtered runs
+          # (e.g. docs-only commits) build nothing, and packages expire
+          # after 30 days. Candidates come from the artifact listing and each
+          # is confirmed with its own run: the filtered run listing (branch +
+          # event + status) has answered with a truncated list that missed
+          # every recent run. The artifacts API occasionally answers with an
+          # empty or stale list for a while too — either no pick at all, or a
+          # pick older than an already-tagged release because the newest
+          # runs are missing from the listing. Both mean the listing is
+          # wrong, never that main went backwards, so both are retried and
+          # then fail the run rather than promote a downgrade.
+          PACKAGES="package-x86_64-unknown-linux-gnu
+                    package-aarch64-apple-darwin
+                    package-x86_64-w64-mingw32
+                    package-aarch64-w64-mingw32"
+          COUNT=$(wc -w <<< "$PACKAGES")
+          TAGS=$(git tag -l 'v*.*.*')
+          COMMIT=""
+          for ATTEMPT in 1 2 3; do
+            if [ "$ATTEMPT" -gt 1 ]; then sleep 30; fi
+            LIVE=""
+            for PACKAGE in $PACKAGES; do
+              ONE=$(gh api --paginate \
+                "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$PACKAGE&per_page=100" \
+                --jq '.artifacts[] | select((.expired | not) and .workflow_run.head_branch == "main")
+                      | "\(.workflow_run.id) \(.workflow_run.head_sha)"') || ONE=""
+              LIVE="$LIVE$(sort -u <<< "$ONE")"$'\n'
+            done
+            # A run qualifies only when every package is live for it. Run
+            # ids grow with creation time: newest first.
+            LIVE=$(grep . <<< "$LIVE" | sort | uniq -c \
+              | awk -v n="$COUNT" '$1 == n { print $2, $3 }' | sort -rn)
+            echo "attempt $ATTEMPT: $(grep -c . <<< "$LIVE") fully packaged main runs"
+            COMMIT=""
+            while read -r RUN SHA; do
+              if [ -z "$RUN" ]; then continue; fi
+              # A pull request from a fork's main branch uploads packages
+              # under main too; only a green run of the main workflow on main
+              # itself, pushed or run by hand, tested what it packaged. A
+              # failed lookup retries the attempt: skipping the run would
+              # promote an older commit.
+              KIND=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN" \
+                --jq '"\(.path) \(.event) \(.conclusion)"') || break
+              case "$KIND" in
+                ".github/workflows/main.yml push success" | \
+                ".github/workflows/main.yml workflow_dispatch success")
+                  COMMIT=$SHA
+                  break
+                  ;;
+              esac
+            done <<< "$LIVE"
+            if [ -n "$COMMIT" ]; then
+              git rev-parse -q --verify "$COMMIT^{commit}" > /dev/null \
+                || git fetch origin "$COMMIT"
+              # Strictly older than any release ever tagged — nightly or
+              # stable — means the listing missed the newer runs, since a
+              # release is only tagged on a commit that was packaged.
+              for TAG in $TAGS; do
+                TAGGED=$(git rev-parse "$TAG^{commit}")
+                if [ "$COMMIT" != "$TAGGED" ] \
+                  && git merge-base --is-ancestor "$COMMIT" "$TAGGED"; then
+                  echo "pick $COMMIT predates $TAG ($TAGGED); stale listing"
+                  COMMIT=""
+                  break
+                fi
+              done
+            fi
+            if [ -n "$COMMIT" ]; then break; fi
+          done
+          if [ -z "$COMMIT" ]; then
+            echo "::error::no green main run at or past the newest release has live package artifacts"
+            exit 1
+          fi
+          echo "Promoting $COMMIT"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Compute nightly version
+        id: version
+        env:
+          COMMIT: ${{ steps.pick.outputs.commit }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+        run: |
+          # Nightlies live on the odd minor above the newest release: after
+          # stable v0.2.0 ships they become v0.3.*.
+          LATEST=$(git tag -l 'v*.*.*' --sort=-v:refname | head -1)
+          MAJOR=0
+          MINOR=1
+          if [ -n "$LATEST" ]; then
+            BASE=${LATEST#v}
+            MAJOR=${BASE%%.*}
+            REST=${BASE#*.}
+            MINOR=${REST%%.*}
+            if [ $((MINOR % 2)) -eq 0 ]; then MINOR=$((MINOR + 1)); fi
+          fi
+          TAG="v$MAJOR.$MINOR.$(date -u +%Y%m%d%H)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN" >> "$GITHUB_OUTPUT"
+          PUBLISH=true
+          # The newest release is the last nightly, or a stable release that
+          # tagged a nightly's commit. Manual dispatch skips only the
+          # same-hour duplicate below, so a failed nightly can be retried on
+          # the same commit.
+          if [ -n "$LATEST" ] && [ "$(git rev-parse "$LATEST^{commit}")" = "$COMMIT" ] \
+            && [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            echo "No new packaged commits since $LATEST; skipping."
+            PUBLISH=false
+          elif git rev-parse "$TAG" > /dev/null 2>&1; then
+            echo "$TAG already exists; skipping."
+            PUBLISH=false
+          fi
+          if [ "$DRY_RUN" = true ]; then
+            echo "Dry run: would $([ "$PUBLISH" = true ] || echo "not ")publish $TAG on $COMMIT."
+            PUBLISH=false
+          fi
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+
+      - name: Write the release notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          COMMIT: ${{ steps.pick.outputs.commit }}
+        run: |
+          LAST=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          {
+            echo "Nightly build from \`$(git rev-parse --short "$COMMIT")\`."
+            echo
+            if [ -n "$LAST" ]; then
+              echo "## Changes since $LAST"
+              git log --format='- %s' "$LAST".."$COMMIT"
+              echo
+            fi
+            URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG"
+            V=${TAG#v}
+            echo "## Downloads"
+            echo
+            echo "| Platform | Package | Symbols |"
+            echo "| --- | --- | --- |"
+            row() {
+              PKG="catter-$V.$2.$3"
+              SYM="catter-$V.$2.symbols.$4"
+              echo "| $1 | [$PKG]($URL/$PKG) | [$SYM]($URL/$SYM) |"
+            }
+            row "Linux x64" x86_64-unknown-linux-gnu tar.gz tar.xz
+            row "macOS arm64" aarch64-apple-darwin tar.gz tar.xz
+            row "Windows x64" x86_64-w64-mingw32 zip zip
+            row "Windows arm64" aarch64-w64-mingw32 zip zip
+            echo
+            echo "Symbol packages hold the GSYM debug symbols of \`catter\` and"
+            echo "\`catter-proxy\`, which \`llvm-gsymutil\` symbolizes crash addresses with."
+          } > "$RUNNER_TEMP/notes.md"
+          # Mirror the release notes into the run summary page.
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # Tags pushed with GITHUB_TOKEN do not trigger workflows, which is
+      # exactly right here: publish.yml is called directly below instead of
+      # through the tag-push release path of main.yml. The release stays a
+      # draft until publish.yml has attached every package.
+      - name: Create tag and draft pre-release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          COMMIT: ${{ steps.pick.outputs.commit }}
+        run: |
+          git tag "$TAG" "$COMMIT"
+          git push origin "$TAG"
+          gh release create "$TAG" --draft --prerelease --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+
+  promote:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true' || needs.prepare.outputs.dry_run == 'true'
+    permissions:
+      contents: write
+      actions: read
+    uses: ./.github/workflows/publish.yml
+    with:
+      release_tag: ${{ needs.prepare.outputs.tag }}
+      commit: ${{ needs.prepare.outputs.commit }}
+      dry_run: ${{ needs.prepare.outputs.dry_run == 'true' }}
+
+  # Only once every package is attached; a failed promote leaves the draft
+  # for `gh run rerun --failed`.
+  publish:
+    needs: [prepare, promote]
+    if: needs.prepare.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  # Nightlies expire after 30 days, and only the newest 25 are kept. Only
+  # odd-minor pre-releases are pruned; stable releases and their tags are
+  # never deleted.
+  cleanup:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete expired nightlies
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ needs.prepare.outputs.dry_run }}
+        run: |
+          CUTOFF=$(date -u -d '30 days ago' +%s)
+          RANK=0
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 200 \
+            --json tagName,isPrerelease,createdAt \
+            -q '.[] | select(.isPrerelease) | .tagName + " " + .createdAt' |
+          sort -rV |
+          while read -r TAG CREATED; do
+            MINOR=$(echo "$TAG" | cut -d. -f2)
+            case "$MINOR" in *[!0-9]* | "") continue ;; esac
+            if [ $((MINOR % 2)) -eq 0 ]; then continue; fi
+            RANK=$((RANK + 1))
+            if [ "$RANK" -gt 25 ] \
+              || [ "$(date -u -d "$CREATED" +%s)" -lt "$CUTOFF" ]; then
+              if [ "$DRY_RUN" = true ]; then
+                echo "Would prune $TAG (created $CREATED, newest $RANK)"
+                continue
+              fi
+              echo "Pruning $TAG (created $CREATED, newest $RANK)"
+              gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" \
+                --cleanup-tag --yes
+            fi
+          done
