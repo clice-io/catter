@@ -146,7 +146,7 @@ exit = 0
 - **Placeholders.** What differs from host to host reads the same
   everywhere: the copy `${WS}`, catter's data directory `${CATTER_HOME}`,
   catter's own directory `${CATTER}`, the pixi environment `${ENV}`, the
-  temporary directory `${TMP}`, MSVC `${MSVC}`, the Windows SDK `${WINSDK}`,
+  temporary directory `${TMP}`, MSVC `${MSVC}`, the Windows SDK `${WINSDK}`, Visual Studio `${VS}`,
   Xcode `${XCODE}`, each with `/` after it; the macOS SDK's version
   (`MacOSX#.sdk`), durations (`#ms`, `#s`), process ids (`ipc-#`), native
   stack frames (`#… native frames`), xmake's probe files

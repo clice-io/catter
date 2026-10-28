@@ -286,6 +286,7 @@ function findOuterPlaces(): [string, string][] {
     for (const [name, variable] of [
         ["${MSVC}", "VCToolsInstallDir"],
         ["${WINSDK}", "WindowsSdkDir"],
+        ["${VS}", "VSINSTALLDIR"],
     ] as const) {
         const dir = env[variable];
         if (dir !== undefined && dir !== "") {
