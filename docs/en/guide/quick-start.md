@@ -12,14 +12,17 @@ On Linux, extract it to a directory whose path has no space and no colon, and on
 
 Prebuilt packages are currently available for:
 
-| Platform | Architecture |
-| -------- | ------------ |
-| Windows  | x64, arm64   |
-| Linux    | x64          |
-| macOS    | arm64        |
+| Platform | Architecture | Package                                            |
+| -------- | ------------ | -------------------------------------------------- |
+| Linux    | x64          | `catter-<version>.x86_64-unknown-linux-gnu.tar.gz` |
+| macOS    | arm64        | `catter-<version>.aarch64-apple-darwin.tar.gz`     |
+| Windows  | x64          | `catter-<version>.x86_64-w64-mingw32.zip`          |
+| Windows  | arm64        | `catter-<version>.aarch64-w64-mingw32.zip`         |
+
+Releases on an even minor version (`v0.2.0`) are stable, and there is none yet. Nightlies are pre-releases on an odd minor, versioned after the UTC hour they were tagged (`v0.1.2026102902` is 2026-10-29 02:00 UTC): one is published each day `main` gained builds that passed every test, and nightlies older than 30 days or beyond the newest 25 are deleted, but for the newest one.
 
 ::: info
-Catter is under active development; always use the latest package from the Releases page. If there is no prebuilt package for your platform, see [Building from Source](../dev/build).
+Catter is under active development; use the newest nightly. If there is no prebuilt package for your platform, see [Building from Source](../dev/build).
 :::
 
 ## Generate a Compilation Database
