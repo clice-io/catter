@@ -7,6 +7,16 @@ stdout = '''
 '''
 exit = 0
 
+[test."$ catter profile -q -- cmake --build build -j 1".win32]
+differs = "CMake builds with MSVC on Windows, which makes .obj, .lib and .exe files, and Ninja prints Windows paths"
+stdout = '''
+[1/4] Building CXX object CMakeFiles\util.dir\src\util.cc.obj
+[2/4] Linking CXX static library util.lib
+[3/4] Building CXX object CMakeFiles\hello.dir\src\main.cc.obj
+[4/4] Linking CXX executable hello.exe
+'''
+exit = 0
+
 [test."trace.json"]
 process = "cmake --build build -j 1"
 "lane 1" = [
@@ -161,6 +171,216 @@ process = "cmake --build build -j 1"
         depth = 5,
         name = "ld",
         command = "${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin ${ENV}/bin/../libexec/gcc/x86_64-conda-linux-gnu/14.2.0/liblto_plugin.so -plugin-opt=${ENV}/bin/../libexec/gcc/x86_64-conda-linux-gnu/14.2.0/lto-wrapper -plugin-opt=-fresolution=${TMP}/cc#.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=${ENV}/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o hello ${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o ${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o ${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/crtbeginS.o -L${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0 -L${ENV}/bin/../lib/gcc -L${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../lib -L${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../../../x86_64-conda-linux-gnu/lib -L${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/../../.. -L${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/lib -L${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib --dependency-file=CMakeFiles/hello.dir/link.d CMakeFiles/hello.dir/src/main.cc.o libutil.a -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc ${ENV}/bin/../lib/gcc/x86_64-conda-linux-gnu/14.2.0/crtendS.o ${ENV}/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath ${ENV}/lib",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 18,
+        parent = 17,
+    },
+]
+running = [1, 0]
+
+[test."trace.json".darwin]
+wrong = "Ninja runs each command through Apple's /bin/sh, which runs without the hook, and what it starts goes uncaptured"
+process = "cmake --build build -j 1"
+"lane 1" = [
+    { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
+    { depth = 1, name = "ninja", command = "${ENV}/bin/ninja -j 1", cwd = "${WS}/build", exit = 0, id = 2, parent = 1 },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"/usr/bin/c++ -DCATTER_TEST=1 -I${WS}/include -arch arm64 -MD -MT CMakeFiles/util.dir/src/util.cc.o -MF CMakeFiles/util.dir/src/util.cc.o.d -o CMakeFiles/util.dir/src/util.cc.o -c '${WS}/src/util.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 3,
+        parent = 2,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = '/bin/sh -c ": && ${ENV}/bin/cmake -E rm -f libutil.a && /usr/bin/ar qc libutil.a  CMakeFiles/util.dir/src/util.cc.o && /usr/bin/ranlib libutil.a && ${ENV}/bin/cmake -E touch libutil.a && :"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 4,
+        parent = 2,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = "/bin/sh -c \"/usr/bin/c++ -DCATTER_TEST=1 -I${WS}/include -arch arm64 -MD -MT CMakeFiles/hello.dir/src/main.cc.o -MF CMakeFiles/hello.dir/src/main.cc.o.d -o CMakeFiles/hello.dir/src/main.cc.o -c '${WS}/src/main.cc'\"",
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 5,
+        parent = 2,
+    },
+    {
+        depth = 2,
+        name = "sh",
+        command = '/bin/sh -c ": && /usr/bin/c++ -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/hello.dir/src/main.cc.o -o hello  libutil.a && :"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 6,
+        parent = 2,
+    },
+]
+running = [1, 0]
+
+[test."trace.json".win32]
+wrong = "the library and the executable are made by lib.exe and link.exe, whose inputs and output catter does not analyze: no target for the compiles"
+process = "cmake --build build -j 1"
+"lane 1" = [
+    { depth = 0, name = "cmake", command = "cmake --build build -j 1", cwd = "${WS}", exit = 0, id = 1 },
+    {
+        depth = 1,
+        name = "ninja.exe",
+        command = '"C:/PROGRA~1/MICROS~2/18/ENTERP~1/Common7/IDE/COMMON~1/MICROS~1/CMake/Ninja/ninja.exe" -j 1',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 2,
+        parent = 1,
+    },
+    {
+        depth = 2,
+        name = "cl.exe util.cc",
+        cat = "compile",
+        command = '"${MSVC}/bin/Hostx64/x64/cl.exe" /nologo /TP -DCATTER_TEST=1 "-I${WS}/include" /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\util.dir\src\util.cc.obj /FdCMakeFiles\util.dir\util.pdb /FS -c "${WS}/src/util.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 3,
+        parent = 2,
+        writes = ["${WS}/build/CMakeFiles/util.dir/src/util.cc.obj"],
+    },
+    {
+        depth = 2,
+        name = "cmd.exe",
+        command = 'C:\Windows\System32\cmd.exe /C "cd . && ${MSVC}/bin/Hostx64/x64/lib.exe /nologo /machine:x64 /out:util.lib CMakeFiles\\util.dir\\src\\util.cc.obj && cd ."',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 4,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "lib.exe",
+        command = '"${MSVC}/bin/Hostx64/x64/lib.exe" /nologo /machine:x64 /out:util.lib CMakeFiles\util.dir\src\util.cc.obj',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 5,
+        parent = 4,
+    },
+    {
+        depth = 4,
+        name = "LINK",
+        command = 'LINK /LIB /nologo /machine:x64 /out:util.lib CMakeFiles\util.dir\src\util.cc.obj',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 6,
+        parent = 5,
+    },
+    {
+        depth = 2,
+        name = "cl.exe main.cc",
+        cat = "compile",
+        command = '"${MSVC}/bin/Hostx64/x64/cl.exe" /nologo /TP -DCATTER_TEST=1 "-I${WS}/include" /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -MDd /showIncludes /FoCMakeFiles\hello.dir\src\main.cc.obj /FdCMakeFiles\hello.dir\ /FS -c "${WS}/src/main.cc"',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 7,
+        parent = 2,
+        writes = ["${WS}/build/CMakeFiles/hello.dir/src/main.cc.obj"],
+    },
+    {
+        depth = 2,
+        name = "cmd.exe",
+        command = 'C:\Windows\System32\cmd.exe /C "cd . && C:\\Program" Files\Microsoft Visual "Studio\\18\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe -E vs_link_exe --msvc-ver=1951 --intdir=CMakeFiles\\hello.dir --rc=${WINSDK}/bin/100261~1.0/x64/rc.exe --mt=${WINSDK}/bin/100261~1.0/x64/mt.exe --manifests  -- ${MSVC}/bin/Hostx64/x64/link.exe /nologo CMakeFiles\\hello.dir\\src\\main.cc.obj  /out:hello.exe /implib:hello.lib /pdb:hello.pdb /version:0.0 /machine:x64 /debug /INCREMENTAL /subsystem:console  util.lib  kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib && cd ."',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 8,
+        parent = 2,
+    },
+    {
+        depth = 3,
+        name = "cmake.exe",
+        command = '"C:\\Program Files\\Microsoft Visual Studio\\18\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe" -E vs_link_exe --msvc-ver=1951 --intdir=CMakeFiles\hello.dir "--rc=${WINSDK}/bin/100261~1.0/x64/rc.exe" "--mt=${WINSDK}/bin/100261~1.0/x64/mt.exe" --manifests -- "${MSVC}/bin/Hostx64/x64/link.exe" /nologo CMakeFiles\hello.dir\src\main.cc.obj /out:hello.exe /implib:hello.lib /pdb:hello.pdb /version:0.0 /machine:x64 /debug /INCREMENTAL /subsystem:console util.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 9,
+        parent = 8,
+    },
+    {
+        depth = 4,
+        name = "rc.exe",
+        command = '"${WINSDK}/bin/100261~1.0/x64/rc.exe" /fo CMakeFiles\hello.dir/manifest.res CMakeFiles\hello.dir/manifest.rc',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 10,
+        parent = 9,
+    },
+    {
+        depth = 4,
+        name = "link.exe",
+        command = '"${MSVC}/bin/Hostx64/x64/link.exe" /nologo CMakeFiles\hello.dir\src\main.cc.obj /out:hello.exe /implib:hello.lib /pdb:hello.pdb /version:0.0 /machine:x64 /debug /INCREMENTAL /subsystem:console util.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTFILE:CMakeFiles\hello.dir/intermediate.manifest CMakeFiles\hello.dir/manifest.res',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 11,
+        parent = 9,
+    },
+    {
+        depth = 5,
+        name = "cvtres",
+        command = 'cvtres /machine:amd64 /nologo "/out:${TMP}/lnk{9E634631-AEA7-41D6-9BAF-EB8BA6C39912}.tmp" /readonly CMakeFiles\hello.dir\manifest.res',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 12,
+        parent = 11,
+    },
+    {
+        depth = 4,
+        name = "mt.exe",
+        command = '"${WINSDK}/bin/100261~1.0/x64/mt.exe" /nologo /manifest CMakeFiles\hello.dir/intermediate.manifest /out:CMakeFiles\hello.dir/embed.manifest /notify_update',
+        cwd = "${WS}/build",
+        exit = 1090650113,
+        id = 13,
+        parent = 9,
+    },
+    {
+        depth = 4,
+        name = "rc.exe",
+        command = '"${WINSDK}/bin/100261~1.0/x64/rc.exe" /fo CMakeFiles\hello.dir/manifest.res CMakeFiles\hello.dir/manifest.rc',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 14,
+        parent = 9,
+    },
+    {
+        depth = 4,
+        name = "link.exe",
+        command = '"${MSVC}/bin/Hostx64/x64/link.exe" /nologo CMakeFiles\hello.dir\src\main.cc.obj /out:hello.exe /implib:hello.lib /pdb:hello.pdb /version:0.0 /machine:x64 /debug /INCREMENTAL /subsystem:console util.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTFILE:CMakeFiles\hello.dir/intermediate.manifest CMakeFiles\hello.dir/manifest.res',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 15,
+        parent = 9,
+    },
+    {
+        depth = 5,
+        name = "cvtres",
+        command = 'cvtres /machine:amd64 /nologo "/out:${TMP}/lnk{4A763651-17D5-4ADA-9E28-EC02C6BD7F25}.tmp" /readonly CMakeFiles\hello.dir\manifest.res',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 16,
+        parent = 15,
+    },
+    {
+        depth = 5,
+        name = "link.exe",
+        command = '"${MSVC}/bin/Hostx64/x64/link.exe" /nologo CMakeFiles\hello.dir\src\main.cc.obj /out:hello.exe /implib:hello.lib /pdb:hello.pdb /version:0.0 /machine:x64 /debug /INCREMENTAL /subsystem:console util.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTFILE:CMakeFiles\hello.dir/intermediate.manifest CMakeFiles\hello.dir/manifest.res /nologo /incremental /fullbuild',
+        cwd = "${WS}/build",
+        exit = 0,
+        id = 17,
+        parent = 15,
+    },
+    {
+        depth = 6,
+        name = "cvtres",
+        command = 'cvtres /machine:amd64 /nologo "/out:${TMP}/lnk{543046F0-9DC9-4DFE-B0E4-DE2A5C1B9983}.tmp" /readonly CMakeFiles\hello.dir\manifest.res',
         cwd = "${WS}/build",
         exit = 0,
         id = 18,

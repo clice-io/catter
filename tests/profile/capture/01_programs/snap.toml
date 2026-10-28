@@ -49,3 +49,29 @@ process = "node build.mjs"
     { depth = 0, name = "node", command = "node wait.mjs b", cwd = "${WS}", exit = 0, id = 5, parent = 1 },
 ]
 running = [1, 2, 1, 0]
+
+[eslogger."$ catter profile -q --capture eslogger -- node build.mjs"]
+exit = 0
+
+[eslogger."trace.json"]
+process = "node build.mjs"
+"lane 1" = [
+    { depth = 0, name = "node", command = "node build.mjs", cwd = "${WS}", exit = 0, id = 1 },
+]
+"lane 2" = [
+    { depth = 0, name = "node", command = "node -e 0", cwd = "${WS}", exit = 0, id = 2, parent = 1 },
+    {
+        depth = 0,
+        name = "node",
+        command = 'node -e "process.exitCode = 3"',
+        cwd = "${WS}",
+        exit = 3,
+        id = 3,
+        parent = 1,
+    },
+    { depth = 0, name = "node", command = "node wait.mjs a", cwd = "${WS}", exit = 0, id = 4, parent = 1 },
+]
+"lane 3" = [
+    { depth = 0, name = "node", command = "node wait.mjs b", cwd = "${WS}", exit = 0, id = 5, parent = 1 },
+]
+running = [1, 2, 1, 0]
