@@ -24,6 +24,7 @@ import std.compat;
 #include <kota/fs/path.h>
 #include <kota/fs/resolve.h>
 #include <kota/fs/status.h>
+#include <kota/fs/temp.h>
 #include <kota/ipc/codec.h>
 #include <kota/ipc/codec/bincode.h>
 #include <kota/ipc/codec/json.h>

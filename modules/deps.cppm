@@ -741,8 +741,7 @@ using ::kota::detail::when_op;
 }
 
 export namespace kota::fs {
-using ::kota::fs::DirEntry;
-using ::kota::fs::DirStream;
+using ::kota::fs::Directory;
 using ::kota::fs::File;
 using ::kota::fs::FileID;
 using ::kota::fs::FileTimes;
@@ -750,7 +749,10 @@ using ::kota::fs::FileType;
 using ::kota::fs::OpenOptions;
 using ::kota::fs::SeekFrom;
 using ::kota::fs::Status;
+using ::kota::fs::TempDirectory;
+using ::kota::fs::TempFile;
 using ::kota::fs::Volume;
+using ::kota::fs::Walk;
 using ::kota::fs::absolute;
 using ::kota::fs::canonical;
 using ::kota::fs::copy_file;
@@ -764,10 +766,10 @@ using ::kota::fs::create_temp_file;
 using ::kota::fs::current_dir;
 using ::kota::fs::equivalent;
 using ::kota::fs::exists;
+using ::kota::fs::follow_symlinks;
 using ::kota::fs::is_directory;
 using ::kota::fs::is_file;
 using ::kota::fs::is_symlink;
-using ::kota::fs::read_dir;
 using ::kota::fs::read_file;
 using ::kota::fs::read_symlink;
 using ::kota::fs::remove;
@@ -778,7 +780,9 @@ using ::kota::fs::set_permissions;
 using ::kota::fs::set_times;
 using ::kota::fs::status;
 using ::kota::fs::symlink_status;
+using ::kota::fs::try_exists;
 using ::kota::fs::volume;
+using ::kota::fs::walk;
 using ::kota::fs::weakly_canonical;
 using ::kota::fs::write_file;
 using ::kota::fs::write_file_atomic;
@@ -848,12 +852,14 @@ using ::kota::fs::path::has_root;
 using ::kota::fs::path::is_absolute;
 using ::kota::fs::path::is_separator;
 using ::kota::fs::path::is_within;
+using ::kota::fs::path::lowercase_drive;
 using ::kota::fs::path::native_style;
 using ::kota::fs::path::normalize;
 using ::kota::fs::path::parent;
 using ::kota::fs::path::pop;
 using ::kota::fs::path::push;
 using ::kota::fs::path::relative;
+using ::kota::fs::path::resolve;
 using ::kota::fs::path::root;
 using ::kota::fs::path::set_extension;
 using ::kota::fs::path::set_file_name;
@@ -861,6 +867,10 @@ using ::kota::fs::path::stem;
 using ::kota::fs::path::strip_prefix;
 using ::kota::fs::path::to_backslash;
 using ::kota::fs::path::to_slash;
+}
+
+export namespace kota::fs::path::detail {
+using ::kota::fs::path::detail::joins;
 }
 
 export namespace kota::ipc {
