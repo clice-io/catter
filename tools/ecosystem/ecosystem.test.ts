@@ -8,10 +8,12 @@ import { checkRecorder, sameArgs, type Entry } from "./checks/recorder.ts";
 import { syntaxOnly } from "./checks/syntax.ts";
 import { expandResponseFiles, isCompiler, isWrapped, shellSplit } from "./command.ts";
 import { isKnown, Places } from "./difference.ts";
-import { listJobs, projectNames, readProject, type Known } from "./project.ts";
+import type { JobResult } from "./job.ts";
+import { listJobs, projectNames, readProject, type Job, type Known } from "./project.ts";
 import { parseAudit } from "./record/audit.ts";
 import { ImageBuilder } from "./record/images.ts";
 import { parseStrace } from "./record/strace.ts";
+import { isRed, roundReport } from "./report.ts";
 import type { Command, Session } from "./session.ts";
 
 const dirs: string[] = [];
@@ -50,17 +52,13 @@ describe("projects", () => {
             kind: "object-without-entry",
             detail: "no entry has the output <tree>/a.lo",
         };
-        expect(isKnown(known, difference, { build: "b", backend: "hook", platform: "linux" })).toBe(
-            true,
-        );
-        expect(
-            isKnown(known, difference, { build: "b", backend: "wrapper", platform: "linux" }),
-        ).toBe(false);
+        expect(isKnown(known, difference, { build: "b", backend: "hook" })).toBe(true);
+        expect(isKnown(known, difference, { build: "b", backend: "wrapper" })).toBe(false);
         expect(
             isKnown(
                 known,
                 { ...difference, detail: "<tree>/a.o" },
-                { build: "b", backend: "hook", platform: "linux" },
+                { build: "b", backend: "hook" },
             ),
         ).toBe(false);
     });
@@ -243,16 +241,34 @@ describe("artifacts", () => {
     }
 
     test("files are told apart by their magic", () => {
-        expect(fileKind(elf(1), "a.o")).toBe("object");
-        expect(fileKind(elf(2), "a")).toBe("linked");
-        expect(fileKind(elf(3), "liba.so")).toBe("linked");
-        expect(fileKind(Buffer.from("!<arch>\nfoo"), "liba.a")).toBe("archive");
-        const macho = Buffer.alloc(32);
-        macho.writeUInt32LE(0xfeedfacf, 0);
-        macho.writeUInt32LE(1, 12);
-        expect(fileKind(macho, "a.o")).toBe("object");
-        expect(fileKind(Buffer.from("BC\xc0\xde....", "latin1"), "a.o")).toBe("object");
-        expect(fileKind(Buffer.from("int main() {}"), "a.c")).toBeUndefined();
+        expect(fileKind(elf(1))).toBe("object");
+        expect(fileKind(elf(2))).toBe("linked");
+        expect(fileKind(elf(3))).toBe("linked");
+        expect(fileKind(Buffer.from("!<arch>\nfoo"))).toBe("archive");
+        expect(fileKind(Buffer.from("BC\xc0\xde....", "latin1"))).toBe("object");
+        expect(fileKind(Buffer.from("int main() {}"))).toBeUndefined();
+    });
+});
+
+describe("reports", () => {
+    test("a job that stopped, or left no results, is red in the round", () => {
+        const stopped: JobResult = {
+            job: "a/make",
+            platform: "linux",
+            catter: "c",
+            backends: [],
+            unseen: [],
+            error: "no source",
+        };
+        const jobs: Job[] = [
+            { name: "a/make", platform: "linux", packages: "", artifact: "a-make-linux" },
+            { name: "b/make", platform: "linux", packages: "", artifact: "b-make-linux" },
+        ];
+        expect(isRed(stopped)).toBe(true);
+        const round = roundReport([stopped], jobs);
+        expect(round).toContain("| 🔴 b/make | linux | | no results | |");
+        expect(round).toContain("| 🔴 a/make | linux |  | 0, stopped | 0 |");
+        expect(round).toContain("The job stopped: no source");
     });
 });
 

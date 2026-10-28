@@ -13,12 +13,10 @@ import type { Entry } from "./recorder.ts";
 
 export type FileKind = "object" | "linked" | "archive";
 
-/// What a file is, by its first bytes: an object (ELF relocatable, Mach-O
-/// MH_OBJECT, LLVM bitcode, a COFF object), a linked program or library
-/// (ELF executable or shared, Mach-O executable, dylib or bundle, PE), an
-/// archive; undefined for anything else. COFF objects have no magic: only a
-/// `.obj` or `.o` whose machine field is one of Windows' counts.
-export function fileKind(head: Buffer, name: string): FileKind | undefined {
+/// What a file is, by its first bytes: an object (ELF relocatable, LLVM
+/// bitcode), a linked program or library (ELF executable or shared), an
+/// archive; undefined for anything else.
+export function fileKind(head: Buffer): FileKind | undefined {
     if (head.length >= 18 && head.toString("latin1", 0, 4) === "\x7fELF") {
         const type = head[5] === 2 ? head.readUInt16BE(16) : head.readUInt16LE(16);
         return type === 1 ? "object" : type === 2 || type === 3 ? "linked" : undefined;
@@ -27,28 +25,11 @@ export function fileKind(head: Buffer, name: string): FileKind | undefined {
     if (ar === "!<arch>\n" || ar === "!<thin>\n") {
         return "archive";
     }
-    if (head.length >= 16) {
-        const magic = head.readUInt32LE(0);
-        if (magic === 0xfeedfacf || magic === 0xfeedface) {
-            const type = head.readUInt32LE(12);
-            return type === 1 ? "object" : [2, 6, 8].includes(type) ? "linked" : undefined;
-        }
-    }
     if (
         head.toString("latin1", 0, 4) === "BC\xc0\xde" ||
         (head.length >= 4 && head.readUInt32LE(0) === 0x0b17c0de)
     ) {
         return "object";
-    }
-    if (head.toString("latin1", 0, 2) === "MZ") {
-        return "linked";
-    }
-    if (/\.(?:obj|o)$/i.test(name) && head.length >= 20) {
-        const machine = head.readUInt16LE(0);
-        const optionalHeader = head.readUInt16LE(16);
-        if ([0x14c, 0x8664, 0xaa64, 0x1c4, 0xa641].includes(machine) && optionalHeader === 0) {
-            return "object";
-        }
     }
     return undefined;
 }
@@ -159,7 +140,7 @@ export function checkArtifacts(input: {
         if (input.before.get(file) === mtime) {
             continue;
         }
-        const kind = fileKind(head(file), file);
+        const kind = fileKind(head(file));
         if (kind === undefined) {
             continue;
         }

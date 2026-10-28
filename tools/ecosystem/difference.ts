@@ -1,7 +1,7 @@
 /// A difference a check found between what catter answered and a reference,
 /// and the known differences of a project it may be one of.
 
-import type { Backend, Check, Known, Platform } from "./project.ts";
+import type { Backend, Check, Known } from "./project.ts";
 
 export interface Difference {
     check: Check;
@@ -16,7 +16,6 @@ export interface Difference {
 export interface Where {
     build: string;
     backend: Backend;
-    platform: Platform;
 }
 
 export function isKnown(known: Known, difference: Difference, where: Where): boolean {
@@ -25,7 +24,6 @@ export function isKnown(known: Known, difference: Difference, where: Where): boo
         known.kind === difference.kind &&
         (known.build === undefined || known.build === where.build) &&
         (known.backend === undefined || known.backend === where.backend) &&
-        (known.platform === undefined || known.platform === where.platform) &&
         known.detail.test(difference.detail)
     );
 }

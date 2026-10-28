@@ -1,9 +1,9 @@
 name: ecosystem
 
 # A round over the real projects of ecosystem/ (ecosystem/README.md): every
-# project's build on each of its platforms, a runner each, under each of its
-# backends, with a recorder of every exec around catter; then the checks of
-# what catter answered. The catter under test is a nightly's release package
+# project's build, a Linux runner each, under each of its backends, with
+# auditd recording every exec around catter; then the checks of what catter
+# answered. The catter under test is a nightly's release package
 # (nightly.yml dispatches a round once it has published one) or a CI run's
 # package artifact, named by hand; a pull request that changes the ecosystem
 # runs a round on the newest nightly. The framework is the workflow's own
@@ -51,11 +51,11 @@ jobs:
           CATTER: ${{ inputs.catter }}
         run: |
           if [ -z "$CATTER" ]; then
-            CATTER=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 \
-              --json tagName --jq '.[0].tagName')
+            CATTER=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 40 \
+              --json tagName,isPrerelease --jq 'map(select(.isPrerelease)) | .[0].tagName // empty')
           fi
           if [ -z "$CATTER" ]; then
-            echo "::error::no published release to test"
+            echo "::error::no published nightly to test"
             exit 1
           fi
           echo "catter=$CATTER" >> "$GITHUB_OUTPUT"
@@ -83,11 +83,11 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.jobs.outputs.jobs) }}
-    runs-on: ${{ fromJSON('{"linux":"ubuntu-24.04","macos":"macos-15","windows":"windows-2025"}')[matrix.platform] }}
+    runs-on: ubuntu-24.04
     # A step's own bound (two hours) stops a hung build well before.
     timeout-minutes: 300
     env:
-      TARGET: ${{ fromJSON('{"linux":"x86_64-unknown-linux-gnu","macos":"aarch64-apple-darwin","windows":"x86_64-w64-mingw32"}')[matrix.platform] }}
+      TARGET: x86_64-unknown-linux-gnu
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -119,7 +119,6 @@ jobs:
       # time. auditd records every exec and fork of the build; its log must
       # not rotate while it does.
       - name: Install the recorder and the project's packages
-        if: matrix.platform == 'linux'
         timeout-minutes: 15
         run: |
           sudo apt-get update

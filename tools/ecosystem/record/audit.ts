@@ -174,8 +174,9 @@ export class AuditRecorder implements Recorder {
         ]);
     }
 
-    /// The rules off, then the log read once it holds the exec of a marker
-    /// run after them: auditd writes what the kernel hands it a little later.
+    /// The log read once it holds the exec of a marker run while the rules
+    /// are still on (auditd writes what the kernel hands it a little later),
+    /// then the rules off.
     async stop(): Promise<Recording> {
         const marker = `catter-ecosystem-marker-${randomBytes(4).toString("hex")}`;
         let log = "";

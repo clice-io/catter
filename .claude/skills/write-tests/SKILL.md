@@ -44,8 +44,9 @@ rules and the pitfalls. The framework is `tools/testing/`
 A case is catter's own small project, one mechanism each; a real project,
 pinned and unmodified, belongs in `ecosystem/` (`ecosystem/README.md`),
 whose round runs nightly and only reports. A difference the round finds
-that catter fixes gets a minimal case here, and the fix removes its
-`[[known]]` entry from the project's `project.toml`.
+that catter fixes gets a minimal case here with the fix; its `[[known]]`
+entry goes once a nightly holds the fix, whose round lists it among the
+known differences no run showed.
 
 ## Hard rules
 

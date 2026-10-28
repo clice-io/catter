@@ -44,7 +44,7 @@ build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
 hint = "build/compile_commands.json"
 
 [[known]]
-issue = "10-28#3"
+issue = "…"
 why = "…"
 build = "cmake-ninja"
 backend = "wrapper"
@@ -58,8 +58,9 @@ detail = "…"
 - **Builds**, each `[builds.<name>]`, named by its build system
   (`cmake-ninja`, `meson`, `cargo`, `pip`):
   - `about`, for a reader;
-  - `platforms` of `linux`, `macos`, `windows` (`["linux"]` when absent);
-  - `backends` of `hook`, `wrapper`, `eslogger` (`["hook"]` when absent);
+  - `platforms`, of which `linux` alone runs today (`["linux"]` when
+    absent);
+  - `backends` of `hook` and `wrapper` (`["hook"]` when absent);
   - `packages`, the Debian packages it needs on Linux;
   - `tree`, a directory of the project's own built in place of its source;
   - `env`, variables of its build;
@@ -122,7 +123,7 @@ directory) and `<catter>` (its directory).
   and each entry is a recorded compile's (`entry-without-compile`). A recording that
   lost events says so (`lost`).
 - **artifacts**: the files the build wrote under `scan`, by their magic:
-  each object (ELF relocatable, Mach-O MH_OBJECT, LLVM bitcode, COFF) is the
+  each object (ELF relocatable, LLVM bitcode) is the
   output of exactly one entry, or of a relocatable link
   (`object-without-entry`, `object-in-several-entries`); each archive,
   shared library and executable is written by a link or archive command of
@@ -144,12 +145,14 @@ directory) and `<catter>` (its directory).
 
 A `[[known]]` table of the project names a difference already understood:
 its `check`, `kind` and a regular expression its `detail` matches, narrowed
-by `build`, `backend` and `platform` when given, with `why` for the reader
+by `build` and `backend` when given, with `why` for the reader
 and, when catter is wrong, the `issue` it is recorded as. A difference
 where the build system's database is the wrong one, or that the build
 itself makes (a Makefile renaming the objects it compiles), has a `why`
 alone. One is as narrow as its difference: a pattern matching a whole kind
-would hide the next difference of that kind.
+would hide the next difference of that kind. A known difference catter
+fixes goes once a nightly holds the fix: that nightly's round lists it
+among the known differences no run showed.
 
 ## Recorders
 
@@ -173,20 +176,23 @@ known ones no backend showed (fixed, or hidden by another). Beside them, for
 each backend: catter's database, the handler's events and their replay, the
 recording, the build's output and catter's logs.
 
-A job is red when a backend is not checked or finds a new difference; known
-differences alone leave it green. **A round shows no new difference** when
+A job is red when it stops before its checks (a source it cannot fetch, a
+recorder that does not record), when a backend is not checked, or when one
+finds a new difference; known differences alone leave it green. The round's
+summary lists every job, one that left no results red. **A round shows no new difference** when
 every job is green: what a stable release requires of the nightly it tags.
 
 ## CI
 
-`.github/workflows/ecosystem.yml` runs a round: every job, each on a runner
-of its platform, all at once, then a job gathering their summaries.
+`.github/workflows/ecosystem.yml` runs a round: every job, each on a Linux
+runner, all at once, then a job gathering their summaries.
 `nightly.yml` dispatches it with the nightly it has just published, whose
 release package is the catter under test. A dispatch by hand names a nightly's
 tag, or a CI run (`main.yml`) whose package artifacts live (30 days); a pull
 request that changes `ecosystem/` or `tools/ecosystem/` runs a round on the
-newest nightly. The framework is the workflow's own ref. The round only
-reports: nothing waits on it but a stable release.
+newest nightly, which checks the change itself: a new project's
+differences, a known one's pattern. The framework is the workflow's own
+ref. The round only reports: nothing waits on it but a stable release.
 
 ## Running
 

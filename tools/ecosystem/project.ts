@@ -8,10 +8,10 @@ import { REPO_ROOT } from "../repo.ts";
 
 export const ECOSYSTEM_DIR = path.join(REPO_ROOT, "ecosystem");
 
-export const PLATFORMS = ["linux", "macos", "windows"] as const;
+export const PLATFORMS = ["linux"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
-export const BACKENDS = ["hook", "wrapper", "eslogger"] as const;
+export const BACKENDS = ["hook", "wrapper"] as const;
 export type Backend = (typeof BACKENDS)[number];
 
 export const CHECKS = ["recorder", "artifacts", "syntax", "hint", "catter"] as const;
@@ -50,7 +50,6 @@ export interface Known {
     why: string;
     build?: string;
     backend?: Backend;
-    platform?: Platform;
     check: Check;
     kind: string;
     detail: RegExp;
@@ -162,9 +161,6 @@ function readBuild(name: string, table: Table, dir: string, where: string): Buil
     const backends = strings(table["backends"] ?? ["hook"], "backends", where).map((each) =>
         oneOf(each, BACKENDS, "backend", where),
     );
-    if (backends.includes("eslogger") && platforms.some((each) => each !== "macos")) {
-        fail(where, "eslogger is macOS's backend alone");
-    }
     const env = table["env"] ?? {};
     if (
         typeof env !== "object" ||
@@ -202,22 +198,18 @@ function readBuild(name: string, table: Table, dir: string, where: string): Buil
 }
 
 function readKnown(table: Table, builds: readonly Build[], where: string): Known {
-    only(table, ["issue", "why", "build", "backend", "platform", "check", "kind", "detail"], where);
+    only(table, ["issue", "why", "build", "backend", "check", "kind", "detail"], where);
     const build = string(table, "build", where);
     if (build !== undefined && !builds.some((each) => each.name === build)) {
         fail(where, `no build ${build}`);
     }
     const backend = string(table, "backend", where);
-    const platform = string(table, "platform", where);
     const issue = string(table, "issue", where);
     return {
         ...(issue === undefined ? {} : { issue }),
         why: required(table, "why", where),
         ...(build === undefined ? {} : { build }),
         ...(backend === undefined ? {} : { backend: oneOf(backend, BACKENDS, "backend", where) }),
-        ...(platform === undefined
-            ? {}
-            : { platform: oneOf(platform, PLATFORMS, "platform", where) }),
         check: oneOf(required(table, "check", where), CHECKS, "check", where),
         kind: required(table, "kind", where),
         detail: new RegExp(required(table, "detail", where)),
@@ -283,16 +275,10 @@ export function projectNames(): string[] {
 }
 
 export function currentPlatform(): Platform {
-    switch (process.platform) {
-        case "linux":
-            return "linux";
-        case "darwin":
-            return "macos";
-        case "win32":
-            return "windows";
-        default:
-            throw new Error(`no ecosystem platform is ${process.platform}`);
+    if (process.platform !== "linux") {
+        throw new Error(`the ecosystem runs on Linux alone, not ${process.platform}`);
     }
+    return "linux";
 }
 
 /// Every job of a round, project by project.
@@ -302,7 +288,7 @@ export function listJobs(): Job[] {
             build.platforms.map((platform) => ({
                 name: `${name}/${build.name}`,
                 platform,
-                packages: platform === "linux" ? build.packages.join(" ") : "",
+                packages: build.packages.join(" "),
                 artifact: `${name}-${build.name}-${platform}`,
             })),
         ),

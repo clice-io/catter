@@ -67,6 +67,8 @@ export interface JobResult {
     backends: BackendResult[];
     /// Known differences of the job no backend showed: fixed, or hidden.
     unseen: { issue?: string; why: string; check: string; kind: string; detail: string }[];
+    /// Why the job stopped before it checked anything.
+    error?: string;
 }
 
 /// The places a step's words and the build's environment name.
@@ -359,7 +361,7 @@ export async function runJob(job: string, options: JobOptions): Promise<JobResul
             ...options,
             out: path.join(options.out),
         });
-        const where = { build: build.name, backend, platform };
+        const where = { build: build.name, backend };
         for (const difference of ran.differences) {
             const known = project.known.find((each) => isKnown(each, difference, where));
             if (known !== undefined) {
@@ -377,7 +379,6 @@ export async function runJob(job: string, options: JobOptions): Promise<JobResul
             (known) =>
                 !seen.has(known) &&
                 (known.build === undefined || known.build === build.name) &&
-                (known.platform === undefined || known.platform === platform) &&
                 (known.backend === undefined || backends.includes(known.backend)),
         )
         .map((known) => ({

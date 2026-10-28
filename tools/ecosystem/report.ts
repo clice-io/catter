@@ -4,14 +4,18 @@
 /// showed.
 
 import type { BackendResult, Found, JobResult } from "./job.ts";
+import type { Job } from "./project.ts";
 
-/// A job is red when a backend could not be checked or found a difference
-/// no known one explains.
+/// A job is red when it stopped, a backend could not be checked or found a
+/// difference no known one explains.
 export function isRed(result: JobResult): boolean {
-    return result.backends.some(
-        (backend) =>
-            backend.setup !== undefined ||
-            backend.differences.some((each) => each.known === undefined),
+    return (
+        result.error !== undefined ||
+        result.backends.some(
+            (backend) =>
+                backend.setup !== undefined ||
+                backend.differences.some((each) => each.known === undefined),
+        )
     );
 }
 
@@ -63,6 +67,9 @@ function capped(lines: readonly string[], limit = 100): string[] {
 
 export function jobReport(result: JobResult): string {
     const out = [`## ${isRed(result) ? "🔴" : "🟢"} ${result.job} (${result.platform})`, ""];
+    if (result.error !== undefined) {
+        out.push(`**The job stopped:** ${result.error}`, "");
+    }
     for (const backend of result.backends) {
         out.push(`### ${backend.backend}, recorded by ${backend.recorder}`, "");
         if (backend.setup !== undefined) {
@@ -106,15 +113,20 @@ export function jobReport(result: JobResult): string {
     return out.join("\n");
 }
 
-/// The round's summary: a line per job, then every red job's new
-/// differences.
-export function roundReport(results: readonly JobResult[]): string {
+/// The round's summary: a line per job of the round, one with no results
+/// red, then every red job's new differences.
+export function roundReport(results: readonly JobResult[], jobs: readonly Job[]): string {
     const out = [
         "# Ecosystem round",
         "",
         "| job | platform | backends | new | known |",
         "| --- | --- | --- | --- | --- |",
     ];
+    for (const job of jobs) {
+        if (!results.some((result) => result.job === job.name)) {
+            out.push(`| 🔴 ${job.name} | ${job.platform} | | no results | |`);
+        }
+    }
     for (const result of results) {
         const fresh = result.backends.reduce(
             (sum, b) =>
@@ -128,9 +140,12 @@ export function roundReport(results: readonly JobResult[]): string {
             (sum, b) => sum + b.differences.filter((d) => d.known !== undefined).length,
             0,
         );
-        const setup = result.backends
-            .filter((b) => b.setup !== undefined)
-            .map((b) => `${b.backend} not checked`);
+        const setup = [
+            ...(result.error === undefined ? [] : ["stopped"]),
+            ...result.backends
+                .filter((b) => b.setup !== undefined)
+                .map((b) => `${b.backend} not checked`),
+        ];
         out.push(
             `| ${isRed(result) ? "🔴" : "🟢"} ${result.job} | ${result.platform} | ${result.backends.map((b) => b.backend).join(", ")} | ${[fresh, ...setup].join(", ")} | ${known} |`,
         );
@@ -138,6 +153,9 @@ export function roundReport(results: readonly JobResult[]): string {
     out.push("");
     for (const result of results.filter(isRed)) {
         out.push(`## ${result.job} (${result.platform})`, "");
+        if (result.error !== undefined) {
+            out.push(`The job stopped: ${result.error}`, "");
+        }
         for (const backend of result.backends) {
             if (backend.setup !== undefined) {
                 out.push(`- ${backend.backend}: not checked: ${backend.setup}`);
