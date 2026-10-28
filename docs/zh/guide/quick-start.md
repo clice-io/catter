@@ -19,7 +19,7 @@ Catter 通过 GitHub Releases 分发预编译包。前往 [GitHub Releases](http
 | Windows | x64   | `catter-<version>.x86_64-w64-mingw32.zip`          |
 | Windows | arm64 | `catter-<version>.aarch64-w64-mingw32.zip`         |
 
-次版本号为偶数的版本（`v0.2.0`）是稳定版，目前还没有。Nightly 是次版本号为奇数的预发布版本，版本号取自打 tag 时的 UTC 小时（`v0.1.2026102902` 即 2026-10-29 02:00 UTC）：`main` 每天只要有通过全部测试的新构建，就会发布一个 nightly，并且只保留最新的 25 个、不超过 30 天的 nightly。
+次版本号为偶数的版本（`v0.2.0`）是稳定版，目前还没有。Nightly 是次版本号为奇数的预发布版本，版本号取自打 tag 时的 UTC 小时（`v0.1.2026102902` 即 2026-10-29 02:00 UTC）：`main` 每天只要有通过全部测试的新构建，就会发布一个 nightly，超过 30 天或排在最新 25 个之后的 nightly 会被删除，但最新的一个始终保留。
 
 ::: info
 Catter 目前仍在积极开发中，请使用最新的 nightly。如果您的平台没有预编译包，可以参阅[从源码构建](../dev/build)自行编译。

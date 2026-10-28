@@ -19,7 +19,7 @@ Prebuilt packages are currently available for:
 | Windows  | x64          | `catter-<version>.x86_64-w64-mingw32.zip`          |
 | Windows  | arm64        | `catter-<version>.aarch64-w64-mingw32.zip`         |
 
-Releases on an even minor version (`v0.2.0`) are stable, and there is none yet. Nightlies are pre-releases on an odd minor, versioned after the UTC hour they were tagged (`v0.1.2026102902` is 2026-10-29 02:00 UTC): one is published each day `main` gained builds that passed every test, and only the newest 25, none older than 30 days, are kept.
+Releases on an even minor version (`v0.2.0`) are stable, and there is none yet. Nightlies are pre-releases on an odd minor, versioned after the UTC hour they were tagged (`v0.1.2026102902` is 2026-10-29 02:00 UTC): one is published each day `main` gained builds that passed every test, and nightlies older than 30 days or beyond the newest 25 are deleted, but for the newest one.
 
 ::: info
 Catter is under active development; use the newest nightly. If there is no prebuilt package for your platform, see [Building from Source](../dev/build).

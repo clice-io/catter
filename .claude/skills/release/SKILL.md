@@ -43,22 +43,26 @@ nightly version, creates a draft pre-release with notes (the commit, the
 changes since the previous tag, the download table), calls `publish.yml` to
 attach the packages, and publishes the draft once every package is there.
 Every run prunes odd-minor pre-releases older than 30 days or beyond the
-newest 25, release and tag; stable releases are never pruned.
+newest 25, release and tag, but for the newest, whatever its age; stable
+releases are never pruned.
 
 A failed nightly means no nightly that day. A failed promote leaves the
 draft and its tag: `gh run rerun <id> --failed` finishes and publishes it.
 Otherwise fix main and dispatch it again, `gh workflow run nightly.yml`
 (a dispatch skips only a nightly of the same hour) — with the maintainer's
-approval like any release trigger.
+approval like any release trigger. When main has built nothing for 30 days
+(docs-only commits), every package has expired and each run fails to pick:
+`gh workflow run main.yml` builds main's tip, and the next run promotes it.
 
 ## Stable release (manual, even minor)
 
 Every step that tags or publishes needs the maintainer's explicit approval first.
 
 1. Pick a nightly that is judged good and tag its commit:
-   `git tag v0.2.0 <commit> && git push origin v0.2.0`. Its packages must
-   still live (30 days): for an older commit, `gh workflow run main.yml` on
-   it first. When catter's ecosystem round exists — real projects over each
+   `git tag v0.2.0 <commit> && git push origin v0.2.0`. Its packages live
+   as long as its `main` run's artifacts, 30 days; an older commit has none
+   and cannot be built for `main` again: tag a newer nightly. When catter's
+   ecosystem round exists — real projects over each
    nightly, which `nightly.yml` starts once it has tagged one, as clice's
    does — the nightly a stable tags is one whose round shows no new failure.
 2. The tag push runs the `release` job of `main.yml`, which calls
@@ -73,8 +77,8 @@ Every step that tags or publishes needs the maintainer's explicit approval first
    page, after editing the notes (the nightly's download table is a good
    template). Nothing publishes a stable release automatically.
 
-A promote that failed (the run was still red, the artifacts expired) is
-redone without a new tag: fix or rerun the commit's `main` run, then
+A promote that failed because the commit's `main` run was red (a flaky
+job) is redone without a new tag: `gh run rerun <run-id> --failed`, then
 `gh workflow run publish.yml -f release_tag=<tag>` — with the maintainer's
 approval like any release trigger.
 
