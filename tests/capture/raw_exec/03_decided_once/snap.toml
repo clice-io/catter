@@ -14,9 +14,9 @@ started with ["two"]
 '''
 exit = 0
 
-[linux."$ catter tree -w 1000 -- /lib64/ld-linux-x86-64.so.2 ${ENV}/bin/node child.mjs three"]
+[linux."$ catter tree -w 1000 -- ./ld.so ${ENV}/bin/node child.mjs three"]
 stdout = '''
 started with ["three"]
-/lib64/ld-linux-x86-64.so.2 ${ENV}/bin/node child.mjs three
+./ld.so ${ENV}/bin/node child.mjs three
 '''
 exit = 0

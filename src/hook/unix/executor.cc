@@ -314,14 +314,17 @@ std::vector<char*> proxy_argv(std::string& proxy,
 
 #ifdef CATTER_LINUX
 /// The program this process runs: the file its exec named, but for a script
-/// or a format binfmt_misc runs, whose interpreter runs.
+/// or a format binfmt_misc runs, whose interpreter runs, and for a name of
+/// this process's own (`/proc/self/exe`, `/dev/fd/3` of fexecve), which names
+/// catter-proxy once it runs here.
 std::string running_program() {
-    const auto* named = reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
+    const std::string_view named = reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
     struct stat file{};
     struct stat image{};
-    if(::stat(named, &file) == 0 && ::stat("/proc/self/exe", &image) == 0 &&
+    if(!named.starts_with("/proc/") && !named.starts_with("/dev/fd/") &&
+       ::stat(named.data(), &file) == 0 && ::stat("/proc/self/exe", &image) == 0 &&
        file.st_dev == image.st_dev && file.st_ino == image.st_ino) {
-        return named;
+        return std::string(named);
     }
     std::string path;
     if(auto error = kota::sys::executable_path(path)) {

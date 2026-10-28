@@ -11,8 +11,19 @@ test(
     "linux",
     { except: { darwin: "Linux's dynamic loader", win32: "the POSIX programs" } },
     async (t) => {
+        // The loader of the machine's architecture, by one name on every one.
+        await t.setup(["ln", "-s", loader, "ld.so"]);
         await t.cli("tree -w 1000 -- ./script.sh one");
         await t.cli("tree -w 1000 -- ./plain two");
-        await t.cli(["tree", "-w", "1000", "--", loader, process.execPath, "child.mjs", "three"]);
+        await t.cli([
+            "tree",
+            "-w",
+            "1000",
+            "--",
+            "./ld.so",
+            process.execPath,
+            "child.mjs",
+            "three",
+        ]);
     },
 );

@@ -13,3 +13,12 @@ started with []
 └── ${ENV}/bin/node child.mjs
 '''
 exit = 0
+
+[linux."$ catter tree -w 1000 -- ./launch self ${ENV}/bin/node child.mjs"]
+stdout = '''
+started with []
+./launch self ${ENV}/bin/node child.mjs
+└── ./launch exec ${ENV}/bin/node child.mjs
+    └── ${ENV}/bin/node child.mjs
+'''
+exit = 0
