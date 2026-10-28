@@ -9,7 +9,6 @@ module catter;
 import catter.command;
 import :feature.descendants;
 import :feature.flat_tree;
-import :feature.path;
 import :feature.targets;
 import :session.handler;
 
@@ -31,10 +30,11 @@ void add(std::vector<Edge>& edges,
     if(output == "-") {
         return;
     }
-    Edge edge{.output = absolute_path(cwd, output)};
+    Edge edge;
+    kota::fs::path::resolve(edge.output, output, cwd);
     for(std::string_view input: inputs) {
         if(input != "-") {
-            edge.inputs.push_back(absolute_path(cwd, input));
+            kota::fs::path::resolve(edge.inputs.emplace_back(), input, cwd);
         }
     }
     edges.push_back(std::move(edge));

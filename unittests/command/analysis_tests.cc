@@ -34,13 +34,6 @@ struct Case {
     std::optional<Target> target;
 };
 
-std::string join(std::string_view directory, std::string_view name) {
-    std::string path(directory);
-    kota::fs::path::push(path, name);
-    kota::fs::path::normalize(path);
-    return path;
-}
-
 std::vector<std::string> paths(const auto& files) {
     return files | std::views::transform([](const auto& file) { return file.path; }) |
            std::ranges::to<std::vector>();
@@ -376,7 +369,7 @@ const Case cases[] = {
      .phase = Phase::Compile,
      .artifact = Artifact::Object,
      .reads = {"src/noext"},
-     .writes = {join("build", "noext.obj")},
+     .writes = {"build/noext.obj"},
      },
     {
      .label = "clang-cl explicit linux target object output",
@@ -422,7 +415,7 @@ const Case cases[] = {
      .phase = Phase::Compile,
      .artifact = Artifact::Object,
      .reads = {"src/main.cpp"},
-     .writes = {"main.obj", join("asm", "main.asm")},
+     .writes = {"main.obj", "asm/main.asm"},
      },
     {
      .label = "clang-cl assembly listing single file output",
@@ -454,7 +447,7 @@ const Case cases[] = {
      .phase = Phase::Link,
      .artifact = Artifact::SharedLibrary,
      .reads = {"src/plugin.cpp"},
-     .writes = {join("bin", "plugin.dll")},
+     .writes = {"bin/plugin.dll"},
      },
     {
      .label = "msvc cl-style shared link via linker remainder",
@@ -470,7 +463,7 @@ const Case cases[] = {
      .phase = Phase::Compile,
      .artifact = Artifact::Object,
      .reads = {"src/noext"},
-     .writes = {join("build", "noext.obj")},
+     .writes = {"build/noext.obj"},
      },
     {
      .label = "clang driver-mode cl shared output directory",
@@ -478,7 +471,7 @@ const Case cases[] = {
      .phase = Phase::Link,
      .artifact = Artifact::SharedLibrary,
      .reads = {"src/plugin.cpp"},
-     .writes = {join("bin", "plugin.dll")},
+     .writes = {"bin/plugin.dll"},
      },
     {
      .label = "clang driver-mode cl assembly listing keeps shared link mode",

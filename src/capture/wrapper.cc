@@ -106,7 +106,7 @@ public:
             return found->second;
         }
         std::optional<std::string> shims;
-        if(auto entries = kota::fs::read_dir(directory)) {
+        if(auto entries = kota::fs::Directory::open(directory)) {
             for(const auto& entry: *entries) {
                 if(!entry) {
                     break;
@@ -205,7 +205,7 @@ private:
             return found->second;
         }
         std::string mirror = standing_for(directory);
-        if(auto entries = kota::fs::read_dir(directory)) {
+        if(auto entries = kota::fs::Directory::open(directory)) {
             for(const auto& entry: *entries) {
                 if(!entry) {
                     break;

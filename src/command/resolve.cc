@@ -207,13 +207,6 @@ bool is_directory_like(std::string_view path) {
     return path.ends_with('/') || path.ends_with('\\');
 }
 
-std::string join(std::string_view directory, std::string_view name) {
-    std::string path(directory);
-    kota::fs::path::push(path, name);
-    kota::fs::path::normalize(path);
-    return path;
-}
-
 /// What a positional argument names: a file read in a role, a source in its language.
 struct Input {
     InputRole role;
@@ -398,7 +391,10 @@ struct Builder {
                     WriteOrigin origin) {
         for(auto read: from) {
             auto file = std::format("{}{}", kota::fs::path::stem(reads[read].path), suffix);
-            write(directory.has_value() ? join(*directory, file) : std::move(file), {read}, origin);
+            if(directory.has_value()) {
+                kota::fs::path::resolve(file, file, *directory);
+            }
+            write(std::move(file), {read}, origin);
         }
     }
 
@@ -413,9 +409,9 @@ struct Builder {
         if(is_directory_like(output.path) && !naming.empty()) {
             if(auto extension = extension_of(parsed.artifact, convention)) {
                 for(auto read: naming) {
-                    paths.push_back(join(
-                        output.path,
-                        std::format("{}{}", kota::fs::path::stem(reads[read].path), *extension)));
+                    auto& path = paths.emplace_back(
+                        std::format("{}{}", kota::fs::path::stem(reads[read].path), *extension));
+                    kota::fs::path::resolve(path, path, output.path);
                 }
             } else {
                 diagnose(

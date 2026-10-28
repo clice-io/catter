@@ -7,7 +7,6 @@ import std.compat;
 #include "libc.macros.h"
 
 #include <spdlog/spdlog.h>
-#include <cpptrace/exceptions.hpp>
 #include <kota/async/async.h>
 #include <kota/async/io/loop.h>
 #include <kota/async/runtime/task.h>
@@ -23,6 +22,7 @@ import std.compat;
 #include <kota/fs/path.h>
 #include <kota/fs/resolve.h>
 #include <kota/fs/status.h>
+#include <kota/fs/temp.h>
 #include <kota/ipc/codec.h>
 #include <kota/ipc/codec/bincode.h>
 #include <kota/ipc/codec/json.h>
@@ -43,3 +43,4 @@ import std.compat;
 #include <kota/sys/windows.h>
 #include <kota/zest/macro.h>
 #include <kota/zest/zest.h>
+#include <cpptrace/exceptions.hpp>

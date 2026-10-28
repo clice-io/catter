@@ -9,7 +9,6 @@
 #include <spawn.h>
 #include <kota/zest/zest.h>
 #include <kota/fs/path.h>
-#include <kota/fs/resolve.h>
 
 #include "hook/unix/executor.h"
 #include "support/hook.h"
@@ -36,7 +35,7 @@ struct CapturedCall {
     }
 };
 
-catter::TempFileManager manager("./tmp-executor");
+catter::TempFileManager manager("catter-executor-");
 CapturedCall exec_call;
 CapturedCall spawn_call;
 
@@ -143,9 +142,7 @@ int fake_posix_spawn(pid_t*,
 /// A script `name` in the manager's directory, by its absolute path.
 std::string create_executable(std::string_view name, std::string_view content = "#!/bin/sh\n") {
     ZEXPECT(!manager.create(name, content));
-    std::string path;
-    ZEXPECT(!kota::fs::absolute(path, manager.path(name)));
-    return path;
+    return manager.path(name);
 }
 
 void expect_proxy_command(const CapturedCall& call,
@@ -159,8 +156,6 @@ void expect_proxy_command(const CapturedCall& call,
 }
 
 ZEST_SUITE(executor) {
-// Every worker process removes ./tmp-executor when it exits, so these must run alone.
-ZEST_SUITE_ATTRS(serial = true);
 
 ZEST_CASE(execve_starts_the_proxy_with_the_session_and_without_the_hook) {
     exec_call.reset(42);

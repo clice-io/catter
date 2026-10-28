@@ -7,18 +7,32 @@
 #include <kota/fs/file.h>
 #include <kota/fs/path.h>
 #include <kota/fs/status.h>
+#include <kota/fs/temp.h>
+#include <kota/sys/dirs.h>
 
 namespace catter {
 
-/// A directory of files a test writes, removed with them when this goes.
+/// A directory of files a test writes, made in the system's temporary directory, named `prefix`
+/// and random characters, and removed with them when this goes.
 struct TempFileManager {
-    std::string root;
+    kota::fs::TempDirectory root;
 
-    explicit TempFileManager(std::string path) : root(std::move(path)) {}
+    explicit TempFileManager(std::string_view prefix) :
+        root([&] {
+            std::string temp;
+            if(auto error = kota::sys::temp_dir(temp)) {
+                throw std::system_error(error, "the temporary directory");
+            }
+            auto created = kota::fs::TempDirectory::create(temp, prefix);
+            if(!created) {
+                throw std::system_error(created.error(), "a directory in " + temp);
+            }
+            return std::move(*created);
+        }()) {}
 
     /// The path of `file` under the root.
     std::string path(std::string_view file) const {
-        auto path = root;
+        std::string path(root.path());
         kota::fs::path::push(path, file);
         return path;
     }
@@ -35,13 +49,6 @@ struct TempFileManager {
         }
         return kota::fs::set_permissions(full_path, 0755);
     }
-
-    ~TempFileManager() {
-        kota::fs::remove_all(root);
-    }
-
-    TempFileManager(const TempFileManager&) = delete;
-    TempFileManager& operator= (const TempFileManager&) = delete;
 };
 
 }  // namespace catter

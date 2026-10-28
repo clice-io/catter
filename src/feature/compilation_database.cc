@@ -7,7 +7,6 @@ module catter;
 import catter.command;
 import :feature.compilation_database;
 import :feature.json;
-import :feature.path;
 
 namespace catter::feature {
 
@@ -15,13 +14,14 @@ namespace {
 
 namespace dyn = kota::codec::dyn;
 
+/// `path` from `cwd`. An absolute path stays as it is spelled, `..` and all, which the system
+/// resolves through the symlinks before it.
 std::string resolve(std::string_view cwd, std::string_view path) {
     if(kota::fs::path::is_absolute(path)) {
         return std::string(path);
     }
-    std::string resolved(cwd);
-    kota::fs::path::push(resolved, path);
-    kota::fs::path::normalize(resolved);
+    std::string resolved;
+    kota::fs::path::resolve(resolved, path, cwd);
     return resolved;
 }
 
@@ -130,9 +130,11 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
         if(write.path == "-" || analysis.phase == Phase::Preprocess) {
             continue;
         }
+        std::string output;
+        kota::fs::path::resolve(output, write.path, cwd);
         for(auto read: write.reads) {
             if(analysis.reads[read].role == InputRole::Source) {
-                add(analysis.reads[read], absolute_path(cwd, write.path));
+                add(analysis.reads[read], output);
                 written[read] = true;
             }
         }
@@ -173,7 +175,8 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     const auto directory = resolve(cwd, object.find("directory")->as_string());
     // A file of a database another tool wrote may be spelled with other separators on Windows.
     const auto key_of = [&](std::string_view path) {
-        auto absolute = absolute_path(directory, path);
+        std::string absolute;
+        kota::fs::path::resolve(absolute, path, directory);
         kota::fs::path::to_slash(absolute);
         return absolute;
     };
@@ -210,11 +213,12 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
     // The save renames a new file over the path it writes, which would replace a symlink: the
-    // database goes to the file the links lead to, which need not exist yet. Linux follows 40
-    // links at most.
-    std::string target;
-    for(int links = 0; links < 40 && !kota::fs::read_symlink(target, file); links += 1) {
-        file = absolute_path(kota::fs::path::parent(file), target);
+    // database goes to the file the links lead to, which need not exist yet.
+    if(auto error = kota::fs::follow_symlinks(file, file)) {
+        throw cpptrace::runtime_error(
+            std::format("Failed to follow the symlinks of the CDB path: {}: {}",
+                        path,
+                        error.message()));
     }
     if(auto status = kota::fs::status(file);
        status.has_value() && status->type != kota::fs::FileType::Regular) {

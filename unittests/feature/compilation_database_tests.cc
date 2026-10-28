@@ -17,11 +17,7 @@ ZEST_SUITE_ATTRS(serial = true);
 
 #ifndef CATTER_WINDOWS
 ZEST_CASE(unreadable_database_is_not_replaced) {
-    std::string temp_dir;
-    ZASSERT(!kota::sys::temp_dir(temp_dir));
-    std::string root;
-    ZASSERT(!kota::fs::create_temp_directory(root, temp_dir, "catter-ut-"));
-    TempFileManager temp(root);
+    TempFileManager temp("catter-ut-");
     ZASSERT(!temp.create("compile_commands.json",
                          R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])"));
     const auto file = temp.path("compile_commands.json");
@@ -29,7 +25,9 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
 
     bool thrown = false;
     try {
-        feature::CompilationDatabase database("compile_commands.json", temp.root, true);
+        feature::CompilationDatabase database("compile_commands.json",
+                                              std::string(temp.root.path()),
+                                              true);
     } catch(const std::exception&) {
         thrown = true;
     }
@@ -41,19 +39,17 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
 };
 
 ZEST_CASE(a_symlinked_database_stays_a_symlink) {
-    std::string temp_dir;
-    ZASSERT(!kota::sys::temp_dir(temp_dir));
-    std::string root;
-    ZASSERT(!kota::fs::create_temp_directory(root, temp_dir, "catter-ut-"));
-    TempFileManager temp(root);
+    TempFileManager temp("catter-ut-");
     ZASSERT(kota::fs::create_directory(temp.path("build")).has_value());
     // The file the link names does not exist yet, as in a clean checkout.
     ZASSERT(!kota::fs::create_symlink("build/compile_commands.json",
                                       temp.path("compile_commands.json")));
 
-    feature::CompilationDatabase database("compile_commands.json", temp.root, true);
+    feature::CompilationDatabase database("compile_commands.json",
+                                          std::string(temp.root.path()),
+                                          true);
     database.add(feature::JSON(kota::codec::dyn::Object{
-        {"directory", temp.root                    },
+        {"directory", temp.root.path()             },
         {"file",      "a.c"                        },
         {"arguments", kota::codec::dyn::Array{"cc"}},
     }));
@@ -64,6 +60,25 @@ ZEST_CASE(a_symlinked_database_stays_a_symlink) {
     auto target = kota::fs::status(temp.path("build/compile_commands.json"));
     ZASSERT(target.has_value());
     ZEXPECT(target->size > 0);
+};
+
+ZEST_CASE(a_loop_of_symlinks_is_no_database) {
+    TempFileManager temp("catter-ut-");
+    const auto link = temp.path("compile_commands.json");
+    ZASSERT(!kota::fs::create_symlink("compile_commands.json", link));
+
+    bool thrown = false;
+    try {
+        feature::CompilationDatabase database("compile_commands.json",
+                                              std::string(temp.root.path()),
+                                              false);
+    } catch(const std::exception&) {
+        thrown = true;
+    }
+    ZEXPECT(thrown);
+    auto status = kota::fs::symlink_status(link);
+    ZASSERT(status.has_value());
+    ZEXPECT(status->type == kota::fs::FileType::Symlink);
 };
 #endif
 
