@@ -1,0 +1,44 @@
+[posix."$ catter compile-commands -o compile_commands.json -- node build.mjs posix"]
+stdout = "CDB saved to ${WS}/compile_commands.json with 2 entries."
+exit = 0
+
+[posix."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.c",
+        directory = "${WS}/kept",
+        output = "${WS}/kept/main.o",
+        arguments = ["cc", "-Iinclude", "-c", "src/main.c", "-o", "main.o"],
+    },
+    {
+        file = "src/main.c",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["cc", "-Iinclude", "-c", "src/main.c", "-o", "main.o"],
+    },
+]
+
+[msvc."$ catter compile-commands -o compile_commands.json -- node build.mjs msvc"]
+stdout = '''
+main.c
+main.c
+CDB saved to ${WS}/compile_commands.json with 2 entries.
+'''
+stderr = "main.c"
+exit = 0
+
+[msvc."compile_commands.json"]
+entries = [
+    {
+        file = "src/main.c",
+        directory = "${WS}/kept",
+        output = "${WS}/kept/main.o",
+        arguments = ["cl", "/nologo", "/Iinclude", "/c", "src/main.c", "/Fomain.o"],
+    },
+    {
+        file = "src/main.c",
+        directory = "${WS}",
+        output = "${WS}/main.o",
+        arguments = ["cl", "/nologo", "/Iinclude", "/c", "src/main.c", "/Fomain.o"],
+    },
+]
