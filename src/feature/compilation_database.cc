@@ -14,6 +14,17 @@ namespace {
 
 namespace dyn = kota::codec::dyn;
 
+/// `path` from `cwd`. An absolute path stays as it is spelled, `..` and all, which the system
+/// resolves through the symlinks before it.
+std::string resolve(std::string_view cwd, std::string_view path) {
+    if(kota::fs::path::is_absolute(path)) {
+        return std::string(path);
+    }
+    std::string resolved;
+    kota::fs::path::resolve(resolved, path, cwd);
+    return resolved;
+}
+
 /// What makes `entry` no entry as the format has it, which has a non-empty `directory` and
 /// `file`, a `command` or `arguments`, and perhaps an `output`; none for an entry.
 std::optional<std::string> invalid(const JSON& entry) {
@@ -161,8 +172,7 @@ JSON entry_of(std::string_view cwd,
 
 void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     const auto& object = entry.as_object();
-    std::string directory;
-    kota::fs::path::resolve(directory, object.find("directory")->as_string(), cwd);
+    const auto directory = resolve(cwd, object.find("directory")->as_string());
     // A file of a database another tool wrote may be spelled with other separators on Windows.
     const auto key_of = [&](std::string_view path) {
         std::string absolute;
@@ -201,8 +211,7 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
 }
 
 CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd, bool inherit) :
-    cwd(std::move(cwd)) {
-    kota::fs::path::resolve(file, path, this->cwd);
+    file(resolve(cwd, path)), cwd(std::move(cwd)) {
     // The save renames a new file over the path it writes, which would replace a symlink: the
     // database goes to the file the links lead to, which need not exist yet.
     if(auto error = kota::fs::follow_symlinks(file, file)) {
