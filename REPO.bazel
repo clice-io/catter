@@ -1,8 +1,10 @@
 # Directories with no packages of this repository: npm's and pixi's trees,
-# the build output and the local caches.
+# the build output, the local caches, and the ecosystem's projects, some of
+# them Bazel workspaces of their own.
 ignore_directories([
     "**/node_modules",
     ".cache",
     ".pixi",
     "build",
+    "ecosystem",
 ])

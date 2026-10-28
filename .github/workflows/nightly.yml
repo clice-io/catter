@@ -3,7 +3,8 @@ name: nightly
 # Nightly pre-release channel (odd-minor versions): if main gained tested
 # builds since the last nightly, tag the newest packaged commit as
 # vX.<odd>.YYYYMMDDHH on the odd minor above the newest release, promote its
-# CI packages, and publish it as a GitHub pre-release.
+# CI packages, publish it as a GitHub pre-release, and start the ecosystem
+# round over it (ecosystem.yml).
 # Old nightlies are pruned after 30 days or beyond the newest 25; stable
 # (even-minor) releases are never touched.
 # A dry run picks the commit, versions it, writes the notes and downloads and
@@ -260,6 +261,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  # The ecosystem round over the published nightly (ecosystem.yml): a stable
+  # release tags a nightly whose round shows no new difference. Dispatched,
+  # not called, so the round keeps a run history of its own, and the
+  # differences it finds leave the nightly green.
+  ecosystem:
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the round
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: gh workflow run ecosystem.yml --repo "$GITHUB_REPOSITORY" --ref main -f catter="$TAG"
 
   # Nightlies expire after 30 days, and only the newest 25 are kept; the
   # newest stays whatever its age: while main gains no commit, the scheduled
