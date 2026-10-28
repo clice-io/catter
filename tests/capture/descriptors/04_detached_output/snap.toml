@@ -10,6 +10,6 @@ stdout = '''
 the daemon said: running
 the daemon stopped: 0
 node build.mjs
-└── node daemon.mjs
+└── python daemon.py
 '''
 exit = 0
