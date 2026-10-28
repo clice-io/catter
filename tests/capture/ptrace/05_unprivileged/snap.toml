@@ -1,8 +1,4 @@
-[hook."$ catter tree -w 1000 -- sudo -n true"]
-stdout = "sudo -n true"
-exit = 0
-
-[ptrace."$ catter tree --capture ptrace -w 1000 -- sudo -n true"]
+[test."$ catter tree --capture ptrace -w 1000 -- sudo -n true"]
 stdout = '''
 Warning: `/usr/bin/sudo` runs without the privileges its file grants it (set-user-ID, set-group-ID or capabilities), as every program catter traces does: capture a build that needs them with --capture hook
 Build failed with exit code 1. Printing partial command tree.

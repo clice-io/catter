@@ -195,8 +195,8 @@ private:
 
     std::exception_ptr failure;
 
-    /// The build's process, once it runs.
-    int build = -1;
+    /// The build command's process, once it runs.
+    int build_pid = -1;
 
     std::optional<BuildProcesses> processes;
 
@@ -245,7 +245,7 @@ kota::task<> Capture::take(std::string_view line) {
     if(!processes.has_value()) {
         co_return;
     }
-    for(auto& report: eslogger::follow(*processes, std::move(event), self, build)) {
+    for(auto& report: eslogger::follow(*processes, std::move(event), self, build_pid)) {
         if(auto* started = std::get_if<BuildProcesses::Started>(&report)) {
             co_await session.decide(started->id, started->parent, std::move(started->command));
         } else {
@@ -313,7 +313,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
                                      .stand_in = true,
                                      .started =
                                          [&](int pid) {
-                                             build = pid;
+                                             build_pid = pid;
                                              processes.emplace([&] { return session.new_id(); });
                                          },
                                  });

@@ -2,7 +2,7 @@
 
 handler 是一个程序，catter 会把构建启动的命令告诉它。**做决定**的 handler 在每条命令运行前给出答复：原样运行、换成另一条命令运行、丢弃，或中止构建。不做决定的 handler **只观察**：它只接收通知，构建从不等它。
 
-在只观察构建的[捕获后端](../design/capture-backends.md) `eslogger` 下，每条命令都在 catter 得知它之前就已运行，catter 会在构建开始前拒绝做决定的 handler。会话开始时会告知这一点（`decisions`）：不做决定也能工作的 handler 在这时设置 `decides`。
+在只观察构建的[捕获后端](../design/capture-backends.md) `eslogger` 或 `ptrace` 下，每条命令都在 catter 得知它之前就已运行，catter 会在构建开始前拒绝做决定的 handler。会话开始时会告知这一点（`decisions`）：不做决定也能工作的 handler 在这时设置 `decides`。
 
 catter 通过一个简单的协议与 handler 通信（见 [Handler 协议](../design/handler-protocol.md)），所以 handler 可以用任何语言编写。Python 和 TypeScript 的 SDK 替你处理协议。
 

@@ -101,3 +101,10 @@ node build.mjs
 └── ./start posix_spawn ./lost-interpreter
 '''
 exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- ./no-format"]
+stdout = '''
+run by /bin/sh
+/bin/sh ${WS}/./no-format
+'''
+exit = 0

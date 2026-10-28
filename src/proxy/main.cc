@@ -460,7 +460,22 @@ int run(std::span<const std::string> argv) {
     char byte;
     while(::read(socket, &byte, 1) < 0 && errno == EINTR) {}
     ::fcntl(socket, F_SETFD, FD_CLOEXEC);
-    ::execve(argv[1], argv + 2, environ);
+    // A name resolve_program found nowhere on PATH is not one in this
+    // directory.
+    errno = ENOENT;
+    if(std::string_view(argv[1]).contains('/')) {
+        ::execve(argv[1], argv + 2, environ);
+    }
+    if(errno == ENOEXEC) {
+        // A file of no format the system knows runs by /bin/sh, as execvp runs
+        // it.
+        std::vector<char*> shell = {const_cast<char*>("/bin/sh"), argv[1]};
+        for(auto arg = argv + 3; *arg != nullptr; arg += 1) {
+            shell.push_back(*arg);
+        }
+        shell.push_back(nullptr);
+        ::execve(shell.front(), shell.data(), environ);
+    }
     const int error = errno;
     [[maybe_unused]] auto written = ::write(socket, &error, sizeof(error));
     // LeakSanitizer, which a Debug catter-proxy runs at its exit, fails under

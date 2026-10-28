@@ -98,26 +98,34 @@ struct Lineage {
     int parent = 0;
 };
 
-/// What /proc/<tid>/status tells of thread `tid`.
-Lineage lineage_of(int tid) {
+/// /proc/<tid>/status of thread `tid`, empty once it has gone.
+std::string status_of(int tid) {
     std::string status;
     [[maybe_unused]] auto error = kota::fs::read_file(status, std::format("/proc/{}/status", tid));
-    Lineage lineage{.process = tid};
+    return status;
+}
+
+/// The process ID `status`, a /proc/<tid>/status, gives as `name`: 0 for none.
+int id_in(std::string_view status, std::string_view name) {
     for(auto line: status | std::views::split('\n')) {
         std::string_view text(line);
-        auto value = [&] {
-            auto number = text.substr(text.find_first_not_of(" \t", text.find(':') + 1));
+        if(text.starts_with(name) && text.substr(name.size()).starts_with(':')) {
+            auto number = text.substr(text.find_first_not_of(" \t", name.size() + 1));
             int id = 0;
             std::from_chars(number.data(), number.data() + number.size(), id);
             return id;
-        };
-        if(text.starts_with("Tgid:")) {
-            lineage.process = value();
-        } else if(text.starts_with("PPid:")) {
-            lineage.parent = value();
         }
     }
-    return lineage;
+    return 0;
+}
+
+/// What /proc/<tid>/status tells of thread `tid`.
+Lineage lineage_of(int tid) {
+    const auto status = status_of(tid);
+    if(status.empty()) {
+        return {.process = tid};
+    }
+    return {.process = id_in(status, "Tgid"), .parent = id_in(status, "PPid")};
 }
 
 /// Where the strings of the environment of process `pid` end, as field 51 of
@@ -171,18 +179,24 @@ bool is_stop_signal(int signal) {
     return signal == SIGSTOP || signal == SIGTSTP || signal == SIGTTIN || signal == SIGTTOU;
 }
 
-/// Why ptrace refused catter the build command's process, as `error` says.
-std::string denied(int error) {
+/// Why ptrace refused catter process `pid`, the build command's, as `error`
+/// says.
+std::string denied(int pid, int error) {
     std::string scope;
     [[maybe_unused]] auto unread = kota::fs::read_file(scope, "/proc/sys/kernel/yama/ptrace_scope");
-    const char level = scope.empty() ? '0' : scope.front();
-    const auto why =
-        level >= '2'
-            ? std::format(
-                  "kernel.yama.ptrace_scope is {}, which keeps processes but an administrator's from tracing even their own children",
-                  level)
-            : std::string(
-                  "the system denies ptrace, as a container's seccomp profile or a security module may");
+    std::string why;
+    if(const int tracer = id_in(status_of(pid), "TracerPid"); tracer != 0) {
+        why = std::format(
+            "process {} traces catter's children already, as strace -f or a debugger does, and a process has one tracer",
+            tracer);
+    } else if(scope.starts_with('2')) {
+        why =
+            "kernel.yama.ptrace_scope is 2, which lets only a process with CAP_SYS_PTRACE trace another";
+    } else if(scope.starts_with('3')) {
+        why = "kernel.yama.ptrace_scope is 3, which lets no process trace another";
+    } else {
+        why = "the system denies ptrace, as a container's seccomp profile or a security module may";
+    }
     return std::format(
         "catter cannot trace the build with ptrace ({}): {}. Capture it with --capture hook instead",
         std::error_code(error, std::generic_category()).message(),
@@ -235,10 +249,6 @@ private:
     /// the process each is of, which have not stopped for the first time yet.
     std::unordered_map<int, int> announced;
 
-    /// The new processes stopped before the event of the process that forked
-    /// them, which they wait for, each with its parent then.
-    std::unordered_map<int, int> held;
-
     /// Whether catter runs as root, as whom a program runs with the privileges
     /// of its file.
     const bool root = ::geteuid() == 0;
@@ -246,7 +256,7 @@ private:
 
 void Tracer::run() {
     if(::ptrace(PTRACE_SEIZE, build, nullptr, reinterpret_cast<void*>(OPTIONS)) != 0) {
-        post(Done{.error = denied(errno)});
+        post(Done{.error = denied(build, errno)});
         return;
     }
     tracees.emplace(build, build);
@@ -323,32 +333,24 @@ void Tracer::stopped(int tid, int status, std::chrono::microseconds time) {
 }
 
 void Tracer::created(int tid, int child, int process) {
-    if(process != child) {
-        announced.emplace(child, process);
-        return;
+    if(process == child) {
+        post(Forked{.parent = tracees.at(tid), .child = child});
     }
-    post(Forked{.parent = tracees.at(tid), .child = child});
-    if(held.erase(child) != 0) {
-        tracees.emplace(child, child);
-        resume(child);
-    } else {
-        announced.emplace(child, child);
-    }
+    announced.emplace(child, process);
 }
 
 void Tracer::arrived(int tid) {
+    // The thread that started it waits, at the event that tells of it, until
+    // it is resumed: its process has run no other program meanwhile.
     const auto lineage = lineage_of(tid);
-    if(lineage.process != tid) {
-        tracees.emplace(tid, lineage.process);
-        return resume(tid);
+    if(lineage.process == tid) {
+        post(Forked{.parent = lineage.parent, .child = tid});
     }
-    held.emplace(tid, lineage.parent);
+    tracees.emplace(tid, lineage.process);
+    resume(tid);
 }
 
 void Tracer::exited(int tid, int status, std::chrono::microseconds time) {
-    if(held.erase(tid) != 0) {
-        return;
-    }
     auto& threads = tracees.contains(tid) ? tracees : announced;
     auto found = threads.find(tid);
     if(found == threads.end()) {
@@ -356,22 +358,9 @@ void Tracer::exited(int tid, int status, std::chrono::microseconds time) {
     }
     const int process = found->second;
     threads.erase(found);
-    if(process != tid) {
-        return;
+    if(process == tid) {
+        post(Exited{.pid = tid, .status = exit_status_of(status), .time = time});
     }
-    // A process forks no more once it has exited: those it forked that wait
-    // for its event go on as its children.
-    for(auto child = held.begin(); child != held.end();) {
-        if(child->second != tid) {
-            ++child;
-            continue;
-        }
-        post(Forked{.parent = tid, .child = child->first});
-        tracees.emplace(child->first, child->first);
-        resume(child->first);
-        child = held.erase(child);
-    }
-    post(Exited{.pid = tid, .status = exit_status_of(status), .time = time});
 }
 
 Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
@@ -481,13 +470,17 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     }
     const int pid = child->pid();
     processes.start(pid);
-    StandIn stand_in(pid);
+    std::optional<StandIn> stand_in(std::in_place, pid);
     const auto line = std::ranges::to<std::string>(build.command | std::views::join_with(' '));
     LOG_INFO("Starting the build command `{}` in {}, traced", line, build.cwd);
 
     auto relay = kota::event_loop::current().create_relay();
     Tracer tracer(pid, sockets[0], [&](Event event) {
-        relay.send([this, event = std::move(event)] mutable {
+        relay.send([&, event = std::move(event)] mutable {
+            // Once reaped, its pid may be another process's.
+            if(auto* exited = std::get_if<Exited>(&event); exited && exited->pid == pid) {
+                stand_in.reset();
+            }
             events.push_back(std::move(event));
             told.set();
         });
@@ -519,7 +512,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
         co_await session.uncaptured(
             session.new_id(),
             std::nullopt,
-            std::format("Run `{}` failed:\nProcess `{}` spawn failed, because `{}`",
+            std::format("Run `{}` failed:\n`{}` did not start: {}",
                         line,
                         build.command.front(),
                         std::error_code(failure, std::generic_category()).message()));

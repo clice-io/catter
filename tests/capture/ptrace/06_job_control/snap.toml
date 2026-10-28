@@ -1,0 +1,18 @@
+[test."$ ./stop"]
+stdout = '''
+stopped: yes
+ran while stopped: no
+ran once continued: yes
+exit 0
+'''
+exit = 0
+
+[test."$ catter tree --capture ptrace -w 1000 -- ./stop"]
+stdout = '''
+stopped: yes
+ran while stopped: no
+ran once continued: yes
+exit 0
+./stop
+'''
+exit = 0
