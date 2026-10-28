@@ -1,13 +1,13 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "status null, signal SIGABRT"
 exit = 0
 
-[test."$ node build.mjs".win32]
+[hook."$ node build.mjs".win32]
 differs = "Windows has no signals: an aborted program exits with a code"
 stdout = "status 134, signal null"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 status null, signal SIGABRT
 node build.mjs
@@ -15,10 +15,18 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs".win32]
+[hook."$ catter tree -w 1000 -- node build.mjs".win32]
 differs = "Windows has no signals: an aborted program exits with a code"
 stdout = '''
 status 134, signal null
+node build.mjs
+└── node -e process.abort()
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
+stdout = '''
+status null, signal SIGABRT
 node build.mjs
 └── node -e process.abort()
 '''

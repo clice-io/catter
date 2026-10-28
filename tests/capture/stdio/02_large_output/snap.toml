@@ -1,11 +1,20 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = '''
 stdout: 4194304 bytes, all o: true
 stderr: 4194304 bytes, all e: true
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+stdout: 4194304 bytes, all o: true
+stderr: 4194304 bytes, all e: true
+node build.mjs
+└── node child.mjs
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 stdout: 4194304 bytes, all o: true
 stderr: 4194304 bytes, all e: true

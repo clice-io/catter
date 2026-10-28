@@ -11,6 +11,7 @@ module;
 module catter;
 
 import :capture.eslogger;
+import :capture.processes;
 
 using namespace catter;
 
@@ -96,11 +97,11 @@ bool refused(std::string_view text) {
 /// What the lines tell of the build process `build` that process 100 starts.
 std::vector<std::string> reports(int build, std::initializer_list<std::string> lines) {
     data::ipcid_t last_id = 0;
-    eslogger::BuildProcesses processes(100, build, [&] { return last_id += 1; });
+    BuildProcesses processes([&] { return last_id += 1; });
     std::vector<std::string> told;
     for(const auto& each: lines) {
-        for(auto& report: processes.add(eslogger::parse(each))) {
-            if(auto* started = std::get_if<eslogger::Started>(&report)) {
+        for(auto& report: eslogger::follow(processes, eslogger::parse(each), 100, build)) {
+            if(auto* started = std::get_if<BuildProcesses::Started>(&report)) {
                 told.push_back(std::format(
                     "{} < {}: {} {} in {}",
                     started->id,
@@ -109,7 +110,7 @@ std::vector<std::string> reports(int build, std::initializer_list<std::string> l
                     started->command.args,
                     started->command.cwd));
             } else {
-                const auto& ended = std::get<eslogger::Ended>(report);
+                const auto& ended = std::get<BuildProcesses::Ended>(report);
                 told.push_back(std::format("{} ended {} after {} lines",
                                            ended.id,
                                            ended.result.code,

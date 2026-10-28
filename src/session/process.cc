@@ -10,6 +10,7 @@ module;
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -28,21 +29,6 @@ namespace {
 BOOL WINAPI outlive_interrupt(DWORD event) {
     return event == CTRL_C_EVENT || event == CTRL_BREAK_EVENT;
 }
-
-/// While it lives, this process waits out an interrupt for the program it
-/// stands in for.
-struct StandIn {
-    explicit StandIn([[maybe_unused]] int pid) {
-        SetConsoleCtrlHandler(outlive_interrupt, TRUE);
-    }
-
-    StandIn(const StandIn&) = delete;
-    StandIn& operator= (const StandIn&) = delete;
-
-    ~StandIn() {
-        SetConsoleCtrlHandler(outlive_interrupt, FALSE);
-    }
-};
 
 #else
 
@@ -65,40 +51,6 @@ void pass_on(int signum, siginfo_t* info, void*) {
     }
 }
 
-/// While it lives, the signals that ask this process to stop go on to the
-/// program it stands in for, whose exit it waits for.
-class StandIn {
-public:
-    explicit StandIn(int pid) {
-        stood_in = pid;
-        for(std::size_t i = 0; i < SIGNALS.size(); i += 1) {
-            ::sigaction(SIGNALS[i], nullptr, &previous[i]);
-            // One the build ignores stays ignored.
-            if(previous[i].sa_handler == SIG_IGN) {
-                continue;
-            }
-            struct sigaction action{};
-            action.sa_sigaction = pass_on;
-            action.sa_flags = SA_SIGINFO | SA_RESTART;
-            ::sigaction(SIGNALS[i], &action, nullptr);
-        }
-    }
-
-    StandIn(const StandIn&) = delete;
-    StandIn& operator= (const StandIn&) = delete;
-
-    ~StandIn() {
-        for(std::size_t i = 0; i < SIGNALS.size(); i += 1) {
-            ::sigaction(SIGNALS[i], &previous[i], nullptr);
-        }
-    }
-
-private:
-    constexpr static std::array SIGNALS = {SIGHUP, SIGINT, SIGTERM};
-
-    std::array<struct sigaction, SIGNALS.size()> previous{};
-};
-
 /// The standard streams this process was started without, which it holds open
 /// on the null device: what it opens would take their numbers otherwise, and
 /// reach a program it starts as that stream.
@@ -113,6 +65,41 @@ std::int64_t code_of(const kota::process::exit_status& status) {
 }
 
 }  // namespace
+
+#ifdef CATTER_WINDOWS
+
+StandIn::StandIn([[maybe_unused]] int pid) {
+    SetConsoleCtrlHandler(outlive_interrupt, TRUE);
+}
+
+StandIn::~StandIn() {
+    SetConsoleCtrlHandler(outlive_interrupt, FALSE);
+}
+
+#else
+
+StandIn::StandIn(int pid) {
+    stood_in = pid;
+    for(std::size_t i = 0; i < SIGNALS.size(); i += 1) {
+        ::sigaction(SIGNALS[i], nullptr, &previous[i]);
+        // One the build ignores stays ignored.
+        if(previous[i].sa_handler == SIG_IGN) {
+            continue;
+        }
+        struct sigaction action{};
+        action.sa_sigaction = pass_on;
+        action.sa_flags = SA_SIGINFO | SA_RESTART;
+        ::sigaction(SIGNALS[i], &action, nullptr);
+    }
+}
+
+StandIn::~StandIn() {
+    for(std::size_t i = 0; i < SIGNALS.size(); i += 1) {
+        ::sigaction(SIGNALS[i], &previous[i], nullptr);
+    }
+}
+
+#endif
 
 void hold_closed_streams() {
 #ifndef CATTER_WINDOWS
@@ -169,6 +156,15 @@ data::process_result result_of(const kota::process::exit_status& status,
                          std::chrono::steady_clock::now() - started));
 }
 
+#ifndef CATTER_WINDOWS
+kota::process::exit_status exit_status_of(int status) {
+    return {
+        .code = WIFEXITED(status) ? WEXITSTATUS(status) : 0,
+        .term_signal = WIFSIGNALED(status) ? WTERMSIG(status) : 0,
+    };
+}
+#endif
+
 int exit_like(const kota::process::exit_status& status) {
 #ifndef CATTER_WINDOWS
     if(status.term_signal != 0) {
@@ -187,34 +183,35 @@ int exit_like(const kota::process::exit_status& status) {
     return static_cast<int>(code_of(status));
 }
 
-kota::task<kota::process::exit_status> run_process(kota::process::options opts, RunOptions run) {
+kota::process::options standing_in(kota::process::options opts) {
 #ifndef CATTER_MAC
-    // macOS has nothing to end a child with its parent by: `started` sees to
-    // it.
-    opts.creation.exit_with_parent = run.stand_in;
+    // macOS has nothing to end a child with its parent by: RunOptions::started
+    // sees to it.
+    opts.creation.exit_with_parent = true;
 #endif
-    if(run.stand_in) {
-        opts.creation.keep_signals = true;
-    }
+    opts.creation.keep_signals = true;
 #ifdef CATTER_WINDOWS
-    opts.creation.windows_inherit_handles = run.stand_in;
-    if(run.stand_in) {
-        // The program gets copies of them: a server it starts would keep
-        // these too, and with them whatever reads the build's output, open
-        // for as long as it lives.
-        for(auto which: {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
-            SetHandleInformation(GetStdHandle(which), HANDLE_FLAG_INHERIT, 0);
-        }
+    opts.creation.windows_inherit_handles = true;
+    // The program gets copies of them: a server it starts would keep these
+    // too, and with them whatever reads the build's output, open for as long
+    // as it lives.
+    for(auto which: {STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE}) {
+        SetHandleInformation(GetStdHandle(which), HANDLE_FLAG_INHERIT, 0);
     }
 #else
-    if(run.stand_in) {
-        for(int fd = 0; fd < 3; fd += 1) {
-            if(held[fd]) {
-                opts.streams[fd] = kota::process::stdio::closed();
-            }
+    for(int fd = 0; fd < 3; fd += 1) {
+        if(held[fd]) {
+            opts.streams[fd] = kota::process::stdio::closed();
         }
     }
 #endif
+    return opts;
+}
+
+kota::task<kota::process::exit_status> run_process(kota::process::options opts, RunOptions run) {
+    if(run.stand_in) {
+        opts = standing_in(std::move(opts));
+    }
     auto spawned = kota::process::spawn(opts);
     if(!spawned) {
         throw cpptrace::runtime_error(std::format("Process `{}` spawn failed, because `{}`",

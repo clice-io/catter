@@ -6,6 +6,11 @@ module;
 #include "support/messages.h"
 #include "support/paths.h"
 
+#ifdef CATTER_LINUX
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 module catter;
 
 #ifndef CATTER_WINDOWS
@@ -445,6 +450,25 @@ int run(std::span<const std::string> argv) {
     return run_proxied(wrapped(self, self, {argv.begin(), argv.end()}, false));
 }
 
+#ifdef CATTER_LINUX
+/// The build command the ptrace backend traces, `catter-proxy <program>
+/// <argv>...`, which catter started with `socket`: once catter traces this
+/// process, the program runs in its place, or this process tells catter why it
+/// did not start.
+[[noreturn]] void run_traced(int socket, char* argv[]) {
+    kota::sys::unset_env(env::PTRACE);
+    char byte;
+    while(::read(socket, &byte, 1) < 0 && errno == EINTR) {}
+    ::fcntl(socket, F_SETFD, FD_CLOEXEC);
+    ::execve(argv[1], argv + 2, environ);
+    const int error = errno;
+    [[maybe_unused]] auto written = ::write(socket, &error, sizeof(error));
+    // LeakSanitizer, which a Debug catter-proxy runs at its exit, fails under
+    // ptrace.
+    ::_exit(127);
+}
+#endif
+
 }  // namespace
 
 extern "C++" int main(int argc, char* argv[]) {
@@ -453,6 +477,13 @@ extern "C++" int main(int argc, char* argv[]) {
     // ASCII.
     return run(kota::sys::arguments());
 #else
+#ifdef CATTER_LINUX
+    if(std::string socket; kota::sys::get_env(socket, env::PTRACE)) {
+        int fd = -1;
+        std::from_chars(socket.data(), socket.data() + socket.size(), fd);
+        run_traced(fd, argv);
+    }
+#endif
     return run(std::vector<std::string>(argv, argv + argc));
 #endif
 }

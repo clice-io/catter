@@ -8,7 +8,6 @@ module;
 
 #ifdef CATTER_MAC
 #include <signal.h>
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include <mach/mach_time.h>
@@ -18,6 +17,7 @@ module catter;
 
 import :capture.backend;
 import :capture.eslogger;
+import :capture.processes;
 import :session.handler;
 import :session.process;
 import :session.session;
@@ -63,52 +63,35 @@ Event parse(std::string_view line) {
     return std::move(*event);
 }
 
-std::vector<Report> BuildProcesses::add(Event event) {
+std::vector<Report> follow(BuildProcesses& processes, Event event, int starter, int build) {
     const auto key = key_of(event.process.audit_token);
     if(event.event.fork.has_value()) {
         const auto& child = event.event.fork->child.audit_token;
-        if(auto parent = members.find(key); parent != members.end()) {
-            members.insert_or_assign(key_of(child), Member{.forked_by = parent->second.current()});
-        } else if(event.process.audit_token.pid == starter && child.pid == build) {
-            members.insert_or_assign(key_of(child), Member{});
+        if(event.process.audit_token.pid == starter && child.pid == build) {
+            processes.start(key_of(child));
+        } else {
+            processes.fork(key, key_of(child));
         }
         return {};
     }
-
-    auto found = members.find(key);
-    if(found == members.end()) {
-        return {};
-    }
+    const auto time = microseconds_of(event.mach_time);
     if(event.event.exec.has_value()) {
         auto& exec = *event.event.exec;
-        auto member = std::move(found->second);
-        members.erase(found);
         data::command command{
             .cwd = std::move(exec.cwd.path),
             .executable = std::move(exec.dyld_exec_path),
             .args = std::move(exec.args),
             .env = std::move(exec.env),
         };
-        Started started{.id = new_id(), .parent = member.current(), .command = std::move(command)};
-        member.commands.push_back({.id = started.id, .started = event.mach_time});
-        members.insert_or_assign(key_of(exec.target.audit_token), std::move(member));
-        return {std::move(started)};
+        auto started =
+            processes.exec(key, key_of(exec.target.audit_token), std::move(command), time);
+        if(!started) {
+            return {};
+        }
+        return {std::move(*started)};
     }
-
-    const int stat = event.event.exit->stat;
-    const kota::process::exit_status status{
-        .code = WIFEXITED(stat) ? WEXITSTATUS(stat) : 0,
-        .term_signal = WIFSIGNALED(stat) ? WTERMSIG(stat) : 0,
-    };
-    std::vector<Report> ended;
-    for(const auto& run: found->second.commands | std::views::reverse) {
-        ended.push_back(Ended{
-            .id = run.id,
-            .result = result_of(status, microseconds_of(event.mach_time - run.started)),
-        });
-    }
-    members.erase(found);
-    return ended;
+    return processes.exit(key, exit_status_of(event.event.exit->stat), time) |
+           std::ranges::to<std::vector<Report>>();
 }
 
 }  // namespace eslogger
@@ -212,7 +195,10 @@ private:
 
     std::exception_ptr failure;
 
-    std::optional<eslogger::BuildProcesses> processes;
+    /// The build's process, once it runs.
+    int build = -1;
+
+    std::optional<BuildProcesses> processes;
 
     std::optional<std::uint64_t> last_seq;
 
@@ -259,11 +245,11 @@ kota::task<> Capture::take(std::string_view line) {
     if(!processes.has_value()) {
         co_return;
     }
-    for(auto& report: processes->add(std::move(event))) {
-        if(auto* started = std::get_if<eslogger::Started>(&report)) {
+    for(auto& report: eslogger::follow(*processes, std::move(event), self, build)) {
+        if(auto* started = std::get_if<BuildProcesses::Started>(&report)) {
             co_await session.decide(started->id, started->parent, std::move(started->command));
         } else {
-            const auto& ended = std::get<eslogger::Ended>(report);
+            const auto& ended = std::get<BuildProcesses::Ended>(report);
             co_await session.exited(ended.id, ended.result);
         }
     }
@@ -321,15 +307,16 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     kota::process::exit_status status;
     std::string error;
     try {
-        status = co_await run_process(
-            std::move(options),
-            {
-                .stand_in = true,
-                .started =
-                    [&](int pid) {
-                        processes.emplace(self, pid, [&] { return session.new_id(); });
-                    },
-            });
+        status =
+            co_await run_process(std::move(options),
+                                 {
+                                     .stand_in = true,
+                                     .started =
+                                         [&](int pid) {
+                                             build = pid;
+                                             processes.emplace([&] { return session.new_id(); });
+                                         },
+                                 });
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());

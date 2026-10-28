@@ -1,4 +1,4 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = '''
 execv ./no-format: failed to start: Exec format error
 posix_spawn ./no-format: failed to start: Exec format error
@@ -11,7 +11,7 @@ posix_spawn ./lost-interpreter: failed to start: No such file or directory
 '''
 exit = 0
 
-[test."$ node build.mjs".darwin]
+[hook."$ node build.mjs".darwin]
 differs = "macOS's posix_spawnp gives a file of no executable format to /bin/sh, as execvp does"
 stdout = '''
 execv ./no-format: failed to start: Exec format error
@@ -26,7 +26,7 @@ posix_spawn ./lost-interpreter: failed to start: No such file or directory
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
 stdout = '''
 execv ./no-format: failed to start: Exec format error
 posix_spawn ./no-format: failed to start: Exec format error
@@ -50,7 +50,7 @@ node build.mjs
 '''
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs".darwin]
+[hook."$ catter tree -w 1000 -- node build.mjs".darwin]
 differs = "macOS's posix_spawnp gives a file of no executable format to /bin/sh, as execvp does"
 stdout = '''
 execv ./no-format: failed to start: Exec format error
@@ -73,6 +73,30 @@ node build.mjs
 │   └── empty
 ├── ./start execvp empty
 │   └── empty
+├── ./start execv ./lost-interpreter
+└── ./start posix_spawn ./lost-interpreter
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
+stdout = '''
+execv ./no-format: failed to start: Exec format error
+posix_spawn ./no-format: failed to start: Exec format error
+posix_spawnp no-format: failed to start: Exec format error
+execvp no-format: run by /bin/sh
+posix_spawnp empty: failed to start: Exec format error
+execvp empty: exit 0
+execv ./lost-interpreter: failed to start: No such file or directory
+posix_spawn ./lost-interpreter: failed to start: No such file or directory
+node build.mjs
+├── ./start execv ./no-format
+├── ./start posix_spawn ./no-format
+├── ./start posix_spawnp no-format
+├── ./start execvp no-format
+│   └── /bin/sh ./no-format
+├── ./start posix_spawnp empty
+├── ./start execvp empty
+│   └── /bin/sh ./empty
 ├── ./start execv ./lost-interpreter
 └── ./start posix_spawn ./lost-interpreter
 '''

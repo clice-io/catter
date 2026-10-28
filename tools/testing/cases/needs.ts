@@ -4,7 +4,7 @@
 
 import { spawnSync } from "node:child_process";
 
-export type Need = "eslogger" | "xcode";
+export type Need = "eslogger" | "go" | "sudo" | "xcode";
 
 const PROBES: Record<Need, () => boolean> = {
     // catter runs eslogger as root: sudo must start it without asking for a
@@ -15,6 +15,13 @@ const PROBES: Record<Need, () => boolean> = {
             stdio: "ignore",
             timeout: 3000,
         }).signal === "SIGTERM",
+    // A Go toolchain.
+    go: () => spawnSync("go", ["version"], { stdio: "ignore" }).status === 0,
+    // sudo, which runs a program as root without asking for a password, for
+    // a user other than root.
+    sudo: () =>
+        process.getuid?.() !== 0 &&
+        spawnSync("sudo", ["-n", "true"], { stdio: "ignore" }).status === 0,
     // Xcode itself, beside the command line tools: xcodebuild.
     xcode: () => spawnSync("xcodebuild", ["-version"], { stdio: "ignore" }).status === 0,
 };

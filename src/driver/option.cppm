@@ -50,6 +50,11 @@ struct SessionOptions {
         meta_var = "<backend>",
         help = "How the build's commands are captured: hook, wrapper or eslogger. [default: hook]")
     <std::string> capture;
+#elifdef CATTER_LINUX
+    DecoKV(names = {"--capture"},
+           meta_var = "<backend>",
+           help = "How the build's commands are captured: hook, wrapper or ptrace. [default: hook]")
+    <std::string> capture;
 #else
     DecoKV(names = {"--capture"},
            meta_var = "<backend>",

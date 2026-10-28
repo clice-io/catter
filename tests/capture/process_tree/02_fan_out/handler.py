@@ -1,10 +1,13 @@
 # Counts the programs build.mjs starts, which start at once: the order
-# catter sees them in is not pinned, their number is.
+# catter sees them in is not pinned, their number is. It decides on each, but
+# given `observe`.
+import sys
+
 import catter
 
 
 class Handler(catter.Handler):
-    decides = True
+    decides = sys.argv[1:] != ["observe"]
 
     def __init__(self):
         self.seen = set()

@@ -1,8 +1,17 @@
-[test."$ node build.mjs"]
+[hook."$ node build.mjs"]
 stdout = "exit 3"
 exit = 0
 
-[test."$ catter tree -w 1000 -- node build.mjs"]
+[hook."$ catter tree -w 1000 -- node build.mjs"]
+stdout = '''
+exit 3
+node build.mjs
+└── python -c "import os, signal; signal.signal(signal.SIGCHLD, signal.SIG_IGN); os.execvp('python', ['python', '-c', 'raise SystemExit(3)'])"
+    └── python -c "raise SystemExit(3)"
+'''
+exit = 0
+
+[ptrace."$ catter tree --capture ptrace -w 1000 -- node build.mjs"]
 stdout = '''
 exit 3
 node build.mjs

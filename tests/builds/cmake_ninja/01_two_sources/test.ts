@@ -16,3 +16,15 @@ test("wrapper", async (t) => {
     );
     t.show("compile_commands.json", t.disk.cdb());
 });
+
+const linuxOnly = {
+    except: { darwin: "the ptrace backend is Linux's", win32: "the ptrace backend is Linux's" },
+};
+
+test("ptrace", linuxOnly, async (t) => {
+    await t.setup("cmake -S . -B build -G Ninja");
+    await t.cli(
+        "compile-commands --capture ptrace -o compile_commands.json -- cmake --build build -j 1",
+    );
+    t.show("compile_commands.json", t.disk.cdb());
+});
