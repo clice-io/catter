@@ -183,7 +183,7 @@ process = "cmake --build build -j 1"
     {
         depth = 1,
         name = "ninja.exe",
-        command = '"C:/PROGRA~1/MICROS~2/18/ENTERP~1/Common7/IDE/COMMON~1/MICROS~1/CMake/Ninja/ninja.exe" -j 1',
+        command = '"${VS}/Common7/IDE/COMMON~1/MICROS~1/CMake/Ninja/ninja.exe" -j 1',
         cwd = "${WS}/build",
         exit = 0,
         id = 2,
