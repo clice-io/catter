@@ -202,6 +202,6 @@ export class AuditRecorder implements Recorder {
         if (size < this.offset) {
             throw new Error(`${LOG} rotated during the build: raise max_log_file in auditd.conf`);
         }
-        return { images: parseAudit(log, this.key).images, lost: lostCount() - this.lost };
+        return { images: parseAudit(log, this.key).build(), lost: lostCount() - this.lost };
     }
 }

@@ -65,27 +65,51 @@ describe("projects", () => {
 });
 
 describe("images", () => {
-    test("an exec logged before the fork that made its process keeps its parent", () => {
+    const parents = (builder: ImageBuilder) =>
+        builder.build().map((image) => [image.args[0], image.parent]);
+
+    test("an exec logged before the forks that made its process keeps its parent", () => {
         const builder = new ImageBuilder();
-        const make = builder.exec(10, 1, "/usr/bin/make", ["make"], "/w");
-        const cc = builder.exec(11, 10, "/usr/bin/cc", ["cc", "-c", "a.c"], "/w");
-        builder.fork(10, 11);
+        builder.exec(10, 1, "/usr/bin/make", ["make"], "/w");
+        // A subshell of make forks a compiler, which execs before either
+        // fork is logged.
         builder.fork(11, 12);
-        const as = builder.exec(12, 11, "/usr/bin/as", ["as"], "/w");
-        expect(cc.parent).toBe(make.id);
-        expect(as.parent).toBe(cc.id);
+        builder.exec(12, 11, "/usr/bin/cc", ["cc", "-c", "a.c"], "/w");
+        builder.fork(10, 11);
+        builder.fork(12, 13);
+        builder.exec(13, 12, "/usr/bin/as", ["as"], "/w");
+        expect(parents(builder)).toEqual([
+            ["make", null],
+            ["cc", 0],
+            ["as", 1],
+        ]);
     });
 
     test("a double fork keeps the daemon under what forked it", () => {
         const builder = new ImageBuilder();
-        const client = builder.exec(10, 1, "/usr/bin/bazel", ["bazel", "build"], "/w");
+        builder.exec(10, 1, "/usr/bin/bazel", ["bazel", "build"], "/w");
         builder.fork(10, 11);
         builder.fork(11, 12);
         // The middle process is gone: the daemon's parent is init by now.
-        const server = builder.exec(12, 1, "/usr/bin/java", ["java"], "/w");
-        expect(server.parent).toBe(client.id);
+        builder.exec(12, 1, "/usr/bin/java", ["java"], "/w");
+        builder.exec(12, 1, "/usr/bin/java", ["java", "again"], "/w");
+        expect(parents(builder)).toEqual([
+            ["bazel", null],
+            ["java", 0],
+            ["java", 1],
+        ]);
     });
 });
+
+// A daemon's double fork: the server execs once its parent is gone.
+const daemonLog = [
+    `type=SYSCALL msg=audit(1.0:1): arch=c000003e syscall=59 success=yes exit=0 ppid=1 pid=10 exe="/usr/bin/bazel" key="k"`,
+    `type=EXECVE msg=audit(1.0:1): argc=2 a0="bazel" a1="build"`,
+    `type=SYSCALL msg=audit(1.0:2): arch=c000003e syscall=57 success=yes exit=11 ppid=1 pid=10 key="k"`,
+    `type=SYSCALL msg=audit(1.0:3): arch=c000003e syscall=435 success=yes exit=12 ppid=10 pid=11 key="k"`,
+    `type=SYSCALL msg=audit(1.0:4): arch=c000003e syscall=59 success=yes exit=0 ppid=1 pid=12 exe="/usr/bin/java" key="k"`,
+    `type=EXECVE msg=audit(1.0:4): argc=1 a0="java"`,
+].join("\n");
 
 describe("auditd", () => {
     const key = "k";
@@ -100,7 +124,7 @@ describe("auditd", () => {
     ].join("\n");
 
     test("execs with their arguments and directory, under the run's key alone", () => {
-        const images = parseAudit(log, key).images;
+        const images = parseAudit(log, key).build();
         expect(images).toEqual([
             {
                 id: 0,
@@ -110,6 +134,16 @@ describe("auditd", () => {
                 args: ["gcc", "-DX=a b", "-cx.c", "-o"],
                 cwd: "/w/é dir",
             },
+        ]);
+    });
+});
+
+describe("auditd forks", () => {
+    test("a fork the log records takes a daemon's exec to what forked it", () => {
+        const images = parseAudit(daemonLog, "k").build();
+        expect(images.map((image) => [image.args, image.parent])).toEqual([
+            [["bazel", "build"], null],
+            [["java"], 0],
         ]);
     });
 });
@@ -129,7 +163,7 @@ describe("strace", () => {
             path.join(dir, "t.11"),
             `1.3 execve("/usr/bin/cc", ["cc", "-c", "a\\303\\251.c"], 0x0 /* 3 vars */) = 0\n`,
         );
-        const images = parseStrace(dir, "/w").images;
+        const images = parseStrace(dir, "/w").build();
         expect(images.map((image) => [image.exe, image.args, image.cwd, image.parent])).toEqual([
             ["/usr/bin/make", ["make", "-C", "sub"], "/w", null],
             ["/usr/bin/cc", ["cc", "-c", "aé.c"], "/w/sub", 0],
@@ -162,7 +196,7 @@ describe("the recorder check", () => {
             builder.fork(ppid, pid);
             builder.exec(pid, ppid, exe, args, "/w");
         }
-        return { images: builder.images, lost: 0 };
+        return { images: builder.build(), lost: 0 };
     }
     const places = new Places({ tree: "/w" });
     const base = {
@@ -212,18 +246,19 @@ describe("the recorder check", () => {
         expect(sameArgs(["cc", "-c", "a.c"], ["cc", "-c", "b.c"])).toBe(false);
     });
 
-    test("under the wrapper, what a compiler driver starts is the driver's", () => {
+    test("under the wrapper, what a compiler driver starts is the driver's, nothing else is", () => {
         const result = checkRecorder({
             ...base,
             backend: "wrapper",
             recording: recording([
-                [3, 1, "/usr/bin/make", ["make"]],
-                [4, 3, "/opt/catter/bin/catter-proxy", ["cc", "-c", "a.c"]],
-                [5, 4, "/usr/bin/cc", ["cc", "-c", "a.c"]],
-                [6, 5, "/usr/lib/gcc/as", ["as"]],
+                [2, 1, "/opt/catter/bin/catter-launch", ["catter-launch", "make"]],
+                [3, 2, "/usr/bin/make", ["make"]],
+                [4, 3, "/opt/catter/bin/catter-proxy", ["cc", "a.o", "-o", "a"]],
+                [5, 4, "/usr/bin/cc", ["cc", "a.o", "-o", "a"]],
+                [6, 5, "/usr/bin/ld", ["/usr/bin/ld", "a.o", "-o", "a"]],
                 [7, 3, "/usr/bin/ar", ["/usr/bin/ar", "rcs", "liba.a"]],
             ]),
-            session: session([{ args: ["cc", "-c", "a.c"] }]),
+            session: session([{ args: ["make"] }, { parent: 1, args: ["cc", "a.o", "-o", "a"] }]),
         });
         expect(result.differences.map((each) => [each.kind, each.detail])).toEqual([
             ["missed", "catter missed /usr/bin/ar rcs liba.a [in <tree>]"],

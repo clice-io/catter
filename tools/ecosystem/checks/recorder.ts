@@ -217,7 +217,9 @@ export function checkRecorder(input: RecorderInput): {
                 commandOf.has(image.id) ||
                 program === undefined ||
                 !(isWrapped(program) || isWrapped(image.exe)) ||
-                ancestors(image).some((each) => commandOf.has(each.id))
+                ancestors(image).some(
+                    (each) => commandOf.has(each.id) && isCompiler(each.args[0] ?? ""),
+                )
             ) {
                 continue;
             }

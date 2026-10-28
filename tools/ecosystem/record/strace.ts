@@ -178,6 +178,6 @@ export class StraceRecorder implements Recorder {
     }
 
     stop(): Promise<Recording> {
-        return Promise.resolve({ images: parseStrace(this.dir, this.cwd).images, lost: 0 });
+        return Promise.resolve({ images: parseStrace(this.dir, this.cwd).build(), lost: 0 });
     }
 }
