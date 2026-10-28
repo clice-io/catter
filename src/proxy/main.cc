@@ -125,15 +125,8 @@ Proxied hooked(std::span<const std::string> argv) {
             [pipe = variables.pipe, late = variables.late](data::command command,
                                                            data::ipcid_t id) {
 #ifdef CATTER_LINUX
-                // The hook of a program it restarted as a command reported
-                // late checks the program's parent alone: it does not restart
-                // it again.
-                auto decided = std::to_string(kota::sys::pid());
-                if(!late) {
-                    const auto args = std::span(command.args)
-                                          .subspan(std::min<std::size_t>(command.args.size(), 1));
-                    decided += std::format(":{}:{:x}", args.size(), hook::arguments_hash(args));
-                }
+                auto decided = late ? hook::decided_exec(kota::sys::pid())
+                                    : hook::decided_exec(kota::sys::pid(), command.args);
 #endif
                 auto options = hook_options(std::move(command), id, pipe);
 #ifdef CATTER_LINUX

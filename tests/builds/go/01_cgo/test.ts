@@ -9,8 +9,8 @@ test(
     "hook",
     {
         except: {
-            darwin: "Go uses macOS's C library, whose exec the hook sees",
-            win32: "the POSIX hook",
+            darwin: "Go starts programs through libSystem, whose exec the hook sees",
+            win32: "Go starts programs with CreateProcess, which the hook sees",
         },
     },
     async (t) => {

@@ -36,9 +36,11 @@ cmake = "==4.1.2"
 ninja = "==1.13.1"
 
 # The Go the cases build with on Linux (tests/builds/go): its `go` is static,
-# and starts the compilers of cgo without libc.
+# and starts the compilers of cgo without libc. valgrind, which runs a program
+# inside its own process (tests/capture/raw_exec).
 [feature.dev.target.linux-64.dependencies]
 go = { version = "==1.27.3", build = "nocgo*" }
+valgrind = "==3.27.1"
 
 [feature.dev.target.win-64.tasks.unit-test]
 args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]

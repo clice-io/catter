@@ -6,7 +6,12 @@ import { test } from "@catter/tools/testing";
 // one that started it.
 test(
     "linux",
-    { except: { darwin: "the hook of macOS sees every exec", win32: "the POSIX functions" } },
+    {
+        except: {
+            darwin: "macOS programs call libSystem, whose exec the hook sees, not the kernel",
+            win32: "the POSIX functions",
+        },
+    },
     async (t) => {
         await t.setup("cc -o launch launch.c");
         for (const mode of ["fork", "exec", "self"]) {

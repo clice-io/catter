@@ -1,9 +1,7 @@
 #pragma once
 
 #include <cstdarg>
-#include <span>
 #include <string>
-#include <string_view>
 #include <vector>
 #include <spawn.h>
 
@@ -101,14 +99,5 @@ private:
 
     PosixSpawnFn* original_posix_spawn = nullptr;
 };
-
-#ifdef CATTER_LINUX
-/// Whether `decided`, env::DECIDED's value, stands for the exec of this
-/// process, whose parent is `parent` and whose argv is `argv`: catter-proxy
-/// `parent` started it with arguments past argv[0] that `argv` ends with, as
-/// it ends with them when the kernel runs it through an interpreter, or as a
-/// command reported late.
-bool is_decided(std::string_view decided, pid_t parent, std::span<char* const> argv) noexcept;
-#endif
 
 }  // namespace catter::hook

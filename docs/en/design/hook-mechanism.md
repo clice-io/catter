@@ -60,7 +60,6 @@ The hook reads session information from these environment variables, which the p
 | `__key_catter_command_id_v1` | The ID of the command the process runs                                                       |
 | `__key_catter_ipc_v1`        | The pipe of the catter session                                                               |
 | `__key_catter_decided_v1`    | On Linux, the exec `catter-proxy` started the process with, which the hook removes once read |
-| `__key_catter_late_v1`       | Set for `catter-proxy` by the hook of a process that reports itself late                     |
 
 ### Interception Flow
 
@@ -123,7 +122,7 @@ A static program loads no hook, and Go's runtime makes its system calls itself: 
 2. The hook's constructor takes the variable out of the environment, so that it stands for one exec, and compares it with its own process: its parent is that `catter-proxy`, and its `argv` ends with those arguments.
 3. A process that matches runs on. One that does not, a child a program of the build started, or a program that replaced the one `catter-proxy` started, starts again as `catter-proxy` with its own program (the file its exec named, or the interpreter that runs a script), `argv` and environment, and `__key_catter_late_v1`. `catter-proxy` reports it as any command, the child of the command its `__key_catter_command_id_v1` names, and runs it as decided: the program restarts with the hook, its variable naming only `catter-proxy`'s pid, so that it does not start again.
 
-The program's own code has not run then: only the constructors of the libraries it links run, and they run again when it restarts. A program the dynamic loader runs as named (`ld.so <program>`) has lost the loader's own arguments from its `argv`, and is not restarted. A static program that replaces itself with another program and the arguments it was started with is reported as itself.
+The program's own code has not run then: only the constructors of the libraries it links run, and they run again when it restarts. Some programs are not restarted: one the dynamic loader runs as named (`ld.so <program>`), which has lost the loader's own arguments from its `argv`; one another program runs inside its own process, as valgrind does, which the restart would leave; one with no name outside its process, as a deleted file or fexecve's memfd. A static program that replaces itself with another program whose arguments end with its own, as one started with no arguments does with any, is reported as itself.
 
 ---
 

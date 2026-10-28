@@ -147,7 +147,9 @@ exit = 0
   Xcode `${XCODE}`, each with `/` after it; the macOS SDK's version
   (`MacOSX#.sdk`), durations (`#ms`, `#s`), process ids (`ipc-#`), native
   stack frames (`#… native frames`), xmake's probe files
-  (`${TMP}/.xmake#/#/_#`). Line ends read LF and colors are dropped.
+  (`${TMP}/.xmake#/#/_#`), Go's build directories (`${TMP}/go-build#`) and
+  the seeds it gives cgo's compiler (`-frandom-seed=#`). Line ends read LF and
+  colors are dropped.
 - **Platforms.** One file serves linux, darwin and win32. A block holds the
   output of the test's reference platform, the first of those three it runs
   on. Another platform whose output differs holds its own under the block,
@@ -219,9 +221,9 @@ pnpm --dir tools test                     the framework's own tests
 ```
 
 Commands run in the pixi `dev` environment, which brings node, CMake, Ninja
-and, on Linux, Go; the repository's npm packages bring Bazelisk, which
-downloads the Bazel a case names; make, xmake and, on Windows, Visual Studio
-come from the machine.
+and, on Linux, Go and valgrind; the repository's npm packages bring
+Bazelisk, which downloads the Bazel a case names; make, xmake and, on
+Windows, Visual Studio come from the machine.
 
 ## Framework
 

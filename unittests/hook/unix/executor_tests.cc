@@ -437,50 +437,47 @@ ZEST_CASE(posix_spawn_leaves_a_script_with_a_missing_interpreter_to_the_system) 
 };  // ZEST_SUITE(executor)
 
 #ifdef CATTER_LINUX
-/// env::DECIDED as catter-proxy `pid` writes it for a program it starts with
-/// `args`, argv[0] among them.
-std::string decided(pid_t pid, std::vector<std::string_view> args) {
-    args.erase(args.begin());
-    return std::format("{}:{}:{:x}", pid, args.size(), catter::hook::arguments_hash(args));
-}
-
 /// Whether the exec of a process whose parent is `parent` and whose argv is
 /// `argv` is the one `token` stands for.
-bool decided_exec(std::string_view token,
-                  pid_t parent,
-                  std::initializer_list<std::string_view> argv) {
+bool matches(std::string_view token, pid_t parent, std::initializer_list<std::string_view> argv) {
     MutableCStrings strings(argv);
-    return ct::is_decided(token, parent, std::span(strings.data(), argv.size()));
+    return catter::hook::is_decided(token, parent, std::span(strings.data(), argv.size()));
 }
 
-ZEST_SUITE(decided_exec) {
+/// env::DECIDED as catter-proxy `pid` writes it for a program it starts with
+/// `argv`.
+std::string decided(pid_t pid, std::vector<std::string_view> argv) {
+    return catter::hook::decided_exec(pid, argv);
+}
+
+ZEST_SUITE(exec_decided) {
 
 ZEST_CASE(the_program_catter_proxy_started) {
-    ZEXPECT(decided_exec(decided(100, {"cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
+    ZEXPECT(matches(decided(100, {"cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
 }
 
 ZEST_CASE(a_script_the_kernel_runs_through_its_interpreter) {
-    ZEXPECT(decided_exec(decided(100, {"./build.sh", "x"}), 100, {"/bin/sh", "./build.sh", "x"}));
+    ZEXPECT(matches(decided(100, {"./build.sh", "x"}), 100, {"/bin/sh", "./build.sh", "x"}));
 }
 
 ZEST_CASE(a_program_catter_proxy_did_not_start) {
-    ZEXPECT(!decided_exec(decided(100, {"cc", "-c", "a.c"}), 101, {"cc", "-c", "a.c"}));
+    ZEXPECT(!matches(decided(100, {"cc", "-c", "a.c"}), 101, {"cc", "-c", "a.c"}));
 }
 
 ZEST_CASE(a_program_the_started_one_execs_with_other_arguments) {
-    ZEXPECT(!decided_exec(decided(100, {"sh", "-c", "cc -c a.c"}), 100, {"cc", "-c", "a.c"}));
+    ZEXPECT(!matches(decided(100, {"sh", "-c", "cc -c a.c"}), 100, {"cc", "-c", "a.c"}));
 }
 
 ZEST_CASE(a_program_the_started_one_execs_with_the_rest_of_its_arguments) {
-    ZEXPECT(!decided_exec(decided(100, {"env", "cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
+    ZEXPECT(!matches(decided(100, {"env", "cc", "-c", "a.c"}), 100, {"cc", "-c", "a.c"}));
 }
 
 ZEST_CASE(a_command_reported_late) {
-    ZEXPECT(decided_exec("100", 100, {"cc", "-c", "a.c"}));
-    ZEXPECT(!decided_exec("100", 101, {"cc", "-c", "a.c"}));
+    ZEXPECT(matches(catter::hook::decided_exec(100), 100, {"cc", "-c", "a.c"}));
+    ZEXPECT(!matches(catter::hook::decided_exec(100), 101, {"cc", "-c", "a.c"}));
 }
 
-};  // ZEST_SUITE(decided_exec)
+};  // ZEST_SUITE(exec_decided)
 #endif
 
 }  // namespace
