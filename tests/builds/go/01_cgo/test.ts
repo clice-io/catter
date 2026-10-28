@@ -14,13 +14,14 @@ test(
         },
     },
     async (t) => {
-        // Go reads none of the user's settings (GOENV), and builds with the
-        // case's C compiler.
+        // Go reads none of the user's settings (GOENV) nor a workspace around
+        // the copy (GOWORK), and builds with the case's C compiler.
         const env = {
             CC: "gcc",
             CGO_ENABLED: "1",
             GOCACHE: join(t.root, ".gocache"),
             GOENV: "off",
+            GOWORK: "off",
             GOTOOLCHAIN: "local",
         };
         await t.setup("go build -o hello .", { env });
