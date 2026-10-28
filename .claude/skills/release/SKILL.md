@@ -41,7 +41,9 @@ then fails the run. When that commit already has the newest nightly, the
 scheduled run tags nothing. Otherwise it tags exactly that commit with the
 nightly version, creates a draft pre-release with notes (the commit, the
 changes since the previous tag, the download table), calls `publish.yml` to
-attach the packages, and publishes the draft once every package is there.
+attach the packages, and publishes the draft once every package is there;
+then it dispatches the ecosystem round over the published nightly
+(`ecosystem.yml`), which only reports.
 Every run prunes odd-minor pre-releases older than 30 days or beyond the
 newest 25, release and tag, but for the newest, whatever its age; stable
 releases are never pruned.
@@ -67,10 +69,10 @@ Every step that tags or publishes needs the maintainer's explicit approval first
 1. Pick a nightly that is judged good and tag its commit:
    `git tag v0.2.0 <commit> && git push origin v0.2.0`. Its packages live
    as long as its `main` run's artifacts, 30 days; an older commit has none
-   and cannot be built for `main` again: tag a newer nightly. When catter's
-   ecosystem round exists — real projects over each
-   nightly, which `nightly.yml` starts once it has tagged one, as clice's
-   does — the nightly a stable tags is one whose round shows no new failure.
+   and cannot be built for `main` again: tag a newer nightly. The nightly a
+   stable tags is one whose ecosystem round — real projects over the
+   nightly, which `nightly.yml` starts once it has published one
+   (`ecosystem.yml`, `ecosystem/README.md`) — shows no new difference.
 2. The tag push runs the `release` job of `main.yml`, which calls
    `publish.yml`. It builds nothing: it waits for the commit's `main` run
    to finish, takes the newest green one that still has every package

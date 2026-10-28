@@ -1,0 +1,128 @@
+about = "fmt 12.0.0 with its tests, the release WrapDB and the Bazel Central Registry package"
+repository = "https://github.com/fmtlib/fmt"
+commit = "e424e3f2e607da02742f73db84873b8084fc714c"
+
+[builds.cmake-ninja]
+about = "CMake and Ninja, its tests on, CMake's database exported"
+backends = ["hook", "wrapper"]
+configure = [
+    [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DFMT_TEST=ON",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ],
+]
+build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.cmake-make]
+about = "CMake and Make, its tests on, CMake's database exported"
+configure = [
+    [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build",
+        "-G",
+        "Unix Makefiles",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DFMT_TEST=ON",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ],
+]
+build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.meson]
+about = "Meson and Ninja: a program taking fmt from WrapDB (fmt_12.0.0-1), as a Meson project takes it"
+tree = "meson"
+configure = [["meson", "setup", "build"]]
+build = [["meson", "compile", "-C", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.bazel]
+about = "Bazel: a program taking fmt 12.0.0 from the Bazel Central Registry, its actions in Bazel's sandbox"
+tree = "bazel"
+configure = [
+    ["bazel", "--output_user_root=${WORK}/bazel", "fetch", "//..."],
+    ["bazel", "--output_user_root=${WORK}/bazel", "shutdown"],
+]
+build = [
+    ["bazel", "--output_user_root=${WORK}/bazel", "build", "--jobs=${JOBS}", "//..."],
+    ["bazel", "--output_user_root=${WORK}/bazel", "shutdown"],
+]
+scan = ["bazel-out"]
+
+[[known]]
+why = "catter leaves out the compiles CMake runs in its CMakeFiles directories to identify and check the compiler, when CMake configures under catter (catter#117)"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "recorder"
+kind = "no-entry"
+detail = "\\[in <tree>/build/(?:[\\w/]+/)?CMakeFiles/[\\w./-]+\\]$"
+
+[[known]]
+why = "CMake copies the program of its compiler ABI check out of the scratch directory where it was linked"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "artifacts"
+kind = "linked-without-command"
+detail = "^no link or archive command of catter's writes <tree>/build/CMakeFiles/[\\d.]+/CMakeDetermineCompilerABI_CXX\\.bin$"
+
+[[known]]
+why = "CMake's Makefile generator writes an entry's output relative to the top build directory, not to the entry's own: catter's entries of the compiles run in build/test pair with none of its"
+build = "cmake-make"
+check = "hint"
+kind = "catter-only"
+detail = "^the build's database has no entry of <tree>/\\S+ to <tree>/build/test/\\S+$"
+
+[[known]]
+why = "CMake's Makefile generator writes an entry's output relative to the top build directory, not to the entry's own: its entries of the compiles run in build/test pair with none of catter's"
+build = "cmake-make"
+check = "hint"
+kind = "build-only"
+detail = "^catter's database has no entry of <tree>/\\S+ to test/\\S+$"
+
+[[known]]
+why = "bazelisk, a static Go binary, execs the Bazel client without libc, where the hook does not see it"
+build = "bazel"
+check = "recorder"
+kind = "missed"
+detail = "^catter missed \\S+/bazelisk/downloads/\\S+/bin/bazel "
+
+[[known]]
+why = "catter, missing the Bazel client bazelisk execs, reports the server's daemonize under bazelisk"
+build = "bazel"
+check = "recorder"
+kind = "extra"
+detail = "^catter reported daemonize "
+
+[[known]]
+why = "each compile's sources are symlinks in a sandbox Bazel removes after the action: catter leaves out every entry as a probe's"
+build = "bazel"
+check = "artifacts"
+kind = "object-without-entry"
+detail = "^no entry has the output <work>/bazel/\\w+/execroot/_main/bazel-out/\\S+\\.pic\\.o$"
+
+[[known]]
+why = "the link writes into the action's sandbox, which Bazel moves its outputs out of"
+build = "bazel"
+check = "artifacts"
+kind = "linked-without-command"
+detail = "^no link or archive command of catter's writes <work>/bazel/\\w+/execroot/_main/bazel-out/k8-fastbuild/bin/hello$"
+
+[[known]]
+why = "CMake probes the linker it found by its absolute path, past the wrapper's shims, for its version and options"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "recorder"
+kind = "missed"
+detail = "^catter missed /usr/bin/ld (?:-v|--help|--push-state --pop-state) \\[in <tree>\\]$"

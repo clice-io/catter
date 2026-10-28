@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "skipLibCheck": true
   },
-  "include": ["docs/**/*.ts", "lint/**/*.ts", "testing/**/*.ts", "*.ts"]
+  "include": ["docs/**/*.ts", "ecosystem/**/*.ts", "lint/**/*.ts", "testing/**/*.ts", "*.ts"]
 }

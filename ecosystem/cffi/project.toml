@@ -1,0 +1,12 @@
+about = "cffi 2.0.0"
+repository = "https://github.com/python-cffi/cffi"
+commit = "6366c01d84e9a78e7e85f12ebe9760ba5d19b6d3"
+
+[builds.pip]
+about = "pip wheel in its checkout, with Ubuntu's Python and a pinned setuptools: its C extension, and the programs its setup.py probes the compiler with in temporary directories"
+packages = ["libffi-dev", "python3-dev", "python3-venv"]
+prepare = [
+    ["/usr/bin/python3", "-m", "venv", ".venv"],
+    ["${TREE}/.venv/bin/pip", "install", "setuptools==80.9.0"],
+]
+build = [["${TREE}/.venv/bin/pip", "wheel", ".", "--no-deps", "--no-build-isolation", "-w", "dist"]]

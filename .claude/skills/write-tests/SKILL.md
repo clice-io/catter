@@ -39,6 +39,15 @@ rules and the pitfalls. The framework is `tools/testing/`
    with `catter/timers`, the framework's tests), and the case on every
    platform it runs on.
 
+## Cases and the ecosystem
+
+A case is catter's own small project, one mechanism each; a real project,
+pinned and unmodified, belongs in `ecosystem/` (`ecosystem/README.md`),
+whose round runs nightly and only reports. A difference the round finds
+that catter fixes gets a minimal case here with the fix; its `[[known]]`
+entry goes once a nightly holds the fix, whose round lists it among the
+known differences no run showed.
+
 ## Hard rules
 
 - A weakened assertion, a dropped block or an `except` for a test that
