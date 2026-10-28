@@ -57,6 +57,9 @@ importers:
 
   tools:
     dependencies:
+      '@catter/sdk':
+        specifier: workspace:*
+        version: link:../sdk/typescript
       diff:
         specifier: ^9.0.0
         version: 9.0.0

@@ -35,13 +35,6 @@ nodejs = "==24.4.0"
 cmake = "==4.1.2"
 ninja = "==1.13.1"
 
-# The Go the cases build with on Linux (tests/builds/go): its `go` is static,
-# and starts the compilers of cgo without libc. valgrind, which runs a program
-# inside its own process (tests/capture/raw_exec).
-[feature.dev.target.linux-64.dependencies]
-go = { version = "==1.27.3", build = "nocgo*" }
-valgrind = "==3.27.1"
-
 [feature.dev.target.win-64.tasks.unit-test]
 args = [{ arg = "type", choices = ["Debug", "RelWithDebInfo"], default = "RelWithDebInfo" }]
 cmd = "build/{{ type }}/bin/bin/unittests.exe && build/{{ type }}/bin/bin/unittests-hook-windows.exe"
@@ -78,6 +71,14 @@ depends-on = [
     { task = "cases-test", args = ["{{ type }}"] },
 ]
 
+# What only the cases run, on Linux: the Go they build with (tests/builds/go),
+# whose `go` is static and starts the compilers of cgo without libc, and
+# valgrind, which runs a program inside its own process
+# (tests/capture/raw_exec).
+[feature.cases.target.linux-64.dependencies]
+go = { version = "==1.27.3", build = "nocgo*" }
+valgrind = "==3.27.1"
+
 # ============================================================================== #
 #                                    FORMAT                                      #
 # ============================================================================== #
@@ -111,8 +112,23 @@ format = {
 }
 lint-python = "ruff check ."
 
+# ============================================================================== #
+#                                   ECOSYSTEM                                    #
+# ============================================================================== #
+
+# The build tools the ecosystem's projects build with (ecosystem/README.md),
+# pinned; their compilers are the system's, as a user's are, which is why
+# the environment leaves out the default feature and its GCC.
+[feature.ecosystem.dependencies]
+pnpm = "*"
+meson = "==1.12.1"
+
+[feature.ecosystem.target.linux-64.dependencies]
+make = "==4.4.1"
+
 [environments]
-dev = ["dev"]
+dev = ["dev", "cases"]
+ecosystem = { features = ["dev", "ecosystem"], no-default-feature = true }
 format = { features = ["format"], no-default-feature = true }
 
 [tasks]
