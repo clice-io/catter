@@ -121,3 +121,11 @@ build = "bazel"
 check = "artifacts"
 kind = "linked-without-command"
 detail = "^no link or archive command of catter's writes <work>/bazel/\\w+/execroot/_main/bazel-out/k8-fastbuild/bin/hello$"
+
+[[known]]
+why = "CMake probes the linker it found by its absolute path, past the wrapper's shims, for its version and options"
+build = "cmake-ninja"
+backend = "wrapper"
+check = "recorder"
+kind = "missed"
+detail = "^catter missed /usr/bin/ld (?:-v|--help|--push-state --pop-state) \\[in <tree>\\]$"

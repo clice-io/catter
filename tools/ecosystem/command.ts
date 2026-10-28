@@ -9,7 +9,7 @@ import * as path from "node:path";
 const COMPILER =
     /^(?:.*-)?(?:gcc|g\+\+|clang|clang\+\+|cc|c\+\+|cl|clang-cl|nvcc)(?:-[\d.]+)?(?:\.exe)?$/i;
 const LINKER_OR_ARCHIVER =
-    /^(?:.*-)?(?:ar|ranlib|ld|ld\.bfd|ld\.gold|ld\.lld|lld|lld-link|llvm-ar|llvm-lib|lib|link)(?:-[\d.]+)?(?:\.exe)?$/i;
+    /^(?:.*-)?(?:ar|ld|ld\.bfd|ld\.gold|ld\.lld|lld|lld-link|llvm-ar|llvm-lib|lib|link)(?:-[\d.]+)?(?:\.exe)?$/i;
 /// The suffixes GCC and Clang compile as C, C++, Objective-C, CUDA or
 /// assembly; preprocessed sources (`.i`, `.ii`) aside, whose entries are the
 /// preprocessed source's.
