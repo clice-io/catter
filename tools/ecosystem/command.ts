@@ -10,7 +10,10 @@ const COMPILER =
     /^(?:.*-)?(?:gcc|g\+\+|clang|clang\+\+|cc|c\+\+|cl|clang-cl|nvcc)(?:-[\d.]+)?(?:\.exe)?$/i;
 const LINKER_OR_ARCHIVER =
     /^(?:.*-)?(?:ar|ranlib|ld|ld\.bfd|ld\.gold|ld\.lld|lld|lld-link|llvm-ar|llvm-lib|lib|link)(?:-[\d.]+)?(?:\.exe)?$/i;
-const SOURCE = /\.(?:c|cc|cpp|cxx|c\+\+|m|mm|cu|s|S|sx)$/;
+/// The suffixes GCC and Clang compile as C, C++, Objective-C, CUDA or
+/// assembly; preprocessed sources (`.i`, `.ii`) aside, whose entries are the
+/// preprocessed source's.
+const SOURCE = /\.(?:c|cc|cp|cpp|cxx|c\+\+|C|CPP|m|mm|M|cu|s|S|sx)$/;
 
 export function baseName(program: string): string {
     return program.split(/[\\/]/).pop() ?? program;

@@ -236,7 +236,7 @@ async function runBackend(
             "-o",
             cdb,
             "--handler",
-            `${process.execPath} ${handler} ${events}`,
+            [process.execPath, handler, events].map(quote).join(" "),
             "--",
             ...command,
         ]),

@@ -255,6 +255,36 @@ describe("the recorder check", () => {
         expect(result.stats).toMatchObject({ kept: 3, commands: 3, matched: 2 });
     });
 
+    test("a compile run twice alike is one entry", () => {
+        const dir = tempDir();
+        fs.writeFileSync(path.join(dir, "a.C"), "");
+        const builder = new ImageBuilder();
+        builder.exec(1, 0, catter, ["catter"], dir);
+        for (const pid of [2, 3]) {
+            builder.fork(1, pid);
+            builder.exec(pid, 1, "/usr/bin/cc", ["cc", "-c", "a.C"], dir);
+        }
+        const commands = [1, 2].map((id) => ({
+            id,
+            parent: null,
+            cwd: dir,
+            exe: "",
+            args: ["cc", "-c", "a.C"],
+            env: [],
+            analysis: null,
+        }));
+        const result = checkRecorder({
+            ...base,
+            places: new Places({ tree: dir }),
+            backend: "hook",
+            recording: { images: builder.build(), lost: 0 },
+            session: { commands, errors: [], finish: 0 },
+            entries: [{ directory: dir, file: "a.C", arguments: ["cc", "-c", "a.C"] }],
+        });
+        expect(result.differences).toEqual([]);
+        expect(result.stats.compiles).toBe(2);
+    });
+
     test("a script runs behind its interpreter", () => {
         expect(
             sameArgs(

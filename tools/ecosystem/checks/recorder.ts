@@ -262,8 +262,9 @@ export function checkRecorder(input: RecorderInput): {
 
     // The compiles the recorder saw against catter's database: an entry for
     // each source a compiler named that is still there, each entry a
-    // recorded compile's.
-    const recorded = new Map<string, { count: number; image: Image }>();
+    // recorded compile's. A compile run twice alike is one entry, as catter
+    // writes it.
+    const recorded = new Map<string, { image: Image; entry: boolean }>();
     for (const image of kept) {
         const args = expandResponseFiles(image.args, image.cwd);
         const sources = isCompiler(args[0] ?? "")
@@ -275,31 +276,29 @@ export function checkRecorder(input: RecorderInput): {
         stats.compiles += 1;
         const rest = args.filter((arg, i) => i === 0 || !sources.includes(arg));
         for (const source of sources) {
-            const key = JSON.stringify([rest, image.cwd, path.resolve(image.cwd, source)]);
-            const slot = recorded.get(key);
-            recorded.set(key, { count: (slot?.count ?? 0) + 1, image });
+            recorded.set(JSON.stringify([rest, image.cwd, path.resolve(image.cwd, source)]), {
+                image,
+                entry: false,
+            });
         }
     }
     for (const entry of input.entries) {
         const args = expandResponseFiles(entry.arguments, entry.directory);
         const rest = args.filter((arg, i) => i === 0 || !isSource(arg, entry.directory));
-        const key = JSON.stringify([
-            rest,
-            entry.directory,
-            path.resolve(entry.directory, entry.file),
-        ]);
-        const slot = recorded.get(key);
-        if (slot === undefined || slot.count === 0) {
+        const slot = recorded.get(
+            JSON.stringify([rest, entry.directory, path.resolve(entry.directory, entry.file)]),
+        );
+        if (slot === undefined) {
             add(
                 "entry-without-compile",
                 `the entry of ${entry.file} is no compile the recorder saw: ${places.label(entry.arguments)} [in ${entry.directory}]`,
             );
         } else {
-            slot.count -= 1;
+            slot.entry = true;
         }
     }
     for (const [key, slot] of recorded) {
-        if (slot.count > 0) {
+        if (!slot.entry) {
             const [, cwd, source] = JSON.parse(key) as [string[], string, string];
             add("no-entry", `no entry of ${source} for ${describe(slot.image.args, cwd)}`);
         }
