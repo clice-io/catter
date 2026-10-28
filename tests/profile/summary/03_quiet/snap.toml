@@ -2,8 +2,72 @@
 exit = 0
 
 [test."trace.json"]
-"critical path" = ["c++ a.cc", "c++ app"]
-"lane 1" = ["ninja"]
-"lane 2" = ["c++ a.cc", "c++ app"]
-"lane 3" = ["c++ b.cc", "ar libbc.a"]
-"lane 4" = ["c++ c.cc"]
+process = "events.json"
+"lane 1" = [
+    { depth = 0, name = "ninja", command = "ninja -j 3", cwd = "${WS}", exit = 0, id = 1 },
+]
+"lane 2" = [
+    {
+        depth = 0,
+        name = "c++ a.cc",
+        cat = "compile",
+        command = "c++ -c a.cc -o a.o",
+        cwd = "${WS}",
+        exit = 0,
+        id = 2,
+        parent = 1,
+        writes = ["${WS}/a.o"],
+        target = ["${WS}/app"],
+    },
+    {
+        depth = 0,
+        name = "c++ app",
+        cat = "link",
+        command = "c++ a.o libbc.a -o app",
+        cwd = "${WS}",
+        exit = 0,
+        id = 6,
+        parent = 1,
+        writes = ["${WS}/app"],
+    },
+]
+"lane 3" = [
+    {
+        depth = 0,
+        name = "c++ b.cc",
+        cat = "compile",
+        command = "c++ -c b.cc -o b.o",
+        cwd = "${WS}",
+        exit = 0,
+        id = 3,
+        parent = 1,
+        writes = ["${WS}/b.o"],
+        target = ["${WS}/libbc.a"],
+    },
+    {
+        depth = 0,
+        name = "ar libbc.a",
+        cat = "archive",
+        command = "ar rcs libbc.a b.o c.o",
+        cwd = "${WS}",
+        exit = 0,
+        id = 5,
+        parent = 1,
+        writes = ["${WS}/libbc.a"],
+    },
+]
+"lane 4" = [
+    {
+        depth = 0,
+        name = "c++ c.cc",
+        cat = "compile",
+        command = "c++ -c c.cc -o c.o",
+        cwd = "${WS}",
+        exit = 0,
+        id = 4,
+        parent = 1,
+        writes = ["${WS}/c.o"],
+        target = ["${WS}/libbc.a"],
+    },
+]
+running = [1, 2, 3, 2, 1, 2, 1, 0]

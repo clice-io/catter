@@ -1,13 +1,13 @@
 [test."$ catter profile --from events.json"]
 stdout = '''
-Profiled 9 commands in #s: 1.0 ran at once on average, 1 at most.
-Critical path, #s: c++ a.cc #s > ar liba.a #s > c++ libb.so #s > (3 more) > c++ libf.so #s > c++ libg.so #s
+Profiled 9 commands in 9.0 s: 1.0 ran at once on average, 1 at most.
+Critical path, 8.0 s: c++ a.cc 1.0 s > ar liba.a 1.0 s > c++ libb.so 1.0 s > (3 more) > c++ libf.so 1.0 s > c++ libg.so 1.0 s
 Slowest:
-  #s  make
-  #s  c++ a.cc
-  #s  ar liba.a
-  #s  c++ libb.so
-  #s  c++ libc.so
+  1.0 s  make
+  1.0 s  c++ a.cc
+  1.0 s  ar liba.a
+  1.0 s  c++ libb.so
+  1.0 s  c++ libc.so
 Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.
 '''
 exit = 0

@@ -150,8 +150,9 @@ exit = 0
   Xcode `${XCODE}`, each with `/` after it; the macOS SDK's version
   (`MacOSX#.sdk`), durations (`#ms`, `#s`), process ids (`ipc-#`), native
   stack frames (`#… native frames`), xmake's probe files
-  (`${TMP}/.xmake#/#/_#`), Go's build directories (`${TMP}/go-build#`) and
-  the seeds it gives cgo's compiler (`-frandom-seed=#`). Line ends read LF and
+  (`${TMP}/.xmake#/#/_#`), Go's build directories (`${TMP}/go-build#`), the
+  seeds it gives cgo's compiler (`-frandom-seed=#`) and the files GCC's
+  driver passes between its stages (`${TMP}/cc#.s`). Line ends read LF and
   colors are dropped.
 - **Platforms.** One file serves linux, darwin and win32. A block holds the
   output of the test's reference platform, the first of those three it runs

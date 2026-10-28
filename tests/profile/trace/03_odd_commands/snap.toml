@@ -1,12 +1,13 @@
 [test."$ catter profile --from events.json"]
 stdout = '''
-Profiled 8 commands in #s: 1.8 ran at once on average, 3 at most.
+`gone` runs in a working directory catter cannot read
+Profiled 8 commands in 2.0 s: 1.8 ran at once on average, 3 at most.
 Slowest:
-   #s  make
-   #s  daemon
-  #ms  orphan
-   #ms  sh
-   #ms  first
+   1.9 s  make
+   1.5 s  daemon
+  100 ms  orphan
+   50 ms  sh
+   30 ms  first
 Left out of the trace: 1 command catter could not capture.
 Left out of the trace: 1 command that did not end before the build did.
 Trace saved to ${WS}/trace.json: open it in https://ui.perfetto.dev or chrome://tracing.

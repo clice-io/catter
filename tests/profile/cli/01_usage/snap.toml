@@ -11,7 +11,7 @@ Arguments:
 Options:
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
-  -q, --quiet                  Print no summary.
+  -q, --quiet                  Print no summary, nor why catter could not capture a command.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or ptrace. [default: hook]
   --from <file>                Replay the build recorded in this file instead of running one.
@@ -43,7 +43,7 @@ Arguments:
 Options:
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
-  -q, --quiet                  Print no summary.
+  -q, --quiet                  Print no summary, nor why catter could not capture a command.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or ptrace. [default: hook]
   --from <file>                Replay the build recorded in this file instead of running one.
