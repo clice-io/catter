@@ -32,8 +32,8 @@ exit = 0
 entries = [
     {
         file = "src/main.c",
-        directory = "${WS}/out/sandbox/processwrapper-sandbox/1/execroot/_main",
-        output = "${WS}/out/sandbox/processwrapper-sandbox/1/execroot/_main/bazel-out/k8-fastbuild/bin/main.o",
+        directory = "${WS}/out/execroot/_main",
+        output = "${WS}/out/execroot/_main/bazel-out/k8-fastbuild/bin/main.o",
         arguments = ["cc", "-Iinclude", "-c", "src/main.c", "-o", "bazel-out/k8-fastbuild/bin/main.o"],
     },
 ]

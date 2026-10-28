@@ -206,7 +206,9 @@ std::string denied(int pid, int error) {
 /// Traces the build's processes from the thread it runs on: it seizes the
 /// build command's process, follows every process and thread that process
 /// starts, and tells `post` what each does, in the order it saw them, reading
-/// what a process runs while the process waits for it.
+/// what a process runs while the process waits for it. A process that execs
+/// runs its program once the session has taken the command (`taken`): its
+/// handlers read the command's files as they are before it runs.
 class Tracer {
 public:
     /// Of the build command's process `build`, which waits on `socket` until it
@@ -218,6 +220,11 @@ public:
     /// takes what is waiting then. The rest of the processes then go on
     /// untraced, as the thread exits.
     void run();
+
+    /// The session has taken the command of the last Execed posted.
+    void taken() {
+        took.release();
+    }
 
 private:
     /// Thread `tid` stopped, as `status` says.
@@ -241,6 +248,8 @@ private:
     int socket;
 
     std::function<void(Event)> post;
+
+    std::binary_semaphore took{0};
 
     /// The threads that run, by ID, each with the process it is of.
     std::unordered_map<int, int> tracees;
@@ -309,6 +318,7 @@ void Tracer::stopped(int tid, int status, std::chrono::microseconds time) {
                 tracees.erase(static_cast<int>(former));
             }
             post(execed(tid, time));
+            took.acquire();
             return resume(tid);
         }
         case EVENT_STOP: {
@@ -440,7 +450,7 @@ private:
     std::deque<Event> events;
 
     /// Set once the tracer tells something.
-    kota::event told;
+    kota::event arrived;
 
     /// The programs catter warned run without their privileges.
     std::unordered_set<std::string> warned;
@@ -482,15 +492,15 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
                 stand_in.reset();
             }
             events.push_back(std::move(event));
-            told.set();
+            arrived.set();
         });
     });
     std::jthread thread([&] { tracer.run(); });
     Done done;
     while(true) {
         while(events.empty()) {
-            told.reset();
-            co_await told.wait();
+            arrived.reset();
+            co_await arrived.wait();
         }
         auto event = std::move(events.front());
         events.pop_front();
@@ -498,7 +508,11 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
             done = std::move(*last);
             break;
         }
+        const bool exec = std::holds_alternative<Execed>(event);
         co_await take(std::move(event));
+        if(exec) {
+            tracer.taken();
+        }
     }
     thread.join();
 

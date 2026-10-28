@@ -2,7 +2,7 @@
 
 A handler is a program that catter tells about the commands a build starts. A handler that **decides** answers each command before it runs: run it as it is, run another command in its place, drop it, or abort the build. A handler that does not decide only **observes**: it is told, and the build never waits for it.
 
-Under a [capture backend](../design/capture-backends.md) that only observes the build, `eslogger` or `ptrace`, each command runs before catter hears of it, and catter refuses a handler that decides before the build starts. The session's start tells (`decisions`): a handler that can do without deciding sets `decides` there.
+Under a [capture backend](../design/capture-backends.md) that only observes the build, `eslogger` or `ptrace`, each command has started by the time catter hears of it, and catter refuses a handler that decides before the build starts. The session's start tells (`decisions`): a handler that can do without deciding sets `decides` there.
 
 catter speaks to a handler over a small protocol (see [Handler protocol](../design/handler-protocol.md)), so a handler can be written in any language. The SDKs for Python and TypeScript do the protocol for you.
 
@@ -61,13 +61,13 @@ class Handler(catter.Handler):
 catter.serve(Handler())
 ```
 
-| Callback              | When                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `on_start(session)`   | The session starts: its build command and working directory, and how commands are captured.                         |
-| `on_command(command)` | A command is about to run, or under `eslogger` and `ptrace` has started. A handler that decides returns its action. |
-| `on_error(error)`     | catter could not capture a command.                                                                                 |
-| `on_exit(exit)`       | A command has run: its exit code and how long it took.                                                              |
-| `on_finish(finish)`   | The build has ended, with its exit code.                                                                            |
+| Callback              | When                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `on_start(session)`   | The session starts: its build command and working directory, and how commands are captured.            |
+| `on_command(command)` | A command is about to run, or under `eslogger` has started. A handler that decides returns its action. |
+| `on_error(error)`     | catter could not capture a command.                                                                    |
+| `on_exit(exit)`       | A command has run: its exit code and how long it took.                                                 |
+| `on_finish(finish)`   | The build has ended, with its exit code.                                                               |
 
 A handler is told only of the events whose callback it overrides. `env = True` makes commands carry their environment.
 
