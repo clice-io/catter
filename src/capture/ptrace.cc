@@ -561,7 +561,11 @@ kota::task<> Capture::take(Event event) {
             execed.command.executable);
     }
     auto started = processes.exec(execed.pid, execed.pid, std::move(execed.command), execed.time);
-    assert(started.has_value());
+    // A process forked by one killed before its fork event, which the system
+    // handed to another parent, is no process of the build's.
+    if(!started) {
+        co_return;
+    }
     if(execed.error) {
         co_await session.uncaptured(started->id, started->parent, std::move(*execed.error));
     } else {
