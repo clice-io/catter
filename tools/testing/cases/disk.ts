@@ -178,7 +178,8 @@ export class Disk {
             if (event.ph !== "M") {
                 continue;
             }
-            const name = String(event.args?.["name"] ?? "");
+            const value = event.args?.["name"];
+            const name = typeof value === "string" ? value : "";
             if (event.name === "process_name") {
                 shown["process"] = name;
             } else if (event.name === "thread_name" && name !== "critical path") {

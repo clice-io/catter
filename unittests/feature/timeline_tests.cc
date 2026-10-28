@@ -51,21 +51,6 @@ bool within(const Span& inner, const Span& outer) {
 
 ZEST_SUITE(feature_timeline_tests) {
 
-ZEXPECT(feature::lanes_of(spans) == std::vector<std::uint32_t>{0, 0, 0, 0, 0, 0});
-};
-
-ZEXPECT(feature::lanes_of(spans) == std::vector<std::uint32_t>{0, 1, 2, 3, 2, 1});
-}
-;
-
-ZEXPECT(feature::lanes_of(spans) == std::vector<std::uint32_t>{0, 0, 1});
-}
-;
-
-ZEXPECT(feature::lanes_of(spans) == std::vector<std::uint32_t>{1, 1, 0, 0});
-}
-;
-
 ZEST_CASE(the_spans_of_a_lane_nest_and_overlapping_siblings_share_none) {
     for(std::uint32_t seed = 0; seed < 20; seed += 1) {
         const auto spans = random_spans(seed);
@@ -81,17 +66,6 @@ ZEST_CASE(the_spans_of_a_lane_nest_and_overlapping_siblings_share_none) {
         }
     }
 };
-
-const auto activity = feature::activity_of(spans);
-ZEXPECT(activity.worked == std::vector<std::int64_t>{25, 20, 30, 20, 20});
-ZEXPECT(activity.working == std::vector<std::pair<std::int64_t, std::uint32_t>>{
-                                {0,   1},
-                                {75,  2},
-                                {90,  1},
-                                {100, 0},
-});
-}
-;
 
 ZEST_CASE(what_spans_work_adds_up_to_how_many_work_over_time) {
     for(std::uint32_t seed = 0; seed < 20; seed += 1) {
@@ -110,5 +84,5 @@ ZEST_CASE(what_spans_work_adds_up_to_how_many_work_over_time) {
         }
     }
 };
-}
-;  // ZEST_SUITE(feature_timeline_tests)
+
+};  // ZEST_SUITE(feature_timeline_tests)

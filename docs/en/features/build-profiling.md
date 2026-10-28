@@ -32,15 +32,15 @@ The trace is a JSON file in Chrome's trace event format. Open it in [ui.perfetto
 
 Each slice is named by its program and, for a command catter analyzes, the file it is about: the source a compile compiles (`c++ main.cc`), the file a link or an archive makes (`c++ app`, `ar libfoo.a`). Its category is what the command does, for one catter analyzes: `compile`, `link`, `preprocess`, `archive`, ... Its arguments hold:
 
-| Argument  | Holds                                                                                                              |
-| --------- | ------------------------------------------------------------------------------------------------------------------ |
-| `command` | Its arguments, on one line, each as it is when plain, else as a JSON string.                                       |
-| `cwd`     | The directory it ran in.                                                                                           |
-| `exit`    | Its exit code; 128 and the signal's number for one a signal ended.                                                 |
-| `id`      | Its id in the session, which `parent` names.                                                                       |
-| `parent`  | The id of the command that started it; none for the build command.                                                 |
-| `writes`  | For a command catter analyzes, the files it writes.                                                                |
-| `target`  | For a compile, the files the commands that read its object write: the library or the program the object goes into. |
+| Argument  | Holds                                                                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `command` | Its arguments, on one line: each as it is when it holds only ASCII letters, digits and `_@%+=:,./\-`, else as a JSON string. |
+| `cwd`     | The directory it ran in.                                                                                                     |
+| `exit`    | Its exit code; 128 and the signal's number for one a signal ended.                                                           |
+| `id`      | Its id in the session, which `parent` names.                                                                                 |
+| `parent`  | The id of the command that started it; none for the build command.                                                           |
+| `writes`  | For a command catter analyzes, the files it writes.                                                                          |
+| `target`  | For a compile, the files the commands that read its object write: the library or the program the object goes into.           |
 
 ## The summary
 
@@ -67,13 +67,13 @@ Trace saved to /src/project/trace.json: open it in https://ui.perfetto.dev or ch
 
 Every capture backend gives each command's start and duration:
 
-| Backend    | Start and duration                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hook`     | On Linux and macOS, `catter-proxy` measures each command, from when it starts the program catter told it to run to the program's exit; on Windows, catter does, from when it takes the program the hook started to its exit. Each program of the build waits for catter's decision before it starts, and on Linux and macOS starts through `catter-proxy`: the trace shows the build as it runs under catter. |
-| `wrapper`  | As under `hook`, for the compilers, linkers and archivers the shims stand for, and the build command: the trace holds only those.                                                                                                                                                                                                                                                                             |
-| `ptrace`   | The times catter's tracer sees each process exec its program and exit. Each process of the build stops at each fork, exec and exit while catter reads it.                                                                                                                                                                                                                                                     |
-| `eslogger` | The times Endpoint Security gives each exec and exit. It only observes: the build runs as it would without catter.                                                                                                                                                                                                                                                                                            |
-| `--from`   | The times the file records, in microseconds: an event's `execution` holds its `start`, since the session started, and its `duration`. A time it does not record is `0`.                                                                                                                                                                                                                                       |
+| Backend    | Start and duration                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `hook`     | On Linux and macOS, `catter-proxy` measures each command, from when it starts the program catter told it to run to the program's exit; on Windows, catter does, from when it takes over the program the hook started, suspended, to its exit. Each program of the build waits for catter's decision before it starts, and on Linux and macOS starts through `catter-proxy`: the trace shows the build as it runs under catter. |
+| `wrapper`  | As under `hook`, for the compilers, linkers and archivers the shims stand for, and the build command: the trace holds only those.                                                                                                                                                                                                                                                                                              |
+| `ptrace`   | The times catter's tracer sees each process exec its program and exit. Each process of the build stops at each fork, exec and exit while catter reads it.                                                                                                                                                                                                                                                                      |
+| `eslogger` | The times Endpoint Security gives each exec and exit. It only observes: the build runs as it would without catter.                                                                                                                                                                                                                                                                                                             |
+| `--from`   | The times the file records, in microseconds: an event's `execution` holds its `start`, since the session started, and its `duration`. A time it does not record is `0`.                                                                                                                                                                                                                                                        |
 
 ## Use Cases
 
