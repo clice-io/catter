@@ -30,6 +30,33 @@ export function isCompile(args: readonly string[]): boolean {
     return program !== undefined && isCompiler(program) && rest.some((arg) => arg === "-c" || arg === "/c");
 }
 
+/// Options that only write what a source depends on (`-MD -MF a.d`):
+/// they change no compile.
+const DEPENDENCY_FILES = new Set(["-MD", "-MMD", "-MP", "-M", "-MM"]);
+const DEPENDENCY_FILES_WITH_VALUE = new Set(["-MF", "-MT", "-MQ"]);
+
+/// The arguments without the options that only write dependency files, and
+/// without `dropped`, options taking a value, joined or not.
+export function withoutDependencyFiles(args: readonly string[], dropped: readonly string[] = []): string[] {
+    const withValue = [...DEPENDENCY_FILES_WITH_VALUE, ...dropped];
+    const out: string[] = [];
+    for (let i = 0; i < args.length; i += 1) {
+        const arg = args[i] ?? "";
+        if (DEPENDENCY_FILES.has(arg) || arg.startsWith("-Wp,-MD,") || arg.startsWith("-Wp,-MMD,")) {
+            continue;
+        }
+        if (withValue.includes(arg)) {
+            i += 1;
+            continue;
+        }
+        if (withValue.some((option) => arg.startsWith(option) && arg.length > option.length)) {
+            continue;
+        }
+        out.push(arg);
+    }
+    return out;
+}
+
 /// Whether `arg` names a source file that is there now, from `cwd`.
 export function isSource(arg: string, cwd: string): boolean {
     return !arg.startsWith("-") && SOURCE.test(arg) && fs.statSync(path.resolve(cwd, arg), { throwIfNoEntry: false })?.isFile() === true;

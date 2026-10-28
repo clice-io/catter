@@ -5,8 +5,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { expandResponseFiles, shellSplit } from "../command.ts";
-import { label, type Difference, type Places } from "../difference.ts";
+import { baseName, expandResponseFiles, shellSplit, withoutDependencyFiles } from "../command.ts";
+import type { Difference, Places } from "../difference.ts";
 import type { Entry } from "./recorder.ts";
 
 interface RawEntry {
@@ -36,16 +36,32 @@ function keyOf(entry: Entry): string {
 
 /// Where two argument lists part, for a detail: the arguments around the
 /// first one they differ at.
-function parting(a: readonly string[], b: readonly string[]): string {
+function parting(a: readonly string[], b: readonly string[], places: Places): string {
     let i = 0;
     while (i < a.length && i < b.length && a[i] === b[i]) {
         i += 1;
     }
-    const around = (args: readonly string[]) => label(args.slice(Math.max(0, i - 1), i + 3), 120);
+    const around = (args: readonly string[]) => places.label(args.slice(Math.max(0, i - 1), i + 3), 120);
     return `at argument ${i}: catter has ${around(a)}, the build's ${around(b)}`;
 }
 
-export function checkHint(input: { entries: readonly Entry[]; hint: string | undefined; places: Places }): Difference[] {
+/// An entry's arguments as the two databases compare: response files read
+/// in, without the options that only write dependency files (CMake's
+/// export leaves them out), the compiler named by its name alone when the
+/// build's names one of catter's shims (a build configured under the
+/// wrapper backend records the shim as its compiler).
+function comparable(entry: Entry, shims: readonly string[]): string[] {
+    const [program = "", ...rest] = withoutDependencyFiles(expandResponseFiles(entry.arguments, entry.directory));
+    return [shims.some((dir) => program.startsWith(dir + path.sep)) ? baseName(program) : program, ...rest];
+}
+
+export function checkHint(input: {
+    entries: readonly Entry[];
+    hint: string | undefined;
+    /// catter's data directory, which holds the wrapper's shims.
+    home: string;
+    places: Places;
+}): Difference[] {
     const differences: Difference[] = [];
     const add = (kind: string, detail: string) => {
         differences.push({ check: "hint", kind, detail: input.places.spell(detail) });
@@ -69,10 +85,13 @@ export function checkHint(input: { entries: readonly Entry[]; hint: string | und
             add("catter-only", `the build's database has no entry of ${file}${entry.output === undefined ? "" : ` to ${entry.output}`}`);
             continue;
         }
-        const ours = expandResponseFiles(entry.arguments, entry.directory);
-        const its = expandResponseFiles(other.arguments, other.directory);
+        const its = comparable(other, [input.home]);
+        const ours = comparable(entry, []);
+        if (its[0] !== ours[0] && baseName(ours[0] ?? "") === its[0]) {
+            its[0] = ours[0] ?? "";
+        }
         if (ours.length !== its.length || ours.some((arg, i) => arg !== its[i])) {
-            add("arguments", `${file}: ${parting(ours, its)}`);
+            add("arguments", `${file}: ${parting(ours, its, input.places)}`);
         }
     }
     for (const left of theirs.values()) {

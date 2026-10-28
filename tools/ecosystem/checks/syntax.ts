@@ -7,39 +7,20 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { runProcess } from "../../testing/process.ts";
-import { baseName, isCompiler } from "../command.ts";
-import { label, quote, type Difference, type Places } from "../difference.ts";
+import { baseName, isCompiler, withoutDependencyFiles } from "../command.ts";
+import { quote, type Difference, type Places } from "../difference.ts";
 import type { Command, Session } from "../session.ts";
 import type { Entry } from "./recorder.ts";
 
-/// Options that write what a syntax check does not: the object and the
-/// dependency files.
-const DROPPED_WITH_VALUE = new Set(["-o", "-MF", "-MT", "-MQ"]);
-const DROPPED = new Set(["-c", "-MD", "-MMD", "-MP", "-M", "-MM"]);
-
-/// The entry's arguments checking its source's code only, or undefined for
+/// The entry's arguments checking its source's code only, writing neither
+/// its object nor its dependency files, or undefined for
 /// a compiler that does not take GCC's options (cl, nvcc).
 export function syntaxOnly(args: readonly string[]): string[] | undefined {
     const [program, ...rest] = args;
     if (program === undefined || !isCompiler(program) || /^(?:cl|clang-cl|nvcc)(?:\.exe)?$/i.test(baseName(program))) {
         return undefined;
     }
-    const out = [program];
-    for (let i = 0; i < rest.length; i += 1) {
-        const arg = rest[i] ?? "";
-        if (DROPPED.has(arg) || arg.startsWith("-Wp,-MD,") || arg.startsWith("-Wp,-MMD,")) {
-            continue;
-        }
-        if (DROPPED_WITH_VALUE.has(arg)) {
-            i += 1;
-            continue;
-        }
-        if ([...DROPPED_WITH_VALUE].some((option) => arg.startsWith(option) && arg.length > option.length)) {
-            continue;
-        }
-        out.push(arg);
-    }
-    return [...out, "-fsyntax-only"];
+    return [program, ...withoutDependencyFiles(rest, ["-o"]).filter((arg) => arg !== "-c"), "-fsyntax-only"];
 }
 
 function environment(env: readonly string[]): NodeJS.ProcessEnv {
@@ -120,7 +101,7 @@ export async function checkSyntax(input: {
                 check: "syntax",
                 kind: "fails",
                 detail: input.places.spell(`${path.resolve(entry.directory, entry.file)}: ${why.trim()}`),
-                repro: input.places.spell(`cd ${quote(entry.directory)} && ${label(args, 100_000)}`),
+                repro: input.places.spell(`cd ${quote(entry.directory)} && ${args.map(quote).join(" ")}`),
             });
         }
     };

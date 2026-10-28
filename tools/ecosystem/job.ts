@@ -249,7 +249,7 @@ async function runBackend(job: string, build: Build, backend: Backend, source: s
     const syntax = await checkSyntax({ entries, session, places: spell });
     add(syntax.differences);
     result.syntax = syntax.stats;
-    add(checkHint({ entries, hint: build.hint === undefined ? undefined : path.join(tree, build.hint), places: spell }));
+    add(checkHint({ entries, hint: build.hint === undefined ? undefined : path.join(tree, build.hint), home, places: spell }));
     return result;
 }
 

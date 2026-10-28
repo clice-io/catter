@@ -1,0 +1,181 @@
+name: ecosystem
+
+# A round over the real projects of ecosystem/ (ecosystem/README.md): every
+# project's build on each of its platforms, a runner each, under each of its
+# backends, with a recorder of every exec around catter; then the checks of
+# what catter answered. The catter under test is a nightly's release package
+# (nightly.yml dispatches a round once it has published one) or a CI run's
+# package artifact, named by hand; a pull request that changes the ecosystem
+# runs a round on the newest nightly. The framework is the workflow's own
+# ref. Each job's summary lists its new differences, each with what
+# reproduces it, then the known ones; the last job's gathers them. The round
+# only reports: nothing waits on it but a stable release, which tags a
+# nightly whose round shows no new difference.
+on:
+  workflow_dispatch:
+    inputs:
+      catter:
+        description: "The catter to test: a nightly's tag (v0.1.YYYYMMDDHH), or the id of a CI run (main.yml) whose package artifacts live"
+        required: true
+  pull_request:
+    paths:
+      - ecosystem/**
+      - tools/ecosystem/**
+      - .github/workflows/ecosystem.yml
+
+# A pull request's newer push replaces its round still going; the rounds of
+# main, one per nightly, all run.
+concurrency:
+  group: ecosystem-${{ github.ref == 'refs/heads/main' && inputs.catter || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  jobs:
+    runs-on: ubuntu-24.04
+    outputs:
+      catter: ${{ steps.catter.outputs.catter }}
+      jobs: ${{ steps.list.outputs.jobs }}
+    steps:
+      - name: Name the catter under test
+        id: catter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CATTER: ${{ inputs.catter }}
+        run: |
+          if [ -z "$CATTER" ]; then
+            CATTER=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 \
+              --json tagName --jq '.[0].tagName')
+          fi
+          if [ -z "$CATTER" ]; then
+            echo "::error::no published release to test"
+            exit 1
+          fi
+          echo "catter=$CATTER" >> "$GITHUB_OUTPUT"
+          echo "Testing catter $CATTER" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-pixi
+        with:
+          environments: ecosystem
+
+      - name: List the jobs
+        id: list
+        run: |
+          pixi run -e ecosystem pnpm install --frozen-lockfile
+          echo "jobs=$(pixi run -e ecosystem node tools/ecosystem/run.ts --list)" >> "$GITHUB_OUTPUT"
+
+  run:
+    needs: jobs
+    name: ${{ matrix.name }} (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.jobs.outputs.jobs) }}
+    runs-on: ${{ fromJSON('{"linux":"ubuntu-24.04","macos":"macos-15","windows":"windows-2025"}')[matrix.platform] }}
+    # A step's own bound (two hours) stops a hung build well before.
+    timeout-minutes: 300
+    env:
+      TARGET: ${{ fromJSON('{"linux":"x86_64-unknown-linux-gnu","macos":"aarch64-apple-darwin","windows":"x86_64-w64-mingw32"}')[matrix.platform] }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-pixi
+        with:
+          environments: ecosystem
+
+      # A nightly's release package, or a CI run's package artifact: the
+      # same tree, catter/bin/.
+      - name: Download catter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CATTER: ${{ needs.jobs.outputs.catter }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/catter"
+          cd "$RUNNER_TEMP/catter"
+          if [[ "$CATTER" == v* ]]; then
+            gh release download "$CATTER" --repo "$GITHUB_REPOSITORY" --pattern "catter-*.$TARGET.tar.gz"
+          else
+            gh run download "$CATTER" --repo "$GITHUB_REPOSITORY" -n "package-$TARGET"
+          fi
+          tar -xzf ./*.tar.gz
+          ls catter/bin
+
+      # Hang detection: an unreachable mirror stalls apt for the job's whole
+      # time. auditd records every exec and fork of the build; its log must
+      # not rotate while it does.
+      - name: Install the recorder and the project's packages
+        if: matrix.platform == 'linux'
+        timeout-minutes: 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends auditd ${{ matrix.packages }}
+          sudo sed -i 's/^max_log_file = .*/max_log_file = 2048/; s/^max_log_file_action = .*/max_log_file_action = ignore/' \
+            /etc/audit/auditd.conf
+          sudo systemctl restart auditd
+
+      - name: Run
+        env:
+          CATTER_EXECUTABLE: ${{ runner.temp }}/catter/catter/bin/catter
+        run: |
+          pixi run -e ecosystem pnpm install --frozen-lockfile
+          pixi run -e ecosystem node tools/ecosystem/run.ts "${{ matrix.name }}" \
+            --dir "$RUNNER_TEMP/projects" --out "$RUNNER_TEMP/out"
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        # GitHub takes a summary up to 1 MiB; the artifact holds the whole.
+        run: head -c 1000000 "$RUNNER_TEMP/out/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+      # The results, and what each backend's run wrote: catter's database,
+      # its events and replay, the recording, the build's output and
+      # catter's logs.
+      - name: Upload the results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ecosystem-${{ matrix.artifact }}
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: warn
+          retention-days: 30
+
+  report:
+    needs: [jobs, run]
+    if: ${{ !cancelled() && needs.jobs.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-pixi
+        with:
+          environments: ecosystem
+
+      - name: Download the results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ecosystem-*
+          path: ${{ runner.temp }}/results
+
+      - name: Read the round
+        run: |
+          pixi run -e ecosystem pnpm install --frozen-lockfile
+          pixi run -e ecosystem node tools/ecosystem/run.ts round "$RUNNER_TEMP/results" --out "$RUNNER_TEMP/round.md"
+          head -c 1000000 "$RUNNER_TEMP/round.md" >> "$GITHUB_STEP_SUMMARY"

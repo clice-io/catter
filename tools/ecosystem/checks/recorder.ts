@@ -14,7 +14,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandResponseFiles, isCompile, isSource, isWrapped } from "../command.ts";
-import { label, type Difference, type Places } from "../difference.ts";
+import type { Difference, Places } from "../difference.ts";
 import type { Backend } from "../project.ts";
 import type { Image, Recording } from "../record/images.ts";
 import type { Command, Session } from "../session.ts";
@@ -121,7 +121,7 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
     for (const command of session.commands) {
         catChildren.set(command.parent, [...(catChildren.get(command.parent) ?? []), command]);
     }
-    const describe = (args: readonly string[], cwd: string) => `${label(args)} [in ${cwd}]`;
+    const describe = (args: readonly string[], cwd: string) => `${places.label(args)} [in ${cwd}]`;
     const subtree = (image: Image): number =>
         (recChildren.get(image.id) ?? []).reduce((sum, child) => sum + 1 + subtree(child), 0);
 
@@ -214,7 +214,7 @@ export function checkRecorder(input: RecorderInput): { differences: Difference[]
         const key = JSON.stringify([rest, entry.directory, path.resolve(entry.directory, entry.file)]);
         const slot = recorded.get(key);
         if (slot === undefined || slot.count === 0) {
-            add("entry-without-compile", `the entry of ${entry.file} is no compile the recorder saw: ${label(entry.arguments)} [in ${entry.directory}]`);
+            add("entry-without-compile", `the entry of ${entry.file} is no compile the recorder saw: ${places.label(entry.arguments)} [in ${entry.directory}]`);
         } else {
             slot.count -= 1;
         }
