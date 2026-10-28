@@ -63,6 +63,16 @@ export function straceStrings(text: string): (string | string[])[] {
     return items;
 }
 
+/// A directory as the kernel names it, its symlinks resolved, as catter and
+/// auditd report a directory: where it still is.
+function physical(dir: string): string {
+    try {
+        return fs.realpathSync.native(dir);
+    } catch {
+        return dir;
+    }
+}
+
 interface Call {
     time: number;
     tid: number;
@@ -117,7 +127,7 @@ export function parseStrace(dir: string, cwd: string): ImageBuilder {
         } else if (call.name === "chdir" && call.result === "0") {
             const [target] = straceStrings(call.args);
             if (typeof target === "string") {
-                cwds.set(pid, path.posix.resolve(cwds.get(pid) ?? "/", target));
+                cwds.set(pid, physical(path.posix.resolve(cwds.get(pid) ?? "/", target)));
             }
         } else if (call.name === "fchdir" && call.result === "0") {
             const target = /<(.*)>/.exec(call.args)?.[1];

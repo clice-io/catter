@@ -171,6 +171,29 @@ describe("strace", () => {
     });
 });
 
+describe("strace through a symlink", () => {
+    test("a directory reads as the kernel names it", () => {
+        const dir = tempDir();
+        fs.mkdirSync(path.join(dir, "real"));
+        fs.symlinkSync(path.join(dir, "real"), path.join(dir, "link"));
+        const traces = path.join(dir, "traces");
+        fs.mkdirSync(traces);
+        fs.writeFileSync(
+            path.join(traces, "t.10"),
+            [
+                `1.0 execve("/usr/bin/make", ["make"], 0x0 /* 3 vars */) = 0`,
+                `1.1 chdir("link") = 0`,
+                `1.2 execve("/usr/bin/cc", ["cc"], 0x0 /* 3 vars */) = 0`,
+            ].join("\n"),
+        );
+        expect(
+            parseStrace(traces, dir)
+                .build()
+                .map((image) => image.cwd),
+        ).toEqual([dir, path.join(dir, "real")]);
+    });
+});
+
 describe("the recorder check", () => {
     const catter = "/opt/catter/bin/catter";
     function session(commands: Partial<Command>[]): Session {

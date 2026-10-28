@@ -134,10 +134,17 @@ function lostCount(): number {
     return Number(/^lost (\d+)/m.exec(sudo(["auditctl", "-s"]))?.[1] ?? "0");
 }
 
+/// The log's inode and size: a log rotated during the build is another
+/// file, which no size tells apart from one that grew.
+function logState(): { inode: string; size: number } {
+    const [inode = "", size = "0"] = sudo(["stat", "-c", "%i %s", LOG]).trim().split(" ");
+    return { inode, size: Number(size) };
+}
+
 export class AuditRecorder implements Recorder {
     readonly name = "auditd";
     private readonly key = `catter-ecosystem-${randomBytes(4).toString("hex")}`;
-    private offset = 0;
+    private log = { inode: "", size: 0 };
     private lost = 0;
 
     wrap(command: string[]): string[] {
@@ -145,63 +152,80 @@ export class AuditRecorder implements Recorder {
     }
 
     start(): void {
-        this.offset = Number(sudo(["stat", "-c", "%s", LOG]).trim());
+        this.log = logState();
         this.lost = lostCount();
-        sudo(["auditctl", "-b", "65536", "-r", "0"]);
-        sudo([
-            "auditctl",
-            "-a",
-            "always,exit",
-            "-F",
-            "arch=b64",
-            "-S",
-            "execve,execveat",
-            "-k",
-            this.key,
-        ]);
-        sudo([
-            "auditctl",
-            "-a",
-            "always,exit",
-            "-F",
-            "arch=b64",
-            "-S",
-            "clone,clone3,fork,vfork",
-            "-F",
-            "success=1",
-            "-k",
-            this.key,
-        ]);
+        try {
+            sudo(["auditctl", "-b", "65536", "-r", "0"]);
+            sudo([
+                "auditctl",
+                "-a",
+                "always,exit",
+                "-F",
+                "arch=b64",
+                "-S",
+                "execve,execveat",
+                "-k",
+                this.key,
+            ]);
+            sudo([
+                "auditctl",
+                "-a",
+                "always,exit",
+                "-F",
+                "arch=b64",
+                "-S",
+                "clone,clone3,fork,vfork",
+                "-F",
+                "success=1",
+                "-k",
+                this.key,
+            ]);
+        } catch (error) {
+            this.removeRules();
+            throw error;
+        }
+    }
+
+    /// The rules of the run off, whatever else failed: left on, they log
+    /// every exec and fork of the machine until it restarts.
+    private removeRules(): void {
+        sudo(["auditctl", "-D", "-k", this.key]);
     }
 
     /// The log read once it holds the exec of a marker run while the rules
     /// are still on (auditd writes what the kernel hands it a little later),
     /// then the rules off.
     async stop(): Promise<Recording> {
-        const marker = `catter-ecosystem-marker-${randomBytes(4).toString("hex")}`;
-        let log = "";
-        for (let attempt = 0; ; attempt += 1) {
-            spawnSync("/bin/true", [marker]);
-            log = sudo(["tail", "-c", `+${this.offset + 1}`, LOG]);
-            if (
-                log.includes(Buffer.from(marker).toString("hex").toUpperCase()) ||
-                log.includes(`"${marker}"`)
-            ) {
-                break;
+        let text = "";
+        try {
+            const marker = `catter-ecosystem-marker-${randomBytes(4).toString("hex")}`;
+            for (let attempt = 0; ; attempt += 1) {
+                spawnSync("/bin/true", [marker]);
+                text = sudo(["tail", "-c", `+${this.log.size + 1}`, LOG]);
+                if (
+                    text.includes(Buffer.from(marker).toString("hex").toUpperCase()) ||
+                    text.includes(`"${marker}"`)
+                ) {
+                    break;
+                }
+                if (attempt === 60) {
+                    throw new Error(
+                        `auditd never logged the marker exec: is it running, with ${LOG}?`,
+                    );
+                }
+                await new Promise((resolve) => {
+                    // No event: auditd says nothing when it has written a record.
+                    setTimeout(resolve, 1000);
+                });
             }
-            if (attempt === 60) {
-                throw new Error(`auditd never logged the marker exec: is it running, with ${LOG}?`);
-            }
-            await new Promise((resolve) => {
-                // No event: auditd says nothing when it has written a record.
-                setTimeout(resolve, 1000);
-            });
+        } finally {
+            this.removeRules();
         }
-        sudo(["auditctl", "-D", "-k", this.key]);
-        const size = Number(sudo(["stat", "-c", "%s", LOG]).trim());
-        if (size < this.offset) {
-            throw new Error(`${LOG} rotated during the build: raise max_log_file in auditd.conf`);
+        if (logState().inode !== this.log.inode) {
+            throw new Error(
+                `${LOG} rotated during the build: raise max_log_file in auditd.conf, and set max_log_file_action to ignore`,
+            );
         }
-        return { images: parseAudit(log, this.key).build(), lost: lostCount() - this.lost };
+        return { images: parseAudit(text, this.key).build(), lost: lostCount() - this.lost };
     }
 }

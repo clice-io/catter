@@ -161,7 +161,9 @@ among the known differences no run showed.
   `SYSCALL`, `EXECVE` and `CWD` records grouped by serial. A process's
   parent is the image its process ran when it forked it, through a daemon's
   double fork (Bazel's server). It needs auditd running, sudo, and a log
-  that does not rotate during the build; it costs the build about a tenth.
+  that does not rotate during the build (`max_log_file_action = ignore`, as
+  the workflow sets it; a log that rotated stops the job); it costs the
+  build about a tenth.
 - **Linux, without auditd: strace** (`--recorder strace`), each process's
   directory rebuilt from its `chdir`s and forks. It slows a build 1.75 times
   and breaks a sanitized catter (LeakSanitizer does not run under ptrace).
