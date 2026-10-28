@@ -611,7 +611,6 @@ stdout = '''
             "arguments": [
                 "gcc",
                 "a.c",
-                "b.c",
                 "-o",
                 "app"
             ],
@@ -622,7 +621,6 @@ stdout = '''
             "file": "b.c",
             "arguments": [
                 "gcc",
-                "a.c",
                 "b.c",
                 "-o",
                 "app"

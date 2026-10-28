@@ -59,9 +59,7 @@ stdout = '''
                 "/nologo",
                 "/c",
                 "/Tc",
-                "a.txt",
-                "/Tp",
-                "b.txt"
+                "a.txt"
             ],
             "output": "${WS}/a.obj"
         },
@@ -72,8 +70,6 @@ stdout = '''
                 "cl",
                 "/nologo",
                 "/c",
-                "/Tc",
-                "a.txt",
                 "/Tp",
                 "b.txt"
             ],

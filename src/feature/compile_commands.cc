@@ -116,10 +116,11 @@ std::string failure_log(data::ipcid_t id, const data::command& command, const Er
 }
 
 /// Writes the compilation database of the compiler commands of a build: the entries of each
-/// command, each of the source and the arguments of that command, but of a source another
-/// compile writes, a preprocess's of a source another command compiles, and a probe's. A compile
-/// into an object of what a preprocess wrote gets an entry of the preprocess's source, and so does
-/// a preprocess whose file the build removes, as a build cache keyed by it does.
+/// command, each of a source and the arguments of that command without its other sources, but of a
+/// source another compile writes, a preprocess's of a source another command compiles, and a
+/// probe's. A compile into an object of what a preprocess wrote gets an entry of the preprocess's
+/// source, and so does a preprocess whose file the build removes, as a build cache keyed by it
+/// does.
 class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}

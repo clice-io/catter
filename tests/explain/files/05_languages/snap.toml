@@ -259,10 +259,7 @@ stdout = '''
                 "clang",
                 "--target=x86_64-linux-gnu",
                 "-c",
-                "greet.cppm",
-                "start.S",
-                "util.m",
-                "kernel.cu"
+                "greet.cppm"
             ],
             "output": "${WS}/greet.o"
         },
@@ -273,10 +270,7 @@ stdout = '''
                 "clang",
                 "--target=x86_64-linux-gnu",
                 "-c",
-                "greet.cppm",
-                "start.S",
-                "util.m",
-                "kernel.cu"
+                "start.S"
             ],
             "output": "${WS}/start.o"
         },
@@ -287,10 +281,7 @@ stdout = '''
                 "clang",
                 "--target=x86_64-linux-gnu",
                 "-c",
-                "greet.cppm",
-                "start.S",
-                "util.m",
-                "kernel.cu"
+                "util.m"
             ],
             "output": "${WS}/util.o"
         },
@@ -301,9 +292,6 @@ stdout = '''
                 "clang",
                 "--target=x86_64-linux-gnu",
                 "-c",
-                "greet.cppm",
-                "start.S",
-                "util.m",
                 "kernel.cu"
             ],
             "output": "${WS}/kernel.o"

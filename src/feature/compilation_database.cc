@@ -123,7 +123,19 @@ JSON entry(std::string_view cwd,
 std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analysis) {
     std::vector<JSON> entries;
     auto add = [&](const Read& source, std::optional<std::string> output) {
-        entries.push_back(entry(cwd, source.path, analysis.expansion.argv, std::move(output)));
+        const auto& argv = analysis.expansion.argv;
+        std::vector<bool> others(argv.size());
+        for(const auto& read: analysis.reads) {
+            if(&read != &source && read.role == InputRole::Source) {
+                const auto& argument = analysis.arguments[read.location.argument];
+                std::fill_n(others.begin() + argument.index, argument.count, true);
+            }
+        }
+        const auto own = std::views::iota(0uz, argv.size()) |
+                         std::views::filter([&](std::size_t i) { return !others[i]; }) |
+                         std::views::transform([&](std::size_t i) { return argv[i]; }) |
+                         std::ranges::to<std::vector>();
+        entries.push_back(entry(cwd, source.path, own, std::move(output)));
     };
     std::vector<bool> written(analysis.reads.size());
     for(const auto& write: analysis.writes) {

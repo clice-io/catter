@@ -1,0 +1,421 @@
+[test."$ catter explain -- gcc -c -DX a.c b.c"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.c",
+        "b.c"
+    ],
+    "reads": [
+        "a.c",
+        "b.c"
+    ],
+    "writes": [
+        "a.o",
+        "b.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        },
+        {
+            "output": "b.o",
+            "inputs": [
+                "b.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "-DX",
+                "a.c"
+            ],
+            "output": "${WS}/a.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "-DX",
+                "b.c"
+            ],
+            "output": "${WS}/b.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang -c -x c a.txt -x c++ b.txt"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "sources": [
+        "a.txt",
+        "b.txt"
+    ],
+    "reads": [
+        "a.txt",
+        "b.txt"
+    ],
+    "writes": [
+        "a.o",
+        "b.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.txt"
+            ]
+        },
+        {
+            "output": "b.o",
+            "inputs": [
+                "b.txt"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.txt",
+            "arguments": [
+                "clang",
+                "-c",
+                "-x",
+                "c",
+                "a.txt",
+                "-x",
+                "c++"
+            ],
+            "output": "${WS}/a.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.txt",
+            "arguments": [
+                "clang",
+                "-c",
+                "-x",
+                "c",
+                "-x",
+                "c++",
+                "b.txt"
+            ],
+            "output": "${WS}/b.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- gcc -c @sources.rsp"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:gcc",
+    "dialect": "gcc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "os": "linux",
+        "objectFormat": "elf",
+        "artifactModel": "elf",
+        "from": "host-fallback"
+    },
+    "responseFiles": [
+        "sources.rsp"
+    ],
+    "arguments": [
+        "gcc",
+        "-c",
+        "a.c",
+        "b.c"
+    ],
+    "sources": [
+        "a.c",
+        "b.c"
+    ],
+    "reads": [
+        "a.c",
+        "b.c"
+    ],
+    "writes": [
+        "a.o",
+        "b.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        },
+        {
+            "output": "b.o",
+            "inputs": [
+                "b.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "a.c"
+            ],
+            "output": "${WS}/a.o"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.c",
+            "arguments": [
+                "gcc",
+                "-c",
+                "b.c"
+            ],
+            "output": "${WS}/b.o"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- cl /nologo /c a.cc /Tcb.txt /Tp c.txt"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:msvc",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cc",
+        "b.txt",
+        "c.txt"
+    ],
+    "reads": [
+        "a.cc",
+        "b.txt",
+        "c.txt"
+    ],
+    "writes": [
+        "a.obj",
+        "b.obj",
+        "c.obj"
+    ],
+    "edges": [
+        {
+            "output": "a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "b.obj",
+            "inputs": [
+                "b.txt"
+            ]
+        },
+        {
+            "output": "c.obj",
+            "inputs": [
+                "c.txt"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "b.obj",
+            "reason": "default-output"
+        },
+        {
+            "path": "c.obj",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "a.cc"
+            ],
+            "output": "${WS}/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.txt",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Tcb.txt"
+            ],
+            "output": "${WS}/b.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "c.txt",
+            "arguments": [
+                "cl",
+                "/nologo",
+                "/c",
+                "/Tp",
+                "c.txt"
+            ],
+            "output": "${WS}/c.obj"
+        }
+    ]
+}
+'''
+exit = 0
+
+[test."$ catter explain -- clang-cl /c a.cc b.cc /Fo:out/"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang-cl",
+    "dialect": "msvc",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "unknown-pc-windows-msvc",
+        "os": "windows",
+        "objectFormat": "coff",
+        "env": "msvc",
+        "artifactModel": "coff-msvc",
+        "from": "driver-default"
+    },
+    "sources": [
+        "a.cc",
+        "b.cc"
+    ],
+    "reads": [
+        "a.cc",
+        "b.cc"
+    ],
+    "writes": [
+        "out/a.obj",
+        "out/b.obj"
+    ],
+    "edges": [
+        {
+            "output": "out/a.obj",
+            "inputs": [
+                "a.cc"
+            ]
+        },
+        {
+            "output": "out/b.obj",
+            "inputs": [
+                "b.cc"
+            ]
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.cc",
+            "arguments": [
+                "clang-cl",
+                "/c",
+                "a.cc",
+                "/Fo:out/"
+            ],
+            "output": "${WS}/out/a.obj"
+        },
+        {
+            "directory": "${WS}",
+            "file": "b.cc",
+            "arguments": [
+                "clang-cl",
+                "/c",
+                "b.cc",
+                "/Fo:out/"
+            ],
+            "output": "${WS}/out/b.obj"
+        }
+    ]
+}
+'''
+exit = 0

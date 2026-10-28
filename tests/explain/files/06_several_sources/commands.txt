@@ -1,0 +1,5 @@
+gcc -c -DX a.c b.c
+clang -c -x c a.txt -x c++ b.txt
+gcc -c @sources.rsp
+cl /nologo /c a.cc /Tcb.txt /Tp c.txt
+clang-cl /c a.cc b.cc /Fo:out/
