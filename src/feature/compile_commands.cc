@@ -189,6 +189,11 @@ public:
             preprocesses.emplace(id, made->file);
         }
         auto entries = entries_of(command.cwd, *analysis);
+        const auto mirror = mirror_of(command.cwd, *analysis);
+        std::vector<JSON> mirrored_entries;
+        if(mirror.has_value()) {
+            mirrored_entries = entries_of(*mirror, *analysis);
+        }
         for(std::size_t i = 0; i < entries.size(); i += 1) {
             auto& entry = entries[i];
             const auto& object = entry.as_object();
@@ -205,14 +210,17 @@ public:
                 consumed.insert(by.id);
                 kota::fs::path::resolve(source, read.path, by.cwd);
             } else {
-                if(auto directory = mirror_of(command.cwd, source)) {
-                    mirrored = Mirrored{.entry = std::move(entries_of(*directory, *analysis)[i])};
+                if(mirror.has_value()) {
+                    mirrored = Mirrored{.entry = std::move(mirrored_entries[i])};
                     kota::fs::path::resolve(mirrored->source,
                                             object.find("file")->as_string(),
-                                            *directory);
+                                            *mirror);
                 }
                 if(!preprocess) {
                     compiled.insert(source);
+                    if(mirrored.has_value()) {
+                        compiled.insert(mirrored->source);
+                    }
                 }
             }
             if(xmake_probe(source) || cmake_probe(command.cwd, source)) {
@@ -231,6 +239,10 @@ public:
                 std::string file;
                 kota::fs::path::resolve(file, write.path, command.cwd);
                 written.insert(std::move(file));
+                if(mirror.has_value()) {
+                    kota::fs::path::resolve(file, write.path, *mirror);
+                    written.insert(std::move(file));
+                }
             }
         }
         co_return Action{};
@@ -311,15 +323,31 @@ private:
         /// The preprocess that made it, when it writes a file from the source.
         std::optional<Preprocessed> made;
 
-        /// The entry in the directory the command's working directory mirrors, when the source is
-        /// a symlink to the file of its name there.
+        /// The entry in the directory the command's working directory mirrors, when the build
+        /// staged its sources there.
         std::optional<Mirrored> mirrored;
     };
 
-    /// The directory the working directory `cwd` of a command mirrors, when the source of the
-    /// command there, `source`, is a symlink to the file of the same name under it: a build that
-    /// stages a command's inputs as symlinks in a directory of their own, as Bazel's sandboxes
-    /// do, mirrors the directory it keeps them in.
+    /// The directory the working directory `cwd` of the compile `analysis` is of mirrors, when a
+    /// source of it there is a symlink to the file of the same name under that directory: a build
+    /// that stages a command's inputs as symlinks in a directory of their own, as Bazel's
+    /// sandboxes do, mirrors the directory it keeps them in.
+    static std::optional<std::string> mirror_of(std::string_view cwd,
+                                                const CompilerAnalysis& analysis) {
+        for(const auto& read: analysis.reads) {
+            if(read.role == InputRole::Source) {
+                std::string source;
+                kota::fs::path::resolve(source, read.path, cwd);
+                if(auto directory = mirror_of(cwd, source)) {
+                    return directory;
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
+    /// The directory `cwd` mirrors, when `source` there is a symlink to the file of the same name
+    /// under it.
     static std::optional<std::string> mirror_of(std::string_view cwd, std::string_view source) {
         const auto name = kota::fs::path::strip_prefix(source, cwd);
         std::string target;
@@ -400,16 +428,18 @@ private:
         std::size_t outputs = 0;
         std::unordered_set<std::string_view> files;
         for(auto& [entry, source, preprocess, existed, made, mirrored]: found) {
-            if(written.contains(source)) {
-                continue;
-            }
             // Gone with the directory the build staged it in, the source is still where its
             // symlink led; gone alone, it was a probe's.
-            if(existed && !kota::fs::is_file(source)) {
+            const bool staged = existed && !kota::fs::is_file(source);
+            if(staged) {
                 if(!mirrored.has_value() || !kota::fs::is_file(mirrored->source)) {
                     continue;
                 }
                 entry = std::move(mirrored->entry);
+                source = std::move(mirrored->source);
+            }
+            if(written.contains(source)) {
+                continue;
             }
             // A compile of the source stands for every preprocess of it; a compile of what a
             // preprocess wrote, for that one alone.
@@ -418,8 +448,9 @@ private:
                 continue;
             }
             // A build cache that looks objects up by the preprocessed source, xmake's, removes it
-            // once it has the object, from the cache or from a compile.
-            if(made.has_value() && kept_files.contains(made->file) &&
+            // once it has the object, from the cache or from a compile; a staged preprocess's
+            // file went with the directory it was written in.
+            if(!staged && made.has_value() && kept_files.contains(made->file) &&
                !kota::fs::is_file(made->file)) {
                 entry = entry_of(made->cwd,
                                  made->analysis,

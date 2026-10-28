@@ -24,6 +24,7 @@ main.c
 main.c
 CDB saved to ${WS}/compile_commands.json with 2 entries.
 '''
+stderr = "main.c"
 exit = 0
 
 [msvc."compile_commands.json"]

@@ -4,7 +4,7 @@ stderr = "OpenJDK 64-Bit Server VM warning: Options -Xverify:none and -noverify 
 exit = 0
 
 [hook."$ catter compile-commands -o compile_commands.json -- bazel --output_base=out build //:main".darwin]
-wrong = "macOS runs Bazel's actions through Apple's sandbox-exec, which runs without the hook: the compile it starts goes uncaptured"
+wrong = "Apple's /bin/sh, which runs npm's Bazelisk, and Apple's sandbox-exec, which runs Bazel's actions, run without the hook: the compile goes uncaptured"
 stdout = "CDB saved to ${WS}/compile_commands.json with 0 entries."
 stderr = "OpenJDK 64-Bit Server VM warning: Options -Xverify:none and -noverify were deprecated in JDK 13 and will likely be removed in a future release."
 exit = 0
@@ -20,5 +20,5 @@ entries = [
 ]
 
 [hook."compile_commands.json".darwin]
-wrong = "macOS runs Bazel's actions through Apple's sandbox-exec, which runs without the hook: the compile it starts goes uncaptured"
+wrong = "Apple's /bin/sh, which runs npm's Bazelisk, and Apple's sandbox-exec, which runs Bazel's actions, run without the hook: the compile goes uncaptured"
 entries = []

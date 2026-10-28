@@ -31,7 +31,7 @@ tests/<topic>/<subtopic>/NN_name/
   programs started during a build reach catter and run: arguments,
   environment, working directory, stdio, exit status, process trees, the
   functions that start programs), `builds` (real build systems: make, CMake
-  with Ninja, MSBuild, xmake), `handlers` (handlers over the protocol, on
+  with Ninja, MSBuild, xmake, Bazel), `handlers` (handlers over the protocol, on
   the SDKs: their actions, errors, lifecycle, transports, several at once,
   arguments that are not UTF-8, the analysis of commands, the TypeScript
   SDK).
@@ -106,11 +106,11 @@ they were started in.
 
 **Test options**:
 
-| Option                   | Means                                                                                                                                                                                                                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `except: { win32: "…" }` | platforms the test has no meaning on, each with the reason; there it is listed as not applicable                                                                                                                                                                                                       |
-| `needs: ["eslogger"]`    | what the machine must have beside catter (`bazel`: Bazel, or Bazelisk under its name, on PATH; `eslogger`: sudo starts it without a password, and Endpoint Security takes it; `xcode`: Xcode, beside its command line tools); a machine without it lists the test as not run, but on CI, where it runs |
-| `errors: ["…"]`          | the error-level log records the test provokes, as regular expressions; any other fails                                                                                                                                                                                                                 |
+| Option                   | Means                                                                                                                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `except: { win32: "…" }` | platforms the test has no meaning on, each with the reason; there it is listed as not applicable                                                                                                                                                  |
+| `needs: ["eslogger"]`    | what the machine must have beside catter (`eslogger`: sudo starts it without a password, and Endpoint Security takes it; `xcode`: Xcode, beside its command line tools); a machine without it lists the test as not run, but on CI, where it runs |
+| `errors: ["…"]`          | the error-level log records the test provokes, as regular expressions; any other fails                                                                                                                                                            |
 
 ## Output
 
@@ -219,7 +219,9 @@ pnpm --dir tools test                     the framework's own tests
 ```
 
 Commands run in the pixi `dev` environment, which brings node, CMake and
-Ninja; make, xmake and, on Windows, Visual Studio come from the machine.
+Ninja; the repository's npm packages bring Bazelisk, which downloads the
+Bazel a case names; make, xmake and, on Windows, Visual Studio come from the
+machine.
 
 ## Framework
 
