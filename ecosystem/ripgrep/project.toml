@@ -1,0 +1,13 @@
+about = "ripgrep 14.1.1"
+repository = "https://github.com/BurntSushi/ripgrep"
+commit = "4649aa9700619f94cf9c66876e9549d83420e16c"
+
+[builds.cargo]
+about = "cargo build --release with PCRE2: pcre2-sys's build script compiles PCRE2 with the cc crate and archives it, and rustc links every program through cc"
+backends = ["hook", "wrapper"]
+env = { PCRE2_SYS_STATIC = "1" }
+prepare = [
+    ["rustup", "toolchain", "install", "1.90.0", "--profile", "minimal"],
+    ["cargo", "+1.90.0", "fetch", "--locked"],
+]
+build = [["cargo", "+1.90.0", "build", "--release", "--locked", "--offline", "--features", "pcre2", "-j", "${JOBS}"]]

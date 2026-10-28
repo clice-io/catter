@@ -1,0 +1,27 @@
+about = "zlib 1.3.1"
+repository = "https://github.com/madler/zlib"
+commit = "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf"
+
+[builds.cmake]
+about = "CMake and Ninja: the shared and static library and the example programs, CMake's database exported"
+configure = [
+    [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ],
+]
+build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.configure]
+about = "its own configure script, which probes the compiler with programs it removes, and Make: the libraries, then the examples built and run by `make test`"
+backends = ["hook", "wrapper"]
+configure = [["./configure"]]
+build = [["make", "-j", "${JOBS}", "test"]]

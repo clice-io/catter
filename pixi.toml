@@ -104,8 +104,23 @@ format = {
 }
 lint-python = "ruff check ."
 
+# ============================================================================== #
+#                                   ECOSYSTEM                                    #
+# ============================================================================== #
+
+# The build tools the ecosystem's projects build with (ecosystem/README.md),
+# pinned; their compilers are the system's, as a user's are, which is why
+# the environment leaves out the default feature and its GCC.
+[feature.ecosystem.dependencies]
+pnpm = "*"
+meson = "==1.12.1"
+
+[feature.ecosystem.target.linux-64.dependencies]
+make = "==4.4.1"
+
 [environments]
 dev = ["dev"]
+ecosystem = { features = ["dev", "ecosystem"], no-default-feature = true }
 format = { features = ["format"], no-default-feature = true }
 
 [tasks]

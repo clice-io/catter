@@ -1,0 +1,62 @@
+about = "fmt 12.0.0 with its tests, the release WrapDB and the Bazel Central Registry package"
+repository = "https://github.com/fmtlib/fmt"
+commit = "e424e3f2e607da02742f73db84873b8084fc714c"
+
+[builds.cmake-ninja]
+about = "CMake and Ninja, its tests on, CMake's database exported"
+backends = ["hook", "wrapper"]
+configure = [
+    [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DFMT_TEST=ON",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ],
+]
+build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.cmake-make]
+about = "CMake and Make, its tests on, CMake's database exported"
+configure = [
+    [
+        "cmake",
+        "-S",
+        ".",
+        "-B",
+        "build",
+        "-G",
+        "Unix Makefiles",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DFMT_TEST=ON",
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+    ],
+]
+build = [["cmake", "--build", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.meson]
+about = "Meson and Ninja: a program taking fmt from WrapDB (fmt_12.0.0-1), as a Meson project takes it"
+tree = "meson"
+configure = [["meson", "setup", "build"]]
+build = [["meson", "compile", "-C", "build", "-j", "${JOBS}"]]
+hint = "build/compile_commands.json"
+
+[builds.bazel]
+about = "Bazel: a program taking fmt 12.0.0 from the Bazel Central Registry, its actions in Bazel's sandbox"
+tree = "bazel"
+configure = [
+    ["bazel", "--output_user_root=${WORK}/bazel", "fetch", "//..."],
+    ["bazel", "--output_user_root=${WORK}/bazel", "shutdown"],
+]
+build = [
+    ["bazel", "--output_user_root=${WORK}/bazel", "build", "--jobs=${JOBS}", "//..."],
+    ["bazel", "--output_user_root=${WORK}/bazel", "shutdown"],
+]
+scan = ["bazel-out"]
