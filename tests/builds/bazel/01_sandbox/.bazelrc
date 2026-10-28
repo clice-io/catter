@@ -1,0 +1,4 @@
+# One Bazel for the build alone, which leaves no server behind, and its output
+# without what changes from run to run.
+startup --batch --quiet
+build --noshow_progress --ui_event_filters=-info --show_result=0 --color=no --curses=no
