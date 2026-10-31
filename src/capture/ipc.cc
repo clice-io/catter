@@ -294,9 +294,7 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Server::serve(Start s
 }
 
 kotatsu::async::task<> Server::accept() {
-    // A client still connected once the build has ended, as a build server's,
-    // is let go, cancelled, with the list.
-    std::list<kotatsu::async::task<>> clients;
+    kotatsu::async::task_group<> clients;
     while(true) {
         auto pipe = co_await acceptor->accept();
         if(!pipe) {
@@ -304,10 +302,13 @@ kotatsu::async::task<> Server::accept() {
             break;
         }
         const auto id = session.new_id();
-        clients.push_back(answer(id, std::move(*pipe)));
-        kotatsu::async::event_loop::current().schedule(clients.back());
+        clients.spawn(answer(id, std::move(*pipe)));
         LOG_INFO("Accepted new client with id: {}", id);
     }
+    // A client still connected once the build has ended, as a build server's,
+    // is let go: cancelled, and gone before the server, which it uses.
+    clients.cancel();
+    co_await clients.join();
 }
 
 kotatsu::async::task<> Server::answer(data::ipcid_t id, kotatsu::async::pipe pipe) {

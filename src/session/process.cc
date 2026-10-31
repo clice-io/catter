@@ -186,7 +186,9 @@ kotatsu::async::process::options process_options(const data::command& command) {
         opts.args.assign(command.args.begin() + 1, command.args.end());
     }
 #ifdef CATTER_WINDOWS
-    kotatsu::sys::windows::join_command_line(opts.windows_command_line, command.args);
+    kotatsu::sys::cmd::join(opts.windows_command_line,
+                            command.args,
+                            kotatsu::sys::cmd::Quoting::Windows);
 #endif
     return opts;
 }

@@ -6,7 +6,7 @@
 #include <string>
 #include <system_error>
 #include <kotatsu/support/utf16.h>
-#include <kotatsu/sys/windows.h>
+#include <kotatsu/sys/cmd.h>
 
 // clang-format off
 // <detours.h> needs the architecture macros of <windows.h>.
@@ -153,7 +153,7 @@ private:
         }
         if(command.args != sent.args) {
             std::string line;
-            kotatsu::sys::windows::join_command_line(line, command.args);
+            kotatsu::sys::cmd::join(line, command.args, kotatsu::sys::cmd::Quoting::Windows);
             kotatsu::to_utf16(edited_command_line, line);
             command_line = edited_command_line.data();
         }
