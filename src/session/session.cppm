@@ -29,18 +29,18 @@ public:
     /// What the handlers decide for command `id`, which `parent` started, none
     /// for the build command: it runs as it is unless they change it, and a
     /// command that is not to run keeps it as it was sent.
-    kota::task<data::action> decide(data::ipcid_t id,
-                                    std::optional<data::ipcid_t> parent,
-                                    data::command command);
+    kotatsu::async::task<data::action> decide(data::ipcid_t id,
+                                              std::optional<data::ipcid_t> parent,
+                                              data::command command);
 
     /// Tells the handlers how command `id` ended.
-    kota::task<> exited(data::ipcid_t id, data::process_result result);
+    kotatsu::async::task<> exited(data::ipcid_t id, data::process_result result);
 
     /// Tells the handlers that catter could not capture command `id`:
     /// `message` says why.
-    kota::task<> uncaptured(data::ipcid_t id,
-                            std::optional<data::ipcid_t> parent,
-                            std::string message);
+    kotatsu::async::task<> uncaptured(data::ipcid_t id,
+                                      std::optional<data::ipcid_t> parent,
+                                      std::string message);
 
     /// Ends the session with `error`, unless it has ended already.
     void fail(std::exception_ptr error) noexcept;
@@ -73,15 +73,15 @@ public:
     virtual bool follows_decisions() const noexcept = 0;
 
     /// Runs `build`, its commands reported to `session`: how the build ended.
-    virtual kota::task<kota::process::exit_status> run(const Build& build,
-                                                       Session& session) const = 0;
+    virtual kotatsu::async::task<kotatsu::async::process::exit_status>
+        run(const Build& build, Session& session) const = 0;
 };
 
 /// Runs the session of `handler` over `backend`: the build `on_start` gives,
 /// if any, its commands decided by `handler`, and then its end. How the build
 /// ended; one that did not start ended with 0.
-kota::task<kota::process::exit_status> run_session(Handler& handler,
-                                                   const Backend& backend,
-                                                   Build build);
+kotatsu::async::task<kotatsu::async::process::exit_status> run_session(Handler& handler,
+                                                                       const Backend& backend,
+                                                                       Build build);
 
 }  // namespace catter

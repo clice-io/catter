@@ -5,8 +5,8 @@
 #include <ranges>
 #include <string>
 #include <system_error>
-#include <kota/support/utf16.h>
-#include <kota/sys/windows.h>
+#include <kotatsu/support/utf16.h>
+#include <kotatsu/sys/windows.h>
 
 // clang-format off
 // <detours.h> needs the architecture macros of <windows.h>.
@@ -147,14 +147,14 @@ private:
         std::wstring edited_environment;
         std::wstring edited_current_directory;
         if(command.executable != sent.executable || command.args != sent.args) {
-            kota::to_utf16(edited_application_name,
-                           catter::resolve_program(command.executable, command.cwd));
+            kotatsu::to_utf16(edited_application_name,
+                              catter::resolve_program(command.executable, command.cwd));
             application_name = edited_application_name.c_str();
         }
         if(command.args != sent.args) {
             std::string line;
-            kota::sys::windows::join_command_line(line, command.args);
-            kota::to_utf16(edited_command_line, line);
+            kotatsu::sys::windows::join_command_line(line, command.args);
+            kotatsu::to_utf16(edited_command_line, line);
             command_line = edited_command_line.data();
         }
         if(command.env != sent.env) {
@@ -163,7 +163,7 @@ private:
             flags |= CREATE_UNICODE_ENVIRONMENT;
         }
         if(command.cwd != sent.cwd) {
-            kota::to_utf16(edited_current_directory, command.cwd);
+            kotatsu::to_utf16(edited_current_directory, command.cwd);
             current_directory = edited_current_directory.c_str();
         }
 

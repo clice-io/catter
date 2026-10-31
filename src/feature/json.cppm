@@ -8,7 +8,7 @@ module catter:feature.json;
 
 namespace catter::feature {
 
-using JSON = kota::codec::dyn::Value;
+using JSON = kotatsu::codec::dyn::Value;
 
 /// How `to_json` lays out what it writes.
 struct Layout {

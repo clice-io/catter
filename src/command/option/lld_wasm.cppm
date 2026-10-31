@@ -29,6 +29,6 @@ enum ID : unsigned {
 #undef OPTION
 };
 
-const kota::option::OptTable& table();
+const kotatsu::option::OptTable& table();
 
 }  // namespace catter::option::lld_wasm

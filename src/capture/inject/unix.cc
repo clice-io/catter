@@ -25,7 +25,7 @@ namespace catter {
 static std::string_view arch_of(std::string_view executable) {
     std::array<char, 512> head;
     std::size_t size = 0;
-    if(auto file = kota::fs::File::open(executable)) {
+    if(auto file = kotatsu::fs::File::open(executable)) {
         size = file->read(head).value_or(0);
     }
     std::string_view line(head.data(), size);
@@ -52,9 +52,9 @@ static std::string_view arch_of(std::string_view executable) {
 }
 #endif
 
-kota::process::options hook_options(data::command command,
-                                    data::ipcid_t id,
-                                    std::string_view pipe_name) {
+kotatsu::async::process::options hook_options(data::command command,
+                                              data::ipcid_t id,
+                                              std::string_view pipe_name) {
 #if defined(CATTER_MAC)
     // dyld ends a program that cannot load a library inserted into it: Apple's
     // own tools, which run as arm64e, and Intel programs under Rosetta. Where

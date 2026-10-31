@@ -107,7 +107,7 @@ std::string text_of(std::string bytes) {
                                            static_cast<unsigned char>(bytes[i + 1]) << 8);
         }
         std::string text;
-        kota::from_utf16(text, units);
+        kotatsu::from_utf16(text, units);
         return text;
     }
     if(bytes.starts_with("\xEF\xBB\xBF")) {
@@ -144,7 +144,7 @@ struct Builder {
 
     std::optional<std::string> read_file(std::string_view name) {
         std::string path(directory);
-        kota::fs::path::push(path, name);
+        kotatsu::fs::path::push(path, name);
         std::string bytes;
         if(read(bytes, path)) {
             return std::nullopt;

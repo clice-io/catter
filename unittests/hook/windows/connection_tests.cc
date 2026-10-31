@@ -5,10 +5,10 @@
 #include <thread>
 #include <variant>
 #include <windows.h>
-#include <kota/zest/zest.h>
-#include <kota/support/utf16.h>
-#include <kota/ipc/codec/bincode.h>
-#include <kota/ipc/framing.h>
+#include <kotatsu/zest/zest.h>
+#include <kotatsu/support/utf16.h>
+#include <kotatsu/ipc/codec/bincode.h>
+#include <kotatsu/ipc/framing.h>
 
 #include "hook/windows/connection.h"
 #include "support/messages.h"
@@ -25,7 +25,7 @@ std::string pipe_name(std::string_view test) {
 /// The one instance of pipe `name`, as a session listens on it.
 HANDLE listen(std::string_view name) {
     std::wstring wide;
-    kota::to_utf16(wide, name);
+    kotatsu::to_utf16(wide, name);
     return CreateNamedPipeW(wide.c_str(),
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
@@ -39,7 +39,7 @@ HANDLE listen(std::string_view name) {
 /// Reads a request `started` from `pipe` and answers it with `result`: the pid
 /// it read; none when it read no such request.
 std::optional<std::int64_t> answer(HANDLE pipe, bool result) {
-    kota::ipc::FrameParser parser;
+    kotatsu::ipc::FrameParser parser;
     std::array<char, 4096> buffer;
     while(true) {
         DWORD read = 0;
@@ -51,16 +51,16 @@ std::optional<std::int64_t> answer(HANDLE pipe, bool result) {
         if(!step.frame || !*step.frame) {
             continue;
         }
-        kota::ipc::BincodeCodec codec;
+        kotatsu::ipc::BincodeCodec codec;
         auto incoming = codec.parse_message(std::move(**step.frame));
-        auto* request = std::get_if<kota::ipc::IncomingRequest>(&incoming);
+        auto* request = std::get_if<kotatsu::ipc::IncomingRequest>(&incoming);
         using Started = catter::ipc::Request<catter::ipc::RequestType::STARTED>;
         if(request == nullptr || request->method != Started::method) {
             return std::nullopt;
         }
         auto params = codec.deserialize_value<Started::Params>(request->params);
         auto response = codec.encode_success_response(request->id, result);
-        auto frame = kota::ipc::frame_header(response->size()) + *response;
+        auto frame = kotatsu::ipc::frame_header(response->size()) + *response;
         DWORD written = 0;
         WriteFile(pipe, frame.data(), static_cast<DWORD>(frame.size()), &written, nullptr);
         return params ? std::optional(params->pid) : std::nullopt;
@@ -94,7 +94,7 @@ ZEST_CASE(request_gets_its_result) {
 ZEST_CASE(busy_pipe_is_waited_for) {
     const auto name = pipe_name("busy");
     std::wstring wide;
-    kota::to_utf16(wide, name);
+    kotatsu::to_utf16(wide, name);
     HANDLE server = listen(name);
     ZASSERT(server != INVALID_HANDLE_VALUE);
     HANDLE first = CreateFileW(wide.c_str(),

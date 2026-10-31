@@ -4,13 +4,13 @@
 #include <string>
 #include <string_view>
 #include <windows.h>
-#include <kota/support/utf16.h>
+#include <kotatsu/support/utf16.h>
 
 namespace catter::hook {
 
 std::optional<Connection> connect(std::string_view pipe) {
     std::wstring name;
-    kota::to_utf16(name, pipe);
+    kotatsu::to_utf16(name, pipe);
     while(true) {
         // Not inheritable: no program the build starts gets it.
         HANDLE handle = CreateFileW(name.c_str(),

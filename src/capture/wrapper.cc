@@ -45,8 +45,8 @@ class Shims {
 public:
     explicit Shims(std::string directory) : dir(std::move(directory)) {
         // A directory a session of the same pid left behind.
-        [[maybe_unused]] auto removed = kota::fs::remove_all(dir);
-        if(auto created = kota::fs::create_directories(dir); !created) {
+        [[maybe_unused]] auto removed = kotatsu::fs::remove_all(dir);
+        if(auto created = kotatsu::fs::create_directories(dir); !created) {
             throw cpptrace::runtime_error(
                 std::format("Failed to create the directory of shims {}: {}",
                             dir,
@@ -56,8 +56,8 @@ public:
         // The shims are hard links, which a copy, on a volume other than catter's, takes.
         const auto proxy = program_path(std::format("{}.exe", PROXY));
         const auto launcher = this->launcher();
-        if(kota::fs::create_hard_link(proxy, launcher)) {
-            if(auto error = kota::fs::copy_file(proxy, launcher)) {
+        if(kotatsu::fs::create_hard_link(proxy, launcher)) {
+            if(auto error = kotatsu::fs::copy_file(proxy, launcher)) {
                 throw cpptrace::runtime_error(
                     std::format("Failed to copy {} to {}: {}", proxy, launcher, error.message()));
             }
@@ -76,7 +76,7 @@ public:
     Shims& operator= (const Shims&) = delete;
 
     ~Shims() {
-        [[maybe_unused]] auto removed = kota::fs::remove_all(dir);
+        [[maybe_unused]] auto removed = kotatsu::fs::remove_all(dir);
     }
 
     std::string_view directory() const noexcept {
@@ -87,9 +87,9 @@ public:
     std::string launcher() const {
         std::string path = dir;
 #ifdef CATTER_WINDOWS
-        kota::fs::path::push(path, std::format("{}.exe", LAUNCHER));
+        kotatsu::fs::path::push(path, std::format("{}.exe", LAUNCHER));
 #else
-        kota::fs::path::push(path, LAUNCHER);
+        kotatsu::fs::path::push(path, LAUNCHER);
 #endif
         return path;
     }
@@ -99,14 +99,14 @@ public:
     /// whichever order, it finds the program it would without catter. None when `directory` holds
     /// none, or is relative, which names another directory wherever the build goes.
     std::optional<std::string> add_found(std::string_view directory) {
-        if(!kota::fs::path::is_absolute(directory)) {
+        if(!kotatsu::fs::path::is_absolute(directory)) {
             return std::nullopt;
         }
         if(auto found = on_path.find(directory); found != on_path.end()) {
             return found->second;
         }
         std::optional<std::string> shims;
-        if(auto entries = kota::fs::Directory::open(directory)) {
+        if(auto entries = kotatsu::fs::Directory::open(directory)) {
             for(const auto& entry: *entries) {
                 if(!entry) {
                     break;
@@ -115,7 +115,7 @@ public:
                     continue;
                 }
                 std::string program(directory);
-                kota::fs::path::push(program, entry->name);
+                kotatsu::fs::path::push(program, entry->name);
                 if(!runs(program)) {
                     continue;
                 }
@@ -135,14 +135,14 @@ public:
     /// of the program's directory is too, a shim of each one catter knows and a link to each
     /// other, as a build tool looks for the tools that go with a compiler beside it.
     std::string shim_of(std::string_view program) {
-        const auto name = kota::fs::path::filename(program);
+        const auto name = kotatsu::fs::path::filename(program);
         if(auto found = names.find(name); found != names.end()) {
-            if(auto same = kota::fs::equivalent(found->second.first, program); same && *same) {
+            if(auto same = kotatsu::fs::equivalent(found->second.first, program); same && *same) {
                 return found->second.second;
             }
         }
-        std::string shim = mirror(kota::fs::path::parent(program));
-        kota::fs::path::push(shim, name);
+        std::string shim = mirror(kotatsu::fs::path::parent(program));
+        kotatsu::fs::path::push(shim, name);
         return shim;
     }
 
@@ -150,13 +150,13 @@ private:
     /// Whether `program` is a file the system can run as a program: on Windows one whose name ends
     /// in `.exe`, as the shims' do.
     static bool runs(std::string_view program) {
-        auto status = kota::fs::status(program);
-        if(!status || status->type != kota::fs::FileType::Regular) {
+        auto status = kotatsu::fs::status(program);
+        if(!status || status->type != kotatsu::fs::FileType::Regular) {
             return false;
         }
 #ifdef CATTER_WINDOWS
-        auto extension = kota::fs::path::extension(program);
-        return extension.size() == 4 && kota::sys::env_name_equal(extension, ".exe");
+        auto extension = kotatsu::fs::path::extension(program);
+        return extension.size() == 4 && kotatsu::sys::env_name_equal(extension, ".exe");
 #else
         return (status->permissions & 0111) != 0;
 #endif
@@ -167,11 +167,11 @@ private:
     /// catter-proxy, which learns the name it is started by from the system.
     std::string link(std::string_view name, std::string_view directory) const {
         std::string path(directory);
-        kota::fs::path::push(path, name);
+        kotatsu::fs::path::push(path, name);
 #ifdef CATTER_WINDOWS
-        auto error = kota::fs::create_hard_link(launcher(), path);
+        auto error = kotatsu::fs::create_hard_link(launcher(), path);
 #else
-        auto error = kota::fs::create_symlink(program_path(PROXY), path);
+        auto error = kotatsu::fs::create_symlink(program_path(PROXY), path);
 #endif
         if(error) {
             throw cpptrace::runtime_error(
@@ -183,14 +183,14 @@ private:
     /// A new directory among the shims, whose shims stand in for the programs of `directory`.
     std::string standing_for(std::string_view directory) {
         std::string shims = dir;
-        kota::fs::path::push(shims, std::to_string(++count));
+        kotatsu::fs::path::push(shims, std::to_string(++count));
         std::string named = shims;
-        kota::fs::path::push(named, SHIM_DIRECTORY_FILE);
+        kotatsu::fs::path::push(named, SHIM_DIRECTORY_FILE);
         std::error_code error;
-        if(auto created = kota::fs::create_directory(shims); !created) {
+        if(auto created = kotatsu::fs::create_directory(shims); !created) {
             error = created.error();
         } else {
-            error = kota::fs::write_file(named, directory);
+            error = kotatsu::fs::write_file(named, directory);
         }
         if(error) {
             throw cpptrace::runtime_error(
@@ -205,13 +205,13 @@ private:
             return found->second;
         }
         std::string mirror = standing_for(directory);
-        if(auto entries = kota::fs::Directory::open(directory)) {
+        if(auto entries = kotatsu::fs::Directory::open(directory)) {
             for(const auto& entry: *entries) {
                 if(!entry) {
                     break;
                 }
                 std::string program(directory);
-                kota::fs::path::push(program, entry->name);
+                kotatsu::fs::path::push(program, entry->name);
                 if(!runs(program)) {
                     continue;
                 }
@@ -222,8 +222,8 @@ private:
 #ifndef CATTER_WINDOWS
                 // Windows lets few make a symlink.
                 std::string path = mirror;
-                kota::fs::path::push(path, entry->name);
-                if(auto error = kota::fs::create_symlink(program, path)) {
+                kotatsu::fs::path::push(path, entry->name);
+                if(auto error = kotatsu::fs::create_symlink(program, path)) {
                     throw cpptrace::runtime_error(
                         std::format("Failed to link {} to {}: {}", path, program, error.message()));
                 }
@@ -256,8 +256,8 @@ private:
 std::string through_shim(std::string_view value, Shims& shims) {
     const auto end = value.find_first_of(" \t");
     const auto program = value.substr(0, end);
-    if(!kota::fs::path::is_absolute(program) || !known(kota::fs::path::filename(program)) ||
-       !kota::fs::is_file(program)) {
+    if(!kotatsu::fs::path::is_absolute(program) || !known(kotatsu::fs::path::filename(program)) ||
+       !kotatsu::fs::is_file(program)) {
         return std::string(value);
     }
     auto shim = shims.shim_of(program);
@@ -277,37 +277,37 @@ std::string through_shim(std::string_view value, Shims& shims) {
 /// process's, with the shims of each directory on PATH before it, the programs variables such as
 /// CC name by their paths run through theirs, and CMake running each compile and link through the
 /// launcher, unless the build names a launcher of its own.
-std::vector<kota::process::env_var> environment(Shims& shims, std::string_view pipe) {
+std::vector<kotatsu::async::process::env_var> environment(Shims& shims, std::string_view pipe) {
     auto named = [](std::string_view name) {
         return [name](std::string_view other) {
-            return kota::sys::env_name_equal(name, other);
+            return kotatsu::sys::env_name_equal(name, other);
         };
     };
-    auto variables = kota::sys::environment();
-    auto path = std::ranges::find_if(variables, named("PATH"), &kota::sys::EnvVar::name);
+    auto variables = kotatsu::sys::environment();
+    auto path = std::ranges::find_if(variables, named("PATH"), &kotatsu::sys::EnvVar::name);
     if(path == variables.end()) {
         throw cpptrace::runtime_error(
             "The wrapper backend puts its shims on the build's PATH, which is not set: set it");
     }
-    if(std::ranges::any_of(variables, named(env::SHIMS), &kota::sys::EnvVar::name)) {
+    if(std::ranges::any_of(variables, named(env::SHIMS), &kotatsu::sys::EnvVar::name)) {
         throw cpptrace::runtime_error(
             "catter runs in a build under the wrapper backend, whose shims would stand in for this session's: run it outside that build, or with --capture hook");
     }
     std::vector<std::string> directories;
-    for(auto directory: kota::sys::split_paths(path->value)) {
+    for(auto directory: kotatsu::sys::split_paths(path->value)) {
         if(auto found = shims.add_found(directory)) {
             directories.push_back(std::move(*found));
         }
         directories.emplace_back(directory);
     }
     std::string path_list;
-    if(auto error = kota::sys::join_paths(path_list, directories)) {
+    if(auto error = kotatsu::sys::join_paths(path_list, directories)) {
         throw cpptrace::runtime_error(std::format(
             "catter cannot put its shims {} on PATH, which splits paths at what that path holds: set CATTER_HOME to a directory whose path has none",
             shims.directory()));
     }
 
-    std::vector<kota::process::env_var> env;
+    std::vector<kotatsu::async::process::env_var> env;
     for(auto& [name, value]: variables) {
         // The build command has no parent; the session's variables come last.
         if(named("PATH")(name) || std::ranges::any_of(env::VARIABLES, named(name))) {
@@ -325,7 +325,7 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
 
 #ifdef CATTER_WINDOWS
     for(auto name: MSBUILD_PATHS) {
-        if(std::ranges::none_of(env, named(name), &kota::process::env_var::name)) {
+        if(std::ranges::none_of(env, named(name), &kotatsu::async::process::env_var::name)) {
             env.push_back({.name = std::string(name), .value = std::string(shims.directory())});
         }
     }
@@ -333,7 +333,7 @@ std::vector<kota::process::env_var> environment(Shims& shims, std::string_view p
     for(auto language: CMAKE_LANGUAGES) {
         for(auto kind: {"COMPILER", "LINKER"}) {
             auto name = std::format("CMAKE_{}_{}_LAUNCHER", language, kind);
-            if(std::ranges::none_of(env, named(name), &kota::process::env_var::name)) {
+            if(std::ranges::none_of(env, named(name), &kotatsu::async::process::env_var::name)) {
                 env.push_back({.name = std::move(name), .value = shims.launcher()});
             }
         }
@@ -351,14 +351,14 @@ public:
         return true;
     }
 
-    kota::task<kota::process::exit_status> run(const Build& build,
-                                               Session& session) const override {
+    kotatsu::async::task<kotatsu::async::process::exit_status>
+        run(const Build& build, Session& session) const override {
         ipc::Server server(session);
         // A build tool that writes the shims' paths down writes them as they are spelled.
-        auto directory = data_path(std::format("shims-{}", kota::sys::pid()));
-        kota::fs::path::normalize(directory);
+        auto directory = data_path(std::format("shims-{}", kotatsu::sys::pid()));
+        kotatsu::fs::path::normalize(directory);
         Shims shims(std::move(directory));
-        kota::process::options launch{
+        kotatsu::async::process::options launch{
             .program = shims.launcher(),
             .args = build.command,
             .env = environment(shims, server.pipe()),

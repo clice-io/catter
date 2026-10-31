@@ -12,7 +12,7 @@ namespace catter::feature {
 struct TargetsOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-d", "--depth", "--depth="},
                  meta_var = "<n>",
                  help = "Limit render depth.")

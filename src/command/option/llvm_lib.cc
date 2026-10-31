@@ -8,7 +8,7 @@ import :option.tablegen;
 
 namespace catter::option::llvm_lib {
 
-namespace kota_opt = kota::option;
+namespace kota_opt = kotatsu::option;
 
 namespace detail {
 

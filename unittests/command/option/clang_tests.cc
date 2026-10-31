@@ -35,7 +35,7 @@ ParseResult parse_command(std::span<const std::string> argv, uint32_t visibility
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    kota::option::ParseOptions options;
+    kotatsu::option::ParseOptions options;
     options.dash_dash_parsing = true;
     options.visibility = visibility;
     for(auto parsed: option::clang::table().parse(args, options)) {

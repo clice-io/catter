@@ -6,7 +6,7 @@ module catter;
 
 import catter.command;
 
-namespace kota_opt = kota::option;
+namespace kota_opt = kotatsu::option;
 using namespace catter;
 
 namespace {

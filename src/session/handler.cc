@@ -10,17 +10,17 @@ import :session.handler;
 
 namespace catter {
 
-kota::task<std::optional<Build>> Handler::on_start(Build build) {
+kotatsu::async::task<std::optional<Build>> Handler::on_start(Build build) {
     co_return build;
 }
 
-kota::task<> Handler::on_exit(data::ipcid_t, data::process_result) {
+kotatsu::async::task<> Handler::on_exit(data::ipcid_t, data::process_result) {
     co_return;
 }
 
 HandlerChain::HandlerChain(std::vector<Handler*> handlers) : handlers(std::move(handlers)) {}
 
-kota::task<std::optional<Build>> HandlerChain::on_start(Build build) {
+kotatsu::async::task<std::optional<Build>> HandlerChain::on_start(Build build) {
     for(auto* handler: handlers) {
         auto next = co_await handler->on_start(std::move(build));
         if(!next) {
@@ -31,9 +31,9 @@ kota::task<std::optional<Build>> HandlerChain::on_start(Build build) {
     co_return build;
 }
 
-kota::task<Action> HandlerChain::on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) {
+kotatsu::async::task<Action> HandlerChain::on_command(data::ipcid_t id,
+                                                      std::optional<data::ipcid_t> parent,
+                                                      data::command command) {
     Action result{.type = Action::Type::Skip};
     for(auto* handler: handlers) {
         auto action = co_await handler->on_command(id, parent, command);
@@ -50,21 +50,21 @@ kota::task<Action> HandlerChain::on_command(data::ipcid_t id,
     co_return result;
 }
 
-kota::task<> HandlerChain::on_error(data::ipcid_t id,
-                                    std::optional<data::ipcid_t> parent,
-                                    std::string message) {
+kotatsu::async::task<> HandlerChain::on_error(data::ipcid_t id,
+                                              std::optional<data::ipcid_t> parent,
+                                              std::string message) {
     for(auto* handler: handlers) {
         co_await handler->on_error(id, parent, message);
     }
 }
 
-kota::task<> HandlerChain::on_exit(data::ipcid_t id, data::process_result result) {
+kotatsu::async::task<> HandlerChain::on_exit(data::ipcid_t id, data::process_result result) {
     for(auto* handler: handlers) {
         co_await handler->on_exit(id, result);
     }
 }
 
-kota::task<> HandlerChain::on_finish(data::process_result result) {
+kotatsu::async::task<> HandlerChain::on_finish(data::process_result result) {
     for(auto* handler: handlers) {
         co_await handler->on_finish(result);
     }

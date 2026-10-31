@@ -32,7 +32,7 @@ extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.
-    const auto& args = kota::sys::arguments();
+    const auto& args = kotatsu::sys::arguments();
 #else
     const std::vector<std::string> args(argv, argv + argc);
 #endif
@@ -40,12 +40,12 @@ extern "C++" int main(int argc, char* argv[]) {
         std::println(stderr, "usage: catter-protocol-schema <output file>");
         return 1;
     }
-    auto schema = kota::codec::json::schema_string<Messages, kota::ipc::lsp_config>(true);
+    auto schema = kotatsu::codec::json::schema_string<Messages, kotatsu::ipc::lsp_config>(true);
     if(!schema) {
         std::println(stderr, "{}", schema.error().to_string());
         return 1;
     }
-    if(auto error = kota::fs::write_file(args[1], *schema + '\n')) {
+    if(auto error = kotatsu::fs::write_file(args[1], *schema + '\n')) {
         std::println(stderr, "Failed to write the schema to `{}`: {}", args[1], error.message());
         return 1;
     }

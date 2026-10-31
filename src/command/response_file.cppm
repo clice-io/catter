@@ -17,8 +17,9 @@ enum class Quoting : std::uint8_t {
     Windows,
 };
 
-/// Reads the file at `path` into `out`: `kota::fs::read_file`, or what a test reads instead.
-using ReadFile = kota::function_ref<std::error_code(kota::buffer_ref out, std::string_view path)>;
+/// Reads the file at `path` into `out`: `kotatsu::fs::read_file`, or what a test reads instead.
+using ReadFile =
+    kotatsu::function_ref<std::error_code(kotatsu::buffer_ref out, std::string_view path)>;
 
 /// A command's argv with the response files it names read in.
 struct Expansion {

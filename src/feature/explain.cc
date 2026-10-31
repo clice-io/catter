@@ -13,8 +13,8 @@ namespace catter::feature {
 
 namespace {
 
-using kota::codec::dyn::Array;
-using kota::codec::dyn::Object;
+using kotatsu::codec::dyn::Array;
+using kotatsu::codec::dyn::Object;
 
 template <std::ranges::range Strings>
 Array strings(Strings&& values) {
@@ -196,7 +196,7 @@ Object describe(const Error& error) {
 /// what it found, with the outputs it inferred, the notes on how, and the entries
 /// `compile-commands` writes for it; or, when none does, why.
 JSON describe(std::string_view cwd, std::span<const std::string> argv) {
-    auto compiler = analyze_compiler(argv[0], argv, cwd, kota::fs::read_file);
+    auto compiler = analyze_compiler(argv[0], argv, cwd, kotatsu::fs::read_file);
     if(compiler.has_value()) {
         return describe(cwd, *compiler);
     }

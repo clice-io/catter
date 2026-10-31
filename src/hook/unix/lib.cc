@@ -6,7 +6,7 @@
 #include <dlfcn.h>
 #include <spawn.h>
 #include <unistd.h>
-#include <kota/sys/process.h>
+#include <kotatsu/sys/process.h>
 
 #include "hook/unix/debug.h"
 #include "hook/unix/environment.h"
@@ -61,7 +61,7 @@ extern "C" EXPORT_SYMBOL void on_load([[maybe_unused]] int argc, [[maybe_unused]
         catter::log::mute_logger();
     }
     std::string program;
-    kota::sys::executable_path(program);
+    kotatsu::sys::executable_path(program);
     INFO("catter hook library loaded, from executable path: {}", program);
 #endif
 #ifdef CATTER_MAC

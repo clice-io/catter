@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <string_view>
-#include <kota/fs/path.h>
+#include <kotatsu/fs/path.h>
 
 namespace catter {
 
@@ -30,8 +30,8 @@ inline std::string data_path([[maybe_unused]] std::string_view pipe, std::string
 #ifdef CATTER_WINDOWS
     return data_path(name);
 #else
-    std::string path(kota::fs::path::parent(pipe));
-    kota::fs::path::push(path, name);
+    std::string path(kotatsu::fs::path::parent(pipe));
+    kotatsu::fs::path::push(path, name);
     return path;
 #endif
 }

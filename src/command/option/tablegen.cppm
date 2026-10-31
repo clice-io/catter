@@ -6,7 +6,7 @@ module catter.command:option.tablegen;
 
 namespace catter::option::external_detail {
 
-namespace kota_opt = kota::option;
+namespace kota_opt = kotatsu::option;
 
 namespace llvm {
 

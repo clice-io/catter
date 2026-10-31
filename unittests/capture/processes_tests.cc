@@ -35,7 +35,7 @@ struct Recorder {
         }
     }
 
-    void exit(std::uint64_t pid, kota::process::exit_status status) {
+    void exit(std::uint64_t pid, kotatsu::async::process::exit_status status) {
         now += std::chrono::seconds(1);
         for(const auto& ended: processes.exit(pid, status, now)) {
             told.push_back(std::format("{} started at {}s, ended {} after {}s",

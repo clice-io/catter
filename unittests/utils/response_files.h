@@ -8,7 +8,7 @@ namespace catter {
 struct ResponseFiles {
     std::map<std::string, std::string, std::less<>> files;
 
-    std::error_code operator() (kota::buffer_ref out, std::string_view path) const {
+    std::error_code operator() (kotatsu::buffer_ref out, std::string_view path) const {
         auto file = files.find(path);
         if(file == files.end()) {
             return std::make_error_code(std::errc::no_such_file_or_directory);

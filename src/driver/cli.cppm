@@ -29,7 +29,7 @@ struct SubcommandEntry {
 };
 
 inline auto& subcommand_entries() {
-    static std::array<SubcommandEntry, kota::meta::reflection<Subcommand>::member_count> entries;
+    static std::array<SubcommandEntry, kotatsu::meta::reflection<Subcommand>::member_count> entries;
     return entries;
 }
 
@@ -61,12 +61,12 @@ std::string usage_of_catter();
 
 /// The text renderer of a subcommand's command line: its help laid out as `catter <name>
 /// --help` prints it, `<name>: <message>` for an error.
-kota::deco::cli::text::Renderer renderer_of(const Help& help);
+kotatsu::deco::cli::text::Renderer renderer_of(const Help& help);
 
 /// The help of the subcommand whose options `T` declares.
 template <typename T>
 std::string usage_of(const Help& help) {
-    auto command = kota::deco::cli::command<T>(help.name);
+    auto command = kotatsu::deco::cli::command<T>(help.name);
     command.render_with(renderer_of(help));
     std::ostringstream usage;
     command.usage(usage);
@@ -82,7 +82,7 @@ template <typename T>
 std::optional<T> parse(const Help& help, std::span<const std::string> args) {
     std::vector<std::string> argv(args.begin(), args.end());
     bool asked_for_help = false;
-    auto command = kota::deco::cli::command<T>(help.name);
+    auto command = kotatsu::deco::cli::command<T>(help.name);
     command.render_with(renderer_of(help)).template after<&T::help>([&](auto& step) {
         asked_for_help = true;
         return step.stop();

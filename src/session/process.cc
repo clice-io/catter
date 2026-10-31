@@ -84,7 +84,7 @@ void release_descriptors(bool streams) {
 
 /// How a program ended, as a shell reports it: a signal that ended it as 128
 /// and the signal's number.
-std::int64_t code_of(const kota::process::exit_status& status) {
+std::int64_t code_of(const kotatsu::async::process::exit_status& status) {
     return status.term_signal == 0 ? status.code : 128 + status.term_signal;
 }
 
@@ -139,7 +139,7 @@ void prepare_descriptors() {
 #else
     constexpr std::string_view descriptors = "/dev/fd";
 #endif
-    auto directory = kota::fs::Directory::open(descriptors);
+    auto directory = kotatsu::fs::Directory::open(descriptors);
     if(!directory) {
         return;
     }
@@ -161,16 +161,16 @@ void prepare_descriptors() {
 
 std::vector<std::string> environment() {
     std::vector<std::string> env;
-    for(const auto& [name, value]: kota::sys::environment()) {
+    for(const auto& [name, value]: kotatsu::sys::environment()) {
         env.push_back(std::format("{}={}", name, value));
     }
     return env;
 }
 
-kota::process::options process_options(const data::command& command) {
-    kota::process::options opts{
+kotatsu::async::process::options process_options(const data::command& command) {
+    kotatsu::async::process::options opts{
         .program = command.executable,
-        .env = std::vector<kota::process::env_var>(),
+        .env = std::vector<kotatsu::async::process::env_var>(),
         .cwd = command.cwd,
     };
     for(std::string_view entry: command.env) {
@@ -186,17 +186,17 @@ kota::process::options process_options(const data::command& command) {
         opts.args.assign(command.args.begin() + 1, command.args.end());
     }
 #ifdef CATTER_WINDOWS
-    kota::sys::windows::join_command_line(opts.windows_command_line, command.args);
+    kotatsu::sys::windows::join_command_line(opts.windows_command_line, command.args);
 #endif
     return opts;
 }
 
-data::process_result result_of(const kota::process::exit_status& status,
+data::process_result result_of(const kotatsu::async::process::exit_status& status,
                                std::chrono::microseconds ran) {
     return {.code = code_of(status), .duration = ran.count()};
 }
 
-data::process_result result_of(const kota::process::exit_status& status,
+data::process_result result_of(const kotatsu::async::process::exit_status& status,
                                std::chrono::steady_clock::time_point started) {
     return result_of(status,
                      std::chrono::duration_cast<std::chrono::microseconds>(
@@ -204,7 +204,7 @@ data::process_result result_of(const kota::process::exit_status& status,
 }
 
 #ifndef CATTER_WINDOWS
-kota::process::exit_status exit_status_of(int status) {
+kotatsu::async::process::exit_status exit_status_of(int status) {
     return {
         .code = WIFEXITED(status) ? WEXITSTATUS(status) : 0,
         .term_signal = WIFSIGNALED(status) ? WTERMSIG(status) : 0,
@@ -212,7 +212,7 @@ kota::process::exit_status exit_status_of(int status) {
 }
 #endif
 
-int exit_like(const kota::process::exit_status& status) {
+int exit_like(const kotatsu::async::process::exit_status& status) {
 #ifndef CATTER_WINDOWS
     if(status.term_signal != 0) {
         // No core of this process beside the program's own.
@@ -230,7 +230,7 @@ int exit_like(const kota::process::exit_status& status) {
     return static_cast<int>(code_of(status));
 }
 
-kota::process::options standing_in(kota::process::options opts) {
+kotatsu::async::process::options standing_in(kotatsu::async::process::options opts) {
 #ifndef CATTER_MAC
     // macOS has nothing to end a child with its parent by: RunOptions::started
     // sees to it.
@@ -248,18 +248,19 @@ kota::process::options standing_in(kota::process::options opts) {
 #else
     for(int fd = 0; fd < 3; fd += 1) {
         if(held[fd]) {
-            opts.streams[fd] = kota::process::stdio::closed();
+            opts.streams[fd] = kotatsu::async::process::stdio::closed();
         }
     }
 #endif
     return opts;
 }
 
-kota::task<kota::process::exit_status> run_process(kota::process::options opts, RunOptions run) {
+kotatsu::async::task<kotatsu::async::process::exit_status>
+    run_process(kotatsu::async::process::options opts, RunOptions run) {
     if(run.stand_in) {
         opts = standing_in(std::move(opts));
     }
-    auto spawned = kota::process::spawn(opts);
+    auto spawned = kotatsu::async::process::spawn(opts);
     if(!spawned) {
         throw cpptrace::runtime_error(std::format("Process `{}` spawn failed, because `{}`",
                                                   opts.program,

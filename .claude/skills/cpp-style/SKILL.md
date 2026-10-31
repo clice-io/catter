@@ -93,7 +93,7 @@ are what breaking this cost.
 The hook payloads (`src/hook`) run inside every process
 of the build, next to that program's own runtime. They:
 
-- link only what they must (`kota::fs` and `kota::sys`, on Windows kotatsu's
+- link only what they must (`kotatsu::fs` and `kotatsu::sys`, on Windows kotatsu's
   IPC codec too, `:ipc_codec`, which needs no event loop; of `support` the
   messages and the program search, and the logging of the `Debug` build),
   built without ASan and, for each
@@ -129,7 +129,7 @@ of the build, next to that program's own runtime. They:
   `catter` and `catter-proxy`) catch it and report it. Nothing inspects
   types at run time (`dynamic_cast`, `typeid`).
 - A failure the caller handles is a value: `std::expected<T, E>`;
-  async code uses kota's outcome types.
+  async code uses kotatsu's outcome types.
 - `assert` pins preconditions; impossible branches end in
   `std::unreachable()`.
 - Invalid external input (an unknown compiler, arguments no table knows, a
@@ -151,7 +151,7 @@ of the build, next to that program's own runtime. They:
 
 ## Concurrency & Async
 
-- Async code is kota coroutines (`kota::task`, `co_await`) on kotatsu's
+- Async code is kotatsu coroutines (`kotatsu::async::task`, `co_await`) on kotatsu's
   event loop — no callback style. A public interface may stay synchronous
   and drive a coroutine internally when the caller has no event loop.
 - Review coroutine code by interleavings, not function by function: list
@@ -162,7 +162,7 @@ of the build, next to that program's own runtime. They:
   before suspending is still valid when it resumes. Bugs here are always
   cross-function interleavings; a function-level read finds none of them.
 - Cancellation flows down the ownership tree through `task_group::cancel()`;
-  tokens and sources exist only to cross an ownership boundary. kota has no
+  tokens and sources exist only to cross an ownership boundary. kotatsu has no
   shield — a cancel cascades all the way down — so a graceful shutdown is
   a cancellable phase bounded by `with_token`, then a non-cancellable drain
   that joins each task in order.
@@ -272,7 +272,7 @@ Domain words with one meaning each — use them only in that meaning:
 
 - Use C++23 APIs whenever possible. Do NOT use `<iostream>` facilities (`std::cout`, `std::cin`, `std::cerr`, etc.) or C-style I/O (`printf`, `fprintf`, etc.); `std::format` and `std::print` instead.
 - Prefer `std::ranges` / `std::views` APIs over raw loops and traditional `<algorithm>` calls.
-- Use kotatsu for what it covers — paths and files (`kota::fs`), processes, the environment and program search (`kota::sys`), pipes, the event loop, IPC, option parsing, tests — rather than std::filesystem, libuv or the OS directly. std::filesystem is used nowhere, the unit tests included. The hook payloads use `kota::fs`, `kota::sys` and, on Windows, kotatsu's IPC codec alone, which need no event loop.
+- Use kotatsu for what it covers — paths and files (`kotatsu::fs`), processes, the environment and program search (`kotatsu::sys`), pipes, the event loop, IPC, option parsing, tests — rather than std::filesystem, libuv or the OS directly. std::filesystem is used nowhere, the unit tests included. The hook payloads use `kotatsu::fs`, `kotatsu::sys` and, on Windows, kotatsu's IPC codec alone, which need no event loop.
 
 ## Parameter Passing Preferences
 

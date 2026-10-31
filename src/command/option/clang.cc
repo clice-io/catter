@@ -6,7 +6,7 @@ module catter.command;
 
 namespace catter::option::clang {
 
-namespace kota_opt = kota::option;
+namespace kota_opt = kotatsu::option;
 
 namespace detail {
 
@@ -38,7 +38,7 @@ constexpr std::size_t OptionCount = 0
 
 // `clang-Driver-Options.inc` reuses LLVM driver flag names directly in the generated
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
-// `kota::option::Option` without pulling in LLVM's option library.
+// `kotatsu::option::Option` without pulling in LLVM's option library.
 enum Flag : unsigned {
     HelpHidden = kota_opt::HelpHidden,
     RenderAsInput = kota_opt::RenderAsInput,
@@ -54,7 +54,7 @@ enum Flag : unsigned {
 
 // The generated prefix table only uses a small fixed set of layouts for clang
 // driver options, so we map the encoded table offsets to the corresponding
-// `kota::option` prefix spans directly.
+// `kotatsu::option` prefix spans directly.
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
         case 0: return kota_opt::pfx_none;

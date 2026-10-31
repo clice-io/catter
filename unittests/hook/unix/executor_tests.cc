@@ -9,8 +9,8 @@
 #include <system_error>
 #include <vector>
 #include <spawn.h>
-#include <kota/zest/zest.h>
-#include <kota/fs/path.h>
+#include <kotatsu/zest/zest.h>
+#include <kotatsu/fs/path.h>
 
 #include "hook/unix/executor.h"
 #include "support/hook.h"
@@ -193,7 +193,7 @@ ZEST_CASE(execvp_resolves_with_the_process_environment) {
     exec_call.reset(51);
 
     auto executable = create_executable("path-tool");
-    auto search_path = std::string(kota::fs::path::parent(executable));
+    auto search_path = std::string(kotatsu::fs::path::parent(executable));
     ScopedEnv path_env("PATH", search_path);
     ScopedEnv command_id(std::string(catter::env::COMMAND_ID), "11");
 
@@ -234,7 +234,7 @@ ZEST_CASE(execvP_looks_in_the_search_path_it_is_given) {
     exec_call.reset(52);
 
     auto executable = create_executable("search-tool");
-    auto search_path = "/definitely/missing:" + std::string(kota::fs::path::parent(executable));
+    auto search_path = "/definitely/missing:" + std::string(kotatsu::fs::path::parent(executable));
     MutableCStrings argv = {"search-tool"};
     MutableCStrings envp = {"LANG=C"};
 
@@ -388,7 +388,7 @@ ZEST_CASE(execvp_runs_a_file_of_no_executable_format_through_the_proxy) {
     exec_call.reset(53);
 
     auto executable = create_executable("shell-script", "echo run by /bin/sh\n");
-    ScopedEnv path_env("PATH", std::string(kota::fs::path::parent(executable)));
+    ScopedEnv path_env("PATH", std::string(kotatsu::fs::path::parent(executable)));
     MutableCStrings argv = {"shell-script"};
 
     ct::Executor executor;
@@ -404,7 +404,7 @@ ZEST_CASE(execvp_runs_a_script_that_names_no_interpreter_through_the_proxy) {
     exec_call.reset(54);
 
     auto executable = create_executable("empty-shebang", "#!\necho run by /bin/sh\n");
-    ScopedEnv path_env("PATH", std::string(kota::fs::path::parent(executable)));
+    ScopedEnv path_env("PATH", std::string(kotatsu::fs::path::parent(executable)));
     MutableCStrings argv = {"empty-shebang"};
 
     ct::Executor executor;

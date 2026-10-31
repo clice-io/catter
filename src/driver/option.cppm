@@ -11,13 +11,13 @@ namespace catter::driver {
 struct WorkingDirectory {
     std::string path = [] {
         std::string cwd;
-        kota::fs::current_dir(cwd);
+        kotatsu::fs::current_dir(cwd);
         return cwd;
     }();
 
-    auto into(std::string_view text, const kota::deco::decl::IntoContext& context)
+    auto into(std::string_view text, const kotatsu::deco::decl::IntoContext& context)
         -> std::optional<std::string> {
-        if(auto error = kota::fs::absolute(path, text)) {
+        if(auto error = kotatsu::fs::absolute(path, text)) {
             return context.format_error(std::format("Wrong Path: {}", error.message()));
         }
         return std::nullopt;
@@ -28,7 +28,7 @@ struct WorkingDirectory {
 struct DirectoryOption {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-C", "--directory", "--directory="},
                  meta_var = "<path>",
                  help = "The directory the command runs in. [default: the current directory]")
@@ -62,7 +62,7 @@ struct SessionOptions {
     <std::string> capture;
 #endif
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"--from", "--from="},
                  meta_var = "<file>",
                  help = "Replay the build recorded in this file instead of running one.")
