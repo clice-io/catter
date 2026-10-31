@@ -1,10 +1,9 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/output.h"
+#include "support/prelude.h"
 #include "support/program.h"
 
 module catter;
@@ -126,16 +125,16 @@ Address parse_address(std::string_view address, bool allow_remote) {
     return {.hosts = {std::string(host)}, .port = port};
 }
 
-std::string seconds(std::chrono::milliseconds time) {
-    return std::format("{} s", std::chrono::duration<double>(time).count());
+std::string seconds(chrono::milliseconds time) {
+    return std::format("{} s", chrono::duration<double>(time).count());
 }
 
 }  // namespace
 
 RemoteHandler::RemoteHandler(std::unique_ptr<kotatsu::ipc::Transport> transport,
-                             kotatsu::async::process process,
+                             async::process process,
                              Options options) :
-    options(std::move(options)), peer(kotatsu::async::event_loop::current(), std::move(transport)),
+    options(std::move(options)), peer(async::event_loop::current(), std::move(transport)),
     process(std::move(process)) {
     // A handler answers catter's requests, asks its own, and writes nothing
     // else: anything else ends the conversation, rather than leave catter
@@ -144,7 +143,7 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kotatsu::ipc::Transport> transport,
     peer.on_request(
         "analyze",
         [](kotatsu::ipc::JSONPeer::RequestContext&, const protocol::AnalyzeParams& params)
-            -> kotatsu::async::task<protocol::AnalyzeResult, kotatsu::ipc::Error> {
+            -> async::task<protocol::AnalyzeResult, kotatsu::ipc::Error> {
             protocol::AnalyzeResult result;
             for(const auto& program: params.programs) {
                 auto executable = protocol::to_bytes(program.executable);
@@ -166,26 +165,25 @@ RemoteHandler::RemoteHandler(std::unique_ptr<kotatsu::ipc::Transport> transport,
             }
             co_return result;
         });
-    kotatsu::async::event_loop::current().schedule(
-        [](RemoteHandler& self) -> kotatsu::async::task<> {
-            co_await self.peer.run();
-            self.stopped.set();
-        }(*this));
+    async::event_loop::current().schedule([](RemoteHandler& self) -> async::task<> {
+        co_await self.peer.run();
+        self.stopped.set();
+    }(*this));
 }
 
 std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Options options) {
     // The terminal's Ctrl+C is the build's: the handler is told how the build
     // ended, and ends when catter closes its input.
-    kotatsu::async::process::options opts{
+    async::process::options opts{
         .creation = {.process_group = true},
-        .streams = {kotatsu::async::process::stdio::pipe(),
-                     kotatsu::async::process::stdio::pipe(),
-                     kotatsu::async::process::stdio::inherit()},
+        .streams = {async::process::stdio::pipe(),
+                     async::process::stdio::pipe(),
+                     async::process::stdio::inherit()},
     };
 #ifdef CATTER_WINDOWS
     // The command line goes to CreateProcessW as it is, to be split by the
     // program as Windows programs split theirs.
-    auto words = kotatsu::sys::cmd::split(command, kotatsu::sys::cmd::Quoting::Windows);
+    auto words = sys::cmd::split(command, sys::cmd::Quoting::Windows);
     if(words.begin() == words.end()) {
         throw cpptrace::runtime_error("The handler command is empty");
     }
@@ -199,7 +197,7 @@ std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Op
     opts.program = words.front();
     opts.args.assign(words.begin() + 1, words.end());
 #endif
-    auto spawned = kotatsu::async::process::spawn(opts);
+    auto spawned = async::process::spawn(opts);
     if(!spawned) {
         throw cpptrace::runtime_error(std::format("Failed to start handler `{}`: {}",
                                                   options.name,
@@ -212,19 +210,19 @@ std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Op
         new RemoteHandler(std::move(transport), std::move(spawned->proc), std::move(options)));
 }
 
-kotatsu::async::task<std::unique_ptr<RemoteHandler>>
-    RemoteHandler::connect(std::string_view address, bool allow_remote, Options options) {
+async::task<std::unique_ptr<RemoteHandler>> RemoteHandler::connect(std::string_view address,
+                                                                   bool allow_remote,
+                                                                   Options options) {
     auto [hosts, port] = parse_address(address, allow_remote);
     std::string error;
     for(const auto& host: hosts) {
-        auto transport = co_await kotatsu::ipc::StreamTransport::connect_tcp(
-            host,
-            port,
-            kotatsu::async::event_loop::current());
+        auto transport =
+            co_await kotatsu::ipc::StreamTransport::connect_tcp(host,
+                                                                port,
+                                                                async::event_loop::current());
         if(transport) {
-            co_return std::unique_ptr<RemoteHandler>(new RemoteHandler(std::move(*transport),
-                                                                       kotatsu::async::process(),
-                                                                       std::move(options)));
+            co_return std::unique_ptr<RemoteHandler>(
+                new RemoteHandler(std::move(*transport), async::process(), std::move(options)));
         }
         if(error.empty()) {
             error = std::move(transport.error().message);
@@ -257,9 +255,9 @@ std::string RemoteHandler::failure(std::string_view what, const kotatsu::ipc::Er
 }
 
 template <typename Result, typename Params>
-kotatsu::async::task<Result> RemoteHandler::request(std::string_view method,
-                                                    std::string_view what,
-                                                    Params params) {
+async::task<Result> RemoteHandler::request(std::string_view method,
+                                           std::string_view what,
+                                           Params params) {
     kotatsu::ipc::request_options opts;
     if(options.timeout.count() != 0) {
         opts.timeout = options.timeout;
@@ -281,7 +279,7 @@ void RemoteHandler::notify(std::string_view method, const Params& params) {
     }
 }
 
-kotatsu::async::task<std::optional<Build>> RemoteHandler::on_start(Build build) {
+async::task<std::optional<Build>> RemoteHandler::on_start(Build build) {
     subscription = co_await request<protocol::InitializeResult>(
         "initialize",
         "initialize",
@@ -313,9 +311,9 @@ kotatsu::async::task<std::optional<Build>> RemoteHandler::on_start(Build build) 
     co_return build;
 }
 
-kotatsu::async::task<Action> RemoteHandler::on_command(data::ipcid_t id,
-                                                       std::optional<data::ipcid_t> parent,
-                                                       data::command command) {
+async::task<Action> RemoteHandler::on_command(data::ipcid_t id,
+                                              std::optional<data::ipcid_t> parent,
+                                              data::command command) {
     auto action = co_await decide(id, parent, std::move(command));
     if(!action) {
         co_return Action{.type = Action::Type::Skip};
@@ -326,10 +324,9 @@ kotatsu::async::task<Action> RemoteHandler::on_command(data::ipcid_t id,
     co_return std::move(*action);
 }
 
-kotatsu::async::task<std::optional<Action>>
-    RemoteHandler::decide(data::ipcid_t id,
-                          std::optional<data::ipcid_t> parent,
-                          data::command command) {
+async::task<std::optional<Action>> RemoteHandler::decide(data::ipcid_t id,
+                                                         std::optional<data::ipcid_t> parent,
+                                                         data::command command) {
     std::optional<CommandAnalysis> analysis;
     if(subscription.analysis || subscription.filter) {
         analysis.emplace(command.executable, command.args, command.cwd);
@@ -422,9 +419,9 @@ kotatsu::async::task<std::optional<Action>>
     co_return Action{.type = Action::Type::Modify, .command = std::move(command)};
 }
 
-kotatsu::async::task<> RemoteHandler::on_error(data::ipcid_t id,
-                                               std::optional<data::ipcid_t> parent,
-                                               std::string message) {
+async::task<> RemoteHandler::on_error(data::ipcid_t id,
+                                      std::optional<data::ipcid_t> parent,
+                                      std::string message) {
     if(subscription.events.error) {
         notify("error",
                protocol::CaptureError{
@@ -436,7 +433,7 @@ kotatsu::async::task<> RemoteHandler::on_error(data::ipcid_t id,
     co_return;
 }
 
-kotatsu::async::task<> RemoteHandler::on_exit(data::ipcid_t id, data::process_result result) {
+async::task<> RemoteHandler::on_exit(data::ipcid_t id, data::process_result result) {
     if(told.erase(id) != 0) {
         notify("exit",
                protocol::Exit{.id = id,
@@ -447,15 +444,15 @@ kotatsu::async::task<> RemoteHandler::on_exit(data::ipcid_t id, data::process_re
     co_return;
 }
 
-kotatsu::async::task<> RemoteHandler::on_finish(data::process_result result) {
+async::task<> RemoteHandler::on_finish(data::process_result result) {
     co_await request<kotatsu::ipc::protocol::null>("finish",
                                                    "finish",
                                                    protocol::Finish{.code = result.code});
 }
 
-kotatsu::async::task<> RemoteHandler::close() {
+async::task<> RemoteHandler::close() {
     peer.close_output();
-    auto ended = [](RemoteHandler& self) -> kotatsu::async::task<> {
+    auto ended = [](RemoteHandler& self) -> async::task<> {
         co_await self.stopped.wait();
         if(self.process.pid() != -1) {
             co_await self.process.wait();
@@ -466,8 +463,7 @@ kotatsu::async::task<> RemoteHandler::close() {
         co_return;
     }
 
-    auto result =
-        co_await kotatsu::async::when_any(std::move(ended), kotatsu::async::sleep(options.timeout));
+    auto result = co_await async::when_any(std::move(ended), async::sleep(options.timeout));
     if(result.index() == 0) {
         co_return;
     }

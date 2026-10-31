@@ -1,7 +1,6 @@
 module;
 
-#include "modules/prelude.h"
-
+#include "support/prelude.h"
 #include "utils/response_files.h"
 
 module catter;
@@ -82,7 +81,7 @@ ZEST_CASE(a_file_that_names_itself_ends) {
     const Strings argv = {"gcc", "@loop.rsp"};
     auto expansion = expand_response_files(argv, "/work", Quoting::GNU, files);
     ZEXPECT(expansion.files.size() == 8);
-    ZEXPECT(std::ranges::count(expansion.argv, "-DX") == 8);
+    ZEXPECT(ranges::count(expansion.argv, "-DX") == 8);
     ZEXPECT(expansion.argv.back() == "@loop.rsp");
 };
 

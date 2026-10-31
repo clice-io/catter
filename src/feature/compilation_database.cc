@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -12,16 +12,16 @@ namespace catter::feature {
 
 namespace {
 
-namespace dyn = kotatsu::codec::dyn;
+namespace dyn = codec::dyn;
 
 /// `path` from `cwd`. An absolute path stays as it is spelled, `..` and all, which the system
 /// resolves through the symlinks before it.
 std::string resolve(std::string_view cwd, std::string_view path) {
-    if(kotatsu::fs::path::is_absolute(path)) {
+    if(fs::path::is_absolute(path)) {
         return std::string(path);
     }
     std::string resolved;
-    kotatsu::fs::path::resolve(resolved, path, cwd);
+    fs::path::resolve(resolved, path, cwd);
     return resolved;
 }
 
@@ -44,7 +44,7 @@ std::optional<std::string> invalid(const JSON& entry) {
     }
     const auto* arguments = object->find("arguments");
     if(arguments != nullptr &&
-       (!arguments->is_array() || !std::ranges::all_of(arguments->as_array(), &JSON::is_string))) {
+       (!arguments->is_array() || !ranges::all_of(arguments->as_array(), &JSON::is_string))) {
         return R"("arguments" must be a string array)";
     }
     if(command == nullptr && arguments == nullptr) {
@@ -65,7 +65,7 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
             reason));
     };
     std::string text;
-    if(auto error = kotatsu::fs::read_file(text, file)) {
+    if(auto error = fs::read_file(text, file)) {
         if(error == std::errc::no_such_file_or_directory) {
             return {};
         }
@@ -81,7 +81,7 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
         return {};
     }
 
-    auto parsed = kotatsu::codec::json::from_string<JSON>(content);
+    auto parsed = json::from_string<JSON>(content);
     if(!parsed.has_value()) {
         throw fail(std::format("CDB file is not valid JSON: {}: {}", path, parsed.error().message));
     }
@@ -126,7 +126,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
         const auto& argv = analysis.expansion.argv;
         std::vector<bool> removed(argv.size());
         const auto remove = [&](const Argument& argument) {
-            std::ranges::fill_n(removed.begin() + argument.index, argument.count, true);
+            ranges::fill_n(removed.begin() + argument.index, argument.count, true);
         };
         for(const auto& read: analysis.reads) {
             if(&read != &source && read.role == InputRole::Source) {
@@ -137,7 +137,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
         // names none, which clang warns of.
         bool any_after = false;
         bool left_after = false;
-        for(const auto& argument: analysis.arguments | std::views::reverse) {
+        for(const auto& argument: analysis.arguments | views::reverse) {
             if(argument.id == option::clang::ID_INPUT) {
                 any_after = true;
                 left_after = left_after || !removed[argument.index];
@@ -145,10 +145,10 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
                 remove(argument);
             }
         }
-        const auto own = std::views::iota(0uz, argv.size()) |
-                         std::views::filter([&](std::size_t i) { return !removed[i]; }) |
-                         std::views::transform([&](std::size_t i) { return argv[i]; }) |
-                         std::ranges::to<std::vector>();
+        const auto own = views::iota(0uz, argv.size()) |
+                         views::filter([&](std::size_t i) { return !removed[i]; }) |
+                         views::transform([&](std::size_t i) { return argv[i]; }) |
+                         ranges::to<std::vector>();
         entries.push_back(entry(cwd, source.path, own, std::move(output)));
     };
     std::vector<bool> written(analysis.reads.size());
@@ -157,7 +157,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
             continue;
         }
         std::string output;
-        kotatsu::fs::path::resolve(output, write.path, cwd);
+        fs::path::resolve(output, write.path, cwd);
         for(auto read: write.reads) {
             if(analysis.reads[read].role == InputRole::Source) {
                 add(analysis.reads[read], output);
@@ -202,8 +202,8 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     // A file of a database another tool wrote may be spelled with other separators on Windows.
     const auto key_of = [&](std::string_view path) {
         std::string absolute;
-        kotatsu::fs::path::resolve(absolute, path, directory);
-        kotatsu::fs::path::to_slash(absolute);
+        fs::path::resolve(absolute, path, directory);
+        fs::path::to_slash(absolute);
         return absolute;
     };
     const auto field = [&](std::string_view name, JSON absent) {
@@ -240,14 +240,14 @@ CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd,
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
     // The save renames a new file over the path it writes, which would replace a symlink: the
     // database goes to the file the links lead to, which need not exist yet.
-    if(auto error = kotatsu::fs::follow_symlinks(file, file)) {
+    if(auto error = fs::follow_symlinks(file, file)) {
         throw cpptrace::runtime_error(
             std::format("Failed to follow the symlinks of the CDB path: {}: {}",
                         path,
                         error.message()));
     }
-    if(auto status = kotatsu::fs::status(file);
-       status.has_value() && status->type != kotatsu::fs::FileType::Regular) {
+    if(auto status = fs::status(file);
+       status.has_value() && status->type != fs::FileType::Regular) {
         throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
     }
     if(inherit) {
@@ -269,11 +269,11 @@ std::vector<JSON> CompilationDatabase::entries() const {
                 ? added.files.contains(group.file)
                 : added.positions.contains(to_json(dyn::Array{group.file, group.output}));
         if(!replaced) {
-            std::ranges::copy(group.entries, std::back_inserter(entries));
+            ranges::copy(group.entries, std::back_inserter(entries));
         }
     }
     for(const auto& group: added.groups) {
-        std::ranges::copy(group.entries, std::back_inserter(entries));
+        ranges::copy(group.entries, std::back_inserter(entries));
     }
     return entries;
 }

@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -44,21 +43,21 @@ class CmdTree final : public Handler {
 public:
     explicit CmdTree(TreeOptions options) : options(std::move(options)) {}
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override {
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override {
         tree.merge(id, std::move(command.args), parent);
         co_return Action{};
     }
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    std::optional<data::ipcid_t> parent,
-                                    std::string message) override {
+    async::task<> on_error(data::ipcid_t id,
+                           std::optional<data::ipcid_t> parent,
+                           std::string message) override {
         tree.merge(id, std::unexpected(std::move(message)), parent);
         co_return;
     }
 
-    kotatsu::async::task<> on_finish(data::process_result result) override {
+    async::task<> on_finish(data::process_result result) override {
         print(tree,
               [&](const Tree::Node& node) { return text_of(node.content); },
               max_depth_of(options.depth.as_optional()),
@@ -86,11 +85,11 @@ private:
         const auto shown = visible < 0
                                ? argv.size() - 1
                                : std::min(argv.size() - 1, static_cast<std::size_t>(visible));
-        auto line = argv | std::views::take(shown + 1) |
-                    std::views::transform([&](const std::string& argument) {
+        auto line = argv | views::take(shown + 1) |
+                    views::transform([&](const std::string& argument) {
                         return format_argument(argument, *options.arg_width);
                     }) |
-                    std::views::join_with(' ') | std::ranges::to<std::string>();
+                    views::join_with(' ') | ranges::to<std::string>();
         if(shown + 1 < argv.size()) {
             line += " ...";
         }

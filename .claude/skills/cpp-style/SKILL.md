@@ -51,14 +51,23 @@ defending against ghosts.
   re-exports, as `catter` imports it. It is defined in its source, an
   implementation unit (`module catter;`) that imports the partitions it
   uses (`import :session.process;`). A module unit starts with `module;`,
-  then `#include "modules/prelude.h"`, then the headers it still includes:
-  `support`'s and the platform's (`<windows.h>`, `<sys/resource.h>`); then
-  its module declaration and imports. A `main` is `extern "C++"`.
+  then `#include "support/prelude.h"` (`"modules/prelude.h"` in
+  `catter.command`), then the headers it still includes: `support`'s and
+  the platform's (`<windows.h>`, `<sys/resource.h>`); then its module
+  declaration and imports. A `main` is `extern "C++"`.
 - The standard library and the libraries of `modules/` come from the
   prelude's `import std.compat;` and `import deps;`, never from an include
   in a module unit. A header or macro of theirs `deps` does not export yet
   goes into `modules/demand.cpp`, and `modules/` is regenerated (the
   upgrade-deps skill).
+- `support/prelude.h` gives the namespaces catter writes their short names
+  in `catter`: `ranges`, `views`, `chrono`, `async`, `codec`, `json`,
+  `deco`, `fs`, `meta`, `sys`, `zest`. Code in `catter` writes them
+  (`ranges::sort`, `async::task`, `fs::path::push`), never `std::ranges::`
+  or `kotatsu::async::`, and no file declares them again. `kotatsu::ipc`
+  and `kotatsu::option` keep their names, which catter's own `ipc` and
+  `option` take; `catter.command`, to become a library of its own, and
+  the headers the hook payloads share write every name in full.
 - `support` and the hook payloads stay headers (`.h`, `#pragma once`,
   never include guards) and sources (`.cc`), which include the standard
   and library headers themselves: the payloads import nothing.

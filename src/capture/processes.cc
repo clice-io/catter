@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -24,7 +23,7 @@ void BuildProcesses::fork(std::uint64_t parent, std::uint64_t child) {
 std::optional<BuildProcesses::Started> BuildProcesses::exec(std::uint64_t key,
                                                             std::uint64_t next,
                                                             data::command command,
-                                                            std::chrono::microseconds time) {
+                                                            chrono::microseconds time) {
     auto found = members.find(key);
     if(found == members.end()) {
         return std::nullopt;
@@ -37,16 +36,15 @@ std::optional<BuildProcesses::Started> BuildProcesses::exec(std::uint64_t key,
     return started;
 }
 
-std::vector<BuildProcesses::Ended>
-    BuildProcesses::exit(std::uint64_t key,
-                         const kotatsu::async::process::exit_status& status,
-                         std::chrono::microseconds time) {
+std::vector<BuildProcesses::Ended> BuildProcesses::exit(std::uint64_t key,
+                                                        const async::process::exit_status& status,
+                                                        chrono::microseconds time) {
     auto found = members.find(key);
     if(found == members.end()) {
         return {};
     }
     std::vector<Ended> ended;
-    for(const auto& run: found->second.commands | std::views::reverse) {
+    for(const auto& run: found->second.commands | views::reverse) {
         auto result = result_of(status, time - run.started);
         result.start = (run.started - origin).count();
         ended.push_back({.id = run.id, .result = result});

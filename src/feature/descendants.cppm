@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter:feature.descendants;
 

@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -11,7 +11,7 @@ using namespace catter;
 namespace {
 
 std::vector<std::string> split(std::string_view command) {
-    return command | std::views::split(' ') | std::ranges::to<std::vector<std::string>>();
+    return command | views::split(' ') | ranges::to<std::vector<std::string>>();
 }
 
 /// Commands of every dialect: options that take their value joined and separate, a directory
@@ -37,7 +37,7 @@ ZEST_SUITE(cmd_compiler_tests) {
 ZEST_CASE(arguments_cover_argv) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+        auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
         ZASSERT(analysis.has_value());
 
         std::uint32_t next = 1;
@@ -56,7 +56,7 @@ ZEST_CASE(arguments_cover_argv) {
 ZEST_CASE(locations_point_at_their_paths) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+        auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
         ZASSERT(analysis.has_value());
 
         const auto names = [&](const Location& location, std::string_view path) {
@@ -79,10 +79,10 @@ ZEST_CASE(locations_point_at_their_paths) {
 ZEST_CASE(writes_are_made_from_reads_in_argv_order) {
     for(auto command: commands) {
         const auto argv = split(command);
-        auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+        auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
         ZASSERT(analysis.has_value());
 
-        ZEXPECT(std::ranges::is_sorted(analysis->reads, {}, [](const Read& read) {
+        ZEXPECT(ranges::is_sorted(analysis->reads, {}, [](const Read& read) {
             return read.location.index;
         }));
         for(const auto& write: analysis->writes) {
@@ -95,7 +95,7 @@ ZEST_CASE(writes_are_made_from_reads_in_argv_order) {
 
 ZEST_CASE(missing_option_value_fails_the_parse) {
     const auto argv = split("gcc -c a.c -o");
-    auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
     ZASSERT(!analysis.has_value());
     ZEXPECT(analysis.error().kind == Error::Kind::CompilerParse);
 };
@@ -103,9 +103,9 @@ ZEST_CASE(missing_option_value_fails_the_parse) {
 ZEST_CASE(options_only_gcc_knows_take_their_values) {
     auto reads = [](std::string_view command) {
         const auto argv = split(command);
-        auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
-        return analysis->reads | std::views::transform(&Read::path) |
-               std::ranges::to<std::vector<std::string>>();
+        auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
+        return analysis->reads | views::transform(&Read::path) |
+               ranges::to<std::vector<std::string>>();
     };
     ZEXPECT(reads("gcc -c foo.c -dumpbase xx.c") == std::vector<std::string>{"foo.c"});
     ZEXPECT(reads("g++ -wrapper echo,foo.c -c bar.c") == std::vector<std::string>{"bar.c"});
@@ -123,7 +123,7 @@ ZEST_CASE(options_only_gcc_knows_take_their_values) {
 
 ZEST_CASE(an_option_the_table_does_not_know_keeps_its_value) {
     const auto argv = split("gcc -c foo.c -dumpbase xx.c");
-    auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
     ZASSERT(analysis.has_value());
     const auto& argument = analysis->arguments.back();
     ZEXPECT(option_name(syntax_of(Compiler::GCC, Dialect::GCC), argument.id) == "<unknown>");
@@ -134,7 +134,7 @@ ZEST_CASE(an_option_the_table_does_not_know_keeps_its_value) {
 ZEST_CASE(sources_are_read_in_the_language_their_selector_or_suffix_names) {
     auto languages = [](std::string_view command) {
         const auto argv = split(command);
-        auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+        auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
         std::vector<std::string> languages;
         for(const auto& read: analysis->reads) {
             languages.push_back(read.path + ":" + read.language.value_or("none"));

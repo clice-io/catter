@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -90,7 +90,7 @@ ZEST_CASE(what_spans_work_adds_up_to_how_many_work_over_time) {
                        activity.working[i].second;
         }
         ZEXPECT(activity.working.back().second == 0);
-        ZEXPECT(working == std::ranges::fold_left(activity.worked, std::int64_t(0), std::plus()));
+        ZEXPECT(working == ranges::fold_left(activity.worked, std::int64_t(0), std::plus()));
         for(std::size_t i = 0; i < spans.size(); i += 1) {
             ZEXPECT(0 <= activity.worked[i]);
             ZEXPECT(activity.worked[i] <= spans[i].end - spans[i].start);

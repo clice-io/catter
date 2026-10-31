@@ -1,7 +1,6 @@
 module;
 
-#include "modules/prelude.h"
-
+#include "support/prelude.h"
 #include "utils/temp_file_manager.h"
 
 module catter;
@@ -21,7 +20,7 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
     ZASSERT(!temp.create("compile_commands.json",
                          R"([{"directory": "/", "file": "a.c", "arguments": ["cc"]}])"));
     const auto file = temp.path("compile_commands.json");
-    ZASSERT(!kotatsu::fs::set_permissions(file, 0200));
+    ZASSERT(!fs::set_permissions(file, 0200));
 
     bool thrown = false;
     try {
@@ -32,32 +31,31 @@ ZEST_CASE(unreadable_database_is_not_replaced) {
         thrown = true;
     }
     ZEXPECT(thrown);
-    ZASSERT(!kotatsu::fs::set_permissions(file, 0600));
-    auto status = kotatsu::fs::status(file);
+    ZASSERT(!fs::set_permissions(file, 0600));
+    auto status = fs::status(file);
     ZASSERT(status.has_value());
     ZEXPECT(status->size > 0);
 };
 
 ZEST_CASE(a_symlinked_database_stays_a_symlink) {
     TempFileManager temp("catter-ut-");
-    ZASSERT(kotatsu::fs::create_directory(temp.path("build")).has_value());
+    ZASSERT(fs::create_directory(temp.path("build")).has_value());
     // The file the link names does not exist yet, as in a clean checkout.
-    ZASSERT(!kotatsu::fs::create_symlink("build/compile_commands.json",
-                                         temp.path("compile_commands.json")));
+    ZASSERT(!fs::create_symlink("build/compile_commands.json", temp.path("compile_commands.json")));
 
     feature::CompilationDatabase database("compile_commands.json",
                                           std::string(temp.root.path()),
                                           true);
-    database.add(feature::JSON(kotatsu::codec::dyn::Object{
-        {"directory", temp.root.path()                },
-        {"file",      "a.c"                           },
-        {"arguments", kotatsu::codec::dyn::Array{"cc"}},
+    database.add(feature::JSON(codec::dyn::Object{
+        {"directory", temp.root.path()       },
+        {"file",      "a.c"                  },
+        {"arguments", codec::dyn::Array{"cc"}},
     }));
     ZEXPECT(database.save() == temp.path("build/compile_commands.json"));
-    auto link = kotatsu::fs::symlink_status(temp.path("compile_commands.json"));
+    auto link = fs::symlink_status(temp.path("compile_commands.json"));
     ZASSERT(link.has_value());
-    ZEXPECT(link->type == kotatsu::fs::FileType::Symlink);
-    auto target = kotatsu::fs::status(temp.path("build/compile_commands.json"));
+    ZEXPECT(link->type == fs::FileType::Symlink);
+    auto target = fs::status(temp.path("build/compile_commands.json"));
     ZASSERT(target.has_value());
     ZEXPECT(target->size > 0);
 };
@@ -65,7 +63,7 @@ ZEST_CASE(a_symlinked_database_stays_a_symlink) {
 ZEST_CASE(a_loop_of_symlinks_is_no_database) {
     TempFileManager temp("catter-ut-");
     const auto link = temp.path("compile_commands.json");
-    ZASSERT(!kotatsu::fs::create_symlink("compile_commands.json", link));
+    ZASSERT(!fs::create_symlink("compile_commands.json", link));
 
     bool thrown = false;
     try {
@@ -76,9 +74,9 @@ ZEST_CASE(a_loop_of_symlinks_is_no_database) {
         thrown = true;
     }
     ZEXPECT(thrown);
-    auto status = kotatsu::fs::symlink_status(link);
+    auto status = fs::symlink_status(link);
     ZASSERT(status.has_value());
-    ZEXPECT(status->type == kotatsu::fs::FileType::Symlink);
+    ZEXPECT(status->type == fs::FileType::Symlink);
 };
 #endif
 

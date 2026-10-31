@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter:session.handler;
 
@@ -56,23 +55,23 @@ public:
     virtual ~Handler() = default;
 
     /// The build to run, changed or as it is, or none; as it is by default.
-    virtual kotatsu::async::task<std::optional<Build>> on_start(Build build);
+    virtual async::task<std::optional<Build>> on_start(Build build);
 
     /// `parent` is the command that started this one, none for the build
     /// command.
-    virtual kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                                    std::optional<data::ipcid_t> parent,
-                                                    data::command command) = 0;
+    virtual async::task<Action> on_command(data::ipcid_t id,
+                                           std::optional<data::ipcid_t> parent,
+                                           data::command command) = 0;
 
     /// `message` says why catter could not capture the command.
-    virtual kotatsu::async::task<> on_error(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            std::string message) = 0;
+    virtual async::task<> on_error(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   std::string message) = 0;
 
     /// Nothing by default.
-    virtual kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result);
+    virtual async::task<> on_exit(data::ipcid_t id, data::process_result result);
 
-    virtual kotatsu::async::task<> on_finish(data::process_result result) = 0;
+    virtual async::task<> on_finish(data::process_result result) = 0;
 };
 
 /// Handlers in a fixed order, acting as one. A command goes to each in turn,
@@ -82,19 +81,19 @@ class HandlerChain final : public Handler {
 public:
     explicit HandlerChain(std::vector<Handler*> handlers);
 
-    kotatsu::async::task<std::optional<Build>> on_start(Build build) override;
+    async::task<std::optional<Build>> on_start(Build build) override;
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override;
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override;
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    std::optional<data::ipcid_t> parent,
-                                    std::string message) override;
+    async::task<> on_error(data::ipcid_t id,
+                           std::optional<data::ipcid_t> parent,
+                           std::string message) override;
 
-    kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result) override;
+    async::task<> on_exit(data::ipcid_t id, data::process_result result) override;
 
-    kotatsu::async::task<> on_finish(data::process_result result) override;
+    async::task<> on_finish(data::process_result result) override;
 
 private:
     std::vector<Handler*> handlers;

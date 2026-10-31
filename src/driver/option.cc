@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -29,15 +29,15 @@ const Backend& backend_of(const SessionOptions& options) {
     if(!options.capture.has_value()) {
         return *backends.front();
     }
-    if(auto found = std::ranges::find(backends, *options.capture, &Backend::name);
+    if(auto found = ranges::find(backends, *options.capture, &Backend::name);
        found != backends.end()) {
         return **found;
     }
     throw cpptrace::runtime_error(
         std::format("`{}` is not a capture backend: give {}",
                     *options.capture,
-                    std::ranges::to<std::string>(backends | std::views::transform(&Backend::name) |
-                                                 std::views::join_with(std::string_view(" or ")))));
+                    ranges::to<std::string>(backends | views::transform(&Backend::name) |
+                                            views::join_with(std::string_view(" or ")))));
 }
 
 /// Tells this session from the others a handler over TCP serves.
@@ -47,8 +47,8 @@ std::string session_id() {
     return std::format("{:016x}", random(device));
 }
 
-kotatsu::async::task<kotatsu::async::process::exit_status>
-    async_run(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
+async::task<async::process::exit_status> async_run(std::unique_ptr<Handler> builtin,
+                                                   const SessionOptions& options) {
     if(options.from.has_value() && !options.command->empty()) {
         throw cpptrace::runtime_error(
             "--from replays a recorded build in place of the build command after --: give one of them");
@@ -69,12 +69,12 @@ kotatsu::async::task<kotatsu::async::process::exit_status>
             .session = session,
             .mode = std::string(backend.name()),
             .decisions = backend.follows_decisions(),
-            .timeout = std::chrono::seconds(*options.handler_timeout),
+            .timeout = chrono::seconds(*options.handler_timeout),
         };
     };
 
     std::vector<std::unique_ptr<RemoteHandler>> remotes;
-    kotatsu::async::process::exit_status status;
+    async::process::exit_status status;
     std::exception_ptr error;
     try {
         for(const auto& [connect, text]: options.handlers) {
@@ -113,7 +113,7 @@ kotatsu::async::task<kotatsu::async::process::exit_status>
 }  // namespace
 
 int run_build(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
-    auto [status] = kotatsu::async::run(async_run(std::move(builtin), options));
+    auto [status] = async::run(async_run(std::move(builtin), options));
     return exit_like(*status);
 }
 

@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -31,10 +30,10 @@ void add(std::vector<Edge>& edges,
         return;
     }
     Edge edge;
-    kotatsu::fs::path::resolve(edge.output, output, cwd);
+    fs::path::resolve(edge.output, output, cwd);
     for(std::string_view input: inputs) {
         if(input != "-") {
-            kotatsu::fs::path::resolve(edge.inputs.emplace_back(), input, cwd);
+            fs::path::resolve(edge.inputs.emplace_back(), input, cwd);
         }
     }
     edges.push_back(std::move(edge));
@@ -47,14 +46,11 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
                                           std::string_view executable,
                                           std::span<const std::string> argv) {
     std::vector<Edge> edges;
-    if(auto compiler = analyze_compiler(executable, argv, cwd, kotatsu::fs::read_file)) {
+    if(auto compiler = analyze_compiler(executable, argv, cwd, fs::read_file)) {
         for(const auto& write: compiler->writes) {
-            add(edges,
-                cwd,
-                write.path,
-                write.reads | std::views::transform([&](std::uint32_t read) {
-                    return std::string_view(compiler->reads[read].path);
-                }));
+            add(edges, cwd, write.path, write.reads | views::transform([&](std::uint32_t read) {
+                                            return std::string_view(compiler->reads[read].path);
+                                        }));
         }
         return edges;
     }
@@ -69,7 +65,7 @@ std::optional<std::vector<Edge>> edges_of(std::string_view cwd,
 
 /// The name a target shows by: its file's name, or, for a path that ends in none, the path.
 std::string name_of(std::string_view path) {
-    auto name = kotatsu::fs::path::filename(path);
+    auto name = fs::path::filename(path);
     return kotatsu::replace_invalid_utf8(name.empty() ? path : name);
 }
 
@@ -79,9 +75,9 @@ public:
     explicit TargetTree(TargetsOptions options) :
         max_depth(max_depth_of(options.depth.as_optional())) {}
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override {
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override {
         descendants.add(id, parent);
         if(descendants.left_out(id)) {
             co_return Action{};
@@ -100,14 +96,14 @@ public:
         co_return Action{};
     }
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    [[maybe_unused]] std::optional<data::ipcid_t> parent,
-                                    [[maybe_unused]] std::string message) override {
+    async::task<> on_error(data::ipcid_t id,
+                           [[maybe_unused]] std::optional<data::ipcid_t> parent,
+                           [[maybe_unused]] std::string message) override {
         descendants.add(id, std::nullopt);
         co_return;
     }
 
-    kotatsu::async::task<> on_finish(data::process_result result) override {
+    async::task<> on_finish(data::process_result result) override {
         print(tree,
               [](const Tree::Node& node) { return name_of(node.id); },
               max_depth,

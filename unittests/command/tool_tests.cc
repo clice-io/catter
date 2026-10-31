@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -11,7 +11,7 @@ using namespace catter;
 namespace {
 
 std::vector<std::string> split(std::string_view command) {
-    return command | std::views::split(' ') | std::ranges::to<std::vector<std::string>>();
+    return command | views::split(' ') | ranges::to<std::vector<std::string>>();
 }
 
 }  // namespace

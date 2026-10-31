@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -11,10 +11,10 @@ namespace catter::feature {
 std::vector<std::uint32_t> lanes_of(std::span<const Span> spans) {
     // Whether the spans each span started overlap one another.
     std::vector<bool> parallel(spans.size());
-    auto children = std::views::iota(std::size_t(0), spans.size()) |
-                    std::views::filter([&](std::size_t i) { return spans[i].parent.has_value(); }) |
-                    std::ranges::to<std::vector>();
-    std::ranges::sort(children, {}, [&](std::size_t i) {
+    auto children = views::iota(std::size_t(0), spans.size()) |
+                    views::filter([&](std::size_t i) { return spans[i].parent.has_value(); }) |
+                    ranges::to<std::vector>();
+    ranges::sort(children, {}, [&](std::size_t i) {
         return std::pair(*spans[i].parent, spans[i].start);
     });
     for(std::size_t i = 0; i < children.size();) {
@@ -29,8 +29,8 @@ std::vector<std::uint32_t> lanes_of(std::span<const Span> spans) {
         }
     }
 
-    auto order = std::views::iota(std::size_t(0), spans.size()) | std::ranges::to<std::vector>();
-    std::ranges::sort(order, {}, [&](std::size_t i) {
+    auto order = views::iota(std::size_t(0), spans.size()) | ranges::to<std::vector>();
+    ranges::sort(order, {}, [&](std::size_t i) {
         return std::tuple(spans[i].start, -spans[i].end, i);
     });
     constexpr auto unplaced = std::numeric_limits<std::uint32_t>::max();
@@ -86,7 +86,7 @@ Activity activity_of(std::span<const Span> spans) {
         }
     }
     // At one time, what ends first, and of what starts, what runs longer.
-    std::ranges::sort(events, {}, [&](const Event& event) {
+    ranges::sort(events, {}, [&](const Event& event) {
         return std::tuple(event.time, event.starts, event.starts ? -spans[event.span].end : 0);
     });
 

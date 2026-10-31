@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -21,9 +21,9 @@ std::vector<int> children_of(const Tree& tree, int id) {
 std::vector<std::vector<int>> sorted_cycles(Tree& tree) {
     auto cycles = tree.assemble();
     for(auto& cycle: cycles) {
-        std::ranges::sort(cycle);
+        ranges::sort(cycle);
     }
-    std::ranges::sort(cycles);
+    ranges::sort(cycles);
     return cycles;
 }
 
@@ -125,7 +125,7 @@ ZEST_CASE(a_cycle_is_a_path_that_links_back) {
     const auto& cycle = cycles.front();
     for(std::size_t i = 0; i < cycle.size(); i += 1) {
         const auto next = cycle[(i + 1) % cycle.size()];
-        ZEXPECT(std::ranges::contains(children_of(tree, cycle[i]), next));
+        ZEXPECT(ranges::contains(children_of(tree, cycle[i]), next));
     }
 };
 

@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 #ifndef CATTER_WINDOWS
 #include <signal.h>
@@ -27,26 +26,25 @@ std::vector<std::string> environment();
 /// The options that start `command` as it was captured: its program, argv,
 /// environment and working directory. On Windows its command line is written
 /// from its arguments, as CreateProcess takes it, which runs a batch file too.
-kotatsu::async::process::options process_options(const data::command& command);
+async::process::options process_options(const data::command& command);
 
 /// How a program that ran for `ran` ended, as catter and its handlers are told
 /// it: a signal that ended it as 128 and the signal's number, as a shell
 /// reports it.
-data::process_result result_of(const kotatsu::async::process::exit_status& status,
-                               std::chrono::microseconds ran);
+data::process_result result_of(const async::process::exit_status& status, chrono::microseconds ran);
 
 /// How a program that started at `started` ended, now.
-data::process_result result_of(const kotatsu::async::process::exit_status& status,
-                               std::chrono::steady_clock::time_point started);
+data::process_result result_of(const async::process::exit_status& status,
+                               chrono::steady_clock::time_point started);
 
 #ifndef CATTER_WINDOWS
 /// How a program ended, as its wait status `status` tells.
-kotatsu::async::process::exit_status exit_status_of(int status);
+async::process::exit_status exit_status_of(int status);
 #endif
 
 /// Ends this process as `status` says a program ended: by the same signal, or
 /// with the same exit code, which it returns for main to return.
-int exit_like(const kotatsu::async::process::exit_status& status);
+int exit_like(const async::process::exit_status& status);
 
 struct RunOptions {
     /// This process stands in for the program, as catter stands in for the
@@ -70,7 +68,7 @@ struct RunOptions {
 };
 
 /// `opts` for a program this process stands in for (RunOptions::stand_in).
-kotatsu::async::process::options standing_in(kotatsu::async::process::options opts);
+async::process::options standing_in(async::process::options opts);
 
 /// While it lives, this process stands in for the program process `pid` runs,
 /// which it started with the options standing_in gives: the signals that ask
@@ -97,7 +95,7 @@ private:
 };
 
 /// Starts a program as `opts` say; the task waits for its exit.
-kotatsu::async::task<kotatsu::async::process::exit_status>
-    run_process(kotatsu::async::process::options opts, RunOptions run = {});
+async::task<async::process::exit_status> run_process(async::process::options opts,
+                                                     RunOptions run = {});
 
 }  // namespace catter

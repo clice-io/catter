@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 #ifdef CATTER_MAC
 #include <mach/mach_time.h>
@@ -97,7 +96,7 @@ bool refused(std::string_view text) {
 /// What the lines tell of the build process `build` that process 100 starts.
 std::vector<std::string> reports(int build, std::initializer_list<std::string> lines) {
     data::ipcid_t last_id = 0;
-    BuildProcesses processes([&] { return last_id += 1; }, std::chrono::microseconds());
+    BuildProcesses processes([&] { return last_id += 1; }, chrono::microseconds());
     std::vector<std::string> told;
     for(const auto& each: lines) {
         for(auto& report: eslogger::follow(processes, eslogger::parse(each), 100, build)) {

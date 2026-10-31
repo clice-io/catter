@@ -1,8 +1,7 @@
 module;
 
-#include "modules/prelude.h"
-
 #include "support/messages.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -17,7 +16,7 @@ namespace catter::feature {
 
 namespace {
 
-namespace dyn = kotatsu::codec::dyn;
+namespace dyn = codec::dyn;
 
 /// What catter makes of a command it analyzes, a compiler's or an archiver's.
 struct Analysis {
@@ -35,15 +34,13 @@ struct Analysis {
 
 void add_path(std::vector<std::string>& paths, std::string_view path, std::string_view cwd) {
     if(path != "-") {
-        kotatsu::fs::path::resolve(paths.emplace_back(), path, cwd);
+        fs::path::resolve(paths.emplace_back(), path, cwd);
     }
 }
 
 std::optional<Analysis> analyze(const data::command& command) {
-    if(auto compiler = analyze_compiler(command.executable,
-                                        command.args,
-                                        command.cwd,
-                                        kotatsu::fs::read_file)) {
+    if(auto compiler =
+           analyze_compiler(command.executable, command.args, command.cwd, fs::read_file)) {
         Analysis analysis{.category = std::string(name(compiler->phase))};
         for(const auto& read: compiler->reads) {
             add_path(analysis.reads, read.path, command.cwd);
@@ -54,17 +51,17 @@ std::optional<Analysis> analyze(const data::command& command) {
         const bool makes = compiler->phase == Phase::Link || compiler->phase == Phase::Archive ||
                            compiler->phase == Phase::RelocatableLink;
         if(makes && !compiler->writes.empty()) {
-            analysis.file = kotatsu::fs::path::filename(compiler->writes.front().path);
-        } else if(auto source = std::ranges::find(compiler->reads, InputRole::Source, &Read::role);
+            analysis.file = fs::path::filename(compiler->writes.front().path);
+        } else if(auto source = ranges::find(compiler->reads, InputRole::Source, &Read::role);
                   !makes && source != compiler->reads.end()) {
-            analysis.file = kotatsu::fs::path::filename(source->path);
+            analysis.file = fs::path::filename(source->path);
         }
         return analysis;
     }
     if(auto archiver = analyze_archiver(command.executable, command.args)) {
         Analysis analysis{
             .category = "archive",
-            .file = std::string(kotatsu::fs::path::filename(archiver->archive)),
+            .file = std::string(fs::path::filename(archiver->archive)),
         };
         for(const auto& read: archiver->reads) {
             add_path(analysis.reads, read, command.cwd);
@@ -193,16 +190,13 @@ Timeline timeline_of(std::span<const Command> commands) {
     timeline.activity = activity_of(working);
 
     if(!timeline.spans.empty()) {
-        timeline.origin = std::ranges::min(timeline.spans | std::views::transform(&Span::start));
+        timeline.origin = ranges::min(timeline.spans | views::transform(&Span::start));
         timeline.wall =
-            std::ranges::max(timeline.spans | std::views::transform(&Span::end)) - timeline.origin;
+            ranges::max(timeline.spans | views::transform(&Span::end)) - timeline.origin;
     }
 
-    auto order =
-        std::views::iota(std::size_t(0), timeline.commands.size()) | std::ranges::to<std::vector>();
-    std::ranges::sort(order, {}, [&](std::size_t i) {
-        return std::pair(timeline.spans[i].start, i);
-    });
+    auto order = views::iota(std::size_t(0), timeline.commands.size()) | ranges::to<std::vector>();
+    ranges::sort(order, {}, [&](std::size_t i) { return std::pair(timeline.spans[i].start, i); });
     timeline.targets.resize(timeline.commands.size());
     std::unordered_map<std::string_view, std::size_t> writers;
     std::vector<std::int64_t> lengths(timeline.commands.size());
@@ -225,7 +219,7 @@ Timeline timeline_of(std::span<const Command> commands) {
             }
             if(timeline.commands[w]->category == "compile") {
                 for(const auto& write: command.writes) {
-                    if(!std::ranges::contains(timeline.targets[w], write)) {
+                    if(!ranges::contains(timeline.targets[w], write)) {
                         timeline.targets[w].push_back(write);
                     }
                 }
@@ -242,7 +236,7 @@ Timeline timeline_of(std::span<const Command> commands) {
     for(auto step = last; step.has_value(); step = before[*step]) {
         timeline.critical.push_back(*step);
     }
-    std::ranges::reverse(timeline.critical);
+    ranges::reverse(timeline.critical);
     return timeline;
 }
 
@@ -290,17 +284,16 @@ std::string trace_of(const Timeline& timeline, std::string_view process) {
         {"args", dyn::Object{{"name", process}}},
     });
     if(!timeline.critical.empty()) {
-        std::ranges::move(thread_of(1, "critical path", 0), std::back_inserter(events));
+        ranges::move(thread_of(1, "critical path", 0), std::back_inserter(events));
     }
-    const auto lanes = timeline.lanes.empty() ? 0 : std::ranges::max(timeline.lanes) + 1;
+    const auto lanes = timeline.lanes.empty() ? 0 : ranges::max(timeline.lanes) + 1;
     for(std::uint32_t lane = 0; lane < lanes; lane += 1) {
-        std::ranges::move(thread_of(lane + 2, std::format("lane {}", lane + 1), lane + 1),
-                          std::back_inserter(events));
+        ranges::move(thread_of(lane + 2, std::format("lane {}", lane + 1), lane + 1),
+                     std::back_inserter(events));
     }
 
-    auto order =
-        std::views::iota(std::size_t(0), timeline.commands.size()) | std::ranges::to<std::vector>();
-    std::ranges::sort(order, {}, [&](std::size_t i) {
+    auto order = views::iota(std::size_t(0), timeline.commands.size()) | ranges::to<std::vector>();
+    ranges::sort(order, {}, [&](std::size_t i) {
         return std::tuple(timeline.spans[i].start, -timeline.spans[i].end, i);
     });
     for(const auto i: order) {
@@ -319,12 +312,11 @@ std::string trace_of(const Timeline& timeline, std::string_view process) {
             args.insert("parent", *command.parent);
         }
         if(!command.writes.empty()) {
-            args.insert("writes",
-                        dyn::Array(command.writes | std::ranges::to<std::vector<JSON>>()));
+            args.insert("writes", dyn::Array(command.writes | ranges::to<std::vector<JSON>>()));
         }
         if(!timeline.targets[i].empty()) {
             args.insert("target",
-                        dyn::Array(timeline.targets[i] | std::ranges::to<std::vector<JSON>>()));
+                        dyn::Array(timeline.targets[i] | ranges::to<std::vector<JSON>>()));
         }
         event.insert("args", std::move(args));
         events.push_back(std::move(event));
@@ -349,8 +341,8 @@ std::string trace_of(const Timeline& timeline, std::string_view process) {
 
     const auto lines =
         events |
-        std::views::transform([](const JSON& event) { return to_json(event, {.pretty = false}); }) |
-        std::views::join_with(std::string_view(",\n")) | std::ranges::to<std::string>();
+        views::transform([](const JSON& event) { return to_json(event, {.pretty = false}); }) |
+        views::join_with(std::string_view(",\n")) | ranges::to<std::string>();
     return std::format(R"({{"displayTimeUnit":"ms","traceEvents":[
 {}
 ]}}
@@ -363,21 +355,21 @@ class Profile final : public Handler {
 public:
     explicit Profile(ProfileOptions options) : options(std::move(options)) {}
 
-    kotatsu::async::task<std::optional<Build>> on_start(Build build) override {
-        kotatsu::fs::path::resolve(output, *options.output, build.cwd);
+    async::task<std::optional<Build>> on_start(Build build) override {
+        fs::path::resolve(output, *options.output, build.cwd);
         process = command_line({.args = build.command});
         co_return build;
     }
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override {
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override {
         descendants.add(id, parent);
         const auto& program = command.args.empty() ? command.executable : command.args.front();
         Command entry{
             .id = id,
             .parent = parent,
-            .name = kotatsu::replace_invalid_utf8(kotatsu::fs::path::filename(program)),
+            .name = kotatsu::replace_invalid_utf8(fs::path::filename(program)),
             .line = command_line(command),
             .inside = descendants.left_out(id),
         };
@@ -397,9 +389,9 @@ public:
         co_return Action{};
     }
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    [[maybe_unused]] std::optional<data::ipcid_t> parent,
-                                    std::string message) override {
+    async::task<> on_error(data::ipcid_t id,
+                           [[maybe_unused]] std::optional<data::ipcid_t> parent,
+                           std::string message) override {
         descendants.add(id, std::nullopt);
         if(auto found = positions.find(id); found != positions.end()) {
             commands[found->second].uncaptured = true;
@@ -411,7 +403,7 @@ public:
         co_return;
     }
 
-    kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result) override {
+    async::task<> on_exit(data::ipcid_t id, data::process_result result) override {
         // A backend that only observes the build tells the exit of a command it could not capture.
         if(auto found = positions.find(id); found != positions.end()) {
             commands[found->second].result = result;
@@ -419,7 +411,7 @@ public:
         co_return;
     }
 
-    kotatsu::async::task<> on_finish([[maybe_unused]] data::process_result result) override {
+    async::task<> on_finish([[maybe_unused]] data::process_result result) override {
         const auto timeline = timeline_of(commands);
         save_file(output, trace_of(timeline, process), "trace");
         if(!*options.quiet) {
@@ -431,11 +423,11 @@ public:
 private:
     void print(const Timeline& timeline) const {
         const auto worked =
-            std::ranges::fold_left(timeline.activity.worked, std::int64_t(0), std::plus());
+            ranges::fold_left(timeline.activity.worked, std::int64_t(0), std::plus());
         const auto most =
-            std::ranges::fold_left(timeline.activity.working | std::views::values,
-                                   std::uint32_t(0),
-                                   [](std::uint32_t a, std::uint32_t b) { return std::max(a, b); });
+            ranges::fold_left(timeline.activity.working | views::values,
+                              std::uint32_t(0),
+                              [](std::uint32_t a, std::uint32_t b) { return std::max(a, b); });
         std::println("Profiled {} in {}: {:.1f} ran at once on average, {} at most.",
                      commands_of(timeline.commands.size()),
                      format_time(timeline.wall),
@@ -452,9 +444,8 @@ private:
             const auto& path = timeline.critical;
             std::string steps;
             if(path.size() <= 6) {
-                steps = path | std::views::transform(step) |
-                        std::views::join_with(std::string_view(" > ")) |
-                        std::ranges::to<std::string>();
+                steps = path | views::transform(step) | views::join_with(std::string_view(" > ")) |
+                        ranges::to<std::string>();
             } else {
                 steps = std::format("{} > {} > {} > ({} more) > {} > {}",
                                     step(path[0]),
@@ -472,20 +463,20 @@ private:
         }
 
         auto slowest =
-            std::views::iota(std::size_t(0), timeline.commands.size()) |
-            std::views::filter([&](std::size_t i) { return timeline.activity.worked[i] > 0; }) |
-            std::ranges::to<std::vector>();
-        std::ranges::sort(slowest, {}, [&](std::size_t i) {
+            views::iota(std::size_t(0), timeline.commands.size()) |
+            views::filter([&](std::size_t i) { return timeline.activity.worked[i] > 0; }) |
+            ranges::to<std::vector>();
+        ranges::sort(slowest, {}, [&](std::size_t i) {
             return std::pair(-timeline.activity.worked[i], timeline.spans[i].start);
         });
         slowest.resize(std::min(slowest.size(), static_cast<std::size_t>(*options.top)));
         if(!slowest.empty()) {
             std::println("Slowest:");
-            const auto times = slowest | std::views::transform([&](std::size_t i) {
+            const auto times = slowest | views::transform([&](std::size_t i) {
                                    return format_time(timeline.activity.worked[i]);
                                }) |
-                               std::ranges::to<std::vector>();
-            const auto width = std::ranges::max(times | std::views::transform(&std::string::size));
+                               ranges::to<std::vector>();
+            const auto width = ranges::max(times | views::transform(&std::string::size));
             for(std::size_t i = 0; i < slowest.size(); i += 1) {
                 std::println("  {:>{}}  {}", times[i], width, timeline.commands[slowest[i]]->name);
             }
@@ -495,11 +486,11 @@ private:
             std::println("Left out of the trace: {} catter could not capture.",
                          commands_of(uncaptured));
         }
-        if(const auto unfinished = std::ranges::count_if(commands,
-                                                         [](const Command& command) {
-                                                             return !command.result.has_value() &&
-                                                                    !command.uncaptured;
-                                                         });
+        if(const auto unfinished = ranges::count_if(commands,
+                                                    [](const Command& command) {
+                                                        return !command.result.has_value() &&
+                                                               !command.uncaptured;
+                                                    });
            unfinished != 0) {
             std::println("Left out of the trace: {} that did not end before the build did.",
                          commands_of(static_cast<std::size_t>(unfinished)));
