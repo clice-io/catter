@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -14,19 +14,19 @@ namespace {
 /// Whether `value` is the name of a value of `E`.
 template <typename E>
 bool names_one(std::string_view value) {
-    return std::ranges::any_of(kotatsu::meta::reflection<E>::member_values,
-                               [&](E each) { return name(each) == value; });
+    return ranges::any_of(meta::reflection<E>::member_values,
+                          [&](E each) { return name(each) == value; });
 }
 
 std::error_code read_absolute(kotatsu::buffer_ref out, std::string_view path) {
-    if(!kotatsu::fs::path::is_absolute(path)) {
+    if(!fs::path::is_absolute(path)) {
         return std::make_error_code(std::errc::no_such_file_or_directory);
     }
-    return kotatsu::fs::read_file(out, path);
+    return fs::read_file(out, path);
 }
 
 bool lists(const std::optional<std::vector<std::string>>& names, std::string_view name) {
-    return !names.has_value() || std::ranges::contains(*names, name);
+    return !names.has_value() || ranges::contains(*names, name);
 }
 
 std::vector<protocol::Argument> arguments_of(std::span<const Argument> arguments, Syntax syntax) {
@@ -110,11 +110,10 @@ CommandAnalysis::CommandAnalysis(std::string_view executable,
                                  std::span<const std::string> argv,
                                  std::optional<std::string_view> cwd) {
     if(auto identity = identify(executable)) {
-        auto compiler =
-            analyze_compiler(executable,
-                             argv,
-                             cwd.value_or(""),
-                             cwd ? ReadFile(kotatsu::fs::read_file) : ReadFile(read_absolute));
+        auto compiler = analyze_compiler(executable,
+                                         argv,
+                                         cwd.value_or(""),
+                                         cwd ? ReadFile(fs::read_file) : ReadFile(read_absolute));
         if(compiler.has_value()) {
             result = std::move(*compiler);
         } else {
@@ -150,7 +149,7 @@ CommandAnalysis::CommandAnalysis(std::string_view executable,
 }
 
 bool CommandAnalysis::matches(std::span<const protocol::Pattern> filter) const {
-    return std::ranges::any_of(filter, [&](const protocol::Pattern& pattern) {
+    return ranges::any_of(filter, [&](const protocol::Pattern& pattern) {
         if(auto* compiler = std::get_if<CompilerAnalysis>(&result)) {
             return pattern.kind == "compiler" &&
                    lists(pattern.names, name(compiler->identity.compiler)) &&

@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -209,7 +209,7 @@ KOTATSU_ANNOTATION(analysis_annotation,
                    tag_names = {"compiler", "archiver", "tool", "unparsed"});
 
 /// What catter makes of a command.
-using Analysis = kotatsu::meta::annotate<analysis_annotation>::type<
+using Analysis = meta::annotate<analysis_annotation>::type<
     std::variant<CompilerAnalysis, ArchiverAnalysis, ToolAnalysis, UnparsedAnalysis>>;
 
 /// Request `command` to a handler that decides, else a notification.
@@ -261,7 +261,7 @@ KOTATSU_ANNOTATION(action_annotation,
 
 /// The result of `command`.
 using Action =
-    kotatsu::meta::annotate<action_annotation>::type<std::variant<Skip, Drop, Abort, Modify, Edit>>;
+    meta::annotate<action_annotation>::type<std::variant<Skip, Drop, Abort, Modify, Edit>>;
 
 /// Notification `error`: catter could not capture a command.
 struct CaptureError {

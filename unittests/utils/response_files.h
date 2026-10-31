@@ -1,6 +1,6 @@
 #pragma once
 
-// Included by the tests' module units after modules/prelude.h, whose imports it uses.
+// Included by the tests' module units after support/prelude.h, whose imports it uses.
 
 namespace catter {
 

@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -13,10 +13,10 @@ namespace catter::feature {
 
 namespace {
 
-using kotatsu::codec::dyn::Array;
-using kotatsu::codec::dyn::Object;
+using codec::dyn::Array;
+using codec::dyn::Object;
 
-template <std::ranges::range Strings>
+template <ranges::range Strings>
 Array strings(Strings&& values) {
     Array array;
     for(const auto& value: values) {
@@ -62,10 +62,9 @@ Object source_of(const Location& location, const CompilerAnalysis& analysis) {
         };
     }
     const auto& values = argument.values;
-    const auto value =
-        *std::ranges::find_if(std::views::iota(0uz, values.size()), [&](std::size_t i) {
-            return argument.value_index(i) == location.index;
-        });
+    const auto value = *ranges::find_if(views::iota(0uz, values.size()), [&](std::size_t i) {
+        return argument.value_index(i) == location.index;
+    });
     const std::string_view token = values[value];
     const bool joined = lowercase(token).starts_with("/out:");
     return Object{
@@ -104,8 +103,8 @@ Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
     Array inferred;
     for(const auto& write: analysis.writes) {
         edges.push_back(Object{
-            {"output", write.path                                           },
-            {"inputs", strings(write.reads | std::views::transform(path_of))},
+            {"output", write.path                                      },
+            {"inputs", strings(write.reads | views::transform(path_of))},
         });
         if(write.origin != WriteOrigin::Explicit) {
             inferred.push_back(Object{
@@ -129,11 +128,11 @@ Object describe(std::string_view cwd, const CompilerAnalysis& analysis) {
         object.insert("responseFiles", strings(analysis.expansion.files));
         object.insert("arguments", strings(analysis.expansion.argv));
     }
-    object.insert("sources",
-                  strings(analysis.reads | std::views::filter(is_source) |
-                          std::views::transform(&Read::path)));
-    object.insert("reads", strings(analysis.reads | std::views::transform(&Read::path)));
-    object.insert("writes", strings(analysis.writes | std::views::transform(&Write::path)));
+    object.insert(
+        "sources",
+        strings(analysis.reads | views::filter(is_source) | views::transform(&Read::path)));
+    object.insert("reads", strings(analysis.reads | views::transform(&Read::path)));
+    object.insert("writes", strings(analysis.writes | views::transform(&Write::path)));
     object.insert("edges", std::move(edges));
     if(!inferred.empty()) {
         object.insert("inferred", std::move(inferred));
@@ -196,7 +195,7 @@ Object describe(const Error& error) {
 /// what it found, with the outputs it inferred, the notes on how, and the entries
 /// `compile-commands` writes for it; or, when none does, why.
 JSON describe(std::string_view cwd, std::span<const std::string> argv) {
-    auto compiler = analyze_compiler(argv[0], argv, cwd, kotatsu::fs::read_file);
+    auto compiler = analyze_compiler(argv[0], argv, cwd, fs::read_file);
     if(compiler.has_value()) {
         return describe(cwd, *compiler);
     }

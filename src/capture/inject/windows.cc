@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 // clang-format off
 // <detours.h> needs the architecture macros of <windows.h>.
@@ -110,7 +110,7 @@ std::optional<std::string> ascii_path(std::string_view path) {
     }
     std::wstring short_path(size, L'\0');
     short_path.resize(GetShortPathNameW(wide.c_str(), short_path.data(), size));
-    if(!std::ranges::all_of(short_path, [](wchar_t c) { return c < 0x80; })) {
+    if(!ranges::all_of(short_path, [](wchar_t c) { return c < 0x80; })) {
         return std::nullopt;
     }
     return std::string(short_path.begin(), short_path.end());
@@ -118,15 +118,15 @@ std::optional<std::string> ascii_path(std::string_view path) {
 
 /// A copy of `dll` in catter's data directory, one per build of the DLL.
 std::string temporary_copy(std::string_view dll) {
-    auto status = kotatsu::fs::status(dll);
+    auto status = fs::status(dll);
     if(!status) {
         fail(std::format("Failed to find {}", dll), status.error());
     }
     const auto build =
         std::format("{}|{}|{}", dll, status->size, status->mtime.time_since_epoch().count());
     auto copy = data_path(std::format("hook-{:016x}", std::hash<std::string>{}(build)));
-    kotatsu::fs::path::push(copy, kotatsu::fs::path::filename(dll));
-    if(kotatsu::fs::is_file(copy)) {
+    fs::path::push(copy, fs::path::filename(dll));
+    if(fs::is_file(copy)) {
         return copy;
     }
 
@@ -134,17 +134,17 @@ std::string temporary_copy(std::string_view dll) {
     // process another catter starts meanwhile never loads half a DLL, nor
     // finds the one it loads renamed over.
     const auto partial = std::format("{}.{}", copy, GetCurrentProcessId());
-    auto created = kotatsu::fs::create_directories(kotatsu::fs::path::parent(copy));
-    auto error = created ? kotatsu::fs::copy_file(dll, partial) : created.error();
+    auto created = fs::create_directories(fs::path::parent(copy));
+    auto error = created ? fs::copy_file(dll, partial) : created.error();
     if(!error) {
-        error = kotatsu::fs::rename_noreplace(partial, copy);
+        error = fs::rename_noreplace(partial, copy);
         if(error) {
-            kotatsu::fs::remove(partial);
+            fs::remove(partial);
         }
     }
     // Another catter renamed its copy first, which a process may have loaded
     // already.
-    if(error && !kotatsu::fs::is_file(copy)) {
+    if(error && !fs::is_file(copy)) {
         fail(std::format("Failed to copy {} to {}", dll, copy), error);
     }
     return copy;
@@ -174,8 +174,8 @@ std::string import_name(std::string_view dll) {
 /// for.
 bool add_hook(HANDLE process, std::string_view executable, const hook::Session& session) {
     const USHORT machine = process_machine(process);
-    const auto hook = std::ranges::find(HOOKS, machine, &Hook::machine);
-    if(hook == std::ranges::end(HOOKS)) {
+    const auto hook = ranges::find(HOOKS, machine, &Hook::machine);
+    if(hook == ranges::end(HOOKS)) {
         return false;
     }
 
@@ -212,9 +212,9 @@ bool inject_end(HANDLE process, std::string_view executable, std::uint32_t code)
     return add_hook(process, executable, {.ends = true, .exit_code = code});
 }
 
-kotatsu::async::process::options hook_options(data::command command,
-                                              data::ipcid_t id,
-                                              std::string_view pipe_name) {
+async::process::options hook_options(data::command command,
+                                     data::ipcid_t id,
+                                     std::string_view pipe_name) {
     auto opts = process_options(command);
     opts.windows_before_start = [executable = std::move(command.executable),
                                  id,

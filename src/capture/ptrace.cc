@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/log.h"
 #include "support/messages.h"
@@ -56,21 +56,21 @@ struct Execed {
     /// capabilities, which it runs without as catter traces it.
     bool unprivileged = false;
 
-    std::chrono::microseconds time;
+    chrono::microseconds time;
 };
 
 struct Exited {
     int pid;
 
-    kotatsu::async::process::exit_status status;
+    async::process::exit_status status;
 
-    std::chrono::microseconds time;
+    chrono::microseconds time;
 };
 
 /// The tracer stopped: the build command's process ended as `status` says, or
 /// `error` says why catter could not trace it.
 struct Done {
-    kotatsu::async::process::exit_status status;
+    async::process::exit_status status;
 
     std::optional<std::string> error;
 };
@@ -85,9 +85,9 @@ std::vector<std::string> strings_of(std::string_view bytes) {
     if(bytes.empty()) {
         return {};
     }
-    return bytes | std::views::split('\0') |
-           std::views::transform([](auto string) { return std::ranges::to<std::string>(string); }) |
-           std::ranges::to<std::vector>();
+    return bytes | views::split('\0') |
+           views::transform([](auto string) { return ranges::to<std::string>(string); }) |
+           ranges::to<std::vector>();
 }
 
 struct Lineage {
@@ -101,14 +101,13 @@ struct Lineage {
 /// /proc/<tid>/status of thread `tid`, empty once it has gone.
 std::string status_of(int tid) {
     std::string status;
-    [[maybe_unused]] auto error =
-        kotatsu::fs::read_file(status, std::format("/proc/{}/status", tid));
+    [[maybe_unused]] auto error = fs::read_file(status, std::format("/proc/{}/status", tid));
     return status;
 }
 
 /// The process ID `status`, a /proc/<tid>/status, gives as `name`: 0 for none.
 int id_in(std::string_view status, std::string_view name) {
-    for(auto line: status | std::views::split('\n')) {
+    for(auto line: status | views::split('\n')) {
         std::string_view text(line);
         if(text.starts_with(name) && text.substr(name.size()).starts_with(':')) {
             auto number = text.substr(text.find_first_not_of(" \t", name.size() + 1));
@@ -135,8 +134,7 @@ Lineage lineage_of(int tid) {
 std::uintptr_t environment_end(std::string_view stat) {
     // The fields after the program's name, which may hold spaces, start with
     // the third.
-    auto fields =
-        stat.substr(stat.rfind(')') + 2) | std::views::split(' ') | std::views::drop(51 - 3);
+    auto fields = stat.substr(stat.rfind(')') + 2) | views::split(' ') | views::drop(51 - 3);
     std::uintptr_t end = 0;
     if(auto field = fields.begin(); field != fields.end()) {
         std::string_view text(*field);
@@ -161,7 +159,7 @@ std::expected<std::string, std::error_code> string_at(int pid, std::uintptr_t ad
             return std::unexpected(std::error_code(errno, std::generic_category()));
         }
         const auto bytes = std::bit_cast<std::array<char, sizeof(word)>>(word);
-        const auto end = std::ranges::find(bytes, '\0');
+        const auto end = ranges::find(bytes, '\0');
         string.append(bytes.begin(), end);
         if(end != bytes.end()) {
             return string;
@@ -184,8 +182,7 @@ bool is_stop_signal(int signal) {
 /// says.
 std::string denied(int pid, int error) {
     std::string scope;
-    [[maybe_unused]] auto unread =
-        kotatsu::fs::read_file(scope, "/proc/sys/kernel/yama/ptrace_scope");
+    [[maybe_unused]] auto unread = fs::read_file(scope, "/proc/sys/kernel/yama/ptrace_scope");
     std::string why;
     if(const int tracer = id_in(status_of(pid), "TracerPid"); tracer != 0) {
         why = std::format(
@@ -230,7 +227,7 @@ public:
 
 private:
     /// Thread `tid` stopped, as `status` says.
-    void stopped(int tid, int status, std::chrono::microseconds time);
+    void stopped(int tid, int status, chrono::microseconds time);
 
     /// Thread `tid` started thread or process `child`, its process `process`.
     void created(int tid, int child, int process);
@@ -239,10 +236,10 @@ private:
     void arrived(int tid);
 
     /// Thread `tid` ended, as `status` says.
-    void exited(int tid, int status, std::chrono::microseconds time);
+    void exited(int tid, int status, chrono::microseconds time);
 
     /// What process `pid` runs, which execed it.
-    Execed execed(int pid, std::chrono::microseconds time) const;
+    Execed execed(int pid, chrono::microseconds time) const;
 
 private:
     int build;
@@ -280,7 +277,7 @@ void Tracer::run() {
     }
     tracees.emplace(build, build);
     ::shutdown(socket, SHUT_WR);
-    std::optional<kotatsu::async::process::exit_status> ended;
+    std::optional<async::process::exit_status> ended;
     while(true) {
         int status = 0;
         // waitpid, not waitid, which takes __WALL from Linux 4.7 on.
@@ -291,8 +288,8 @@ void Tracer::run() {
         if(tid <= 0) {
             break;
         }
-        const auto time = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now().time_since_epoch());
+        const auto time = chrono::duration_cast<chrono::microseconds>(
+            chrono::steady_clock::now().time_since_epoch());
         if(WIFSTOPPED(status)) {
             stopped(tid, status, time);
         } else {
@@ -306,7 +303,7 @@ void Tracer::run() {
     post(Done{.status = *ended});
 }
 
-void Tracer::stopped(int tid, int status, std::chrono::microseconds time) {
+void Tracer::stopped(int tid, int status, chrono::microseconds time) {
     const int signal = WSTOPSIG(status);
     switch(const int event = status >> 16) {
         case PTRACE_EVENT_FORK:
@@ -370,7 +367,7 @@ void Tracer::arrived(int tid) {
     resume(tid);
 }
 
-void Tracer::exited(int tid, int status, std::chrono::microseconds time) {
+void Tracer::exited(int tid, int status, chrono::microseconds time) {
     auto& threads = tracees.contains(tid) ? tracees : announced;
     auto found = threads.find(tid);
     if(found == threads.end()) {
@@ -383,38 +380,38 @@ void Tracer::exited(int tid, int status, std::chrono::microseconds time) {
     }
 }
 
-Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
+Execed Tracer::execed(int pid, chrono::microseconds time) const {
     const auto proc = std::format("/proc/{}/", pid);
     Execed execed{.pid = pid, .time = time};
     auto& command = execed.command;
     std::string bytes;
-    [[maybe_unused]] auto unread = kotatsu::fs::read_file(bytes, proc + "cmdline");
+    [[maybe_unused]] auto unread = fs::read_file(bytes, proc + "cmdline");
     command.args = strings_of(bytes);
-    const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
+    const auto line = ranges::to<std::string>(command.args | views::join_with(' '));
     const auto failed = [&](std::error_code error) {
         execed.error =
             std::format("catter cannot read `{}` as the system runs it: {}", line, error.message());
         return std::move(execed);
     };
 
-    if(auto error = kotatsu::fs::read_file(bytes, proc + "environ")) {
+    if(auto error = fs::read_file(bytes, proc + "environ")) {
         return failed(error);
     }
     command.env = strings_of(bytes);
-    if(auto error = kotatsu::fs::read_symlink(command.cwd, proc + "cwd")) {
+    if(auto error = fs::read_symlink(command.cwd, proc + "cwd")) {
         return failed(error);
     }
-    if(auto cwd = kotatsu::fs::status(proc + "cwd"); cwd && cwd->links == 0) {
+    if(auto cwd = fs::status(proc + "cwd"); cwd && cwd->links == 0) {
         execed.error = std::format(
             "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
             line);
         return execed;
     }
-    auto exe = kotatsu::fs::status(proc + "exe");
+    auto exe = fs::status(proc + "exe");
     if(!exe) {
         return failed(exe.error());
     }
-    if(auto error = kotatsu::fs::read_file(bytes, proc + "stat")) {
+    if(auto error = fs::read_file(bytes, proc + "stat")) {
         return failed(error);
     }
     auto path = string_at(pid, environment_end(bytes));
@@ -425,10 +422,10 @@ Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
     // A script, or a program the system runs with another, has the program
     // that runs it as the process's.
     const auto file =
-        std::format("{}{}/{}", proc, kotatsu::fs::path::is_absolute(*path) ? "root" : "cwd", *path);
-    if(auto named = kotatsu::fs::status(file); named && named->id == exe->id) {
+        std::format("{}{}/{}", proc, fs::path::is_absolute(*path) ? "root" : "cwd", *path);
+    if(auto named = fs::status(file); named && named->id == exe->id) {
         command.executable = std::move(*path);
-    } else if(auto error = kotatsu::fs::read_symlink(command.executable, proc + "exe")) {
+    } else if(auto error = fs::read_symlink(command.executable, proc + "exe")) {
         return failed(error);
     }
 
@@ -445,30 +442,30 @@ public:
     explicit Capture(Session& session) : session(session) {}
 
     /// Runs `build`, traced: how it ended.
-    kotatsu::async::task<kotatsu::async::process::exit_status> run(const Build& build);
+    async::task<async::process::exit_status> run(const Build& build);
 
 private:
     /// What `event` tells the session.
-    kotatsu::async::task<> take(Event event);
+    async::task<> take(Event event);
 
 private:
     Session& session;
 
     /// On the tracer's clock, the steady clock's from its epoch.
     BuildProcesses processes{[this] { return session.new_id(); },
-                             -session.time_of(std::chrono::steady_clock::time_point())};
+                             -session.time_of(chrono::steady_clock::time_point())};
 
     /// What the tracer told, which the session has not been told yet.
     std::deque<Event> events;
 
     /// Set once the tracer tells something.
-    kotatsu::async::event arrived;
+    async::event arrived;
 
     /// The programs catter warned run without their privileges.
     std::unordered_set<std::string> warned;
 };
 
-kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Build& build) {
+async::task<async::process::exit_status> Capture::run(const Build& build) {
     int sockets[2];
     if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets) != 0) {
         throw cpptrace::runtime_error(
@@ -477,14 +474,14 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Bu
     }
     kotatsu::ScopeExit close([&] { ::close(sockets[0]); });
     ::fcntl(sockets[1], F_SETFD, 0);
-    kotatsu::async::process::options options{
+    async::process::options options{
         .program = program_path(PROXY),
         .args = {resolve_program(build.command.front(), build.cwd)},
         .env_changes = {{.name = env::PTRACE, .value = std::to_string(sockets[1])}},
         .cwd = build.cwd,
     };
     options.args.append_range(build.command);
-    auto child = kotatsu::sys::spawn(standing_in(std::move(options)));
+    auto child = sys::spawn(standing_in(std::move(options)));
     ::close(sockets[1]);
     if(!child) {
         throw cpptrace::runtime_error(
@@ -493,10 +490,10 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Bu
     const int pid = child->pid();
     processes.start(pid);
     std::optional<StandIn> stand_in(std::in_place, pid, false);
-    const auto line = std::ranges::to<std::string>(build.command | std::views::join_with(' '));
+    const auto line = ranges::to<std::string>(build.command | views::join_with(' '));
     LOG_INFO("Starting the build command `{}` in {}, traced", line, build.cwd);
 
-    auto relay = kotatsu::async::event_loop::current().create_relay();
+    auto relay = async::event_loop::current().create_relay();
     Tracer tracer(pid, sockets[0], [&](Event event) {
         relay.send([&, event = std::move(event)] mutable {
             // Once reaped, its pid may be another process's.
@@ -542,12 +539,12 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Bu
                         line,
                         build.command.front(),
                         std::error_code(failure, std::generic_category()).message()));
-        co_return kotatsu::async::process::exit_status{.code = -1};
+        co_return async::process::exit_status{.code = -1};
     }
     co_return done.status;
 }
 
-kotatsu::async::task<> Capture::take(Event event) {
+async::task<> Capture::take(Event event) {
     if(auto* forked = std::get_if<Forked>(&event)) {
         processes.fork(forked->parent, forked->child);
         co_return;
@@ -587,8 +584,8 @@ public:
         return false;
     }
 
-    kotatsu::async::task<kotatsu::async::process::exit_status>
-        run(const Build& build, Session& session) const override {
+    async::task<async::process::exit_status> run(const Build& build,
+                                                 Session& session) const override {
         assert(!build.command.empty());
         Capture capture(session);
         co_return co_await capture.run(build);

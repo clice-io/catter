@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -10,7 +10,7 @@ namespace catter::driver {
 
 namespace {
 
-namespace text = kotatsu::deco::cli::text;
+namespace text = deco::cli::text;
 
 using Row = std::pair<std::string, std::string>;
 
@@ -26,15 +26,15 @@ std::string columns(std::span<const Row> rows) {
                             ? std::format("  {}", label)
                             : std::format("  {:<{}}  {}", label, width, description));
     }
-    return lines | std::views::join_with('\n') | std::ranges::to<std::string>();
+    return lines | views::join_with('\n') | ranges::to<std::string>();
 }
 
 /// `-o|--output <path>|--output=<path>`, deco's usage of an option, as `-o, --output <path>`:
 /// its forms with the value joined are left out.
 std::string aliases(std::string_view usage) {
-    return usage | std::views::split('|') |
-           std::views::filter([](auto form) { return !std::string_view(form).contains('='); }) |
-           std::views::join_with(std::string_view(", ")) | std::ranges::to<std::string>();
+    return usage | views::split('|') |
+           views::filter([](auto form) { return !std::string_view(form).contains('='); }) |
+           views::join_with(std::string_view(", ")) | ranges::to<std::string>();
 }
 
 std::string layout(const Help& help, const text::UsageDocument& document) {
@@ -72,8 +72,7 @@ std::string layout(const Help& help, const text::UsageDocument& document) {
         }
         sections.push_back(std::move(examples));
     }
-    return sections | std::views::join_with(std::string_view("\n\n")) |
-           std::ranges::to<std::string>();
+    return sections | views::join_with(std::string_view("\n\n")) | ranges::to<std::string>();
 }
 
 }  // namespace
@@ -89,8 +88,7 @@ std::string usage_of_catter() {
         std::format("Commands:\n{}", columns(commands)),
         "Run `catter <command> --help` for the options of a command.",
     };
-    return sections | std::views::join_with(std::string_view("\n\n")) |
-           std::ranges::to<std::string>();
+    return sections | views::join_with(std::string_view("\n\n")) | ranges::to<std::string>();
 }
 
 text::Renderer renderer_of(const Help& help) {

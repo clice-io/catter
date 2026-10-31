@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -11,13 +11,13 @@ using namespace catter;
 namespace {
 
 template <typename T>
-std::string json(const T& value) {
-    return *kotatsu::codec::json::to_string<kotatsu::ipc::lsp_config>(value);
+std::string encode(const T& value) {
+    return *json::to_string<kotatsu::ipc::lsp_config>(value);
 }
 
 template <typename T>
 T parse(std::string_view text) {
-    return *kotatsu::codec::json::from_string<T, kotatsu::ipc::lsp_config>(text);
+    return *json::from_string<T, kotatsu::ipc::lsp_config>(text);
 }
 
 }  // namespace
@@ -25,14 +25,14 @@ T parse(std::string_view text) {
 ZEST_SUITE(protocol_tests) {
 
 ZEST_CASE(utf8_is_a_string_and_other_bytes_are_base64) {
-    ZEXPECT(json(protocol::to_os_string("caf\xc3\xa9")) == R"("café")");
-    ZEXPECT(json(protocol::to_os_string("caf\xe9")) == R"({"base64":"Y2Fm6Q=="})");
+    ZEXPECT(encode(protocol::to_os_string("caf\xc3\xa9")) == R"("café")");
+    ZEXPECT(encode(protocol::to_os_string("caf\xe9")) == R"({"base64":"Y2Fm6Q=="})");
 }
 
 ZEST_CASE(bytes_survive_base64_of_every_length) {
     for(std::string bytes: {"", "\xff", "\xff\xfe", "\xff\xfe\xfd", "\xff\xfe\xfd\xfc"}) {
         auto text = protocol::to_os_string(bytes);
-        auto back = protocol::to_bytes(parse<protocol::OSString>(json(text)));
+        auto back = protocol::to_bytes(parse<protocol::OSString>(encode(text)));
         ZEXPECT(back.has_value());
         ZEXPECT(*back == bytes);
     }
@@ -60,7 +60,7 @@ ZEST_CASE(an_action_is_tagged_by_its_name) {
 }
 
 ZEST_CASE(an_absent_field_is_null_or_left_out) {
-    ZEXPECT(json(protocol::CaptureError{.id = 2, .parent = {}, .message = "m"}) ==
+    ZEXPECT(encode(protocol::CaptureError{.id = 2, .parent = {}, .message = "m"}) ==
             R"({"id":2,"parent":null,"message":"m"})");
     ZEXPECT(!parse<protocol::CaptureError>(R"({"id":2,"message":"m"})").parent.has_value());
 }

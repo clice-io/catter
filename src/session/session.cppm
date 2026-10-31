@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -24,23 +24,23 @@ public:
 
     /// `time` on the session's clock, which `process_result::start` reads: since the session
     /// started.
-    std::chrono::microseconds time_of(std::chrono::steady_clock::time_point time) const noexcept;
+    chrono::microseconds time_of(chrono::steady_clock::time_point time) const noexcept;
 
     /// What the handlers decide for command `id`, which `parent` started, none
     /// for the build command: it runs as it is unless they change it, and a
     /// command that is not to run keeps it as it was sent.
-    kotatsu::async::task<data::action> decide(data::ipcid_t id,
-                                              std::optional<data::ipcid_t> parent,
-                                              data::command command);
+    async::task<data::action> decide(data::ipcid_t id,
+                                     std::optional<data::ipcid_t> parent,
+                                     data::command command);
 
     /// Tells the handlers how command `id` ended.
-    kotatsu::async::task<> exited(data::ipcid_t id, data::process_result result);
+    async::task<> exited(data::ipcid_t id, data::process_result result);
 
     /// Tells the handlers that catter could not capture command `id`:
     /// `message` says why.
-    kotatsu::async::task<> uncaptured(data::ipcid_t id,
-                                      std::optional<data::ipcid_t> parent,
-                                      std::string message);
+    async::task<> uncaptured(data::ipcid_t id,
+                             std::optional<data::ipcid_t> parent,
+                             std::string message);
 
     /// Ends the session with `error`, unless it has ended already.
     void fail(std::exception_ptr error) noexcept;
@@ -55,7 +55,7 @@ private:
 
     data::ipcid_t last_id = 0;
 
-    std::chrono::steady_clock::time_point started = std::chrono::steady_clock::now();
+    chrono::steady_clock::time_point started = chrono::steady_clock::now();
 };
 
 /// A way to capture a build: it starts the build, and reports each command the
@@ -73,15 +73,15 @@ public:
     virtual bool follows_decisions() const noexcept = 0;
 
     /// Runs `build`, its commands reported to `session`: how the build ended.
-    virtual kotatsu::async::task<kotatsu::async::process::exit_status>
-        run(const Build& build, Session& session) const = 0;
+    virtual async::task<async::process::exit_status> run(const Build& build,
+                                                         Session& session) const = 0;
 };
 
 /// Runs the session of `handler` over `backend`: the build `on_start` gives,
 /// if any, its commands decided by `handler`, and then its end. How the build
 /// ended; one that did not start ended with 0.
-kotatsu::async::task<kotatsu::async::process::exit_status> run_session(Handler& handler,
-                                                                       const Backend& backend,
-                                                                       Build build);
+async::task<async::process::exit_status> run_session(Handler& handler,
+                                                     const Backend& backend,
+                                                     Build build);
 
 }  // namespace catter

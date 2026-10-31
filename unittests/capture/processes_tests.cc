@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -18,14 +18,14 @@ namespace {
 struct Recorder {
     data::ipcid_t last_id = 0;
 
-    BuildProcesses processes{[this] { return last_id += 1; }, std::chrono::seconds(100)};
+    BuildProcesses processes{[this] { return last_id += 1; }, chrono::seconds(100)};
 
-    std::chrono::seconds now{100};
+    chrono::seconds now{100};
 
     std::vector<std::string> told;
 
     void exec(std::uint64_t pid, std::vector<std::string> args) {
-        now += std::chrono::seconds(1);
+        now += chrono::seconds(1);
         auto started = processes.exec(pid, pid, {.cwd = "/src", .args = std::move(args)}, now);
         if(started) {
             told.push_back(std::format("{} < {}: {}",
@@ -35,8 +35,8 @@ struct Recorder {
         }
     }
 
-    void exit(std::uint64_t pid, kotatsu::async::process::exit_status status) {
-        now += std::chrono::seconds(1);
+    void exit(std::uint64_t pid, async::process::exit_status status) {
+        now += chrono::seconds(1);
         for(const auto& ended: processes.exit(pid, status, now)) {
             told.push_back(std::format("{} started at {}s, ended {} after {}s",
                                        ended.id,

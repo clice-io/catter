@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -28,7 +28,7 @@ namespace catter::ipc {
 /// and waits for its exit.
 class Server {
 public:
-    using Start = kotatsu::function<kotatsu::async::task<kotatsu::async::process::exit_status>()>;
+    using Start = kotatsu::function<async::task<async::process::exit_status>()>;
 
     explicit Server(Session& session);
 
@@ -41,13 +41,13 @@ public:
 
     /// Runs the build with `start`, and serves the pipe while it runs: how the
     /// build ended.
-    kotatsu::async::task<kotatsu::async::process::exit_status> serve(Start start);
+    async::task<async::process::exit_status> serve(Start start);
 
 #ifdef CATTER_WINDOWS
     /// Waits until the exit of each program the hook started that has ended is
     /// told. The build sees a program end before catter does: the commands it
     /// starts after, and its own end, wait for those exits to be told first.
-    kotatsu::async::task<> ended();
+    async::task<> ended();
 #endif
 
 private:
@@ -56,24 +56,24 @@ private:
 #ifdef CATTER_WINDOWS
     /// A program the hook started whose exit is not told yet.
     struct Untold {
-        const kotatsu::async::process* program;
+        const async::process* program;
 
         /// Set once its exit is told: shared with those waiting for it.
-        std::shared_ptr<kotatsu::async::event> told;
+        std::shared_ptr<async::event> told;
     };
 #endif
 
-    kotatsu::async::task<> accept();
+    async::task<> accept();
 
     /// Answers the requests of client `id` until it goes.
-    kotatsu::async::task<> answer(data::ipcid_t id, kotatsu::async::pipe pipe);
+    async::task<> answer(data::ipcid_t id, async::pipe pipe);
 
 private:
     Session& session;
 
     std::string name;
 
-    std::optional<kotatsu::async::acceptor<kotatsu::async::pipe>> acceptor;
+    std::optional<async::acceptor<async::pipe>> acceptor;
 
 #ifdef CATTER_WINDOWS
     std::list<Untold> untold;

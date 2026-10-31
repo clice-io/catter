@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 #include "support/paths.h"
@@ -30,17 +30,17 @@ namespace {
 /// Runs the build command as the hook runs each command it starts: decided by
 /// the handlers, started with the hook, and its end told to them once the
 /// exits of the programs that ended before it are.
-kotatsu::async::task<kotatsu::async::process::exit_status> run_build(Session& session,
-                                                                     data::command command,
-                                                                     ipc::Server& server) {
+async::task<async::process::exit_status> run_build(Session& session,
+                                                   data::command command,
+                                                   ipc::Server& server) {
     const auto id = session.new_id();
-    const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
+    const auto line = ranges::to<std::string>(command.args | views::join_with(' '));
     auto decision = co_await session.decide(id, std::nullopt, std::move(command));
     if(decision.type != data::action::RUN) {
-        const kotatsu::async::process::exit_status status{
-            .code = decision.type == data::action::DROP ? 0 : 1};
-        auto result = result_of(status, std::chrono::microseconds{});
-        result.start = session.time_of(std::chrono::steady_clock::now()).count();
+        const async::process::exit_status status{.code =
+                                                     decision.type == data::action::DROP ? 0 : 1};
+        auto result = result_of(status, chrono::microseconds{});
+        result.start = session.time_of(chrono::steady_clock::now()).count();
         co_await session.exited(id, result);
         co_return status;
     }
@@ -48,7 +48,7 @@ kotatsu::async::task<kotatsu::async::process::exit_status> run_build(Session& se
     std::string error;
     try {
         LOG_INFO("Starting the build command `{}` in {}", line, decision.cmd.cwd);
-        const auto start = std::chrono::steady_clock::now();
+        const auto start = chrono::steady_clock::now();
         const auto status =
             co_await run_process(hook_options(std::move(decision.cmd), id, server.pipe()),
                                  {.stand_in = true});
@@ -62,7 +62,7 @@ kotatsu::async::task<kotatsu::async::process::exit_status> run_build(Session& se
         LOG_ERROR("{}\nStack trace:\n{}", ex.message(), ex.trace().to_string());
     }
     co_await session.uncaptured(id, std::nullopt, std::format("Run `{}` failed:\n{}", line, error));
-    co_return kotatsu::async::process::exit_status{.code = -1};
+    co_return async::process::exit_status{.code = -1};
 }
 #endif
 
@@ -76,12 +76,12 @@ public:
         return true;
     }
 
-    kotatsu::async::task<kotatsu::async::process::exit_status>
-        run(const Build& build, Session& session) const override {
+    async::task<async::process::exit_status> run(const Build& build,
+                                                 Session& session) const override {
         assert(!build.command.empty());
 #ifndef CATTER_WINDOWS
         const auto library = program_path(hook::LIBRARY);
-        if(!kotatsu::fs::is_file(library)) {
+        if(!fs::is_file(library)) {
             throw cpptrace::runtime_error(
                 std::format("catter's hook `{}` is missing: reinstall catter", library));
         }
@@ -109,15 +109,15 @@ public:
 #else
         // catter-proxy runs the build command with the hook, as it runs each
         // command the hook starts, but with no parent.
-        kotatsu::async::process::options proxy{
+        async::process::options proxy{
             .program = program_path(PROXY),
             .args = {std::move(executable)},
-            .env = std::vector<kotatsu::async::process::env_var>(),
+            .env = std::vector<async::process::env_var>(),
             .cwd = build.cwd,
         };
         proxy.args.append_range(build.command);
-        for(auto& [name, value]: kotatsu::sys::environment()) {
-            if(!std::ranges::contains(env::VARIABLES, name)) {
+        for(auto& [name, value]: sys::environment()) {
+            if(!ranges::contains(env::VARIABLES, name)) {
                 proxy.env->push_back({.name = std::move(name), .value = std::move(value)});
             }
         }

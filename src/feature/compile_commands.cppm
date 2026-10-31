@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter:feature.compile_commands;
 
@@ -12,7 +12,7 @@ namespace catter::feature {
 struct CompileCommandsOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-o", "--output", "--output="},
                  meta_var = "<path>",
                  help = "Write the compilation database to this path.")

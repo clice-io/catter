@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>
@@ -46,16 +46,16 @@ public:
     }
 #endif
 
-    kotatsu::async::task<> answer(kotatsu::async::pipe pipe);
+    async::task<> answer(async::pipe pipe);
 
 private:
-    kotatsu::async::task<MakeDecision::Result> decide(MakeDecision::Params params);
+    async::task<MakeDecision::Result> decide(MakeDecision::Params params);
 
 #ifdef CATTER_WINDOWS
     /// The hook started the command's program suspended, as process `pid`:
     /// whether it is made to run as decided, which the hook resumes then, or
     /// cannot run, which the hook ends.
-    kotatsu::async::task<bool> started(std::int64_t pid);
+    async::task<bool> started(std::int64_t pid);
 
     /// Ends the program started, which is not to run, with exit code `code`:
     /// from within, once its caller resumes it, if it can have the hook.
@@ -63,7 +63,7 @@ private:
 
     /// Waits for the program started to exit, and tells its end; at once when
     /// none was. The hook goes once it has started the program.
-    kotatsu::async::task<> wait_started();
+    async::task<> wait_started();
 
     /// Tells those waiting for the program's exit that it is told.
     void release();
@@ -82,10 +82,10 @@ private:
     std::string executable;
 
     /// The program the hook started, from its start until its exit is told.
-    std::optional<kotatsu::async::process> program;
+    std::optional<async::process> program;
 
     /// When catter took the program the hook started.
-    std::chrono::steady_clock::time_point began;
+    chrono::steady_clock::time_point began;
 
     std::optional<std::list<Untold>::iterator> untold;
 #elif defined(CATTER_MAC)
@@ -95,9 +95,9 @@ private:
 #endif
 };
 
-kotatsu::async::task<> Server::Client::answer(kotatsu::async::pipe pipe) {
+async::task<> Server::Client::answer(async::pipe pipe) {
     kotatsu::ipc::BincodePeer peer(
-        kotatsu::async::event_loop::current(),
+        async::event_loop::current(),
         std::make_unique<kotatsu::ipc::StreamTransport>(std::move(pipe)));
 
     peer.on_request(MakeDecision::method,
@@ -120,8 +120,7 @@ kotatsu::async::task<> Server::Client::answer(kotatsu::async::pipe pipe) {
 #ifdef CATTER_MAC
             running.reset();
 #endif
-            const std::chrono::steady_clock::time_point started{
-                std::chrono::microseconds(params.started)};
+            const chrono::steady_clock::time_point started{chrono::microseconds(params.started)};
             co_await server.session.exited(id,
                                            {
                                                .code = params.code,
@@ -153,7 +152,7 @@ kotatsu::async::task<> Server::Client::answer(kotatsu::async::pipe pipe) {
 #endif
 }
 
-kotatsu::async::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params params) {
+async::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params params) {
 #ifdef CATTER_WINDOWS
     co_await server.ended();
     parent = params.parent;
@@ -168,19 +167,19 @@ kotatsu::async::task<MakeDecision::Result> Server::Client::decide(MakeDecision::
 
 #ifdef CATTER_WINDOWS
 
-kotatsu::async::task<bool> Server::Client::started(std::int64_t pid) {
+async::task<bool> Server::Client::started(std::int64_t pid) {
     std::string error;
     try {
         // What injecting into it takes, besides waiting for it and ending it.
-        auto opened = kotatsu::async::process::open(
-            static_cast<int>(pid),
-            PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE);
+        auto opened = async::process::open(static_cast<int>(pid),
+                                           PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
+                                               PROCESS_VM_READ | PROCESS_VM_WRITE);
         if(!opened) {
             throw cpptrace::runtime_error(
                 std::format("Failed to open process {}: {}", pid, opened.error().message()));
         }
         program.emplace(std::move(*opened));
-        began = std::chrono::steady_clock::now();
+        began = chrono::steady_clock::now();
         switch(decided) {
             case data::action::RUN:
                 inject_hook(program->native_handle(), executable, id, server.name);
@@ -188,9 +187,9 @@ kotatsu::async::task<bool> Server::Client::started(std::int64_t pid) {
             case data::action::DROP: end(0); break;
             case data::action::FAIL: end(1); break;
         }
-        untold = server.untold.insert(
-            server.untold.end(),
-            {.program = &*program, .told = std::make_shared<kotatsu::async::event>()});
+        untold =
+            server.untold.insert(server.untold.end(),
+                                 {.program = &*program, .told = std::make_shared<async::event>()});
         co_return true;
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
@@ -210,7 +209,7 @@ void Server::Client::end(std::uint32_t code) {
     }
 }
 
-kotatsu::async::task<> Server::Client::wait_started() {
+async::task<> Server::Client::wait_started() {
     if(!program) {
         co_return;
     }
@@ -235,8 +234,8 @@ void Server::Client::release() {
     }
 }
 
-kotatsu::async::task<> Server::ended() {
-    std::vector<std::shared_ptr<kotatsu::async::event>> ended;
+async::task<> Server::ended() {
+    std::vector<std::shared_ptr<async::event>> ended;
     for(const auto& entry: untold) {
         if(WaitForSingleObject(entry.program->native_handle(), 0) == WAIT_OBJECT_0) {
             ended.push_back(entry.told);
@@ -252,21 +251,19 @@ kotatsu::async::task<> Server::ended() {
 Server::Server(Session& session) :
     session(session),
 #ifdef CATTER_WINDOWS
-    name(std::format(R"(\\.\pipe\catter-ipc-{})", kotatsu::sys::pid()))
+    name(std::format(R"(\\.\pipe\catter-ipc-{})", sys::pid()))
 #else
-    name(data_path(std::format("ipc-{}.sock", kotatsu::sys::pid())))
+    name(data_path(std::format("ipc-{}.sock", sys::pid())))
 #endif
 {
 }
 
-kotatsu::async::task<kotatsu::async::process::exit_status> Server::serve(Start start) {
+async::task<async::process::exit_status> Server::serve(Start start) {
 #ifndef CATTER_WINDOWS
     // A socket a session of the same pid left behind.
-    kotatsu::fs::remove(name);
+    fs::remove(name);
 #endif
-    auto listened = kotatsu::async::pipe::listen(name,
-                                                 kotatsu::async::pipe::options(),
-                                                 kotatsu::async::event_loop::current());
+    auto listened = async::pipe::listen(name, async::pipe::options(), async::event_loop::current());
     if(!listened) {
         throw cpptrace::runtime_error(
             std::format("Failed to listen on `{}` for the build's commands: {}",
@@ -275,8 +272,7 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Server::serve(Start s
     }
     acceptor.emplace(std::move(*listened));
 
-    auto build = [](Server& self,
-                    Start start) -> kotatsu::async::task<kotatsu::async::process::exit_status> {
+    auto build = [](Server& self, Start start) -> async::task<async::process::exit_status> {
         // Once the build has ended, or failed to start, no command comes.
         kotatsu::ScopeExit stop([&] {
             if(auto error = self.acceptor->stop()) {
@@ -286,19 +282,19 @@ kotatsu::async::task<kotatsu::async::process::exit_status> Server::serve(Start s
         co_return co_await start();
     }(*this, std::move(start));
 
-    auto [_, status] = co_await kotatsu::async::when_all{accept(), std::move(build)};
+    auto [_, status] = co_await async::when_all{accept(), std::move(build)};
 #ifndef CATTER_WINDOWS
-    kotatsu::fs::remove(name);
+    fs::remove(name);
 #endif
     co_return status;
 }
 
-kotatsu::async::task<> Server::accept() {
-    kotatsu::async::task_group<> clients;
+async::task<> Server::accept() {
+    async::task_group<> clients;
     while(true) {
         auto pipe = co_await acceptor->accept();
         if(!pipe) {
-            assert(pipe.error() == kotatsu::async::error::operation_aborted);
+            assert(pipe.error() == async::error::operation_aborted);
             break;
         }
         const auto id = session.new_id();
@@ -311,7 +307,7 @@ kotatsu::async::task<> Server::accept() {
     co_await clients.join();
 }
 
-kotatsu::async::task<> Server::answer(data::ipcid_t id, kotatsu::async::pipe pipe) {
+async::task<> Server::answer(data::ipcid_t id, async::pipe pipe) {
     try {
         Client client(*this, id);
         co_await client.answer(std::move(pipe));

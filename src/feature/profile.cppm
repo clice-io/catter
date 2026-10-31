@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter:feature.profile;
 
@@ -12,13 +12,13 @@ namespace catter::feature {
 struct ProfileOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-o", "--output", "--output="},
                  meta_var = "<path>",
                  help = "Write the trace to this path. [default: trace.json]")
     <std::string> output = std::string("trace.json");
 
-    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"--top", "--top="},
                  meta_var = "<n>",
                  help = "List the n commands that took the longest. [default: 5]")

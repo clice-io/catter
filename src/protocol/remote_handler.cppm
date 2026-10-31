@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -33,7 +33,7 @@ public:
 
         /// How long catter waits for an answer, and for a handler it started
         /// to exit once the session is over; zero waits as long as it takes.
-        std::chrono::milliseconds timeout;
+        chrono::milliseconds timeout;
     };
 
     /// Starts the handler `command` runs, outside the session. On Windows the
@@ -44,44 +44,42 @@ public:
     /// Connects to the handler listening at `address`, `host:port`, the host
     /// of an IPv6 address in brackets: on this machine, but with
     /// `allow_remote`.
-    static kotatsu::async::task<std::unique_ptr<RemoteHandler>> connect(std::string_view address,
-                                                                        bool allow_remote,
-                                                                        Options options);
+    static async::task<std::unique_ptr<RemoteHandler>> connect(std::string_view address,
+                                                               bool allow_remote,
+                                                               Options options);
 
-    kotatsu::async::task<std::optional<Build>> on_start(Build build) override;
+    async::task<std::optional<Build>> on_start(Build build) override;
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override;
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override;
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    std::optional<data::ipcid_t> parent,
-                                    std::string message) override;
+    async::task<> on_error(data::ipcid_t id,
+                           std::optional<data::ipcid_t> parent,
+                           std::string message) override;
 
-    kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result) override;
+    async::task<> on_exit(data::ipcid_t id, data::process_result result) override;
 
-    kotatsu::async::task<> on_finish(data::process_result result) override;
+    async::task<> on_finish(data::process_result result) override;
 
     /// Ends the conversation: the handler reads the end of its input, and
     /// catter waits for one it started to exit, which it kills once the
     /// timeout has passed.
-    kotatsu::async::task<> close();
+    async::task<> close();
 
 private:
     RemoteHandler(std::unique_ptr<kotatsu::ipc::Transport> transport,
-                  kotatsu::async::process process,
+                  async::process process,
                   Options options);
 
     /// The action on a command: the handler's, or skip from one that does
     /// not decide; none for a command the handler's filter leaves out.
-    kotatsu::async::task<std::optional<Action>> decide(data::ipcid_t id,
-                                                       std::optional<data::ipcid_t> parent,
-                                                       data::command command);
+    async::task<std::optional<Action>> decide(data::ipcid_t id,
+                                              std::optional<data::ipcid_t> parent,
+                                              data::command command);
 
     template <typename Result, typename Params>
-    kotatsu::async::task<Result> request(std::string_view method,
-                                         std::string_view what,
-                                         Params params);
+    async::task<Result> request(std::string_view method, std::string_view what, Params params);
 
     template <typename Params>
     void notify(std::string_view method, const Params& params);
@@ -99,10 +97,10 @@ private:
     kotatsu::ipc::JSONPeer peer;
 
     /// Set once the peer has stopped.
-    kotatsu::async::event stopped;
+    async::event stopped;
 
     /// The handler catter started; inert for one it connected to.
-    kotatsu::async::process process;
+    async::process process;
 
     protocol::InitializeResult subscription{};
 

@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -39,13 +39,13 @@ std::vector<std::string> notes_of(const CompilerAnalysis& analysis) {
         return diagnostic.code == Diagnostic::Code::InputCandidateRejected ? 2 : 1;
     };
     auto diagnostics = analysis.diagnostics;
-    std::ranges::stable_sort(diagnostics, {}, priority);
+    ranges::stable_sort(diagnostics, {}, priority);
     std::vector<std::string> notes;
     for(const auto& diagnostic: diagnostics) {
         auto note = diagnostic.path.has_value()
                         ? std::format("{}: {}", *diagnostic.path, diagnostic.message)
                         : diagnostic.message;
-        if(!std::ranges::contains(notes, note)) {
+        if(!ranges::contains(notes, note)) {
             notes.push_back(std::move(note));
         }
         if(notes.size() == 3) {
@@ -60,8 +60,8 @@ std::string success_log(data::ipcid_t id,
                         const CompilerAnalysis& analysis) {
     const auto sources =
         analysis.reads |
-        std::views::filter([](const Read& read) { return read.role == InputRole::Source; }) |
-        std::views::transform(&Read::path) | std::ranges::to<std::vector>();
+        views::filter([](const Read& read) { return read.role == InputRole::Source; }) |
+        views::transform(&Read::path) | ranges::to<std::vector>();
     std::vector<std::string> outputs;
     for(const auto& write: analysis.writes) {
         switch(write.origin) {
@@ -109,10 +109,10 @@ class CDB final : public Handler {
 public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
 
-    kotatsu::async::task<std::optional<Build>> on_start(Build build) override {
+    async::task<std::optional<Build>> on_start(Build build) override {
         output_path = options.output.value_or("build/compile_commands.json");
         // Where it fails, no file is in it.
-        [[maybe_unused]] auto error = kotatsu::sys::temp_dir(temporary);
+        [[maybe_unused]] auto error = sys::temp_dir(temporary);
         // A database catter cannot merge into ends the session before the build, not after.
         database.emplace(output_path, build.cwd, !*options.replace);
         verbose_log(std::format(
@@ -122,9 +122,9 @@ public:
         co_return build;
     }
 
-    kotatsu::async::task<Action> on_command(data::ipcid_t id,
-                                            std::optional<data::ipcid_t> parent,
-                                            data::command command) override {
+    async::task<Action> on_command(data::ipcid_t id,
+                                   std::optional<data::ipcid_t> parent,
+                                   data::command command) override {
         descendants.add(id, parent);
         if(descendants.left_out(id)) {
             co_return Action{};
@@ -135,7 +135,7 @@ public:
             descendants.leave_out_descendants_of(id);
         }
         auto analysis =
-            analyze_compiler(command.executable, command.args, command.cwd, kotatsu::fs::read_file);
+            analyze_compiler(command.executable, command.args, command.cwd, fs::read_file);
         if(!analysis.has_value()) {
             verbose_log(failure_log(id, command, analysis.error()));
             co_return Action{};
@@ -167,7 +167,7 @@ public:
                 .analysis = *analysis,
                 .read = write.reads.front(),
             };
-            kotatsu::fs::path::resolve(made->file, write.path, command.cwd);
+            fs::path::resolve(made->file, write.path, command.cwd);
             preprocessed.insert_or_assign(made->file, *made);
             preprocesses.emplace(id, made->file);
         }
@@ -178,7 +178,7 @@ public:
             auto& entry = entries[i];
             const auto& object = entry.as_object();
             std::string source;
-            kotatsu::fs::path::resolve(source, object.find("file")->as_string(), command.cwd);
+            fs::path::resolve(source, object.find("file")->as_string(), command.cwd);
             const auto* output = object.find("output");
             std::optional<Mirrored> mirrored;
             auto from = preprocessed.find(source);
@@ -188,13 +188,13 @@ public:
                 const auto& read = by.analysis.reads[by.read];
                 entry = entry_of(by.cwd, by.analysis, read, std::string(output->as_string()));
                 consumed.insert(by.id);
-                kotatsu::fs::path::resolve(source, read.path, by.cwd);
+                fs::path::resolve(source, read.path, by.cwd);
             } else {
                 if(auto directory = mirror_of(command.cwd, source)) {
                     mirrored = Mirrored{.entry = std::move(entries_of(*directory, *analysis)[i])};
-                    kotatsu::fs::path::resolve(mirrored->source,
-                                               object.find("file")->as_string(),
-                                               *directory);
+                    fs::path::resolve(mirrored->source,
+                                      object.find("file")->as_string(),
+                                      *directory);
                     if(!mirror.has_value()) {
                         mirror = std::move(directory);
                     }
@@ -209,7 +209,7 @@ public:
             if(xmake_probe(source) || cmake_probe(command.cwd, source)) {
                 continue;
             }
-            const bool existed = kotatsu::fs::is_file(source);
+            const bool existed = fs::is_file(source);
             found.push_back({.entry = std::move(entry),
                              .source = std::move(source),
                              .preprocess = preprocess,
@@ -220,11 +220,11 @@ public:
         for(const auto& write: analysis->writes) {
             if(write.path != "-") {
                 std::string file;
-                kotatsu::fs::path::resolve(file, write.path, command.cwd);
+                fs::path::resolve(file, write.path, command.cwd);
                 written.insert(std::move(file));
                 if(mirror.has_value()) {
                     std::string there;
-                    kotatsu::fs::path::resolve(there, write.path, *mirror);
+                    fs::path::resolve(there, write.path, *mirror);
                     written.insert(std::move(there));
                 }
             }
@@ -232,17 +232,17 @@ public:
         co_return Action{};
     }
 
-    kotatsu::async::task<> on_error(data::ipcid_t id,
-                                    [[maybe_unused]] std::optional<data::ipcid_t> parent,
-                                    std::string message) override {
+    async::task<> on_error(data::ipcid_t id,
+                           [[maybe_unused]] std::optional<data::ipcid_t> parent,
+                           std::string message) override {
         descendants.add(id, std::nullopt);
         uncaptured(std::move(message));
         co_return;
     }
 
-    kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result) override {
+    async::task<> on_exit(data::ipcid_t id, data::process_result result) override {
         if(auto preprocess = preprocesses.extract(id);
-           !preprocess.empty() && kotatsu::fs::is_file(preprocess.mapped())) {
+           !preprocess.empty() && fs::is_file(preprocess.mapped())) {
             kept_files.insert(std::move(preprocess.mapped()));
         }
         if(descendants.left_out(id) || !*options.abort_on_command_failure || result.code == 0) {
@@ -258,7 +258,7 @@ public:
                         result.code));
     }
 
-    kotatsu::async::task<> on_finish(data::process_result result) override {
+    async::task<> on_finish(data::process_result result) override {
         if(result.code != 0 && !*options.save_on_failure) {
             log(std::format("Build failed with exit code {}. CDB will not be saved.", result.code));
             co_return;
@@ -317,24 +317,24 @@ private:
     /// stages a command's inputs as symlinks in a directory of their own, as Bazel's sandboxes
     /// do, mirrors the directory it keeps them in.
     static std::optional<std::string> mirror_of(std::string_view cwd, std::string_view source) {
-        const auto name = kotatsu::fs::path::strip_prefix(source, cwd);
+        const auto name = fs::path::strip_prefix(source, cwd);
         std::string target;
-        if(!name.has_value() || kotatsu::fs::read_symlink(target, source)) {
+        if(!name.has_value() || fs::read_symlink(target, source)) {
             return std::nullopt;
         }
         std::string resolved;
-        kotatsu::fs::path::resolve(resolved, target, kotatsu::fs::path::parent(source));
+        fs::path::resolve(resolved, target, fs::path::parent(source));
         // On Windows an absolute target reads `\\?\` first, which absolute() drops. It fails
         // only an empty path.
         std::string file;
-        [[maybe_unused]] auto error = kotatsu::fs::absolute(file, resolved);
+        [[maybe_unused]] auto error = fs::absolute(file, resolved);
         assert(!error);
         std::string directory = file;
-        for([[maybe_unused]] auto component: kotatsu::fs::path::components(*name)) {
-            kotatsu::fs::path::pop(directory);
+        for([[maybe_unused]] auto component: fs::path::components(*name)) {
+            fs::path::pop(directory);
         }
         std::string named;
-        kotatsu::fs::path::resolve(named, *name, directory);
+        fs::path::resolve(named, *name, directory);
         if(named != file) {
             return std::nullopt;
         }
@@ -346,12 +346,12 @@ private:
     /// build, CMakeFiles, where it identifies the compiler and tries what it compiles, or of a
     /// file of its own modules.
     static bool cmake_probe(std::string_view cwd, std::string_view source) {
-        if(std::ranges::contains(kotatsu::fs::path::components(cwd), "CMakeFiles")) {
+        if(ranges::contains(fs::path::components(cwd), "CMakeFiles")) {
             return true;
         }
         // CMake's own directory, `share/cmake-3.31` or `share/cmake`, holds its modules.
         std::array<std::string_view, 2> previous;
-        for(auto component: kotatsu::fs::path::components(source)) {
+        for(auto component: fs::path::components(source)) {
             const auto [share, cmake] = previous;
             if(component == "Modules" && share == "share" &&
                (cmake == "cmake" || (cmake.starts_with("cmake-") && cmake.size() > 6 &&
@@ -366,7 +366,7 @@ private:
     /// Whether `source` is one xmake compiles to probe the compiler, which it keeps in its own
     /// directory of the temporary directory, `.xmake<uid>`.
     bool xmake_probe(std::string_view source) const {
-        auto rest = kotatsu::fs::path::strip_prefix(source, temporary);
+        auto rest = fs::path::strip_prefix(source, temporary);
         return rest.has_value() && rest->starts_with(".xmake");
     }
 
@@ -398,9 +398,9 @@ private:
         for(auto& [entry, source, preprocess, existed, made, mirrored]: found) {
             // Gone with the directory the build staged it in, the source is still where its
             // symlink led; gone alone, it was a probe's.
-            const bool staged = existed && !kotatsu::fs::is_file(source);
+            const bool staged = existed && !fs::is_file(source);
             if(staged) {
-                if(!mirrored.has_value() || !kotatsu::fs::is_file(mirrored->source)) {
+                if(!mirrored.has_value() || !fs::is_file(mirrored->source)) {
                     continue;
                 }
                 entry = std::move(mirrored->entry);
@@ -419,7 +419,7 @@ private:
             // once it has the object, from the cache or from a compile; a staged preprocess's
             // file went with the directory it was written in.
             if(!staged && made.has_value() && kept_files.contains(made->file) &&
-               !kotatsu::fs::is_file(made->file)) {
+               !fs::is_file(made->file)) {
                 entry = entry_of(made->cwd,
                                  made->analysis,
                                  made->analysis.reads[made->read],

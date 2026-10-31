@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -17,14 +17,13 @@ data::ipcid_t Session::new_id() noexcept {
     return last_id;
 }
 
-std::chrono::microseconds
-    Session::time_of(std::chrono::steady_clock::time_point time) const noexcept {
-    return std::chrono::duration_cast<std::chrono::microseconds>(time - started);
+chrono::microseconds Session::time_of(chrono::steady_clock::time_point time) const noexcept {
+    return chrono::duration_cast<chrono::microseconds>(time - started);
 }
 
-kotatsu::async::task<data::action> Session::decide(data::ipcid_t id,
-                                                   std::optional<data::ipcid_t> parent,
-                                                   data::command command) {
+async::task<data::action> Session::decide(data::ipcid_t id,
+                                          std::optional<data::ipcid_t> parent,
+                                          data::command command) {
     if(error) {
         co_return data::action{.type = data::action::FAIL, .cmd = std::move(command)};
     }
@@ -50,7 +49,7 @@ kotatsu::async::task<data::action> Session::decide(data::ipcid_t id,
     std::unreachable();
 }
 
-kotatsu::async::task<> Session::exited(data::ipcid_t id, data::process_result result) {
+async::task<> Session::exited(data::ipcid_t id, data::process_result result) {
     if(error) {
         co_return;
     }
@@ -61,9 +60,9 @@ kotatsu::async::task<> Session::exited(data::ipcid_t id, data::process_result re
     }
 }
 
-kotatsu::async::task<> Session::uncaptured(data::ipcid_t id,
-                                           std::optional<data::ipcid_t> parent,
-                                           std::string message) {
+async::task<> Session::uncaptured(data::ipcid_t id,
+                                  std::optional<data::ipcid_t> parent,
+                                  std::string message) {
     if(error) {
         co_return;
     }
@@ -86,18 +85,17 @@ void Session::rethrow() const {
     }
 }
 
-kotatsu::async::task<kotatsu::async::process::exit_status> run_session(Handler& handler,
-                                                                       const Backend& backend,
-                                                                       Build build) {
+async::task<async::process::exit_status> run_session(Handler& handler,
+                                                     const Backend& backend,
+                                                     Build build) {
     auto started = co_await handler.on_start(std::move(build));
     if(!started) {
-        co_return kotatsu::async::process::exit_status{};
+        co_return async::process::exit_status{};
     }
     Session session(handler);
     auto status = co_await backend.run(*started, session);
     session.rethrow();
-    co_await handler.on_finish(
-        result_of(status, session.time_of(std::chrono::steady_clock::now())));
+    co_await handler.on_finish(result_of(status, session.time_of(chrono::steady_clock::now())));
     co_return status;
 }
 

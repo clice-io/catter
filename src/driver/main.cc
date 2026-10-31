@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/log.h"
 #include "support/paths.h"
@@ -53,9 +53,9 @@ int run(std::span<const std::string> argv) {
             std::println("catter: give a command\n\n{}", driver::usage_of_catter());
             return 1;
         }
-        auto entry = std::ranges::find(driver::subcommand_entries(),
-                                       args.front(),
-                                       &driver::SubcommandEntry::name);
+        auto entry = ranges::find(driver::subcommand_entries(),
+                                  args.front(),
+                                  &driver::SubcommandEntry::name);
         if(entry == driver::subcommand_entries().end()) {
             std::println("catter: no command `{}`\n\n{}", args.front(), driver::usage_of_catter());
             return 1;
@@ -80,7 +80,7 @@ extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.
-    return run(kotatsu::sys::arguments());
+    return run(sys::arguments());
 #else
     return run(std::vector<std::string>(argv, argv + argc));
 #endif

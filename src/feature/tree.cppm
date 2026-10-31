@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter:feature.tree;
 
@@ -12,21 +12,21 @@ namespace catter::feature {
 struct TreeOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-d", "--depth", "--depth="},
                  meta_var = "<n>",
                  help = "Limit render depth.")
     <std::int64_t> depth;
 
     DecoKVStyled(
-        kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+        deco::decl::KVStyle::JoinedOrSeparate,
         names = {"-a", "--args", "--args="},
         meta_var = "<n>",
         help = "Show the first n arguments after argv[0]. Use -1 to keep all. [default: -1]")
     <std::int64_t> args = -1;
 
     DecoKVStyled(
-        kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
+        deco::decl::KVStyle::JoinedOrSeparate,
         names = {"-w", "--arg-width", "--arg-width="},
         meta_var = "<n>",
         help = "Cut each longer argument in its middle to this many characters. [default: 10]")

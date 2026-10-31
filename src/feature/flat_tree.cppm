@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/output.h"
 
@@ -33,7 +33,7 @@ public:
             pool[it->second].content = std::move(content);
         }
         auto& parents = pool[it->second].parents;
-        if(parent.has_value() && !std::ranges::contains(parents, *parent)) {
+        if(parent.has_value() && !ranges::contains(parents, *parent)) {
             parents.push_back(std::move(*parent));
         }
     }
@@ -115,12 +115,12 @@ public:
 
     /// The nodes none of whose parents are in the graph.
     std::vector<Id> starts() const {
-        return pool | std::views::filter([&](const Node& node) {
-                   return std::ranges::none_of(node.parents, [&](const Id& parent) {
+        return pool | views::filter([&](const Node& node) {
+                   return ranges::none_of(node.parents, [&](const Id& parent) {
                        return position(parent).has_value();
                    });
                }) |
-               std::views::transform(&Node::id) | std::ranges::to<std::vector>();
+               views::transform(&Node::id) | ranges::to<std::vector>();
     }
 
 private:
@@ -141,9 +141,9 @@ private:
 
         std::vector<std::size_t> children_left(std::size_t node) const {
             return tree.pool[node].children |
-                   std::views::transform([&](const Id& child) { return *tree.position(child); }) |
-                   std::views::filter([&](std::size_t child) { return left[child]; }) |
-                   std::ranges::to<std::vector>();
+                   views::transform([&](const Id& child) { return *tree.position(child); }) |
+                   views::filter([&](std::size_t child) { return left[child]; }) |
+                   ranges::to<std::vector>();
         }
 
         void connect(std::size_t node) {
@@ -174,8 +174,8 @@ private:
                 component.push_back(top);
             } while(top != node);
 
-            const auto self_loop = std::ranges::any_of(component, [&](std::size_t member) {
-                return std::ranges::contains(tree.pool[member].children, tree.pool[member].id);
+            const auto self_loop = ranges::any_of(component, [&](std::size_t member) {
+                return ranges::contains(tree.pool[member].children, tree.pool[member].id);
             });
             if(component.size() > 1 || self_loop) {
                 cycles.push_back(cycle_of(component));
@@ -192,8 +192,8 @@ private:
                 seen[current] = path.size();
                 path.push_back(tree.pool[current].id);
                 const auto children = children_left(current);
-                current = *std::ranges::find_if(children, [&](std::size_t child) {
-                    return std::ranges::contains(component, child);
+                current = *ranges::find_if(children, [&](std::size_t child) {
+                    return ranges::contains(component, child);
                 });
             }
             return std::vector<Id>(path.begin() + seen[current], path.end());
@@ -252,10 +252,10 @@ std::string render(const FlatTree<Id, Content>& tree,
         out += std::format(colors[depth % std::size(colors)], text(node));
         out += '\n';
         if(!max_depth.has_value() || depth < *max_depth) {
-            const auto children = node.children | std::views::filter([&](const Id& child) {
-                                      return !std::ranges::contains(path, child);
-                                  }) |
-                                  std::ranges::to<std::vector>();
+            const auto children =
+                node.children |
+                views::filter([&](const Id& child) { return !ranges::contains(path, child); }) |
+                ranges::to<std::vector>();
             const auto next = prefix + (branch ? (last ? "    " : "│   ") : "");
             for(std::size_t i = 0; i < children.size(); i += 1) {
                 self(children[i], depth + 1, next, i + 1 == children.size(), true);
@@ -309,12 +309,11 @@ void print(FlatTree<Id, Content>& tree,
     std::println("");
     std::println("Detected {} cycles:", words.node);
     for(const auto& cycle: cycles) {
-        const auto names =
-            cycle | std::views::transform([&](const Id& id) { return text(*tree.find(id)); }) |
-            std::ranges::to<std::vector>();
+        const auto names = cycle |
+                           views::transform([&](const Id& id) { return text(*tree.find(id)); }) |
+                           ranges::to<std::vector>();
         std::println("[cycle] {} -> {}",
-                     names | std::views::join_with(std::string_view(" -> ")) |
-                         std::ranges::to<std::string>(),
+                     names | views::join_with(std::string_view(" -> ")) | ranges::to<std::string>(),
                      names.front());
     }
 }

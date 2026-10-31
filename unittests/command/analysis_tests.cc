@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 module catter;
 
@@ -35,8 +35,8 @@ struct Case {
 };
 
 std::vector<std::string> paths(const auto& files) {
-    return files | std::views::transform([](const auto& file) { return file.path; }) |
-           std::ranges::to<std::vector>();
+    return files | views::transform([](const auto& file) { return file.path; }) |
+           ranges::to<std::vector>();
 }
 
 /// Commands with their mode, the files they read and write, in order, and some with their target.
@@ -513,7 +513,7 @@ const Case cases[] = {
 
 void expect_analysis(const Case& expected) {
     ZEST_CONTEXT("case: {}", expected.label);
-    auto analysis = analyze_compiler(expected.argv[0], expected.argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler(expected.argv[0], expected.argv, "", fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(analysis->phase == expected.phase);
     ZEXPECT(analysis->artifact == expected.artifact);
@@ -545,13 +545,13 @@ ZEST_CASE(compilers_of_each_dialect_are_analyzed) {
     };
     for(const auto& argv: commands) {
         ZEST_CONTEXT("executable: {}", argv[0]);
-        ZEXPECT(analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file).has_value());
+        ZEXPECT(analyze_compiler(argv[0], argv, "", fs::read_file).has_value());
     }
 };
 
 ZEST_CASE(nvcc_is_unsupported) {
     const std::vector<std::string> argv = {"nvcc", "-c", "kernel.cu"};
-    auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
     ZASSERT(!analysis.has_value());
     ZEXPECT(analysis.error().kind == Error::Kind::CompilerUnsupported);
     ZEXPECT(analysis.error().message.contains("nvcc"));
@@ -564,7 +564,7 @@ ZEST_CASE(clang_cl_rejects_gnu_modes) {
     };
     for(const auto& argv: commands) {
         ZEST_CONTEXT("option: {}", argv[1]);
-        ZEXPECT(!analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file).has_value());
+        ZEXPECT(!analyze_compiler(argv[0], argv, "", fs::read_file).has_value());
     }
 };
 
@@ -574,7 +574,7 @@ ZEST_CASE(last_target_argument_wins) {
                                            "--target=x86_64-pc-windows-msvc",
                                            "-c",
                                            "main.c"};
-    auto analysis = analyze_compiler(argv[0], argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(analysis->target.triple == "x86_64-pc-windows-msvc");
     ZEXPECT(analysis->target.source == TargetSource::Argument);
@@ -582,7 +582,7 @@ ZEST_CASE(last_target_argument_wins) {
 
 ZEST_CASE(absolute_executable_names_default_output) {
     const std::vector<std::string> argv = {"gcc", "-c", "absolute.c"};
-    auto analysis = analyze_compiler("/opt/toolchains/bin/gcc", argv, "", kotatsu::fs::read_file);
+    auto analysis = analyze_compiler("/opt/toolchains/bin/gcc", argv, "", fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(paths(analysis->writes) == std::vector<std::string>{"absolute.o"});
 };
@@ -592,7 +592,7 @@ ZEST_CASE(absolute_cross_clang_names_its_target) {
     auto analysis = analyze_compiler("C:/toolchains/bin/x86_64-w64-mingw32-clang++.exe",
                                      argv,
                                      "",
-                                     kotatsu::fs::read_file);
+                                     fs::read_file);
     ZASSERT(analysis.has_value());
     ZEXPECT(analysis->target.triple == "x86_64-w64-mingw32");
 };

@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #include "support/messages.h"
 
@@ -8,7 +8,7 @@ module catter:feature.json;
 
 namespace catter::feature {
 
-using JSON = kotatsu::codec::dyn::Value;
+using JSON = codec::dyn::Value;
 
 /// How `to_json` lays out what it writes.
 struct Layout {

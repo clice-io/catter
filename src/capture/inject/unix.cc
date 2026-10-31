@@ -1,6 +1,6 @@
 module;
 
-#include "modules/prelude.h"
+#include "support/prelude.h"
 
 #if defined(CATTER_MAC)
 #include <mach-o/utils.h>
@@ -25,7 +25,7 @@ namespace catter {
 static std::string_view arch_of(std::string_view executable) {
     std::array<char, 512> head;
     std::size_t size = 0;
-    if(auto file = kotatsu::fs::File::open(executable)) {
+    if(auto file = fs::File::open(executable)) {
         size = file->read(head).value_or(0);
     }
     std::string_view line(head.data(), size);
@@ -52,9 +52,9 @@ static std::string_view arch_of(std::string_view executable) {
 }
 #endif
 
-kotatsu::async::process::options hook_options(data::command command,
-                                              data::ipcid_t id,
-                                              std::string_view pipe_name) {
+async::process::options hook_options(data::command command,
+                                     data::ipcid_t id,
+                                     std::string_view pipe_name) {
 #if defined(CATTER_MAC)
     // dyld ends a program that cannot load a library inserted into it: Apple's
     // own tools, which run as arm64e, and Intel programs under Rosetta. Where
@@ -72,8 +72,8 @@ kotatsu::async::process::options hook_options(data::command command,
     const auto library = program_path(hook::LIBRARY);
     const auto preload = std::string(hook::PRELOAD) + "=";
     if(auto entry =
-           std::ranges::find_if(command.env,
-                                [&](std::string_view entry) { return entry.starts_with(preload); });
+           ranges::find_if(command.env,
+                           [&](std::string_view entry) { return entry.starts_with(preload); });
        entry != command.env.end()) {
         *entry += hook::PRELOAD_SEPARATORS[0] + library;
     } else {
