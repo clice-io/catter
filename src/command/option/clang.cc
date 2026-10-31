@@ -6,7 +6,7 @@ module catter.command;
 
 namespace catter::option::clang {
 
-namespace kota_opt = kotatsu::option;
+namespace option = kotatsu::option;
 
 namespace detail {
 
@@ -40,9 +40,9 @@ constexpr std::size_t OptionCount = 0
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
 // `kotatsu::option::Option` without pulling in LLVM's option library.
 enum Flag : unsigned {
-    HelpHidden = kota_opt::HelpHidden,
-    RenderAsInput = kota_opt::RenderAsInput,
-    RenderJoined = kota_opt::RenderJoined,
+    HelpHidden = option::HelpHidden,
+    RenderAsInput = option::RenderAsInput,
+    RenderJoined = option::RenderJoined,
     Ignored = 1u << 4,
     LinkOption = 1u << 5,
     LinkerInput = 1u << 6,
@@ -57,13 +57,13 @@ enum Flag : unsigned {
 // `kotatsu::option` prefix spans directly.
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return kota_opt::pfx_none;
-        case 1: return kota_opt::pfx_dash;
-        case 3: return kota_opt::pfx_dash_double;
-        case 6: return kota_opt::pfx_double;
-        case 8: return kota_opt::pfx_all;
-        case 12: return kota_opt::pfx_slash_dash;
-        default: return kota_opt::pfx_none;
+        case 0: return option::pfx_none;
+        case 1: return option::pfx_dash;
+        case 3: return option::pfx_dash_double;
+        case 6: return option::pfx_double;
+        case 8: return option::pfx_all;
+        case 12: return option::pfx_slash_dash;
+        default: return option::pfx_none;
     }
 }
 
@@ -89,21 +89,21 @@ static_assert(OptionPrefixesTable[8] == 3 && OptionPrefixesTable[9] == 3 &&
 static_assert(OptionPrefixesTable[12] == 2 && OptionPrefixesTable[13] == 6 &&
               OptionPrefixesTable[14] == 1);
 
-#define Group kota_opt::Kind::Group
-#define Input kota_opt::Kind::Input
-#define Unknown kota_opt::Kind::Unknown
-#define Flag kota_opt::Kind::Flag
-#define Joined kota_opt::Kind::Joined
-#define Values kota_opt::Kind::Values
-#define Separate kota_opt::Kind::Separate
-#define RemainingArgs kota_opt::Kind::RemainingArgs
-#define RemainingArgsJoined kota_opt::Kind::RemainingArgsJoined
-#define CommaJoined kota_opt::Kind::CommaJoined
-#define MultiArg kota_opt::Kind::MultiArg
-#define JoinedOrSeparate kota_opt::Kind::JoinedOrSeparate
-#define JoinedAndSeparate kota_opt::Kind::JoinedAndSeparate
+#define Group option::Kind::Group
+#define Input option::Kind::Input
+#define Unknown option::Kind::Unknown
+#define Flag option::Kind::Flag
+#define Joined option::Kind::Joined
+#define Values option::Kind::Values
+#define Separate option::Kind::Separate
+#define RemainingArgs option::Kind::RemainingArgs
+#define RemainingArgsJoined option::Kind::RemainingArgsJoined
+#define CommaJoined option::Kind::CommaJoined
+#define MultiArg option::Kind::MultiArg
+#define JoinedOrSeparate option::Kind::JoinedOrSeparate
+#define JoinedAndSeparate option::Kind::JoinedAndSeparate
 
-constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
+constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -119,7 +119,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
                META_VAR,                                                                           \
                VALUES,                                                                             \
                SUBCOMMANDIDS_OFFSET)                                                               \
-    kota_opt::Option{                                                                              \
+    option::Option{                                                                                \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(NAME_OFFSET),                                                      \
         .id = ID_##ID,                                                                             \
@@ -153,10 +153,10 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 
 }  // namespace detail
 
-const kota_opt::OptTable& table() {
+const option::OptTable& table() {
     const static auto opt_table = [] {
         auto table =
-            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), false, {});
+            option::OptTable(std::span<const option::Option>(detail::OptionInfos), false, {});
         table.tablegen_mode = true;
         return table;
     }();
