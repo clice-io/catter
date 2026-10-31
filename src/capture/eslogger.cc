@@ -1,9 +1,10 @@
 module;
 
+#include "support/prelude.h"
+
 #include "support/log.h"
 #include "support/messages.h"
 #include "support/output.h"
-#include "support/prelude.h"
 
 #ifdef CATTER_MAC
 #include <signal.h>

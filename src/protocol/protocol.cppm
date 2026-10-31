@@ -1,7 +1,8 @@
 module;
 
-#include "support/messages.h"
 #include "support/prelude.h"
+
+#include "support/messages.h"
 
 module catter:protocol.protocol;
 

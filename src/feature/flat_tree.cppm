@@ -1,7 +1,8 @@
 module;
 
-#include "support/output.h"
 #include "support/prelude.h"
+
+#include "support/output.h"
 
 module catter:feature.flat_tree;
 

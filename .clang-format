@@ -106,8 +106,9 @@ IncludeBlocks: Regroup
 # get interleaved. Keep the numbers packed and monotonic below.
 IncludeCategories:
   # 0. The module prelude, first in a module unit: it imports the standard
-  # library and the third-party module that every later include reads.
-  - Regex: '^"modules/prelude.h"$'
+  # library and the third-party module that every later include reads, and
+  # catter's (support/prelude.h) names the namespaces catter writes.
+  - Regex: '^"(modules|support)/prelude.h"$'
     Priority: 1
     SortPriority: 1
 

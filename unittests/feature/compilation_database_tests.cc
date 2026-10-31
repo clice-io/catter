@@ -1,6 +1,7 @@
 module;
 
 #include "support/prelude.h"
+
 #include "utils/temp_file_manager.h"
 
 module catter;

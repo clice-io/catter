@@ -1,7 +1,8 @@
 module;
 
-#include "support/messages.h"
 #include "support/prelude.h"
+
+#include "support/messages.h"
 
 #ifdef CATTER_MAC
 #include <mach/mach_time.h>

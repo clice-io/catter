@@ -1,8 +1,9 @@
 module;
 
+#include "support/prelude.h"
+
 #include "support/log.h"
 #include "support/paths.h"
-#include "support/prelude.h"
 
 #ifdef CATTER_WINDOWS
 #include <windows.h>

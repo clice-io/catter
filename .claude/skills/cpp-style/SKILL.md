@@ -160,7 +160,7 @@ of the build, next to that program's own runtime. They:
 
 ## Concurrency & Async
 
-- Async code is kotatsu coroutines (`kotatsu::async::task`, `co_await`) on kotatsu's
+- Async code is kotatsu coroutines (`async::task`, `co_await`) on kotatsu's
   event loop — no callback style. A public interface may stay synchronous
   and drive a coroutine internally when the caller has no event loop.
 - Review coroutine code by interleavings, not function by function: list

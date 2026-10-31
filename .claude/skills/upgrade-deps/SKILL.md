@@ -73,7 +73,8 @@ together.
 ## Regenerating `modules/`
 
 `modules/` is the third-party libraries as one C++20 module, `deps`, and
-the prelude every module unit of catter includes first, written by `clice
+the prelude every module unit of catter includes first (`catter`'s through
+`support/prelude.h`), written by `clice
 modularize` from `modules/demand.cpp`, which records what catter takes
 from them: their headers, the C library names only those headers bring, and
 the macros catter uses, an `#ifdef` each. Its headers differ by platform
