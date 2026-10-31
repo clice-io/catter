@@ -8,7 +8,6 @@ import std.compat;
 #include "std.macros.h"
 #include "libc.macros.h"
 
-#include <cpptrace/exceptions.hpp>
 #include <kotatsu/async/async.h>
 #include <kotatsu/async/io/loop.h>
 #include <kotatsu/async/runtime/task.h>
@@ -44,4 +43,5 @@ import std.compat;
 #include <kotatsu/sys/process.h>
 #include <kotatsu/zest/macro.h>
 #include <kotatsu/zest/zest.h>
+#include <cpptrace/exceptions.hpp>
 #include <spdlog/spdlog.h>

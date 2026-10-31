@@ -239,6 +239,8 @@ export namespace kotatsu::async::detail {
 using ::kotatsu::async::detail::BasicGuard;
 using ::kotatsu::async::detail::CancellationNode;
 using ::kotatsu::async::detail::CancellationState;
+using ::kotatsu::async::detail::LoopRunScope;
+using ::kotatsu::async::detail::ResumptionScope;
 using ::kotatsu::async::detail::ScopedAwaiter;
 using ::kotatsu::async::detail::aggregate_result_t;
 using ::kotatsu::async::detail::async_range;
@@ -1771,15 +1773,13 @@ using ::simdjson::arm64::ondemand::logger::log_level;
 #endif
 
 #if (defined(_WIN32) && defined(__x86_64__) && defined(NDEBUG)) || (defined(_WIN32) && defined(__x86_64__) && !defined(NDEBUG)) || (defined(_WIN32) && defined(__aarch64__) && defined(NDEBUG))
-export namespace kotatsu::sys::windows {
-using ::kotatsu::sys::windows::CommandLineRules;
-using ::kotatsu::sys::windows::create_process_directories;
-using ::kotatsu::sys::windows::find_create_process_program;
-using ::kotatsu::sys::windows::join_command_line;
-using ::kotatsu::sys::windows::ntstatus_name;
-using ::kotatsu::sys::windows::quote_argument;
-using ::kotatsu::sys::windows::split_command_line;
-using ::kotatsu::sys::windows::split_command_line_view;
+export namespace kotatsu::sys::cmd {
+using ::kotatsu::sys::cmd::Quoting;
+using ::kotatsu::sys::cmd::expand;
+using ::kotatsu::sys::cmd::expand_view;
+using ::kotatsu::sys::cmd::join;
+using ::kotatsu::sys::cmd::split;
+using ::kotatsu::sys::cmd::split_view;
 }
 #endif
 

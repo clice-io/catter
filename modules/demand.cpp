@@ -85,7 +85,7 @@
 #include <kotatsu/zest/zest.h>
 #include <spdlog/spdlog.h>
 #ifdef _WIN32
-#include <kotatsu/sys/windows.h>
+#include <kotatsu/sys/cmd.h>
 #endif
 
 #ifndef _WIN32

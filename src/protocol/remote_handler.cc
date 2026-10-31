@@ -185,7 +185,7 @@ std::unique_ptr<RemoteHandler> RemoteHandler::spawn(std::string_view command, Op
 #ifdef CATTER_WINDOWS
     // The command line goes to CreateProcessW as it is, to be split by the
     // program as Windows programs split theirs.
-    auto words = kotatsu::sys::windows::split_command_line(command);
+    auto words = kotatsu::sys::cmd::split(command, kotatsu::sys::cmd::Quoting::Windows);
     if(words.begin() == words.end()) {
         throw cpptrace::runtime_error("The handler command is empty");
     }

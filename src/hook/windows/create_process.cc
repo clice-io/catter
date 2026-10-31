@@ -12,6 +12,7 @@
 #include <kotatsu/support/utf16.h>
 #include <kotatsu/fs/resolve.h>
 #include <kotatsu/fs/status.h>
+#include <kotatsu/sys/cmd.h>
 #include <kotatsu/sys/env.h>
 #include <kotatsu/sys/windows.h>
 
@@ -30,7 +31,7 @@ std::optional<std::string> resolve_program(const wchar_t* application_name,
         if(command_line != nullptr) {
             kotatsu::from_utf16(line, command_line);
         }
-        auto words = kotatsu::sys::windows::split_command_line(line);
+        auto words = kotatsu::sys::cmd::split(line, kotatsu::sys::cmd::Quoting::Windows);
         auto first = words.begin();
         if(first == words.end()) {
             return std::nullopt;
@@ -65,7 +66,7 @@ std::vector<std::string> arguments_of(const wchar_t* application_name,
     std::string line;
     kotatsu::from_utf16(line, command_line != nullptr ? command_line : application_name);
     std::vector<std::string> arguments;
-    for(auto argument: kotatsu::sys::windows::split_command_line(line)) {
+    for(auto argument: kotatsu::sys::cmd::split(line, kotatsu::sys::cmd::Quoting::Windows)) {
         arguments.emplace_back(argument);
     }
     return arguments;
