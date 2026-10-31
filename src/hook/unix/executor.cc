@@ -15,13 +15,13 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <kota/sys/env.h>
-#include <kota/sys/process.h>
+#include <kotatsu/sys/env.h>
+#include <kotatsu/sys/process.h>
 
 #ifdef CATTER_LINUX
 #include <optional>
 #include <sys/auxv.h>
-#include <kota/fs/status.h>
+#include <kotatsu/fs/status.h>
 #endif
 
 #include "hook/unix/debug.h"
@@ -49,17 +49,17 @@ struct Error : std::exception {
 /// The program `file` names, looked for as `search` says, by execvp's rules;
 /// `{.directories = {""}}` looks in the current directory alone, from which
 /// execve runs a path without a `/`.
-std::string resolve_program(const char* file, const kota::sys::ProgramSearch& search) {
+std::string resolve_program(const char* file, const kotatsu::sys::ProgramSearch& search) {
     std::string path;
-    if(auto error = kota::sys::find_program(path, file, search)) {
+    if(auto error = kotatsu::sys::find_program(path, file, search)) {
         throw Error(error.value(), std::format("failed to resolve executable: {}", file));
     }
     return path;
 }
 
 std::string resolve_from_search_path(const char* file, std::string_view search_path) {
-    kota::sys::ProgramSearch search;
-    for(auto directory: kota::sys::split_paths(search_path)) {
+    kotatsu::sys::ProgramSearch search;
+    for(auto directory: kotatsu::sys::split_paths(search_path)) {
         search.directories.emplace_back(directory);
     }
     return resolve_program(file, search);
@@ -71,7 +71,7 @@ std::string resolve_from_path(const char* file, const char* const envp[]) {
     if(file == nullptr) {
         throw Error(EFAULT, "The file of the program is null");
     }
-    // Read here: kota::sys reads the environment under a lock, which a child
+    // Read here: kotatsu::sys reads the environment under a lock, which a child
     // forked while another thread held it would wait on forever.
     if(auto path = envp == nullptr ? nullptr : get_env_value(envp, "PATH")) {
         return resolve_from_search_path(file, path);
@@ -321,14 +321,14 @@ std::vector<char*> proxy_argv(std::string& proxy,
 /// no name outside its process, as a deleted file or a memfd has.
 std::optional<std::string> restartable_program() {
     std::string image;
-    if(kota::sys::executable_path(image) || !kota::fs::is_file(image)) {
+    if(kotatsu::sys::executable_path(image) || !kotatsu::fs::is_file(image)) {
         return std::nullopt;
     }
     const std::string_view named = reinterpret_cast<const char*>(::getauxval(AT_EXECFN));
     if(named.starts_with("/proc/") || named.starts_with("/dev/fd/")) {
         return image;
     }
-    if(auto same = kota::fs::equivalent(named, image); same && *same) {
+    if(auto same = kotatsu::fs::equivalent(named, image); same && *same) {
         return std::string(named);
     }
     return image;

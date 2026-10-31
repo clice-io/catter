@@ -390,9 +390,9 @@ struct Builder {
                     std::optional<std::string_view> directory,
                     WriteOrigin origin) {
         for(auto read: from) {
-            auto file = std::format("{}{}", kota::fs::path::stem(reads[read].path), suffix);
+            auto file = std::format("{}{}", kotatsu::fs::path::stem(reads[read].path), suffix);
             if(directory.has_value()) {
-                kota::fs::path::resolve(file, file, *directory);
+                kotatsu::fs::path::resolve(file, file, *directory);
             }
             write(std::move(file), {read}, origin);
         }
@@ -410,8 +410,8 @@ struct Builder {
             if(auto extension = extension_of(parsed.artifact, convention)) {
                 for(auto read: naming) {
                     auto& path = paths.emplace_back(
-                        std::format("{}{}", kota::fs::path::stem(reads[read].path), *extension));
-                    kota::fs::path::resolve(path, path, output.path);
+                        std::format("{}{}", kotatsu::fs::path::stem(reads[read].path), *extension));
+                    kotatsu::fs::path::resolve(path, path, output.path);
                 }
             } else {
                 diagnose(
@@ -468,7 +468,7 @@ struct Builder {
         }
         const auto suffix = parsed.artifact == Artifact::Executable ? convention.executable
                                                                     : convention.shared_library;
-        auto path = std::format("{}{}", kota::fs::path::stem(reads[from.front()].path), suffix);
+        auto path = std::format("{}{}", kotatsu::fs::path::stem(reads[from.front()].path), suffix);
         write(std::move(path), std::move(from), WriteOrigin::DefaultOutput);
     }
 

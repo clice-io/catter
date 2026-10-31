@@ -47,7 +47,7 @@ std::chrono::microseconds microseconds_of(std::uint64_t ticks) {
 }  // namespace
 
 Event parse(std::string_view line) {
-    auto event = kota::codec::json::from_string<Event>(line);
+    auto event = kotatsu::codec::json::from_string<Event>(line);
     if(!event.has_value()) {
         throw cpptrace::runtime_error(
             std::format("eslogger wrote an event catter cannot read: {}", event.error().message));
@@ -109,17 +109,17 @@ constexpr std::string_view MARKER = "/usr/bin/true";
 /// How long a marker waits for its event before another runs.
 constexpr std::chrono::milliseconds MARKER_INTERVAL{100};
 
-bool succeeded(const kota::process::exit_status& status) {
+bool succeeded(const kotatsu::async::process::exit_status& status) {
     return status.code == 0 && status.term_signal == 0;
 }
 
 /// Makes sure sudo starts eslogger without asking for a password: it asks on
 /// the terminal, before the build starts.
-kota::task<> authorize() {
+kotatsu::async::task<> authorize() {
     std::vector<std::string> args = {"-n", "-l"};
     args.append_range(ESLOGGER);
-    auto probe =
-        co_await kota::process::capture({.program = std::string(SUDO), .args = std::move(args)});
+    auto probe = co_await kotatsu::async::process::capture(
+        {.program = std::string(SUDO), .args = std::move(args)});
     if(probe.has_value() && succeeded(probe->status)) {
         co_return;
     }
@@ -139,32 +139,32 @@ kota::task<> authorize() {
 /// eslogger reports them, until the build has ended.
 class Capture {
 public:
-    Capture(kota::process::spawn_result spawned, Session& session) :
+    Capture(kotatsu::async::process::spawn_result spawned, Session& session) :
         process(std::move(spawned.proc)), output(std::move(spawned.stdout_pipe)), session(session) {
     }
 
     /// Reads what eslogger writes until it ends.
-    kota::task<> read();
+    kotatsu::async::task<> read();
 
     /// Runs `build` once eslogger reports, and stops eslogger once it has
     /// reported every event of the build: how the build ended.
-    kota::task<kota::process::exit_status> run(const Build& build);
+    kotatsu::async::task<kotatsu::async::process::exit_status> run(const Build& build);
 
 private:
     /// What a line eslogger wrote tells.
-    kota::task<> take(std::string_view line);
+    kotatsu::async::task<> take(std::string_view line);
 
     /// Runs markers until eslogger reports one: then every event before it has
     /// been read.
-    kota::task<> mark();
+    kotatsu::async::task<> mark();
 
     /// Throws why eslogger stopped reporting.
     [[noreturn]] void stopped() const;
 
 private:
-    kota::process process;
+    kotatsu::async::process process;
 
-    kota::pipe output;
+    kotatsu::async::pipe output;
 
     Session& session;
 
@@ -179,7 +179,7 @@ private:
 
     /// Set once eslogger reports one of `markers`, or once what it writes is
     /// not read any more.
-    kota::event woken;
+    kotatsu::async::event woken;
 
     /// Set once the build has ended: the marker eslogger reports next is the
     /// last of its events read.
@@ -206,7 +206,7 @@ private:
     std::uint64_t lost = 0;
 };
 
-kota::task<> Capture::read() {
+kotatsu::async::task<> Capture::read() {
     while(true) {
         auto line = co_await output.read_line();
         if(!line.has_value() || !line->has_value()) {
@@ -228,7 +228,7 @@ kota::task<> Capture::read() {
     woken.set();
 }
 
-kota::task<> Capture::take(std::string_view line) {
+kotatsu::async::task<> Capture::take(std::string_view line) {
     auto event = eslogger::parse(line);
     if(last_seq.has_value() && event.global_seq_num > *last_seq + 1) {
         lost += event.global_seq_num - *last_seq - 1;
@@ -255,7 +255,7 @@ kota::task<> Capture::take(std::string_view line) {
     }
 }
 
-kota::task<> Capture::mark() {
+kotatsu::async::task<> Capture::mark() {
     markers.clear();
     marked = false;
     while(!marked) {
@@ -263,11 +263,11 @@ kota::task<> Capture::mark() {
             stopped();
         }
         woken.reset();
-        auto marker = kota::process::spawn({
+        auto marker = kotatsu::async::process::spawn({
             .program = std::string(MARKER),
-            .streams = {kota::process::stdio::ignore(),
-                        kota::process::stdio::ignore(),
-                        kota::process::stdio::ignore()},
+            .streams = {kotatsu::async::process::stdio::ignore(),
+                        kotatsu::async::process::stdio::ignore(),
+                        kotatsu::async::process::stdio::ignore()},
         });
         if(!marker.has_value()) {
             throw cpptrace::runtime_error(
@@ -275,11 +275,11 @@ kota::task<> Capture::mark() {
         }
         markers.push_back(marker->proc.pid());
         co_await marker->proc.wait();
-        co_await kota::when_any(
-            [](kota::event& woken) -> kota::task<> {
+        co_await kotatsu::async::when_any(
+            [](kotatsu::async::event& woken) -> kotatsu::async::task<> {
                 co_await woken.wait();
             }(woken),
-            kota::sleep(MARKER_INTERVAL));
+            kotatsu::async::sleep(MARKER_INTERVAL));
     }
 }
 
@@ -291,12 +291,12 @@ void Capture::stopped() const {
         "eslogger stopped before it reported the build's commands. It runs as root, through sudo, and needs Full Disk Access for the app catter runs in (System Settings > Privacy & Security > Full Disk Access), or over SSH, Allow full disk access for remote users (System Settings > General > Sharing > Remote Login)");
 }
 
-kota::task<kota::process::exit_status> Capture::run(const Build& build) {
-    kota::ScopeExit stop([&] { [[maybe_unused]] auto error = process.kill(SIGTERM); });
+kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Build& build) {
+    kotatsu::ScopeExit stop([&] { [[maybe_unused]] auto error = process.kill(SIGTERM); });
 
     co_await mark();
 
-    kota::process::options options{
+    kotatsu::async::process::options options{
         .program = build.command.front(),
         .cwd = build.cwd,
     };
@@ -304,7 +304,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     const auto line = std::ranges::to<std::string>(build.command | std::views::join_with(' '));
     LOG_INFO("Starting the build command `{}` in {}", line, build.cwd);
 
-    kota::process::exit_status status;
+    kotatsu::async::process::exit_status status;
     std::string error;
     try {
         status = co_await run_process(
@@ -327,7 +327,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
         co_await session.uncaptured(session.new_id(),
                                     std::nullopt,
                                     std::format("Run `{}` failed:\n{}", line, error));
-        co_return kota::process::exit_status{.code = -1};
+        co_return kotatsu::async::process::exit_status{.code = -1};
     }
 
     ending = true;
@@ -350,27 +350,27 @@ public:
         return false;
     }
 
-    kota::task<kota::process::exit_status> run(const Build& build,
-                                               Session& session) const override {
+    kotatsu::async::task<kotatsu::async::process::exit_status>
+        run(const Build& build, Session& session) const override {
         assert(!build.command.empty());
         co_await authorize();
         std::vector<std::string> args = {"-n"};
         args.append_range(ESLOGGER);
         // eslogger reports no process of its own process group.
-        auto spawned = kota::process::spawn({
+        auto spawned = kotatsu::async::process::spawn({
             .program = std::string(SUDO),
             .args = std::move(args),
             .creation = {.process_group = true},
-            .streams = {kota::process::stdio::ignore(),
-                         kota::process::stdio::pipe(),
-                         kota::process::stdio::inherit()},
+            .streams = {kotatsu::async::process::stdio::ignore(),
+                         kotatsu::async::process::stdio::pipe(),
+                         kotatsu::async::process::stdio::inherit()},
         });
         if(!spawned.has_value()) {
             throw cpptrace::runtime_error(
                 std::format("Failed to start {}: {}", ESLOGGER.front(), spawned.error().message()));
         }
         Capture capture(std::move(*spawned), session);
-        auto [_, status] = co_await kota::when_all{capture.read(), capture.run(build)};
+        auto [_, status] = co_await kotatsu::async::when_all{capture.read(), capture.run(build)};
         co_return status;
     }
 };

@@ -17,7 +17,7 @@ namespace catter::feature {
 
 namespace {
 
-namespace dyn = kota::codec::dyn;
+namespace dyn = kotatsu::codec::dyn;
 
 /// What catter makes of a command it analyzes, a compiler's or an archiver's.
 struct Analysis {
@@ -35,13 +35,15 @@ struct Analysis {
 
 void add_path(std::vector<std::string>& paths, std::string_view path, std::string_view cwd) {
     if(path != "-") {
-        kota::fs::path::resolve(paths.emplace_back(), path, cwd);
+        kotatsu::fs::path::resolve(paths.emplace_back(), path, cwd);
     }
 }
 
 std::optional<Analysis> analyze(const data::command& command) {
-    if(auto compiler =
-           analyze_compiler(command.executable, command.args, command.cwd, kota::fs::read_file)) {
+    if(auto compiler = analyze_compiler(command.executable,
+                                        command.args,
+                                        command.cwd,
+                                        kotatsu::fs::read_file)) {
         Analysis analysis{.category = std::string(name(compiler->phase))};
         for(const auto& read: compiler->reads) {
             add_path(analysis.reads, read.path, command.cwd);
@@ -52,17 +54,17 @@ std::optional<Analysis> analyze(const data::command& command) {
         const bool makes = compiler->phase == Phase::Link || compiler->phase == Phase::Archive ||
                            compiler->phase == Phase::RelocatableLink;
         if(makes && !compiler->writes.empty()) {
-            analysis.file = kota::fs::path::filename(compiler->writes.front().path);
+            analysis.file = kotatsu::fs::path::filename(compiler->writes.front().path);
         } else if(auto source = std::ranges::find(compiler->reads, InputRole::Source, &Read::role);
                   !makes && source != compiler->reads.end()) {
-            analysis.file = kota::fs::path::filename(source->path);
+            analysis.file = kotatsu::fs::path::filename(source->path);
         }
         return analysis;
     }
     if(auto archiver = analyze_archiver(command.executable, command.args)) {
         Analysis analysis{
             .category = "archive",
-            .file = std::string(kota::fs::path::filename(archiver->archive)),
+            .file = std::string(kotatsu::fs::path::filename(archiver->archive)),
         };
         for(const auto& read: archiver->reads) {
             add_path(analysis.reads, read, command.cwd);
@@ -361,27 +363,27 @@ class Profile final : public Handler {
 public:
     explicit Profile(ProfileOptions options) : options(std::move(options)) {}
 
-    kota::task<std::optional<Build>> on_start(Build build) override {
-        kota::fs::path::resolve(output, *options.output, build.cwd);
+    kotatsu::async::task<std::optional<Build>> on_start(Build build) override {
+        kotatsu::fs::path::resolve(output, *options.output, build.cwd);
         process = command_line({.args = build.command});
         co_return build;
     }
 
-    kota::task<Action> on_command(data::ipcid_t id,
-                                  std::optional<data::ipcid_t> parent,
-                                  data::command command) override {
+    kotatsu::async::task<Action> on_command(data::ipcid_t id,
+                                            std::optional<data::ipcid_t> parent,
+                                            data::command command) override {
         descendants.add(id, parent);
         const auto& program = command.args.empty() ? command.executable : command.args.front();
         Command entry{
             .id = id,
             .parent = parent,
-            .name = kota::replace_invalid_utf8(kota::fs::path::filename(program)),
+            .name = kotatsu::replace_invalid_utf8(kotatsu::fs::path::filename(program)),
             .line = command_line(command),
             .inside = descendants.left_out(id),
         };
         if(auto analysis = entry.inside ? std::nullopt : analyze(command)) {
             if(!analysis->file.empty()) {
-                entry.name += " " + kota::replace_invalid_utf8(analysis->file);
+                entry.name += " " + kotatsu::replace_invalid_utf8(analysis->file);
             }
             entry.category = std::move(analysis->category);
             entry.reads = std::move(analysis->reads);
@@ -395,21 +397,21 @@ public:
         co_return Action{};
     }
 
-    kota::task<> on_error(data::ipcid_t id,
-                          [[maybe_unused]] std::optional<data::ipcid_t> parent,
-                          std::string message) override {
+    kotatsu::async::task<> on_error(data::ipcid_t id,
+                                    [[maybe_unused]] std::optional<data::ipcid_t> parent,
+                                    std::string message) override {
         descendants.add(id, std::nullopt);
         if(auto found = positions.find(id); found != positions.end()) {
             commands[found->second].uncaptured = true;
         }
         uncaptured += 1;
         if(!*options.quiet) {
-            std::println("{}", kota::replace_invalid_utf8(message));
+            std::println("{}", kotatsu::replace_invalid_utf8(message));
         }
         co_return;
     }
 
-    kota::task<> on_exit(data::ipcid_t id, data::process_result result) override {
+    kotatsu::async::task<> on_exit(data::ipcid_t id, data::process_result result) override {
         // A backend that only observes the build tells the exit of a command it could not capture.
         if(auto found = positions.find(id); found != positions.end()) {
             commands[found->second].result = result;
@@ -417,7 +419,7 @@ public:
         co_return;
     }
 
-    kota::task<> on_finish([[maybe_unused]] data::process_result result) override {
+    kotatsu::async::task<> on_finish([[maybe_unused]] data::process_result result) override {
         const auto timeline = timeline_of(commands);
         save_file(output, trace_of(timeline, process), "trace");
         if(!*options.quiet) {

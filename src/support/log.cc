@@ -9,9 +9,9 @@
 #include <spdlog/logger.h>
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/spdlog.h>
-#include <kota/fs/directory.h>
-#include <kota/fs/file.h>
-#include <kota/fs/path.h>
+#include <kotatsu/fs/directory.h>
+#include <kotatsu/fs/file.h>
+#include <kotatsu/fs/path.h>
 
 namespace {
 
@@ -29,9 +29,9 @@ constexpr char PATTERN[] = "[%Y-%m-%d %H:%M:%S.%e] [%l] [pid:%P][tid:%t] \n %v";
 class path_file_sink final : public spdlog::sinks::base_sink<std::mutex> {
 public:
     path_file_sink(std::string_view path, bool reopen) : path(path), reopen(reopen) {
-        kota::fs::create_directories(kota::fs::path::parent(path));
+        kotatsu::fs::create_directories(kotatsu::fs::path::parent(path));
         // The log is there once the logger starts, though nothing is logged.
-        auto opened = kota::fs::File::open(path, {.append = true, .create = true});
+        auto opened = kotatsu::fs::File::open(path, {.append = true, .create = true});
         if(opened && !reopen) {
             file = std::move(*opened);
         }
@@ -46,7 +46,7 @@ protected:
             if(file) {
                 file->write(text);
             }
-        } else if(auto opened = kota::fs::File::open(path, {.append = true, .create = true})) {
+        } else if(auto opened = kotatsu::fs::File::open(path, {.append = true, .create = true})) {
             opened->write(text);
         }
     }
@@ -56,7 +56,7 @@ protected:
 private:
     std::string path;
     bool reopen;
-    std::optional<kota::fs::File> file;
+    std::optional<kotatsu::fs::File> file;
 };
 }  // namespace
 

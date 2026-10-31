@@ -8,7 +8,7 @@ import :option.tablegen;
 
 namespace catter::option::llvm_lib {
 
-namespace kota_opt = kota::option;
+namespace option = kotatsu::option;
 
 namespace detail {
 
@@ -31,10 +31,10 @@ constexpr std::size_t OptionCount = 0
 
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return kota_opt::pfx_none;
+        case 0: return option::pfx_none;
         case 1: return pfx_slash_dash_help;
         case 6: return pfx_slash_dash_help_hidden;
-        default: return kota_opt::pfx_none;
+        default: return option::pfx_none;
     }
 }
 
@@ -46,7 +46,7 @@ static_assert(OptionPrefixesTable[6] == 4 && OptionPrefixesTable[7] == 15 &&
               OptionPrefixesTable[8] == 6 && OptionPrefixesTable[9] == 12 &&
               OptionPrefixesTable[10] == 3);
 
-constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
+constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -62,7 +62,7 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
                META_VAR,                                                                           \
                VALUES,                                                                             \
                SUBCOMMANDIDS_OFFSET)                                                               \
-    kota_opt::Option{                                                                              \
+    option::Option{                                                                                \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                               \
         .id = ID_##ID,                                                                             \
@@ -82,11 +82,11 @@ constexpr auto OptionInfos = std::array<kota_opt::Option, OptionCount>{
 
 }  // namespace detail
 
-const kota_opt::OptTable& table() {
+const option::OptTable& table() {
     const static auto opt_table = [] {
         // lib.exe, and llvm-lib after it, match options without case: `/OUT:` is `/out:`.
         auto table =
-            kota_opt::OptTable(std::span<const kota_opt::Option>(detail::OptionInfos), true, {});
+            option::OptTable(std::span<const option::Option>(detail::OptionInfos), true, {});
         table.tablegen_mode = true;
         return table;
     }();

@@ -21,7 +21,7 @@ std::string format_argument(std::string_view argument, std::int64_t width) {
     if(argument.empty()) {
         return R"("")";
     }
-    auto text = kota::replace_invalid_utf8(argument);
+    auto text = kotatsu::replace_invalid_utf8(argument);
     const bool quoted = text.find_first_of(" \t\n\v\f\r\"'\\") != std::string::npos;
     std::vector<std::size_t> starts;
     for(std::size_t i = 0; i < text.size(); i += 1) {
@@ -44,21 +44,21 @@ class CmdTree final : public Handler {
 public:
     explicit CmdTree(TreeOptions options) : options(std::move(options)) {}
 
-    kota::task<Action> on_command(data::ipcid_t id,
-                                  std::optional<data::ipcid_t> parent,
-                                  data::command command) override {
+    kotatsu::async::task<Action> on_command(data::ipcid_t id,
+                                            std::optional<data::ipcid_t> parent,
+                                            data::command command) override {
         tree.merge(id, std::move(command.args), parent);
         co_return Action{};
     }
 
-    kota::task<> on_error(data::ipcid_t id,
-                          std::optional<data::ipcid_t> parent,
-                          std::string message) override {
+    kotatsu::async::task<> on_error(data::ipcid_t id,
+                                    std::optional<data::ipcid_t> parent,
+                                    std::string message) override {
         tree.merge(id, std::unexpected(std::move(message)), parent);
         co_return;
     }
 
-    kota::task<> on_finish(data::process_result result) override {
+    kotatsu::async::task<> on_finish(data::process_result result) override {
         print(tree,
               [&](const Tree::Node& node) { return text_of(node.content); },
               max_depth_of(options.depth.as_optional()),
@@ -75,7 +75,8 @@ private:
 
     std::string text_of(const Capture& capture) const {
         if(!capture.has_value()) {
-            return std::format("[capture error] {}", kota::replace_invalid_utf8(capture.error()));
+            return std::format("[capture error] {}",
+                               kotatsu::replace_invalid_utf8(capture.error()));
         }
         const auto& argv = *capture;
         if(argv.empty()) {

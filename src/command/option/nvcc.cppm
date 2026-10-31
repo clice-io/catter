@@ -397,6 +397,6 @@ enum ID : unsigned {
     ID_alias_x,
 };
 
-const kota::option::OptTable& table();
+const kotatsu::option::OptTable& table();
 
 }  // namespace catter::option::nvcc

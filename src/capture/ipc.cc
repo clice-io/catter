@@ -28,7 +28,7 @@ using ReportError = Request<RequestType::REPORT_ERROR>;
 using Finish = Request<RequestType::FINISH>;
 using Started = Request<RequestType::STARTED>;
 
-using Context = kota::ipc::BincodePeer::RequestContext;
+using Context = kotatsu::ipc::BincodePeer::RequestContext;
 
 }  // namespace
 
@@ -46,16 +46,16 @@ public:
     }
 #endif
 
-    kota::task<> answer(kota::pipe pipe);
+    kotatsu::async::task<> answer(kotatsu::async::pipe pipe);
 
 private:
-    kota::task<MakeDecision::Result> decide(MakeDecision::Params params);
+    kotatsu::async::task<MakeDecision::Result> decide(MakeDecision::Params params);
 
 #ifdef CATTER_WINDOWS
     /// The hook started the command's program suspended, as process `pid`:
     /// whether it is made to run as decided, which the hook resumes then, or
     /// cannot run, which the hook ends.
-    kota::task<bool> started(std::int64_t pid);
+    kotatsu::async::task<bool> started(std::int64_t pid);
 
     /// Ends the program started, which is not to run, with exit code `code`:
     /// from within, once its caller resumes it, if it can have the hook.
@@ -63,7 +63,7 @@ private:
 
     /// Waits for the program started to exit, and tells its end; at once when
     /// none was. The hook goes once it has started the program.
-    kota::task<> wait_started();
+    kotatsu::async::task<> wait_started();
 
     /// Tells those waiting for the program's exit that it is told.
     void release();
@@ -82,7 +82,7 @@ private:
     std::string executable;
 
     /// The program the hook started, from its start until its exit is told.
-    std::optional<kota::process> program;
+    std::optional<kotatsu::async::process> program;
 
     /// When catter took the program the hook started.
     std::chrono::steady_clock::time_point began;
@@ -95,26 +95,28 @@ private:
 #endif
 };
 
-kota::task<> Server::Client::answer(kota::pipe pipe) {
-    kota::ipc::BincodePeer peer(kota::event_loop::current(),
-                                std::make_unique<kota::ipc::StreamTransport>(std::move(pipe)));
+kotatsu::async::task<> Server::Client::answer(kotatsu::async::pipe pipe) {
+    kotatsu::ipc::BincodePeer peer(
+        kotatsu::async::event_loop::current(),
+        std::make_unique<kotatsu::ipc::StreamTransport>(std::move(pipe)));
 
-    peer.on_request(
-        MakeDecision::method,
-        [&](const Context&, MakeDecision::Params params) -> kota::ipc::RequestResult<MakeDecision> {
-            co_return co_await decide(std::move(params));
-        });
+    peer.on_request(MakeDecision::method,
+                    [&](const Context&,
+                        MakeDecision::Params params) -> kotatsu::ipc::RequestResult<MakeDecision> {
+                        co_return co_await decide(std::move(params));
+                    });
 
     peer.on_request(
         ReportError::method,
-        [&](const Context&, ReportError::Params params) -> kota::ipc::RequestResult<ReportError> {
+        [&](const Context&,
+            ReportError::Params params) -> kotatsu::ipc::RequestResult<ReportError> {
             co_await server.session.uncaptured(id, params.parent, std::move(params.message));
             co_return nullptr;
         });
 
     peer.on_request(
         Finish::method,
-        [&](const Context&, const Finish::Params& params) -> kota::ipc::RequestResult<Finish> {
+        [&](const Context&, const Finish::Params& params) -> kotatsu::ipc::RequestResult<Finish> {
 #ifdef CATTER_MAC
             running.reset();
 #endif
@@ -132,7 +134,7 @@ kota::task<> Server::Client::answer(kota::pipe pipe) {
 #ifdef CATTER_WINDOWS
     peer.on_request(
         Started::method,
-        [&](const Context&, const Started::Params& params) -> kota::ipc::RequestResult<Started> {
+        [&](const Context&, const Started::Params& params) -> kotatsu::ipc::RequestResult<Started> {
             co_return co_await started(params.pid);
         });
 #elif defined(CATTER_MAC)
@@ -151,7 +153,7 @@ kota::task<> Server::Client::answer(kota::pipe pipe) {
 #endif
 }
 
-kota::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params params) {
+kotatsu::async::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params params) {
 #ifdef CATTER_WINDOWS
     co_await server.ended();
     parent = params.parent;
@@ -166,13 +168,13 @@ kota::task<MakeDecision::Result> Server::Client::decide(MakeDecision::Params par
 
 #ifdef CATTER_WINDOWS
 
-kota::task<bool> Server::Client::started(std::int64_t pid) {
+kotatsu::async::task<bool> Server::Client::started(std::int64_t pid) {
     std::string error;
     try {
         // What injecting into it takes, besides waiting for it and ending it.
-        auto opened = kota::process::open(static_cast<int>(pid),
-                                          PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
-                                              PROCESS_VM_READ | PROCESS_VM_WRITE);
+        auto opened = kotatsu::async::process::open(
+            static_cast<int>(pid),
+            PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE);
         if(!opened) {
             throw cpptrace::runtime_error(
                 std::format("Failed to open process {}: {}", pid, opened.error().message()));
@@ -186,9 +188,9 @@ kota::task<bool> Server::Client::started(std::int64_t pid) {
             case data::action::DROP: end(0); break;
             case data::action::FAIL: end(1); break;
         }
-        untold =
-            server.untold.insert(server.untold.end(),
-                                 {.program = &*program, .told = std::make_shared<kota::event>()});
+        untold = server.untold.insert(
+            server.untold.end(),
+            {.program = &*program, .told = std::make_shared<kotatsu::async::event>()});
         co_return true;
     } catch(const cpptrace::exception& ex) {
         error = ex.message();
@@ -208,7 +210,7 @@ void Server::Client::end(std::uint32_t code) {
     }
 }
 
-kota::task<> Server::Client::wait_started() {
+kotatsu::async::task<> Server::Client::wait_started() {
     if(!program) {
         co_return;
     }
@@ -233,8 +235,8 @@ void Server::Client::release() {
     }
 }
 
-kota::task<> Server::ended() {
-    std::vector<std::shared_ptr<kota::event>> ended;
+kotatsu::async::task<> Server::ended() {
+    std::vector<std::shared_ptr<kotatsu::async::event>> ended;
     for(const auto& entry: untold) {
         if(WaitForSingleObject(entry.program->native_handle(), 0) == WAIT_OBJECT_0) {
             ended.push_back(entry.told);
@@ -250,19 +252,21 @@ kota::task<> Server::ended() {
 Server::Server(Session& session) :
     session(session),
 #ifdef CATTER_WINDOWS
-    name(std::format(R"(\\.\pipe\catter-ipc-{})", kota::sys::pid()))
+    name(std::format(R"(\\.\pipe\catter-ipc-{})", kotatsu::sys::pid()))
 #else
-    name(data_path(std::format("ipc-{}.sock", kota::sys::pid())))
+    name(data_path(std::format("ipc-{}.sock", kotatsu::sys::pid())))
 #endif
 {
 }
 
-kota::task<kota::process::exit_status> Server::serve(Start start) {
+kotatsu::async::task<kotatsu::async::process::exit_status> Server::serve(Start start) {
 #ifndef CATTER_WINDOWS
     // A socket a session of the same pid left behind.
-    kota::fs::remove(name);
+    kotatsu::fs::remove(name);
 #endif
-    auto listened = kota::pipe::listen(name, kota::pipe::options(), kota::event_loop::current());
+    auto listened = kotatsu::async::pipe::listen(name,
+                                                 kotatsu::async::pipe::options(),
+                                                 kotatsu::async::event_loop::current());
     if(!listened) {
         throw cpptrace::runtime_error(
             std::format("Failed to listen on `{}` for the build's commands: {}",
@@ -271,9 +275,10 @@ kota::task<kota::process::exit_status> Server::serve(Start start) {
     }
     acceptor.emplace(std::move(*listened));
 
-    auto build = [](Server& self, Start start) -> kota::task<kota::process::exit_status> {
+    auto build = [](Server& self,
+                    Start start) -> kotatsu::async::task<kotatsu::async::process::exit_status> {
         // Once the build has ended, or failed to start, no command comes.
-        kota::ScopeExit stop([&] {
+        kotatsu::ScopeExit stop([&] {
             if(auto error = self.acceptor->stop()) {
                 LOG_ERROR("Failed to stop accepting clients: {}", error.message());
             }
@@ -281,31 +286,31 @@ kota::task<kota::process::exit_status> Server::serve(Start start) {
         co_return co_await start();
     }(*this, std::move(start));
 
-    auto [_, status] = co_await kota::when_all{accept(), std::move(build)};
+    auto [_, status] = co_await kotatsu::async::when_all{accept(), std::move(build)};
 #ifndef CATTER_WINDOWS
-    kota::fs::remove(name);
+    kotatsu::fs::remove(name);
 #endif
     co_return status;
 }
 
-kota::task<> Server::accept() {
+kotatsu::async::task<> Server::accept() {
     // A client still connected once the build has ended, as a build server's,
     // is let go, cancelled, with the list.
-    std::list<kota::task<>> clients;
+    std::list<kotatsu::async::task<>> clients;
     while(true) {
         auto pipe = co_await acceptor->accept();
         if(!pipe) {
-            assert(pipe.error() == kota::error::operation_aborted);
+            assert(pipe.error() == kotatsu::async::error::operation_aborted);
             break;
         }
         const auto id = session.new_id();
         clients.push_back(answer(id, std::move(*pipe)));
-        kota::event_loop::current().schedule(clients.back());
+        kotatsu::async::event_loop::current().schedule(clients.back());
         LOG_INFO("Accepted new client with id: {}", id);
     }
 }
 
-kota::task<> Server::answer(data::ipcid_t id, kota::pipe pipe) {
+kotatsu::async::task<> Server::answer(data::ipcid_t id, kotatsu::async::pipe pipe) {
     try {
         Client client(*this, id);
         co_await client.answer(std::move(pipe));

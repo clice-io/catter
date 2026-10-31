@@ -24,7 +24,7 @@ using namespace catter;
 
 namespace {
 
-using exit_status = kota::process::exit_status;
+using exit_status = kotatsu::async::process::exit_status;
 
 /// A command the proxy stands in for, and the session it reports it to.
 struct Proxied {
@@ -40,7 +40,7 @@ struct Proxied {
     data::command command;
 
     /// The options that run the command as catter decided, as command `id`.
-    std::function<kota::process::options(data::command, data::ipcid_t)> launch;
+    std::function<kotatsu::async::process::options(data::command, data::ipcid_t)> launch;
 
     /// Why catter cannot capture the command, which the proxy reports in its
     /// place.
@@ -50,7 +50,7 @@ struct Proxied {
 /// This process's working directory; empty when it cannot be read.
 std::string working_directory() {
     std::string cwd;
-    if(kota::fs::current_dir(cwd)) {
+    if(kotatsu::fs::current_dir(cwd)) {
         cwd.clear();
     }
     return cwd;
@@ -59,7 +59,7 @@ std::string working_directory() {
 /// Whether `entry`, `name=value`, is of variable `name`.
 bool is_entry_of(std::string_view entry, std::string_view name) {
     return entry.size() > name.size() && entry[name.size()] == '=' &&
-           kota::sys::env_name_equal(entry.substr(0, name.size()), name);
+           kotatsu::sys::env_name_equal(entry.substr(0, name.size()), name);
 }
 
 /// The value of variable `name` in `env`.
@@ -128,8 +128,8 @@ Proxied hooked(std::span<const std::string> argv) {
             [pipe = variables.pipe, late = variables.late](data::command command,
                                                            data::ipcid_t id) {
 #ifdef CATTER_LINUX
-                auto decided = late ? hook::decided_exec(kota::sys::pid())
-                                    : hook::decided_exec(kota::sys::pid(), command.args);
+                auto decided = late ? hook::decided_exec(kotatsu::sys::pid())
+                                    : hook::decided_exec(kotatsu::sys::pid(), command.args);
 #endif
                 auto options = hook_options(std::move(command), id, pipe);
 #ifdef CATTER_LINUX
@@ -142,20 +142,20 @@ Proxied hooked(std::span<const std::string> argv) {
 #endif
 
 bool has_separator(std::string_view path) {
-    return std::ranges::any_of(path, [](char c) { return kota::fs::path::is_separator(c); });
+    return std::ranges::any_of(path, [](char c) { return kotatsu::fs::path::is_separator(c); });
 }
 
 /// Whether `path` names one of the shims in the directory `shims`.
 bool is_shim(std::string_view path, std::string_view shims) {
-    return has_separator(path) && kota::fs::path::is_within(path, shims);
+    return has_separator(path) && kotatsu::fs::path::is_within(path, shims);
 }
 
 /// The entries of the list of paths `path_list` but the directories of shims
 /// under `shims`.
 std::vector<std::string> past_shims(std::string_view path_list, std::string_view shims) {
     std::vector<std::string> directories;
-    for(auto directory: kota::sys::split_paths(path_list)) {
-        if(!kota::fs::path::is_within(directory, shims)) {
+    for(auto directory: kotatsu::sys::split_paths(path_list)) {
+        if(!kotatsu::fs::path::is_within(directory, shims)) {
             directories.emplace_back(directory);
         }
     }
@@ -175,18 +175,18 @@ std::optional<std::string> resolve_past(std::string_view program,
         if(!is_shim(program, shims)) {
             return std::string(program);
         }
-        name = kota::fs::path::filename(program);
-        std::string named(kota::fs::path::parent(program));
-        kota::fs::path::push(named, SHIM_DIRECTORY_FILE);
-        if(std::string directory; !kota::fs::read_file(directory, named)) {
-            kota::fs::path::push(directory, name);
+        name = kotatsu::fs::path::filename(program);
+        std::string named(kotatsu::fs::path::parent(program));
+        kotatsu::fs::path::push(named, SHIM_DIRECTORY_FILE);
+        if(std::string directory; !kotatsu::fs::read_file(directory, named)) {
+            kotatsu::fs::path::push(directory, name);
             return directory;
         }
     }
-    kota::sys::ProgramSearch search{.directories = past_shims(path_list, shims)};
+    kotatsu::sys::ProgramSearch search{.directories = past_shims(path_list, shims)};
     std::string found;
     // No directories would search the shims' PATH.
-    if(search.directories.empty() || kota::sys::find_program(found, name, search)) {
+    if(search.directories.empty() || kotatsu::sys::find_program(found, name, search)) {
         return std::nullopt;
     }
     return found;
@@ -204,15 +204,16 @@ Proxied wrapped(std::string_view self,
                 bool launcher) {
     data::command cmd{.cwd = working_directory(), .env = environment()};
     Variables variables(cmd.env);
-    const std::string shims = variables.shims.value_or(std::string(kota::fs::path::parent(self)));
+    const std::string shims =
+        variables.shims.value_or(std::string(kotatsu::fs::path::parent(self)));
     std::optional<std::string> path(variable(cmd.env, "PATH"));
 
     auto real = resolve_past(program, shims, path.value_or(""));
     // A path the build spelled otherwise than catter, which names a shim all
     // the same, would run it again and again.
     std::string executable;
-    if(real && !kota::sys::executable_path(executable)) {
-        if(auto same = kota::fs::equivalent(*real, executable); same && *same) {
+    if(real && !kotatsu::sys::executable_path(executable)) {
+        if(auto same = kotatsu::fs::equivalent(*real, executable); same && *same) {
             real.reset();
         }
     }
@@ -232,7 +233,7 @@ Proxied wrapped(std::string_view self,
     if(!build && path) {
         std::string without;
         // Entries PATH was split into join back.
-        [[maybe_unused]] auto error = kota::sys::join_paths(without, past_shims(*path, shims));
+        [[maybe_unused]] auto error = kotatsu::sys::join_paths(without, past_shims(*path, shims));
         assert(!error);
         std::ranges::replace_if(
             cmd.env,
@@ -259,7 +260,7 @@ Proxied wrapped(std::string_view self,
 
 /// The connection to the session.
 struct Connection {
-    kota::ipc::BincodePeer peer;
+    kotatsu::ipc::BincodePeer peer;
 
 #ifdef CATTER_MAC
     /// The program the proxy stands in for, from its start until its exit.
@@ -269,7 +270,7 @@ struct Connection {
     /// Sends request `Type`: its result. Throws when the session fails it, or
     /// is gone.
     template <ipc::RequestType Type>
-    kota::task<typename ipc::Request<Type>::Result>
+    kotatsu::async::task<typename ipc::Request<Type>::Result>
         request(const typename ipc::Request<Type>::Params& params) {
         using Request = ipc::Request<Type>;
         auto result = co_await peer.send_request<typename Request::Result>(Request::method, params);
@@ -282,7 +283,7 @@ struct Connection {
 
     /// Tells the session that catter cannot capture the command, as `message`
     /// says; it is lost when the session is gone.
-    kota::task<> report_error(std::optional<data::ipcid_t> parent, std::string message) {
+    kotatsu::async::task<> report_error(std::optional<data::ipcid_t> parent, std::string message) {
         try {
             co_await request<ipc::RequestType::REPORT_ERROR>(
                 {.parent = parent, .message = std::move(message)});
@@ -293,10 +294,10 @@ struct Connection {
 };
 
 /// Runs `command` as `action` says, as command `id`: how it ended.
-kota::task<exit_status> run(data::action action,
-                            data::ipcid_t id,
-                            const Proxied& proxied,
-                            [[maybe_unused]] Connection& connection) {
+kotatsu::async::task<exit_status> run(data::action action,
+                                      data::ipcid_t id,
+                                      const Proxied& proxied,
+                                      [[maybe_unused]] Connection& connection) {
     RunOptions stand_in{.stand_in = true, .release_streams = true};
 #ifdef CATTER_MAC
     stand_in.started = [&](int pid) {
@@ -306,7 +307,7 @@ kota::task<exit_status> run(data::action action,
         [[maybe_unused]] auto sent =
             connection.peer.send_notification(Started::method, Started::Params{pid});
     };
-    kota::ScopeExit exited([&] { connection.program.reset(); });
+    kotatsu::ScopeExit exited([&] { connection.program.reset(); });
 #endif
     switch(action.type) {
         case data::action::RUN: {
@@ -324,8 +325,8 @@ kota::task<exit_status> run(data::action action,
 }
 
 /// Reports the command of `proxied` to its session, and runs it as decided.
-kota::task<exit_status> report(const Proxied& proxied, Connection& connection) noexcept {
-    kota::ScopeExit close([&] {
+kotatsu::async::task<exit_status> report(const Proxied& proxied, Connection& connection) noexcept {
+    kotatsu::ScopeExit close([&] {
         if(auto closed = connection.peer.close(); !closed) {
             LOG_ERROR("Failed to close the connection to the session: {}", closed.error().message);
         }
@@ -383,9 +384,10 @@ kota::task<exit_status> report(const Proxied& proxied, Connection& connection) n
 
 /// Stands in for the command of `proxied`: reports it to its session, and runs
 /// it as decided, or as it is when there is no session.
-kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
-    auto& loop = kota::event_loop::current();
-    auto pipe = co_await kota::pipe::connect(proxied.pipe, kota::pipe::options(), loop);
+kotatsu::async::task<exit_status> stand_in(const Proxied& proxied) noexcept {
+    auto& loop = kotatsu::async::event_loop::current();
+    auto pipe =
+        co_await kotatsu::async::pipe::connect(proxied.pipe, kotatsu::async::pipe::options(), loop);
     if(!pipe) {
         // A build server an earlier session started (an sccache server, a
         // Gradle daemon) outlives that session's pipe: its commands run as
@@ -405,13 +407,13 @@ kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
         }
     }
     Connection connection{
-        .peer =
-            kota::ipc::BincodePeer(loop,
-                                   std::make_unique<kota::ipc::StreamTransport>(std::move(*pipe))),
+        .peer = kotatsu::ipc::BincodePeer(
+            loop,
+            std::make_unique<kotatsu::ipc::StreamTransport>(std::move(*pipe))),
     };
 
     auto run_connection = [](Connection& connection,
-                             [[maybe_unused]] bool build_command) -> kota::task<> {
+                             [[maybe_unused]] bool build_command) -> kotatsu::async::task<> {
         co_await connection.peer.run();
 #ifdef CATTER_MAC
         // macOS ends no child with its parent: the build command ends here
@@ -422,7 +424,7 @@ kota::task<exit_status> stand_in(const Proxied& proxied) noexcept {
 #endif
     }(connection, !proxied.parent);
     auto [_, status] =
-        co_await kota::when_all{std::move(run_connection), report(proxied, connection)};
+        co_await kotatsu::async::when_all{std::move(run_connection), report(proxied, connection)};
     co_return status;
 }
 
@@ -437,7 +439,7 @@ int run_proxied(const Proxied& proxied) {
             log::mute_logger();
         }
     }
-    auto [status] = kota::run(stand_in(proxied));
+    auto [status] = kotatsu::async::run(stand_in(proxied));
     return status.has_value() ? exit_like(*status) : -1;
 }
 
@@ -447,16 +449,16 @@ int run_proxied(const Proxied& proxied) {
 int run(std::span<const std::string> argv) {
     prepare_descriptors();
 
-    // The link this program was started by, which kota::sys::executable_path
+    // The link this program was started by, which kotatsu::sys::executable_path
     // would resolve.
     std::string self;
-    kota::sys::started_path(self);
+    kotatsu::sys::started_path(self);
 #ifdef CATTER_WINDOWS
     // Windows names a program with its extension, which the role's name has
     // not.
-    const auto name = kota::fs::path::stem(self);
+    const auto name = kotatsu::fs::path::stem(self);
 #else
-    const auto name = kota::fs::path::filename(self);
+    const auto name = kotatsu::fs::path::filename(self);
 #endif
 #ifndef CATTER_WINDOWS
     if(name == PROXY) {
@@ -481,7 +483,7 @@ int run(std::span<const std::string> argv) {
 /// tells catter it runs: once catter traces it, the program runs in its place,
 /// or this process tells catter why it did not start.
 [[noreturn]] void run_traced(int socket, char* argv[]) {
-    kota::sys::unset_env(env::PTRACE);
+    kotatsu::sys::unset_env(env::PTRACE);
     char byte = 1;
     [[maybe_unused]] auto told = ::write(socket, &byte, 1);
     while(::read(socket, &byte, 1) < 0 && errno == EINTR) {}
@@ -516,10 +518,10 @@ extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.
-    return run(kota::sys::arguments());
+    return run(kotatsu::sys::arguments());
 #else
 #ifdef CATTER_LINUX
-    if(std::string socket; kota::sys::get_env(socket, env::PTRACE)) {
+    if(std::string socket; kotatsu::sys::get_env(socket, env::PTRACE)) {
         int fd = -1;
         std::from_chars(socket.data(), socket.data() + socket.size(), fd);
         run_traced(fd, argv);

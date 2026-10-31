@@ -37,9 +37,10 @@ std::optional<BuildProcesses::Started> BuildProcesses::exec(std::uint64_t key,
     return started;
 }
 
-std::vector<BuildProcesses::Ended> BuildProcesses::exit(std::uint64_t key,
-                                                        const kota::process::exit_status& status,
-                                                        std::chrono::microseconds time) {
+std::vector<BuildProcesses::Ended>
+    BuildProcesses::exit(std::uint64_t key,
+                         const kotatsu::async::process::exit_status& status,
+                         std::chrono::microseconds time) {
     auto found = members.find(key);
     if(found == members.end()) {
         return {};

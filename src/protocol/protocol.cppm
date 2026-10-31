@@ -8,7 +8,7 @@ module catter:protocol.protocol;
 
 /// The messages catter and a handler exchange (docs/en/design/handler-protocol.md):
 /// JSON-RPC 2.0, each message framed by a Content-Length header. Field names
-/// are in lower camel case, as kota::ipc::JSONCodec writes them; the SDKs'
+/// are in lower camel case, as kotatsu::ipc::JSONCodec writes them; the SDKs'
 /// types are generated from the schema of these.
 namespace catter::protocol {
 
@@ -209,7 +209,7 @@ KOTATSU_ANNOTATION(analysis_annotation,
                    tag_names = {"compiler", "archiver", "tool", "unparsed"});
 
 /// What catter makes of a command.
-using Analysis = kota::meta::annotate<analysis_annotation>::type<
+using Analysis = kotatsu::meta::annotate<analysis_annotation>::type<
     std::variant<CompilerAnalysis, ArchiverAnalysis, ToolAnalysis, UnparsedAnalysis>>;
 
 /// Request `command` to a handler that decides, else a notification.
@@ -261,7 +261,7 @@ KOTATSU_ANNOTATION(action_annotation,
 
 /// The result of `command`.
 using Action =
-    kota::meta::annotate<action_annotation>::type<std::variant<Skip, Drop, Abort, Modify, Edit>>;
+    kotatsu::meta::annotate<action_annotation>::type<std::variant<Skip, Drop, Abort, Modify, Edit>>;
 
 /// Notification `error`: catter could not capture a command.
 struct CaptureError {

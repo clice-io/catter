@@ -4,13 +4,13 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <kota/zest/zest.h>
-#include <kota/support/utf16.h>
-#include <kota/fs/directory.h>
-#include <kota/fs/file.h>
-#include <kota/fs/path.h>
-#include <kota/fs/resolve.h>
-#include <kota/sys/env.h>
+#include <kotatsu/zest/zest.h>
+#include <kotatsu/support/utf16.h>
+#include <kotatsu/fs/directory.h>
+#include <kotatsu/fs/file.h>
+#include <kotatsu/fs/path.h>
+#include <kotatsu/fs/resolve.h>
+#include <kotatsu/sys/env.h>
 
 #include "hook/windows/create_process.h"
 
@@ -24,21 +24,21 @@ struct ScopedFile {
     std::string path;
 
     ScopedFile(std::string_view directory, std::string_view name) {
-        kota::fs::current_dir(path);
-        kota::fs::path::push(path, directory);
-        kota::fs::create_directories(path);
-        kota::fs::path::push(path, name);
-        kota::fs::write_file(path, "");
+        kotatsu::fs::current_dir(path);
+        kotatsu::fs::path::push(path, directory);
+        kotatsu::fs::create_directories(path);
+        kotatsu::fs::path::push(path, name);
+        kotatsu::fs::write_file(path, "");
     }
 
     ~ScopedFile() {
-        kota::fs::remove_all(kota::fs::path::parent(path));
+        kotatsu::fs::remove_all(kotatsu::fs::path::parent(path));
     }
 };
 
 std::wstring wide(std::string_view text) {
     std::wstring out;
-    kota::to_utf16(out, text);
+    kotatsu::to_utf16(out, text);
     return out;
 }
 
@@ -102,7 +102,7 @@ ZEST_CASE(ansi_environment_block_is_read_in_the_ansi_code_page) {
 };
 
 ZEST_CASE(no_environment_block_is_this_process_environment) {
-    kota::sys::set_env("CATTER_ENVIRONMENT_OF", "\u00e9t\u00e9");
+    kotatsu::sys::set_env("CATTER_ENVIRONMENT_OF", "\u00e9t\u00e9");
 
     ZEXPECT(std::ranges::contains(ct::environment_of(nullptr, true),
                                   "CATTER_ENVIRONMENT_OF=\u00e9t\u00e9"));
@@ -134,9 +134,9 @@ ZEST_CASE(empty_environment_block_is_two_nuls) {
 
 ZEST_CASE(directory_is_made_absolute_from_the_current_one) {
     std::string current;
-    kota::fs::current_dir(current);
+    kotatsu::fs::current_dir(current);
     std::string expected = current;
-    kota::fs::path::push(expected, "sub");
+    kotatsu::fs::path::push(expected, "sub");
 
     ZEXPECT(ct::directory_of(L"sub") == expected);
     ZEXPECT(ct::directory_of(nullptr) == current);

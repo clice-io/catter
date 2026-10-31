@@ -156,7 +156,7 @@ catter 的每个 Windows 版本都同时带有这两个 DLL：在 Windows on ARM
 
 catter 把钩子注入它自己启动的构建命令，以及钩子启动的每个程序：
 
-1. **进程处于挂起状态**。catter 用 kotatsu 的 `kota::sys::spawn` 启动构建命令，其 `windows_before_start` 回调拿到已创建的进程：进程已在自己的 job 对象中，主线程尚未运行。钩子启动的程序由钩子以挂起状态创建，钩子把它的进程 ID 发给 catter，catter 随后打开该进程。
+1. **进程处于挂起状态**。catter 用 kotatsu 的 `kotatsu::sys::spawn` 启动构建命令，其 `windows_before_start` 回调拿到已创建的进程：进程已在自己的 job 对象中，主线程尚未运行。钩子启动的程序由钩子以挂起状态创建，钩子把它的进程 ID 发给 catter，catter 随后打开该进程。
 
 2. **确定进程的架构**。`GetProcessInformation(ProcessMachineTypeInfo)` 给出进程所运行代码的机器类型：在 ARM64 上模拟运行的 x64 进程和 ARM64EC 进程得到的都是 x64，而 `IsWow64Process2` 无法把它们与原生 ARM64 进程区分开。Windows 10 没有 `ProcessMachineTypeInfo`，也不支持模拟 x64，在那里由 `IsWow64Process2` 给出架构。
 

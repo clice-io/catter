@@ -14,15 +14,15 @@ namespace {
 /// Whether `value` is the name of a value of `E`.
 template <typename E>
 bool names_one(std::string_view value) {
-    return std::ranges::any_of(kota::meta::reflection<E>::member_values,
+    return std::ranges::any_of(kotatsu::meta::reflection<E>::member_values,
                                [&](E each) { return name(each) == value; });
 }
 
-std::error_code read_absolute(kota::buffer_ref out, std::string_view path) {
-    if(!kota::fs::path::is_absolute(path)) {
+std::error_code read_absolute(kotatsu::buffer_ref out, std::string_view path) {
+    if(!kotatsu::fs::path::is_absolute(path)) {
         return std::make_error_code(std::errc::no_such_file_or_directory);
     }
-    return kota::fs::read_file(out, path);
+    return kotatsu::fs::read_file(out, path);
 }
 
 bool lists(const std::optional<std::vector<std::string>>& names, std::string_view name) {
@@ -91,7 +91,7 @@ protocol::CompilerAnalysis message_of(const CompilerAnalysis& analysis) {
     for(const auto& diagnostic: analysis.diagnostics) {
         auto& added = message.diagnostics.emplace_back(protocol::Diagnostic{
             .code = std::string(name(diagnostic.code)),
-            .message = kota::replace_invalid_utf8(diagnostic.message),
+            .message = kotatsu::replace_invalid_utf8(diagnostic.message),
         });
         if(diagnostic.path.has_value()) {
             added.path = protocol::to_os_string(*diagnostic.path);
@@ -114,7 +114,7 @@ CommandAnalysis::CommandAnalysis(std::string_view executable,
             analyze_compiler(executable,
                              argv,
                              cwd.value_or(""),
-                             cwd ? ReadFile(kota::fs::read_file) : ReadFile(read_absolute));
+                             cwd ? ReadFile(kotatsu::fs::read_file) : ReadFile(read_absolute));
         if(compiler.has_value()) {
             result = std::move(*compiler);
         } else {
@@ -178,7 +178,7 @@ std::optional<protocol::Analysis> CommandAnalysis::message() const {
     if(auto* archiver = std::get_if<ArchiverAnalysis>(&result)) {
         return protocol::ArchiverAnalysis{
             .operation = std::string(name(archiver->operation)),
-            .modifiers = kota::replace_invalid_utf8(archiver->modifiers),
+            .modifiers = kotatsu::replace_invalid_utf8(archiver->modifiers),
             .thin = archiver->thin,
             .archive = protocol::to_os_string(archiver->archive),
             .members = protocol::to_os_string(archiver->members),
@@ -197,7 +197,7 @@ std::optional<protocol::Analysis> CommandAnalysis::message() const {
             .of = std::string(unparsed->of),
             .name = unparsed->name,
             .error = std::string(name(unparsed->error.kind)),
-            .message = kota::replace_invalid_utf8(unparsed->error.message),
+            .message = kotatsu::replace_invalid_utf8(unparsed->error.message),
         };
     }
     return std::nullopt;

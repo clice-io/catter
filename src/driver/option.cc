@@ -47,8 +47,8 @@ std::string session_id() {
     return std::format("{:016x}", random(device));
 }
 
-kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builtin,
-                                                 const SessionOptions& options) {
+kotatsu::async::task<kotatsu::async::process::exit_status>
+    async_run(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
     if(options.from.has_value() && !options.command->empty()) {
         throw cpptrace::runtime_error(
             "--from replays a recorded build in place of the build command after --: give one of them");
@@ -74,7 +74,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
     };
 
     std::vector<std::unique_ptr<RemoteHandler>> remotes;
-    kota::process::exit_status status;
+    kotatsu::async::process::exit_status status;
     std::exception_ptr error;
     try {
         for(const auto& [connect, text]: options.handlers) {
@@ -113,7 +113,7 @@ kota::task<kota::process::exit_status> async_run(std::unique_ptr<Handler> builti
 }  // namespace
 
 int run_build(std::unique_ptr<Handler> builtin, const SessionOptions& options) {
-    auto [status] = kota::run(async_run(std::move(builtin), options));
+    auto [status] = kotatsu::async::run(async_run(std::move(builtin), options));
     return exit_like(*status);
 }
 

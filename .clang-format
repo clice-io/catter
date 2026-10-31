@@ -132,27 +132,27 @@ IncludeCategories:
     SortPriority: 12
 
   # 3. kotatsu (split by submodule)
-  - Regex: "^<(kota/zest)/"
+  - Regex: "^<(kotatsu/zest)/"
     Priority: 10
     SortPriority: 13
 
-  - Regex: "^<(kota/support)/"
+  - Regex: "^<(kotatsu/support)/"
     Priority: 10
     SortPriority: 14
 
-  - Regex: "^<(kota/async)/"
+  - Regex: "^<(kotatsu/async)/"
     Priority: 10
     SortPriority: 15
 
-  - Regex: "^<(kota/meta)/"
+  - Regex: "^<(kotatsu/meta)/"
     Priority: 10
     SortPriority: 16
 
-  - Regex: "^<(kota/deco)/"
+  - Regex: "^<(kotatsu/deco)/"
     Priority: 10
     SortPriority: 18
 
-  - Regex: "^<kota/"
+  - Regex: "^<kotatsu/"
     Priority: 10
     SortPriority: 19
 

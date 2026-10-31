@@ -25,7 +25,7 @@ The hook on Windows runs no proxy: the daemon decides the build command itself a
 
 ## Serialization
 
-All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format, each framed by a `Content-Length` header. The daemon and `catter-proxy` use `kota::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kota::ipc::StreamTransport`); the Windows hook, which runs inside the build's processes and has no event loop, sends the same frames through `kota::ipc::BlockingClient`, which waits for each answer.
+All messages are encoded using [Bincode](https://github.com/bincode-org/bincode), a compact binary serialization format, each framed by a `Content-Length` header. The daemon and `catter-proxy` use `kotatsu::ipc::BincodePeer`, which provides a request-response abstraction over a stream transport (`kotatsu::ipc::StreamTransport`); the Windows hook, which runs inside the build's processes and has no event loop, sends the same frames through `kotatsu::ipc::BlockingClient`, which waits for each answer.
 
 Bincode was chosen for its efficiency -- messages are small and fast to encode/decode, which matters because every intercepted build command results in multiple IPC round-trips.
 
@@ -207,8 +207,8 @@ Each session is identified by a unique `ipcid_t` (32-bit integer). The tree is b
 ## Connection Lifecycle
 
 1. **Daemon starts** -- Creates and binds the Unix domain socket or named pipe.
-2. **Client connects** -- Opens a connection to the socket/pipe: `kota::pipe::connect()` in the proxy, `CreateFileW` in the Windows hook.
-3. **Daemon accepts** -- For each incoming connection, the daemon creates a `kota::ipc::BincodePeer` and registers request handlers (`on_request<Request<Type>>(...)`) for each request type.
+2. **Client connects** -- Opens a connection to the socket/pipe: `kotatsu::async::pipe::connect()` in the proxy, `CreateFileW` in the Windows hook.
+3. **Daemon accepts** -- For each incoming connection, the daemon creates a `kotatsu::ipc::BincodePeer` and registers request handlers (`on_request<Request<Type>>(...)`) for each request type.
 4. **Request handling** -- The daemon's event loop dispatches incoming requests to the appropriate handler. Request handlers may be async (using `co_await`), to wait for the session's handlers or other daemon state.
 5. **Peer disconnects** -- When the proxy process exits, or the Windows hook has started its program, the transport closes and the `BincodePeer::run()` coroutine completes. The daemon logs the disconnection and cleans up the session; on macOS it kills the program of a proxy that went before its `FINISH`, and on Windows it waits for the program the hook started to exit.
 

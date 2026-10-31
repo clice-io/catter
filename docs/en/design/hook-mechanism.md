@@ -156,7 +156,7 @@ The hook in a process learns the session it reports to from catter, not from the
 
 catter injects the hook into the build command, which it starts itself, and into every program the hook starts:
 
-1. **The process is suspended**. catter starts the build command with kotatsu's `kota::sys::spawn`, whose `windows_before_start` callback receives the process created, in a job object of its own, before its main thread runs. A program the hook starts is created suspended by the hook, which sends catter its process ID; catter opens the process.
+1. **The process is suspended**. catter starts the build command with kotatsu's `kotatsu::sys::spawn`, whose `windows_before_start` callback receives the process created, in a job object of its own, before its main thread runs. A program the hook starts is created suspended by the hook, which sends catter its process ID; catter opens the process.
 
 2. **Find the process's architecture**. `GetProcessInformation(ProcessMachineTypeInfo)` gives the machine whose code the process runs: x64 for x64 processes emulated on ARM64 and for ARM64EC ones, which `IsWow64Process2` cannot tell from native ARM64 processes. On Windows 10, which has no `ProcessMachineTypeInfo` and emulates no x64, `IsWow64Process2` gives it.
 

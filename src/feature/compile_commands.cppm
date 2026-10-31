@@ -12,7 +12,7 @@ namespace catter::feature {
 struct CompileCommandsOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-o", "--output", "--output="},
                  meta_var = "<path>",
                  help = "Write the compilation database to this path.")

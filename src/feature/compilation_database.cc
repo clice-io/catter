@@ -12,16 +12,16 @@ namespace catter::feature {
 
 namespace {
 
-namespace dyn = kota::codec::dyn;
+namespace dyn = kotatsu::codec::dyn;
 
 /// `path` from `cwd`. An absolute path stays as it is spelled, `..` and all, which the system
 /// resolves through the symlinks before it.
 std::string resolve(std::string_view cwd, std::string_view path) {
-    if(kota::fs::path::is_absolute(path)) {
+    if(kotatsu::fs::path::is_absolute(path)) {
         return std::string(path);
     }
     std::string resolved;
-    kota::fs::path::resolve(resolved, path, cwd);
+    kotatsu::fs::path::resolve(resolved, path, cwd);
     return resolved;
 }
 
@@ -65,7 +65,7 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
             reason));
     };
     std::string text;
-    if(auto error = kota::fs::read_file(text, file)) {
+    if(auto error = kotatsu::fs::read_file(text, file)) {
         if(error == std::errc::no_such_file_or_directory) {
             return {};
         }
@@ -81,7 +81,7 @@ std::vector<JSON> read(std::string_view path, std::string_view file) {
         return {};
     }
 
-    auto parsed = kota::codec::json::from_string<JSON>(content);
+    auto parsed = kotatsu::codec::json::from_string<JSON>(content);
     if(!parsed.has_value()) {
         throw fail(std::format("CDB file is not valid JSON: {}: {}", path, parsed.error().message));
     }
@@ -157,7 +157,7 @@ std::vector<JSON> entries_of(std::string_view cwd, const CompilerAnalysis& analy
             continue;
         }
         std::string output;
-        kota::fs::path::resolve(output, write.path, cwd);
+        kotatsu::fs::path::resolve(output, write.path, cwd);
         for(auto read: write.reads) {
             if(analysis.reads[read].role == InputRole::Source) {
                 add(analysis.reads[read], output);
@@ -202,8 +202,8 @@ void CompilationDatabase::Store::add(std::string_view cwd, JSON entry) {
     // A file of a database another tool wrote may be spelled with other separators on Windows.
     const auto key_of = [&](std::string_view path) {
         std::string absolute;
-        kota::fs::path::resolve(absolute, path, directory);
-        kota::fs::path::to_slash(absolute);
+        kotatsu::fs::path::resolve(absolute, path, directory);
+        kotatsu::fs::path::to_slash(absolute);
         return absolute;
     };
     const auto field = [&](std::string_view name, JSON absent) {
@@ -240,14 +240,14 @@ CompilationDatabase::CompilationDatabase(std::string_view path, std::string cwd,
     file(resolve(cwd, path)), cwd(std::move(cwd)) {
     // The save renames a new file over the path it writes, which would replace a symlink: the
     // database goes to the file the links lead to, which need not exist yet.
-    if(auto error = kota::fs::follow_symlinks(file, file)) {
+    if(auto error = kotatsu::fs::follow_symlinks(file, file)) {
         throw cpptrace::runtime_error(
             std::format("Failed to follow the symlinks of the CDB path: {}: {}",
                         path,
                         error.message()));
     }
-    if(auto status = kota::fs::status(file);
-       status.has_value() && status->type != kota::fs::FileType::Regular) {
+    if(auto status = kotatsu::fs::status(file);
+       status.has_value() && status->type != kotatsu::fs::FileType::Regular) {
         throw cpptrace::runtime_error(std::format("CDB path is not a file: {}", path));
     }
     if(inherit) {

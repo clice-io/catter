@@ -101,7 +101,7 @@ void fix_converted_header(HANDLE process, USHORT machine) {
 /// that keeps no short names.
 std::optional<std::string> ascii_path(std::string_view path) {
     std::wstring wide;
-    if(auto error = kota::to_utf16(wide, path)) {
+    if(auto error = kotatsu::to_utf16(wide, path)) {
         fail(std::format("Failed to find {}", path), error);
     }
     const DWORD size = GetShortPathNameW(wide.c_str(), nullptr, 0);
@@ -118,15 +118,15 @@ std::optional<std::string> ascii_path(std::string_view path) {
 
 /// A copy of `dll` in catter's data directory, one per build of the DLL.
 std::string temporary_copy(std::string_view dll) {
-    auto status = kota::fs::status(dll);
+    auto status = kotatsu::fs::status(dll);
     if(!status) {
         fail(std::format("Failed to find {}", dll), status.error());
     }
     const auto build =
         std::format("{}|{}|{}", dll, status->size, status->mtime.time_since_epoch().count());
     auto copy = data_path(std::format("hook-{:016x}", std::hash<std::string>{}(build)));
-    kota::fs::path::push(copy, kota::fs::path::filename(dll));
-    if(kota::fs::is_file(copy)) {
+    kotatsu::fs::path::push(copy, kotatsu::fs::path::filename(dll));
+    if(kotatsu::fs::is_file(copy)) {
         return copy;
     }
 
@@ -134,17 +134,17 @@ std::string temporary_copy(std::string_view dll) {
     // process another catter starts meanwhile never loads half a DLL, nor
     // finds the one it loads renamed over.
     const auto partial = std::format("{}.{}", copy, GetCurrentProcessId());
-    auto created = kota::fs::create_directories(kota::fs::path::parent(copy));
-    auto error = created ? kota::fs::copy_file(dll, partial) : created.error();
+    auto created = kotatsu::fs::create_directories(kotatsu::fs::path::parent(copy));
+    auto error = created ? kotatsu::fs::copy_file(dll, partial) : created.error();
     if(!error) {
-        error = kota::fs::rename_noreplace(partial, copy);
+        error = kotatsu::fs::rename_noreplace(partial, copy);
         if(error) {
-            kota::fs::remove(partial);
+            kotatsu::fs::remove(partial);
         }
     }
     // Another catter renamed its copy first, which a process may have loaded
     // already.
-    if(error && !kota::fs::is_file(copy)) {
+    if(error && !kotatsu::fs::is_file(copy)) {
         fail(std::format("Failed to copy {} to {}", dll, copy), error);
     }
     return copy;
@@ -212,9 +212,9 @@ bool inject_end(HANDLE process, std::string_view executable, std::uint32_t code)
     return add_hook(process, executable, {.ends = true, .exit_code = code});
 }
 
-kota::process::options hook_options(data::command command,
-                                    data::ipcid_t id,
-                                    std::string_view pipe_name) {
+kotatsu::async::process::options hook_options(data::command command,
+                                              data::ipcid_t id,
+                                              std::string_view pipe_name) {
     auto opts = process_options(command);
     opts.windows_before_start = [executable = std::move(command.executable),
                                  id,

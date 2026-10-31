@@ -22,9 +22,9 @@ std::chrono::microseconds
     return std::chrono::duration_cast<std::chrono::microseconds>(time - started);
 }
 
-kota::task<data::action> Session::decide(data::ipcid_t id,
-                                         std::optional<data::ipcid_t> parent,
-                                         data::command command) {
+kotatsu::async::task<data::action> Session::decide(data::ipcid_t id,
+                                                   std::optional<data::ipcid_t> parent,
+                                                   data::command command) {
     if(error) {
         co_return data::action{.type = data::action::FAIL, .cmd = std::move(command)};
     }
@@ -50,7 +50,7 @@ kota::task<data::action> Session::decide(data::ipcid_t id,
     std::unreachable();
 }
 
-kota::task<> Session::exited(data::ipcid_t id, data::process_result result) {
+kotatsu::async::task<> Session::exited(data::ipcid_t id, data::process_result result) {
     if(error) {
         co_return;
     }
@@ -61,9 +61,9 @@ kota::task<> Session::exited(data::ipcid_t id, data::process_result result) {
     }
 }
 
-kota::task<> Session::uncaptured(data::ipcid_t id,
-                                 std::optional<data::ipcid_t> parent,
-                                 std::string message) {
+kotatsu::async::task<> Session::uncaptured(data::ipcid_t id,
+                                           std::optional<data::ipcid_t> parent,
+                                           std::string message) {
     if(error) {
         co_return;
     }
@@ -86,12 +86,12 @@ void Session::rethrow() const {
     }
 }
 
-kota::task<kota::process::exit_status> run_session(Handler& handler,
-                                                   const Backend& backend,
-                                                   Build build) {
+kotatsu::async::task<kotatsu::async::process::exit_status> run_session(Handler& handler,
+                                                                       const Backend& backend,
+                                                                       Build build) {
     auto started = co_await handler.on_start(std::move(build));
     if(!started) {
-        co_return kota::process::exit_status{};
+        co_return kotatsu::async::process::exit_status{};
     }
     Session session(handler);
     auto status = co_await backend.run(*started, session);

@@ -62,7 +62,7 @@ struct Execed {
 struct Exited {
     int pid;
 
-    kota::process::exit_status status;
+    kotatsu::async::process::exit_status status;
 
     std::chrono::microseconds time;
 };
@@ -70,7 +70,7 @@ struct Exited {
 /// The tracer stopped: the build command's process ended as `status` says, or
 /// `error` says why catter could not trace it.
 struct Done {
-    kota::process::exit_status status;
+    kotatsu::async::process::exit_status status;
 
     std::optional<std::string> error;
 };
@@ -101,7 +101,8 @@ struct Lineage {
 /// /proc/<tid>/status of thread `tid`, empty once it has gone.
 std::string status_of(int tid) {
     std::string status;
-    [[maybe_unused]] auto error = kota::fs::read_file(status, std::format("/proc/{}/status", tid));
+    [[maybe_unused]] auto error =
+        kotatsu::fs::read_file(status, std::format("/proc/{}/status", tid));
     return status;
 }
 
@@ -183,7 +184,8 @@ bool is_stop_signal(int signal) {
 /// says.
 std::string denied(int pid, int error) {
     std::string scope;
-    [[maybe_unused]] auto unread = kota::fs::read_file(scope, "/proc/sys/kernel/yama/ptrace_scope");
+    [[maybe_unused]] auto unread =
+        kotatsu::fs::read_file(scope, "/proc/sys/kernel/yama/ptrace_scope");
     std::string why;
     if(const int tracer = id_in(status_of(pid), "TracerPid"); tracer != 0) {
         why = std::format(
@@ -278,7 +280,7 @@ void Tracer::run() {
     }
     tracees.emplace(build, build);
     ::shutdown(socket, SHUT_WR);
-    std::optional<kota::process::exit_status> ended;
+    std::optional<kotatsu::async::process::exit_status> ended;
     while(true) {
         int status = 0;
         // waitpid, not waitid, which takes __WALL from Linux 4.7 on.
@@ -386,7 +388,7 @@ Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
     Execed execed{.pid = pid, .time = time};
     auto& command = execed.command;
     std::string bytes;
-    [[maybe_unused]] auto unread = kota::fs::read_file(bytes, proc + "cmdline");
+    [[maybe_unused]] auto unread = kotatsu::fs::read_file(bytes, proc + "cmdline");
     command.args = strings_of(bytes);
     const auto line = std::ranges::to<std::string>(command.args | std::views::join_with(' '));
     const auto failed = [&](std::error_code error) {
@@ -395,24 +397,24 @@ Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
         return std::move(execed);
     };
 
-    if(auto error = kota::fs::read_file(bytes, proc + "environ")) {
+    if(auto error = kotatsu::fs::read_file(bytes, proc + "environ")) {
         return failed(error);
     }
     command.env = strings_of(bytes);
-    if(auto error = kota::fs::read_symlink(command.cwd, proc + "cwd")) {
+    if(auto error = kotatsu::fs::read_symlink(command.cwd, proc + "cwd")) {
         return failed(error);
     }
-    if(auto cwd = kota::fs::status(proc + "cwd"); cwd && cwd->links == 0) {
+    if(auto cwd = kotatsu::fs::status(proc + "cwd"); cwd && cwd->links == 0) {
         execed.error = std::format(
             "`{}` runs in a working directory catter cannot read, which the build may have removed: it runs uncaptured",
             line);
         return execed;
     }
-    auto exe = kota::fs::status(proc + "exe");
+    auto exe = kotatsu::fs::status(proc + "exe");
     if(!exe) {
         return failed(exe.error());
     }
-    if(auto error = kota::fs::read_file(bytes, proc + "stat")) {
+    if(auto error = kotatsu::fs::read_file(bytes, proc + "stat")) {
         return failed(error);
     }
     auto path = string_at(pid, environment_end(bytes));
@@ -423,10 +425,10 @@ Execed Tracer::execed(int pid, std::chrono::microseconds time) const {
     // A script, or a program the system runs with another, has the program
     // that runs it as the process's.
     const auto file =
-        std::format("{}{}/{}", proc, kota::fs::path::is_absolute(*path) ? "root" : "cwd", *path);
-    if(auto named = kota::fs::status(file); named && named->id == exe->id) {
+        std::format("{}{}/{}", proc, kotatsu::fs::path::is_absolute(*path) ? "root" : "cwd", *path);
+    if(auto named = kotatsu::fs::status(file); named && named->id == exe->id) {
         command.executable = std::move(*path);
-    } else if(auto error = kota::fs::read_symlink(command.executable, proc + "exe")) {
+    } else if(auto error = kotatsu::fs::read_symlink(command.executable, proc + "exe")) {
         return failed(error);
     }
 
@@ -443,11 +445,11 @@ public:
     explicit Capture(Session& session) : session(session) {}
 
     /// Runs `build`, traced: how it ended.
-    kota::task<kota::process::exit_status> run(const Build& build);
+    kotatsu::async::task<kotatsu::async::process::exit_status> run(const Build& build);
 
 private:
     /// What `event` tells the session.
-    kota::task<> take(Event event);
+    kotatsu::async::task<> take(Event event);
 
 private:
     Session& session;
@@ -460,29 +462,29 @@ private:
     std::deque<Event> events;
 
     /// Set once the tracer tells something.
-    kota::event arrived;
+    kotatsu::async::event arrived;
 
     /// The programs catter warned run without their privileges.
     std::unordered_set<std::string> warned;
 };
 
-kota::task<kota::process::exit_status> Capture::run(const Build& build) {
+kotatsu::async::task<kotatsu::async::process::exit_status> Capture::run(const Build& build) {
     int sockets[2];
     if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets) != 0) {
         throw cpptrace::runtime_error(
             std::format("Failed to make the socket the build command waits on: {}",
                         std::error_code(errno, std::generic_category()).message()));
     }
-    kota::ScopeExit close([&] { ::close(sockets[0]); });
+    kotatsu::ScopeExit close([&] { ::close(sockets[0]); });
     ::fcntl(sockets[1], F_SETFD, 0);
-    kota::process::options options{
+    kotatsu::async::process::options options{
         .program = program_path(PROXY),
         .args = {resolve_program(build.command.front(), build.cwd)},
         .env_changes = {{.name = env::PTRACE, .value = std::to_string(sockets[1])}},
         .cwd = build.cwd,
     };
     options.args.append_range(build.command);
-    auto child = kota::sys::spawn(standing_in(std::move(options)));
+    auto child = kotatsu::sys::spawn(standing_in(std::move(options)));
     ::close(sockets[1]);
     if(!child) {
         throw cpptrace::runtime_error(
@@ -494,7 +496,7 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
     const auto line = std::ranges::to<std::string>(build.command | std::views::join_with(' '));
     LOG_INFO("Starting the build command `{}` in {}, traced", line, build.cwd);
 
-    auto relay = kota::event_loop::current().create_relay();
+    auto relay = kotatsu::async::event_loop::current().create_relay();
     Tracer tracer(pid, sockets[0], [&](Event event) {
         relay.send([&, event = std::move(event)] mutable {
             // Once reaped, its pid may be another process's.
@@ -540,12 +542,12 @@ kota::task<kota::process::exit_status> Capture::run(const Build& build) {
                         line,
                         build.command.front(),
                         std::error_code(failure, std::generic_category()).message()));
-        co_return kota::process::exit_status{.code = -1};
+        co_return kotatsu::async::process::exit_status{.code = -1};
     }
     co_return done.status;
 }
 
-kota::task<> Capture::take(Event event) {
+kotatsu::async::task<> Capture::take(Event event) {
     if(auto* forked = std::get_if<Forked>(&event)) {
         processes.fork(forked->parent, forked->child);
         co_return;
@@ -585,8 +587,8 @@ public:
         return false;
     }
 
-    kota::task<kota::process::exit_status> run(const Build& build,
-                                               Session& session) const override {
+    kotatsu::async::task<kotatsu::async::process::exit_status>
+        run(const Build& build, Session& session) const override {
         assert(!build.command.empty());
         Capture capture(session);
         co_return co_await capture.run(build);

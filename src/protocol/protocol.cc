@@ -68,7 +68,7 @@ std::expected<std::string, std::string> decode_base64(std::string_view text) {
 }  // namespace
 
 OSString to_os_string(std::string bytes) {
-    if(kota::is_utf8(bytes)) {
+    if(kotatsu::is_utf8(bytes)) {
         return bytes;
     }
     return Base64{.base64 = encode_base64(bytes)};

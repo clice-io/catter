@@ -80,7 +80,7 @@ extern "C++" int main(int argc, char* argv[]) {
 #ifdef CATTER_WINDOWS
     // main's argv is in the ANSI code page, which holds few characters past
     // ASCII.
-    return run(kota::sys::arguments());
+    return run(kotatsu::sys::arguments());
 #else
     return run(std::vector<std::string>(argv, argv + argc));
 #endif

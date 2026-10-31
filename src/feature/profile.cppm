@@ -12,13 +12,13 @@ namespace catter::feature {
 struct ProfileOptions {
     DECO_CFG_START(required = false)
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"-o", "--output", "--output="},
                  meta_var = "<path>",
                  help = "Write the trace to this path. [default: trace.json]")
     <std::string> output = std::string("trace.json");
 
-    DecoKVStyled(kota::deco::decl::KVStyle::JoinedOrSeparate,
+    DecoKVStyled(kotatsu::deco::decl::KVStyle::JoinedOrSeparate,
                  names = {"--top", "--top="},
                  meta_var = "<n>",
                  help = "List the n commands that took the longest. [default: 5]")

@@ -10,7 +10,7 @@ namespace catter::driver {
 
 namespace {
 
-namespace text = kota::deco::cli::text;
+namespace text = kotatsu::deco::cli::text;
 
 using Row = std::pair<std::string, std::string>;
 

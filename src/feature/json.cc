@@ -14,7 +14,7 @@ namespace {
 
 /// A command's arguments need not be UTF-8, which JSON is.
 struct Config {
-    constexpr static auto invalid_utf8 = kota::codec::invalid_utf8::Replace;
+    constexpr static auto invalid_utf8 = kotatsu::codec::invalid_utf8::Replace;
 };
 
 /// `argument` as a command line shows it: as it is when plain, else as a JSON string.
@@ -29,19 +29,19 @@ std::string quote_argument(std::string_view argument) {
 }  // namespace
 
 std::string to_json(const JSON& value, Layout layout) {
-    auto compact = kota::codec::json::to_string<Config>(value);
+    auto compact = kotatsu::codec::json::to_string<Config>(value);
     assert(compact.has_value());
     if(!layout.pretty) {
         return std::move(*compact);
     }
-    auto pretty = kota::codec::json::prettify(*compact);
+    auto pretty = kotatsu::codec::json::prettify(*compact);
     assert(pretty.has_value());
     return std::move(*pretty);
 }
 
 std::string quote(std::string_view text) {
     std::string out = R"(")";
-    for(const char c: kota::replace_invalid_utf8(text)) {
+    for(const char c: kotatsu::replace_invalid_utf8(text)) {
         switch(c) {
             case '"': out += R"(\")"; break;
             case '\\': out += R"(\\)"; break;
@@ -71,8 +71,8 @@ std::string command_line(const data::command& command) {
 }
 
 void save_file(std::string_view file, std::string_view text, std::string_view what) {
-    auto created = kota::fs::create_directories(kota::fs::path::parent(file));
-    auto error = created.has_value() ? kota::fs::write_file_atomic(file, text) : created.error();
+    auto created = kotatsu::fs::create_directories(kotatsu::fs::path::parent(file));
+    auto error = created.has_value() ? kotatsu::fs::write_file_atomic(file, text) : created.error();
     if(error) {
         throw cpptrace::runtime_error(
             std::format("Failed to write the {} `{}`: {}", what, file, error.message()));

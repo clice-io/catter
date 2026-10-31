@@ -50,7 +50,7 @@ public:
     /// Process `key` ended as `status` says at `time`: the commands that end
     /// with it, the last it ran first, each having run from its exec on.
     std::vector<Ended> exit(std::uint64_t key,
-                            const kota::process::exit_status& status,
+                            const kotatsu::async::process::exit_status& status,
                             std::chrono::microseconds time);
 
 private:

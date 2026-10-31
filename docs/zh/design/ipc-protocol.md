@@ -25,7 +25,7 @@ Windows 上的钩子不经过代理：守护进程自己决定如何处理构建
 
 ## 序列化
 
-所有消息使用 [Bincode](https://github.com/bincode-org/bincode) 编码，这是一种紧凑的二进制序列化格式，每条消息都以一个 `Content-Length` 头分帧。守护进程和 `catter-proxy` 使用 `kota::ipc::BincodePeer`，它在流传输（`kota::ipc::StreamTransport`）之上提供了请求 - 响应抽象；Windows 钩子运行在构建的进程中，没有事件循环，它通过 `kota::ipc::BlockingClient` 发送同样的帧，逐个等待答复。
+所有消息使用 [Bincode](https://github.com/bincode-org/bincode) 编码，这是一种紧凑的二进制序列化格式，每条消息都以一个 `Content-Length` 头分帧。守护进程和 `catter-proxy` 使用 `kotatsu::ipc::BincodePeer`，它在流传输（`kotatsu::ipc::StreamTransport`）之上提供了请求 - 响应抽象；Windows 钩子运行在构建的进程中，没有事件循环，它通过 `kotatsu::ipc::BlockingClient` 发送同样的帧，逐个等待答复。
 
 选择 Bincode 是因为其高效性 -- 消息体积小、编解码速度快。这一点很重要，因为每个被拦截的构建命令都会导致多次 IPC 往返。
 
@@ -207,8 +207,8 @@ Session 1 (root -- the build command)
 ## 连接生命周期
 
 1. **守护进程启动** -- 创建并绑定 Unix 域套接字或命名管道。
-2. **客户端连接** -- 打开到套接字/管道的连接：代理中用 `kota::pipe::connect()`，Windows 钩子中用 `CreateFileW`。
-3. **守护进程接受连接** -- 对于每个传入连接，守护进程创建一个 `kota::ipc::BincodePeer` 并为每种请求类型注册请求处理器（`on_request<Request<Type>>(...)`）。
+2. **客户端连接** -- 打开到套接字/管道的连接：代理中用 `kotatsu::async::pipe::connect()`，Windows 钩子中用 `CreateFileW`。
+3. **守护进程接受连接** -- 对于每个传入连接，守护进程创建一个 `kotatsu::ipc::BincodePeer` 并为每种请求类型注册请求处理器（`on_request<Request<Type>>(...)`）。
 4. **请求处理** -- 守护进程的事件循环将传入请求分发到相应的处理器。请求处理器可以是异步的（使用 `co_await`），以等待会话的各个 handler 或其他守护进程状态。
 5. **对端断开** -- 当代理进程退出，或 Windows 钩子已启动它的程序时，传输层关闭，`BincodePeer::run()` 协程完成。守护进程记录断开事件并清理会话；在 macOS 上，若代理在 `FINISH` 之前就已断开，守护进程会杀死它的程序；在 Windows 上，守护进程等待钩子启动的程序退出。
 

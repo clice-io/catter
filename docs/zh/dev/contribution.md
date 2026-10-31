@@ -17,7 +17,7 @@ pixi run -e dev cases-test Debug
 
 ### 单元测试
 
-单元测试使用 Kotatsu 测试框架（`kota::zest`）。位于 `unittests/`，目录结构与 `src/` 对应：
+单元测试使用 Kotatsu 测试框架（`kotatsu::zest`）。位于 `unittests/`，目录结构与 `src/` 对应：
 
 - `unittests/command/` -- 命令分析的测试（编译器识别、参数解析、选项表）
 - `unittests/protocol/`、`unittests/feature/` -- handler 协议和内置功能的测试

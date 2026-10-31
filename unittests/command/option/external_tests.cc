@@ -6,7 +6,6 @@ module catter;
 
 import catter.command;
 
-namespace kota_opt = kota::option;
 using namespace catter;
 
 namespace {
@@ -32,11 +31,12 @@ struct ParseResult {
     std::vector<std::string> errors;
 };
 
-ParseResult parse_command(const kota_opt::OptTable& table, std::span<const std::string> argv) {
+ParseResult parse_command(const kotatsu::option::OptTable& table,
+                          std::span<const std::string> argv) {
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    kota_opt::ParseOptions options;
+    kotatsu::option::ParseOptions options;
     options.dash_dash_parsing = true;
     for(auto parsed: table.parse(args, options)) {
         if(parsed.has_value()) {
@@ -53,7 +53,7 @@ ParseResult parse_command(const kota_opt::OptTable& table, std::span<const std::
     return result;
 };
 
-std::string_view canonical_spelling(const kota_opt::OptTable& table,
+std::string_view canonical_spelling(const kotatsu::option::OptTable& table,
                                     const ParseResult::OwnedArg& arg) {
     auto option = table.option(arg.id);
     if(!option.has_value()) {
@@ -126,7 +126,7 @@ ZEST_CASE(parse_lld_macho_link_command) {
     ZEXPECT(option::lld_macho::table()
                 .option(option::lld_macho::ID_force_cpusubtype_ALL)
                 .value()
-                .has_flag(kota_opt::HelpHidden));
+                .has_flag(kotatsu::option::HelpHidden));
 
     ZEXPECT(parsed.args[2].id == option::lld_macho::ID_INPUT);
     ZEXPECT(parsed.args[2].spelling == "foo.o");

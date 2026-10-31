@@ -23,7 +23,7 @@ struct Directory {
 
     explicit Directory(std::string_view name) : files(name) {
         std::string program;
-        kota::fs::path::push(program, "bin", PROGRAM);
+        kotatsu::fs::path::push(program, "bin", PROGRAM);
         files.create(program);
     }
 };
@@ -35,7 +35,7 @@ ZEST_SUITE(program_tests) {
 ZEST_CASE(path_is_taken_from_the_directory_given) {
     Directory directory("catter-program-path");
     std::string name;
-    kota::fs::path::push(name, "bin", PROGRAM);
+    kotatsu::fs::path::push(name, "bin", PROGRAM);
 
     ZEXPECT(resolve_program(name, directory.files.root.path()) == directory.files.path(name));
 };
@@ -43,7 +43,7 @@ ZEST_CASE(path_is_taken_from_the_directory_given) {
 ZEST_CASE(path_found_nowhere_is_the_name_itself) {
     Directory directory("catter-program-missing");
     std::string name;
-    kota::fs::path::push(name, "bin", "catter-no-such-program");
+    kotatsu::fs::path::push(name, "bin", "catter-no-such-program");
 
     ZEXPECT(resolve_program(name, directory.files.root.path()) == name);
 };
@@ -54,7 +54,7 @@ ZEST_CASE(name_is_looked_for_in_the_directory_given_as_the_current_one) {
 
     const auto bin = directory.files.path("bin");
     std::string program;
-    kota::fs::path::push(program, bin, PROGRAM);
+    kotatsu::fs::path::push(program, bin, PROGRAM);
 
     ZEXPECT(resolve_program(PROGRAM, bin) == program);
 };

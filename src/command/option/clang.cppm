@@ -39,6 +39,6 @@ enum DriverClass : unsigned {
     FlangOption = 1u << 6,
 };
 
-const kota::option::OptTable& table();
+const kotatsu::option::OptTable& table();
 
 }  // namespace catter::option::clang

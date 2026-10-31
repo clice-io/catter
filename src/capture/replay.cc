@@ -97,12 +97,12 @@ data::process_result to_process_result(const ReplayExecution& execution) {
 
 ReplayFile parse_replay_file(std::string_view path) {
     std::string content;
-    if(auto error = kota::fs::read_file(content, path)) {
+    if(auto error = kotatsu::fs::read_file(content, path)) {
         throw cpptrace::runtime_error(
             std::format("Failed to open replay file: {}: {}", path, error.message()));
     }
 
-    auto replay = kota::codec::json::from_string<ReplayFile>(content);
+    auto replay = kotatsu::codec::json::from_string<ReplayFile>(content);
     if(!replay.has_value()) {
         throw cpptrace::runtime_error(
             std::format("Replay file is not valid: {}: {}", path, replay.error().message));
@@ -125,14 +125,14 @@ public:
         return true;
     }
 
-    kota::task<kota::process::exit_status> run(const Build& build,
-                                               Session& session) const override {
+    kotatsu::async::task<kotatsu::async::process::exit_status>
+        run(const Build& build, Session& session) const override {
         assert(build.command.size() == 1);
         std::string path;
-        kota::fs::path::resolve(path, build.command.front(), build.cwd);
+        kotatsu::fs::path::resolve(path, build.command.front(), build.cwd);
         const auto replay = parse_replay_file(path);
         std::string base;
-        kota::fs::path::resolve(base, replay.cwd.value_or("."), kota::fs::path::parent(path));
+        kotatsu::fs::path::resolve(base, replay.cwd.value_or("."), kotatsu::fs::path::parent(path));
         for(const auto& event: replay.events) {
             if(event.error.has_value()) {
                 co_await session.uncaptured(event.id,
@@ -141,7 +141,7 @@ public:
                 continue;
             }
             std::string cwd;
-            kota::fs::path::resolve(cwd, event.cwd.value_or("."), base);
+            kotatsu::fs::path::resolve(cwd, event.cwd.value_or("."), base);
             co_await session.decide(event.id,
                                     parent_of(event.parent),
                                     data::command{
@@ -155,7 +155,8 @@ public:
             }
         }
 
-        co_return kota::process::exit_status{.code = replay.finish ? replay.finish->code : 0};
+        co_return kotatsu::async::process::exit_status{.code =
+                                                           replay.finish ? replay.finish->code : 0};
     }
 };
 
