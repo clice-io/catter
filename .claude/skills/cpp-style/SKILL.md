@@ -65,9 +65,10 @@ defending against ghosts.
   `json`, `fs`, `meta`, `sys`, `zest`. Code in `catter` writes them
   (`ranges::sort`, `async::task`, `fs::path::push`), never `std::ranges::`
   or `kotatsu::async::`, and no file declares them again. `kotatsu::ipc`
-  keeps its name, which catter's own `ipc` takes; `catter.command`, to
-  become a library of its own, and the headers the hook payloads share
-  write every name in full.
+  keeps its name, which catter's own `ipc` takes. `catter.command`, to
+  become a library of its own, names the aliases it uses in the file that
+  uses them (`namespace cli = kotatsu::cli;` in an option table), and the
+  headers the hook payloads share write every name in full.
 - `support` and the hook payloads stay headers (`.h`, `#pragma once`,
   never include guards) and sources (`.cc`), which include the standard
   and library headers themselves: the payloads import nothing.

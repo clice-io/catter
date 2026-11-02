@@ -36,7 +36,6 @@ std::string usage_of(const Help& help, std::span<const cli::UsageEntry> entries)
         if(entry.kind == cli::UsageEntry::Kind::Positional) {
             arguments.emplace_back(entry.usage, entry.help);
         } else {
-            // `-o|--output <path>` as `-o, --output <path>`.
             options.emplace_back(entry.usage | views::split('|') |
                                      views::join_with(std::string_view(", ")) |
                                      ranges::to<std::string>(),
