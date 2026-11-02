@@ -17,12 +17,8 @@ struct Options {
 
     SessionOptions session;
 
-    DECO_CFG_START(required = false)
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&help, help_option)
+    bool help = false;
 };
 
 const Help help{
@@ -35,9 +31,9 @@ int run(std::span<std::string> args) {
     if(!options.has_value()) {
         return 0;
     }
-    check_at_least<Options>(help, "--depth", options->tree.depth.as_optional(), 0);
-    check_at_least<Options>(help, "--args", *options->tree.args, -1);
-    check_at_least<Options>(help, "--arg-width", *options->tree.arg_width, 4);
+    check_at_least<Options>(help, "--depth", options->tree.depth, 0);
+    check_at_least<Options>(help, "--args", options->tree.args, -1);
+    check_at_least<Options>(help, "--arg-width", options->tree.arg_width, 4);
     return run_build(feature::make_tree(std::move(options->tree)), options->session);
 }
 

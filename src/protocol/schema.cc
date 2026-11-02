@@ -40,7 +40,8 @@ extern "C++" int main(int argc, char* argv[]) {
         std::println(stderr, "usage: catter-protocol-schema <output file>");
         return 1;
     }
-    auto schema = kotatsu::codec::json::schema_string<Messages, kotatsu::ipc::lsp_config>(true);
+    auto schema =
+        kotatsu::codec::json::schema_string<Messages, kotatsu::ipc::lsp_format>({.pretty = true});
     if(!schema) {
         std::println(stderr, "{}", schema.error().to_string());
         return 1;

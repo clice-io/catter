@@ -51,7 +51,7 @@ cpptrace, simdjson, ...) at registry versions, which Bazel resolves with
 catter's own (`cpptrace`, `spdlog`): a newer one of theirs is taken for
 both. The kotatsu libraries catter's modules use are in `LIBRARIES` of
 `modules/modules.bzl` (`@kotatsu//:fs`, `:sys`, `:async`, `:ipc`,
-`:codec_json`, `:deco`, `:zest`, ...), which `deps` wraps; `support` and
+`:codec_json`, `:cli`, `:zest`, ...), which `deps` wraps; `support` and
 the hook payloads name theirs in `BUILD.bazel`, the payloads `:fs` and
 `:sys`, and the Windows one `:ipc_codec` too.
 

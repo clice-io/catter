@@ -8,7 +8,7 @@ import :option.tablegen;
 
 namespace catter::option::lld_wasm {
 
-namespace option = kotatsu::option;
+namespace cli = kotatsu::cli;
 
 namespace detail {
 
@@ -31,11 +31,11 @@ constexpr std::size_t OptionCount = 0
 
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return option::pfx_none;
-        case 1: return option::pfx_dash;
-        case 3: return option::pfx_double;
+        case 0: return cli::pfx_none;
+        case 1: return cli::pfx_dash;
+        case 3: return cli::pfx_double;
         case 5: return pfx_double_dash_first;
-        default: return option::pfx_none;
+        default: return cli::pfx_none;
     }
 }
 
@@ -45,7 +45,7 @@ static_assert(OptionPrefixesTable[3] == 1 && OptionPrefixesTable[4] == 3);
 static_assert(OptionPrefixesTable[5] == 2 && OptionPrefixesTable[6] == 3 &&
               OptionPrefixesTable[7] == 1);
 
-constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
+constexpr auto OptionInfos = std::array<cli::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -61,7 +61,7 @@ constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
                META_VAR,                                                                           \
                VALUES,                                                                             \
                SUBCOMMANDIDS_OFFSET)                                                               \
-    option::Option{                                                                                \
+    cli::Option{                                                                                   \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(OptionStrTableStorage, NAME_OFFSET),                               \
         .id = ID_##ID,                                                                             \
@@ -81,10 +81,9 @@ constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
 
 }  // namespace detail
 
-const option::OptTable& table() {
+const cli::OptTable& table() {
     const static auto opt_table = [] {
-        auto table =
-            option::OptTable(std::span<const option::Option>(detail::OptionInfos), false, {});
+        auto table = cli::OptTable(std::span<const cli::Option>(detail::OptionInfos), false, {});
         table.tablegen_mode = true;
         return table;
     }();

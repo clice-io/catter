@@ -61,7 +61,7 @@ public:
     async::task<> on_finish(data::process_result result) override {
         print(tree,
               [&](const Tree::Node& node) { return text_of(node.content); },
-              max_depth_of(options.depth.as_optional()),
+              max_depth_of(options.depth),
               result.code,
               {.nodes = "commands", .node = "command", .tree = "command tree"});
         co_return;
@@ -82,13 +82,13 @@ private:
         if(argv.empty()) {
             return "<empty command>";
         }
-        const auto visible = *options.args;
+        const std::int64_t visible = options.args;
         const auto shown = visible < 0
                                ? argv.size() - 1
                                : std::min(argv.size() - 1, static_cast<std::size_t>(visible));
         auto line = argv | views::take(shown + 1) |
                     views::transform([&](const std::string& argument) {
-                        return format_argument(argument, *options.arg_width);
+                        return format_argument(argument, options.arg_width);
                     }) |
                     views::join_with(' ') | ranges::to<std::string>();
         if(shown + 1 < argv.size()) {

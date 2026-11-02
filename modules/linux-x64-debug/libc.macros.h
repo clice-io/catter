@@ -1,9 +1,7 @@
 #pragma once
-#define	ERANGE		34	/* Math result not representable */
 # define __ASSERT_VOID_CAST static_cast<void>
 # define assert(expr)							  ((expr)								   ? __ASSERT_VOID_CAST (0)						   : __assert_fail (__STRING(expr), __FILE__, __LINE__, __ASSERT_FUNCTION))
 #   define __ASSERT_FUNCTION	__PRETTY_FUNCTION__
-#   define errno (*__errno_location ())
 #define __LC_CTYPE		 0
 #define __LC_NUMERIC		 1
 #define __LC_TIME		 2

@@ -11,7 +11,7 @@ export namespace catter {
 /// How a program's arguments are read: by an option table, and those of its options the
 /// program takes.
 struct Syntax {
-    const kotatsu::option::OptTable* table;
+    const kotatsu::cli::OptTable* table;
 
     std::uint32_t visibility;
 

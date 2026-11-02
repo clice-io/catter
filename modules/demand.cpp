@@ -52,12 +52,12 @@
 #include <kotatsu/async/io/loop.h>
 #include <kotatsu/async/runtime/task.h>
 #include <kotatsu/async/vocab/error.h>
+#include <kotatsu/cli/cli.h>
+#include <kotatsu/cli/table.h>
 #include <kotatsu/codec/dyn/dyn.h>
 #include <kotatsu/codec/json/json.h>
 #include <kotatsu/codec/json/schema.h>
 #include <kotatsu/codec/macro.h>
-#include <kotatsu/deco/deco.h>
-#include <kotatsu/deco/option.h>
 #include <kotatsu/fs/directory.h>
 #include <kotatsu/fs/file.h>
 #include <kotatsu/fs/path.h>
@@ -99,23 +99,20 @@ using ::siginfo_t;
 using ::sigset_t;
 #endif
 
-#ifdef DECO_CFG
+#ifdef KANNOTATE
 #endif
-#ifdef DECO_CFG_END
+#ifdef KANNOTATE_TYPE
 #endif
-#ifdef DECO_CFG_START
+#ifdef KANNOTATION
 #endif
-#ifdef DecoFlag
+// KANNOTATE_TYPE pastes these names, which the index does not follow.
+#ifdef KOTATSU_CLASS_KEY_class
 #endif
-#ifdef DecoInput
+#ifdef KOTATSU_CLASS_KEY_struct
 #endif
-#ifdef DecoKV
+#ifdef KOTATSU_WHEN_0
 #endif
-#ifdef DecoKVStyled
-#endif
-#ifdef DecoPack
-#endif
-#ifdef KOTATSU_ANNOTATION
+#ifdef KOTATSU_WHEN_1
 #endif
 #ifdef ZASSERT
 #endif

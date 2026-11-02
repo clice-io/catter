@@ -64,12 +64,16 @@ std::expected<std::vector<Argument>, std::string>
                                                         .visibility = syntax.visibility,
                                                     })) {
             if(!result.has_value()) {
-                const auto index = start + result.error().index;
+                const auto index = start + result.error().begin;
                 return std::unexpected(
                     std::format("fatal error in parsing: failed to parse `{}` (arg #{}) : {}",
                                 argv[index],
                                 index,
                                 result.error().message));
+            }
+            // clang skips an empty argument, which names no file.
+            if(result->id == syntax.table->input_option_id && result->spelling.empty()) {
+                continue;
             }
             const auto index = static_cast<std::uint32_t>(start + result->index);
             if(std::ranges::contains(syntax.separate, argv[index])) {

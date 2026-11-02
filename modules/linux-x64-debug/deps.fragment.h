@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,16 +8,18 @@ import std.compat;
 #include "std.macros.h"
 #include "libc.macros.h"
 
+#include <spdlog/spdlog.h>
+#include <cpptrace/exceptions.hpp>
 #include <kotatsu/async/async.h>
 #include <kotatsu/async/io/loop.h>
 #include <kotatsu/async/runtime/task.h>
 #include <kotatsu/async/vocab/error.h>
+#include <kotatsu/cli/cli.h>
+#include <kotatsu/cli/table.h>
 #include <kotatsu/codec/dyn/dyn.h>
 #include <kotatsu/codec/json/json.h>
 #include <kotatsu/codec/json/schema.h>
 #include <kotatsu/codec/macro.h>
-#include <kotatsu/deco/deco.h>
-#include <kotatsu/deco/option.h>
 #include <kotatsu/fs/directory.h>
 #include <kotatsu/fs/file.h>
 #include <kotatsu/fs/path.h>
@@ -44,5 +45,3 @@ import std.compat;
 #include <kotatsu/sys/process.h>
 #include <kotatsu/zest/macro.h>
 #include <kotatsu/zest/zest.h>
-#include <spdlog/spdlog.h>
-#include <cpptrace/exceptions.hpp>

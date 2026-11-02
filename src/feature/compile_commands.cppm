@@ -10,38 +10,38 @@ namespace catter::feature {
 
 /// The options of `catter compile-commands` that are its own.
 struct CompileCommandsOptions {
-    DECO_CFG_START(required = false)
+    KANNOTATE(&output,
+              cli::names = {"-o", "--output"},
+              cli::meta_var = "<path>",
+              description = "Write the compilation database to this path.")
+    std::string output = "build/compile_commands.json";
 
-    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
-                 names = {"-o", "--output", "--output="},
-                 meta_var = "<path>",
-                 help = "Write the compilation database to this path.")
-    <std::string> output;
+    KANNOTATE(&replace,
+              description = "Ignore existing database entries and replace the output file.")
+    bool replace = false;
 
-    DecoFlag(names = {"--replace"},
-             help = "Ignore existing database entries and replace the output file.")
-    replace = false;
+    KANNOTATE(
+        &save_on_failure,
+        description = "Save collected entries even when the build exits with a non-zero code.")
+    bool save_on_failure = false;
 
-    DecoFlag(names = {"--save-on-failure"},
-             help = "Save collected entries even when the build exits with a non-zero code.")
-    save_on_failure = false;
+    KANNOTATE(&abort_on_command_failure,
+              description = "Abort when any captured command exits with a non-zero code.")
+    bool abort_on_command_failure = false;
 
-    DecoFlag(names = {"--abort-on-command-failure"},
-             help = "Abort when any captured command exits with a non-zero code.")
-    abort_on_command_failure = false;
+    KANNOTATE(&abort_on_capture_error,
+              description = "Abort when catter reports a command capture error.")
+    bool abort_on_capture_error = false;
 
-    DecoFlag(names = {"--abort-on-capture-error"},
-             help = "Abort when catter reports a command capture error.")
-    abort_on_capture_error = false;
+    KANNOTATE(&quiet,
+              cli::names = {"-q", "--quiet"},
+              description = "Suppress informational output.")
+    bool quiet = false;
 
-    DecoFlag(names = {"-q", "--quiet"}, help = "Suppress informational output.")
-    quiet = false;
-
-    DecoFlag(names = {"-v", "--verbose"},
-             help = "Print detailed command analysis and generated entries.")
-    verbose = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&verbose,
+              cli::names = {"-v", "--verbose"},
+              description = "Print detailed command analysis and generated entries.")
+    bool verbose = false;
 };
 
 /// Writes the compilation database of the build's compiler commands.

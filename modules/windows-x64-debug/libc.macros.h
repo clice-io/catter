@@ -9,13 +9,11 @@
 #define LC_MONETARY 3
 #define LC_NUMERIC 4
 #define LC_TIME 5
-#define ERANGE 34
 #define INT32_MAX 2147483647
 #define INT64_MAX 9223372036854775807LL
 #define WCHAR_MAX 0xffffU
 #define SEEK_END 2
 #define _IONBF 0x0004
-#define errno (*_errno())
 #define stdout (__acrt_iob_func(1))
 #define stderr (__acrt_iob_func(2))
 #define _LIBCPP_ABI_NAMESPACE __1
