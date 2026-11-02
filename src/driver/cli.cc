@@ -10,8 +10,6 @@ namespace catter::driver {
 
 namespace {
 
-namespace text = deco::cli::text;
-
 using Row = std::pair<std::string, std::string>;
 
 /// The rows of a section, a label and its description each, the descriptions in one column.
@@ -29,24 +27,20 @@ std::string columns(std::span<const Row> rows) {
     return lines | views::join_with('\n') | ranges::to<std::string>();
 }
 
-/// `-o|--output <path>|--output=<path>`, deco's usage of an option, as `-o, --output <path>`:
-/// its forms with the value joined are left out.
-std::string aliases(std::string_view usage) {
-    return usage | views::split('|') |
-           views::filter([](auto form) { return !std::string_view(form).contains('='); }) |
-           views::join_with(std::string_view(", ")) | ranges::to<std::string>();
-}
+}  // namespace
 
-std::string layout(const Help& help, const text::UsageDocument& document) {
+std::string usage_of(const Help& help, std::span<const cli::UsageEntry> entries) {
     std::vector<Row> arguments;
     std::vector<Row> options;
-    for(const auto& group: document.groups) {
-        for(const auto& entry: group.entries) {
-            if(entry.usage.starts_with("-- ")) {
-                arguments.emplace_back(entry.usage, entry.help);
-            } else {
-                options.emplace_back(aliases(entry.usage), entry.help);
-            }
+    for(const auto& entry: entries) {
+        if(entry.kind == cli::UsageEntry::Kind::Positional) {
+            arguments.emplace_back(entry.usage, entry.help);
+        } else {
+            // `-o|--output <path>` as `-o, --output <path>`.
+            options.emplace_back(entry.usage | views::split('|') |
+                                     views::join_with(std::string_view(", ")) |
+                                     ranges::to<std::string>(),
+                                 entry.help);
         }
     }
 
@@ -75,8 +69,6 @@ std::string layout(const Help& help, const text::UsageDocument& document) {
     return sections | views::join_with(std::string_view("\n\n")) | ranges::to<std::string>();
 }
 
-}  // namespace
-
 std::string usage_of_catter() {
     std::vector<Row> commands;
     for(const auto& entry: subcommand_entries()) {
@@ -89,18 +81,6 @@ std::string usage_of_catter() {
         "Run `catter <command> --help` for the options of a command.",
     };
     return sections | views::join_with(std::string_view("\n\n")) | ranges::to<std::string>();
-}
-
-text::Renderer renderer_of(const Help& help) {
-    text::Renderer renderer;
-    renderer.usage = [help](const text::UsageDocument& document, bool, const text::TextStyle&) {
-        return layout(help, document);
-    };
-    renderer.diagnostic = [name = help.name](const text::Diagnostic& diagnostic,
-                                             const text::TextStyle&) {
-        return std::format("{}: {}", name, diagnostic.message);
-    };
-    return renderer;
 }
 
 }  // namespace catter::driver

@@ -15,15 +15,14 @@ namespace {
 struct Options {
     DirectoryOption directory;
 
-    DECO_CFG_START(required = false)
+    KANNOTATE(&command,
+              cli::rest = true,
+              cli::meta_var = "<command>",
+              description = "The command to analyze.")
+    std::vector<std::string> command;
 
-    DecoPack(meta_var = "<command>", help = "The command to analyze.")
-    <std::vector<std::string>> command = std::vector<std::string>{};
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&help, help_option)
+    bool help = false;
 };
 
 const Help help{
@@ -40,10 +39,10 @@ int run(std::span<std::string> args) {
     if(!options.has_value()) {
         return 0;
     }
-    if(options->command->empty()) {
+    if(options->command.empty()) {
         throw cpptrace::runtime_error("explain: give the command to analyze after --");
     }
-    std::print("{}", feature::explain(options->directory.directory->path, *options->command));
+    std::print("{}", feature::explain(options->directory.directory.path, options->command));
     return 0;
 }
 

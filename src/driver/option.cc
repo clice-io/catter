@@ -49,18 +49,18 @@ std::string session_id() {
 
 async::task<async::process::exit_status> async_run(std::unique_ptr<Handler> builtin,
                                                    const SessionOptions& options) {
-    if(options.from.has_value() && !options.command->empty()) {
+    if(options.from.has_value() && !options.command.empty()) {
         throw cpptrace::runtime_error(
             "--from replays a recorded build in place of the build command after --: give one of them");
     }
-    if(!options.from.has_value() && options.command->empty()) {
+    if(!options.from.has_value() && options.command.empty()) {
         throw cpptrace::runtime_error(
             "give the build command after --, or a recorded build with --from");
     }
     const auto& backend = backend_of(options);
     Build build{
-        .command = options.from.has_value() ? std::vector{*options.from} : *options.command,
-        .cwd = options.directory.directory->path,
+        .command = options.from.has_value() ? std::vector{*options.from} : options.command,
+        .cwd = options.directory.directory.path,
     };
 
     const auto handler_options = [&, session = session_id()](std::string_view name) {
@@ -69,7 +69,7 @@ async::task<async::process::exit_status> async_run(std::unique_ptr<Handler> buil
             .session = session,
             .mode = std::string(backend.name()),
             .decisions = backend.follows_decisions(),
-            .timeout = chrono::seconds(*options.handler_timeout),
+            .timeout = chrono::seconds(options.handler_timeout),
         };
     };
 
@@ -82,9 +82,8 @@ async::task<async::process::exit_status> async_run(std::unique_ptr<Handler> buil
                 remotes.push_back(RemoteHandler::spawn(text, handler_options(text)));
                 continue;
             }
-            remotes.push_back(co_await RemoteHandler::connect(text,
-                                                              *options.allow_remote,
-                                                              handler_options(text)));
+            remotes.push_back(
+                co_await RemoteHandler::connect(text, options.allow_remote, handler_options(text)));
         }
 
         std::vector<Handler*> chain;

@@ -6,7 +6,7 @@ module catter.command;
 
 namespace catter::option::clang {
 
-namespace option = kotatsu::option;
+namespace cli = kotatsu::cli;
 
 namespace detail {
 
@@ -38,11 +38,11 @@ constexpr std::size_t OptionCount = 0
 
 // `clang-Driver-Options.inc` reuses LLVM driver flag names directly in the generated
 // `OPTION(...)` rows. We mirror the bits here so the table can be embedded into
-// `kotatsu::option::Option` without pulling in LLVM's option library.
+// `kotatsu::cli::Option` without pulling in LLVM's option library.
 enum Flag : unsigned {
-    HelpHidden = option::HelpHidden,
-    RenderAsInput = option::RenderAsInput,
-    RenderJoined = option::RenderJoined,
+    HelpHidden = cli::HelpHidden,
+    RenderAsInput = cli::RenderAsInput,
+    RenderJoined = cli::RenderJoined,
     Ignored = 1u << 4,
     LinkOption = 1u << 5,
     LinkerInput = 1u << 6,
@@ -54,16 +54,16 @@ enum Flag : unsigned {
 
 // The generated prefix table only uses a small fixed set of layouts for clang
 // driver options, so we map the encoded table offsets to the corresponding
-// `kotatsu::option` prefix spans directly.
+// `kotatsu::cli` prefix spans directly.
 constexpr std::span<const std::string_view> prefixes(unsigned offset) {
     switch(offset) {
-        case 0: return option::pfx_none;
-        case 1: return option::pfx_dash;
-        case 3: return option::pfx_dash_double;
-        case 6: return option::pfx_double;
-        case 8: return option::pfx_all;
-        case 12: return option::pfx_slash_dash;
-        default: return option::pfx_none;
+        case 0: return cli::pfx_none;
+        case 1: return cli::pfx_dash;
+        case 3: return cli::pfx_dash_double;
+        case 6: return cli::pfx_double;
+        case 8: return cli::pfx_all;
+        case 12: return cli::pfx_slash_dash;
+        default: return cli::pfx_none;
     }
 }
 
@@ -89,21 +89,20 @@ static_assert(OptionPrefixesTable[8] == 3 && OptionPrefixesTable[9] == 3 &&
 static_assert(OptionPrefixesTable[12] == 2 && OptionPrefixesTable[13] == 6 &&
               OptionPrefixesTable[14] == 1);
 
-#define Group option::Kind::Group
-#define Input option::Kind::Input
-#define Unknown option::Kind::Unknown
-#define Flag option::Kind::Flag
-#define Joined option::Kind::Joined
-#define Values option::Kind::Values
-#define Separate option::Kind::Separate
-#define RemainingArgs option::Kind::RemainingArgs
-#define RemainingArgsJoined option::Kind::RemainingArgsJoined
-#define CommaJoined option::Kind::CommaJoined
-#define MultiArg option::Kind::MultiArg
-#define JoinedOrSeparate option::Kind::JoinedOrSeparate
-#define JoinedAndSeparate option::Kind::JoinedAndSeparate
+#define Group cli::OptionKind::Group
+#define Input cli::OptionKind::Input
+#define Unknown cli::OptionKind::Unknown
+#define Flag cli::OptionKind::Flag
+#define Joined cli::OptionKind::Joined
+#define Separate cli::OptionKind::Separate
+#define RemainingArgs cli::OptionKind::RemainingArgs
+#define RemainingArgsJoined cli::OptionKind::RemainingArgsJoined
+#define CommaJoined cli::OptionKind::CommaJoined
+#define MultiArg cli::OptionKind::MultiArg
+#define JoinedOrSeparate cli::OptionKind::JoinedOrSeparate
+#define JoinedAndSeparate cli::OptionKind::JoinedAndSeparate
 
-constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
+constexpr auto OptionInfos = std::array<cli::Option, OptionCount>{
 #define OPTION(PREFIXES_OFFSET,                                                                    \
                NAME_OFFSET,                                                                        \
                ID,                                                                                 \
@@ -119,7 +118,7 @@ constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
                META_VAR,                                                                           \
                VALUES,                                                                             \
                SUBCOMMANDIDS_OFFSET)                                                               \
-    option::Option{                                                                                \
+    cli::Option{                                                                                   \
         .prefixes = prefixes(PREFIXES_OFFSET),                                                     \
         .prefixed_name = str_at(NAME_OFFSET),                                                      \
         .id = ID_##ID,                                                                             \
@@ -142,7 +141,6 @@ constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
 #undef Unknown
 #undef Flag
 #undef Joined
-#undef Values
 #undef Separate
 #undef RemainingArgs
 #undef RemainingArgsJoined
@@ -153,10 +151,9 @@ constexpr auto OptionInfos = std::array<option::Option, OptionCount>{
 
 }  // namespace detail
 
-const option::OptTable& table() {
+const cli::OptTable& table() {
     const static auto opt_table = [] {
-        auto table =
-            option::OptTable(std::span<const option::Option>(detail::OptionInfos), false, {});
+        auto table = cli::OptTable(std::span<const cli::Option>(detail::OptionInfos), false, {});
         table.tablegen_mode = true;
         return table;
     }();

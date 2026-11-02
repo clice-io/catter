@@ -17,12 +17,8 @@ struct Options {
 
     SessionOptions session;
 
-    DECO_CFG_START(required = false)
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&help, help_option)
+    bool help = false;
 };
 
 const Help help{
@@ -43,7 +39,7 @@ int run(std::span<std::string> args) {
     if(!options.has_value()) {
         return 0;
     }
-    check_at_least<Options>(help, "--top", *options->profile.top, 0);
+    check_at_least<Options>(help, "--top", options->profile.top, 0);
     return run_build(feature::make_profile(std::move(options->profile)), options->session);
 }
 

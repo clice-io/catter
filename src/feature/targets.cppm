@@ -10,15 +10,11 @@ namespace catter::feature {
 
 /// The options of `catter targets` that are its own.
 struct TargetsOptions {
-    DECO_CFG_START(required = false)
-
-    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
-                 names = {"-d", "--depth", "--depth="},
-                 meta_var = "<n>",
-                 help = "Limit render depth.")
-    <std::int64_t> depth;
-
-    DECO_CFG_END()
+    KANNOTATE(&depth,
+              cli::names = {"-d", "--depth"},
+              cli::meta_var = "<n>",
+              description = "Limit render depth.")
+    std::optional<std::int64_t> depth;
 };
 
 /// Renders the files the build makes as the forest of the files each is made from.

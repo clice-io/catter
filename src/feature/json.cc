@@ -12,11 +12,6 @@ namespace catter::feature {
 
 namespace {
 
-/// A command's arguments need not be UTF-8, which JSON is.
-struct Config {
-    constexpr static auto invalid_utf8 = codec::invalid_utf8::Replace;
-};
-
 /// `argument` as a command line shows it: as it is when plain, else as a JSON string.
 std::string quote_argument(std::string_view argument) {
     const auto plain = !argument.empty() && ranges::all_of(argument, [](char c) {
@@ -29,7 +24,8 @@ std::string quote_argument(std::string_view argument) {
 }  // namespace
 
 std::string to_json(const JSON& value, Layout layout) {
-    auto compact = json::to_string<Config>(value);
+    // A command's arguments need not be UTF-8, which JSON is.
+    auto compact = json::to_string(value, {.invalid_utf8 = codec::invalid_utf8::Replace});
     assert(compact.has_value());
     if(!layout.pretty) {
         return std::move(*compact);

@@ -61,13 +61,13 @@ defending against ghosts.
   goes into `modules/demand.cpp`, and `modules/` is regenerated (the
   upgrade-deps skill).
 - `support/prelude.h` gives the namespaces catter writes their short names
-  in `catter`: `ranges`, `views`, `chrono`, `async`, `codec`, `json`,
-  `deco`, `fs`, `meta`, `sys`, `zest`. Code in `catter` writes them
+  in `catter`: `ranges`, `views`, `chrono`, `async`, `cli`, `codec`,
+  `json`, `fs`, `meta`, `sys`, `zest`. Code in `catter` writes them
   (`ranges::sort`, `async::task`, `fs::path::push`), never `std::ranges::`
   or `kotatsu::async::`, and no file declares them again. `kotatsu::ipc`
-  and `kotatsu::option` keep their names, which catter's own `ipc` and
-  `option` take; `catter.command`, to become a library of its own, and
-  the headers the hook payloads share write every name in full.
+  keeps its name, which catter's own `ipc` takes; `catter.command`, to
+  become a library of its own, and the headers the hook payloads share
+  write every name in full.
 - `support` and the hook payloads stay headers (`.h`, `#pragma once`,
   never include guards) and sources (`.cc`), which include the standard
   and library headers themselves: the payloads import nothing.

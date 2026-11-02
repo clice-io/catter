@@ -21,8 +21,6 @@
 #define INT64_MAX        9223372036854775807LL
 #    define WCHAR_MAX     __WCHAR_MAX__
 #define SEEK_END        2       /* set file offset to EOF plus offset */
-#define errno (*__error())
-#define ERANGE          34              /* Result too large */
 #define SIGHUP  1       /* hangup */
 #define SIGINT  2       /* interrupt */
 #define SIGKILL 9       /* kill (cannot be caught or ignored) */

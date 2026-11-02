@@ -17,12 +17,8 @@ struct Options {
 
     SessionOptions session;
 
-    DECO_CFG_START(required = false)
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&help, help_option)
+    bool help = false;
 };
 
 const Help help{

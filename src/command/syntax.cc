@@ -64,7 +64,7 @@ std::expected<std::vector<Argument>, std::string>
                                                         .visibility = syntax.visibility,
                                                     })) {
             if(!result.has_value()) {
-                const auto index = start + result.error().index;
+                const auto index = start + result.error().begin;
                 return std::unexpected(
                     std::format("fatal error in parsing: failed to parse `{}` (arg #{}) : {}",
                                 argv[index],

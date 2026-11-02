@@ -10,25 +10,21 @@ namespace catter::feature {
 
 /// The options of `catter profile` that are its own.
 struct ProfileOptions {
-    DECO_CFG_START(required = false)
+    KANNOTATE(&output,
+              cli::names = {"-o", "--output"},
+              cli::meta_var = "<path>",
+              description = "Write the trace to this path. [default: trace.json]")
+    std::string output = "trace.json";
 
-    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
-                 names = {"-o", "--output", "--output="},
-                 meta_var = "<path>",
-                 help = "Write the trace to this path. [default: trace.json]")
-    <std::string> output = std::string("trace.json");
+    KANNOTATE(&top,
+              cli::meta_var = "<n>",
+              description = "List the n commands that took the longest. [default: 5]")
+    std::int64_t top = 5;
 
-    DecoKVStyled(deco::decl::KVStyle::JoinedOrSeparate,
-                 names = {"--top", "--top="},
-                 meta_var = "<n>",
-                 help = "List the n commands that took the longest. [default: 5]")
-    <std::int64_t> top = 5;
-
-    DecoFlag(names = {"-q", "--quiet"},
-             help = "Print no summary, nor why catter could not capture a command.")
-    quiet = false;
-
-    DECO_CFG_END()
+    KANNOTATE(&quiet,
+              cli::names = {"-q", "--quiet"},
+              description = "Print no summary, nor why catter could not capture a command.")
+    bool quiet = false;
 };
 
 /// Writes the timeline of the build's commands as a trace that Perfetto and chrome://tracing

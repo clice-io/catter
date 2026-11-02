@@ -31,12 +31,11 @@ struct ParseResult {
     std::vector<std::string> errors;
 };
 
-ParseResult parse_command(const kotatsu::option::OptTable& table,
-                          std::span<const std::string> argv) {
+ParseResult parse_command(const cli::OptTable& table, std::span<const std::string> argv) {
     std::vector<std::string> args(argv.begin() + 1, argv.end());
 
     ParseResult result;
-    kotatsu::option::ParseOptions options;
+    cli::ParseOptions options;
     options.dash_dash_parsing = true;
     for(auto parsed: table.parse(args, options)) {
         if(parsed.has_value()) {
@@ -53,8 +52,7 @@ ParseResult parse_command(const kotatsu::option::OptTable& table,
     return result;
 };
 
-std::string_view canonical_spelling(const kotatsu::option::OptTable& table,
-                                    const ParseResult::OwnedArg& arg) {
+std::string_view canonical_spelling(const cli::OptTable& table, const ParseResult::OwnedArg& arg) {
     auto option = table.option(arg.id);
     if(!option.has_value()) {
         return arg.spelling;
@@ -126,7 +124,7 @@ ZEST_CASE(parse_lld_macho_link_command) {
     ZEXPECT(option::lld_macho::table()
                 .option(option::lld_macho::ID_force_cpusubtype_ALL)
                 .value()
-                .has_flag(kotatsu::option::HelpHidden));
+                .has_flag(cli::HelpHidden));
 
     ZEXPECT(parsed.args[2].id == option::lld_macho::ID_INPUT);
     ZEXPECT(parsed.args[2].spelling == "foo.o");
