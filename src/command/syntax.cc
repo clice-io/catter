@@ -71,6 +71,10 @@ std::expected<std::vector<Argument>, std::string>
                                 index,
                                 result.error().message));
             }
+            // clang skips an empty argument, which names no file.
+            if(result->id == syntax.table->input_option_id && result->spelling.empty()) {
+                continue;
+            }
             const auto index = static_cast<std::uint32_t>(start + result->index);
             if(std::ranges::contains(syntax.separate, argv[index])) {
                 // An edit that removes it may name it alone.
