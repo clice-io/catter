@@ -99,7 +99,7 @@ jobs:
           (pwsh -NoProfile -Command "..."), as CI's default shell.
           NOTES
 
-      - uses: 16bit-ykiko/agent-box@1d433bb4c6ac84e877e2f9861b72fd251adee496
+      - uses: 16bit-ykiko/agent-box@3d725fcfdb4368ef79b6005c41c4bbc0ab4888d7
         with:
           pubkey: ${{ inputs.pubkey }}
           minutes: ${{ inputs.minutes }}
