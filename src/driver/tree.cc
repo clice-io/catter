@@ -16,9 +16,6 @@ struct Options {
     feature::TreeOptions tree;
 
     SessionOptions session;
-
-    KANNOTATE(&help, help_option)
-    bool help = false;
 };
 
 const Help help{

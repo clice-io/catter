@@ -13,9 +13,6 @@ namespace {
 
 struct Options {
     SessionOptions session;
-
-    KANNOTATE(&help, help_option)
-    bool help = false;
 };
 
 const Help help{

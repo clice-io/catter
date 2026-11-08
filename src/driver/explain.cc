@@ -20,9 +20,6 @@ struct Options {
               cli::meta_var = "<command>",
               description = "The command to analyze.")
     std::vector<std::string> command;
-
-    KANNOTATE(&help, help_option)
-    bool help = false;
 };
 
 const Help help{

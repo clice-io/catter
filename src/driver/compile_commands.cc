@@ -16,9 +16,6 @@ struct Options {
     feature::CompileCommandsOptions database;
 
     SessionOptions session;
-
-    KANNOTATE(&help, help_option)
-    bool help = false;
 };
 
 const Help help{

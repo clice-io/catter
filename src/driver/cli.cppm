@@ -29,7 +29,7 @@ struct SubcommandEntry {
 };
 
 inline auto& subcommand_entries() {
-    static std::array<SubcommandEntry, meta::reflection<Subcommand>::member_count> entries;
+    static std::array<SubcommandEntry, meta::enum_values<Subcommand>.size()> entries;
     return entries;
 }
 
@@ -59,15 +59,12 @@ struct Help {
 /// What `catter --help` prints: what catter does, and its subcommands.
 std::string usage_of_catter();
 
-/// The help option every subcommand declares, a `bool help` field.
-KANNOTATION(help_option, cli::help, description = "Print this help message.");
-
 /// The help of a subcommand, its arguments and options laid out from `entries`.
 std::string usage_of(const Help& help, std::span<const cli::UsageEntry> entries);
 
 /// The options `args` gives a subcommand, read as `T` declares them; none when they ask for
-/// its help, which is printed. `T` declares its help option last, and, when the subcommand
-/// runs a build, the session's options as `session`.
+/// its help, which is printed. When the subcommand runs a build, `T` declares the session's
+/// options as `session`.
 ///
 /// Throws for an argument the subcommand does not take, with its help.
 template <typename T>
@@ -81,13 +78,13 @@ std::optional<T> parse(const Help& help, std::span<const std::string> args) {
             }
         }
     });
-    if(!options.has_value()) {
+    if(auto error = options.error()) {
         throw cpptrace::runtime_error(std::format("{}: {}\n\n{}",
                                                   help.name,
-                                                  options.error().message,
+                                                  error->message,
                                                   usage_of(help, cli::usage_entries<T>())));
     }
-    if(options->help) {
+    if(options.help()) {
         std::println("{}", usage_of(help, cli::usage_entries<T>()));
         return std::nullopt;
     }

@@ -105,15 +105,6 @@ using ::sigset_t;
 #endif
 #ifdef KANNOTATION
 #endif
-// KANNOTATE_TYPE pastes these names, which the index does not follow.
-#ifdef KOTATSU_CLASS_KEY_class
-#endif
-#ifdef KOTATSU_CLASS_KEY_struct
-#endif
-#ifdef KOTATSU_WHEN_0
-#endif
-#ifdef KOTATSU_WHEN_1
-#endif
 #ifdef ZASSERT
 #endif
 #ifdef ZEST_CASE

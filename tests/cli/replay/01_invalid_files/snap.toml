@@ -7,5 +7,5 @@ stdout = "Replay file is not valid: ${WS}/missing_field.json: missing required f
 exit = 1
 
 [test."$ catter tree --from not_json.json"]
-stdout = "Replay file is not valid: ${WS}/not_json.json: TAPE_ERROR: The JSON document has an improper structure: missing or superfluous commas, braces, missing keys, etc.  This is a fatal and unrecoverable error."
+stdout = "Replay file is not valid: ${WS}/not_json.json: INCOMPLETE_ARRAY_OR_OBJECT: JSON document ended early in the middle of an object or array. This is a fatal and unrecoverable error."
 exit = 1

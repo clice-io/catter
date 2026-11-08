@@ -14,8 +14,7 @@ namespace {
 /// Whether `value` is the name of a value of `E`.
 template <typename E>
 bool names_one(std::string_view value) {
-    return ranges::any_of(meta::reflection<E>::member_values,
-                          [&](E each) { return name(each) == value; });
+    return ranges::any_of(meta::enum_values<E>, [&](E each) { return name(each) == value; });
 }
 
 std::error_code read_absolute(kotatsu::buffer_ref out, std::string_view path) {
