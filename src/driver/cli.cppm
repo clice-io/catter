@@ -29,7 +29,7 @@ struct SubcommandEntry {
 };
 
 inline auto& subcommand_entries() {
-    static std::array<SubcommandEntry, meta::reflection<Subcommand>::member_count> entries;
+    static std::array<SubcommandEntry, meta::enum_values<Subcommand>.size()> entries;
     return entries;
 }
 
@@ -59,55 +59,36 @@ struct Help {
 /// What `catter --help` prints: what catter does, and its subcommands.
 std::string usage_of_catter();
 
-/// The text renderer of a subcommand's command line: its help laid out as `catter <name>
-/// --help` prints it, `<name>: <message>` for an error.
-deco::cli::text::Renderer renderer_of(const Help& help);
-
-/// The help of the subcommand whose options `T` declares.
-template <typename T>
-std::string usage_of(const Help& help) {
-    auto command = deco::cli::command<T>(help.name);
-    command.render_with(renderer_of(help));
-    std::ostringstream usage;
-    command.usage(usage);
-    return usage.str();
-}
+/// The help of a subcommand, its arguments and options laid out from `entries`.
+std::string usage_of(const Help& help, std::span<const cli::UsageEntry> entries);
 
 /// The options `args` gives a subcommand, read as `T` declares them; none when they ask for
-/// its help, which is printed. `T` declares the help flag, `-h, --help`, last, and, when the
-/// subcommand runs a build, the session's options as `session`.
+/// its help, which is printed. When the subcommand runs a build, `T` declares the session's
+/// options as `session`.
 ///
 /// Throws for an argument the subcommand does not take, with its help.
 template <typename T>
 std::optional<T> parse(const Help& help, std::span<const std::string> args) {
-    std::vector<std::string> argv(args.begin(), args.end());
-    bool asked_for_help = false;
-    auto command = deco::cli::command<T>(help.name);
-    command.render_with(renderer_of(help)).template after<&T::help>([&](auto& step) {
-        asked_for_help = true;
-        return step.stop();
+    auto options = cli::parse<T>(args, [](T& parsed, const cli::Given& given) {
+        if constexpr(requires { &T::session; }) {
+            const bool connect = given.path == "session.connect";
+            if(connect || given.path == "session.handler") {
+                parsed.session.handlers.push_back(
+                    {.connect = connect, .text = std::string(given.values.front())});
+            }
+        }
     });
-    if constexpr(requires { &T::session; }) {
-        command
-            .template after<&T::session, &SessionOptions::handler>([](auto& step) {
-                step.options().session.handlers.push_back({.connect = false, .text = step.value()});
-                return step.next();
-            })
-            .template after<&T::session, &SessionOptions::connect>([](auto& step) {
-                step.options().session.handlers.push_back({.connect = true, .text = step.value()});
-                return step.next();
-            });
+    if(auto error = options.error()) {
+        throw cpptrace::runtime_error(std::format("{}: {}\n\n{}",
+                                                  help.name,
+                                                  error->message,
+                                                  usage_of(help, cli::usage_entries<T>())));
     }
-    auto result = command.invoke(argv);
-    if(asked_for_help) {
-        std::println("{}", usage_of<T>(help));
+    if(options.help()) {
+        std::println("{}", usage_of(help, cli::usage_entries<T>()));
         return std::nullopt;
     }
-    if(!result.has_value()) {
-        throw cpptrace::runtime_error(
-            std::format("{}\n\n{}", result.error().message, usage_of<T>(help)));
-    }
-    return std::move(result->options);
+    return std::move(*options);
 }
 
 /// Throws for a value of `option` below `least`, with the help of the subcommand whose options
@@ -123,7 +104,7 @@ void check_at_least(const Help& help,
                                                   option,
                                                   least,
                                                   *value,
-                                                  usage_of<T>(help)));
+                                                  usage_of(help, cli::usage_entries<T>())));
     }
 }
 

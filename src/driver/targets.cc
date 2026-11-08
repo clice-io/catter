@@ -16,13 +16,6 @@ struct Options {
     feature::TargetsOptions targets;
 
     SessionOptions session;
-
-    DECO_CFG_START(required = false)
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
 };
 
 const Help help{
@@ -35,7 +28,7 @@ int run(std::span<std::string> args) {
     if(!options.has_value()) {
         return 0;
     }
-    check_at_least<Options>(help, "--depth", options->targets.depth.as_optional(), 0);
+    check_at_least<Options>(help, "--depth", options->targets.depth, 0);
     return run_build(feature::make_targets(std::move(options->targets)), options->session);
 }
 

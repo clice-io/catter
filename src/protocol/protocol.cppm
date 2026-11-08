@@ -204,13 +204,14 @@ struct UnparsedAnalysis {
     std::string message;
 };
 
-KOTATSU_ANNOTATION(analysis_annotation,
-                   tag = "kind",
-                   tag_names = {"compiler", "archiver", "tool", "unparsed"});
-
 /// What catter makes of a command.
-using Analysis = meta::annotate<analysis_annotation>::type<
-    std::variant<CompilerAnalysis, ArchiverAnalysis, ToolAnalysis, UnparsedAnalysis>>;
+KANNOTATE_TYPE(struct Analysis,
+               tag = "kind",
+               tag_names = {"compiler", "archiver", "tool", "unparsed"});
+
+struct Analysis : std::variant<CompilerAnalysis, ArchiverAnalysis, ToolAnalysis, UnparsedAnalysis> {
+    using variant::variant;
+};
 
 /// Request `command` to a handler that decides, else a notification.
 struct Command {
@@ -255,13 +256,14 @@ struct Edit {
     std::vector<CommandEdit> edits;
 };
 
-KOTATSU_ANNOTATION(action_annotation,
-                   tag = "action",
-                   tag_names = {"skip", "drop", "abort", "modify", "edit"});
-
 /// The result of `command`.
-using Action =
-    meta::annotate<action_annotation>::type<std::variant<Skip, Drop, Abort, Modify, Edit>>;
+KANNOTATE_TYPE(struct Action,
+               tag = "action",
+               tag_names = {"skip", "drop", "abort", "modify", "edit"});
+
+struct Action : std::variant<Skip, Drop, Abort, Modify, Edit> {
+    using variant::variant;
+};
 
 /// Notification `error`: catter could not capture a command.
 struct CaptureError {

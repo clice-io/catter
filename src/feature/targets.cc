@@ -73,8 +73,7 @@ std::string name_of(std::string_view path) {
 /// Renders the files a build makes as the forest of the files each is made from.
 class TargetTree final : public Handler {
 public:
-    explicit TargetTree(TargetsOptions options) :
-        max_depth(max_depth_of(options.depth.as_optional())) {}
+    explicit TargetTree(TargetsOptions options) : max_depth(max_depth_of(options.depth)) {}
 
     async::task<Action> on_command(data::ipcid_t id,
                                    std::optional<data::ipcid_t> parent,

@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include <arm_neon.h>
@@ -10,12 +9,12 @@ import std.compat;
 #include <kotatsu/async/io/loop.h>
 #include <kotatsu/async/runtime/task.h>
 #include <kotatsu/async/vocab/error.h>
+#include <kotatsu/cli/cli.h>
+#include <kotatsu/cli/table.h>
 #include <kotatsu/codec/dyn/dyn.h>
 #include <kotatsu/codec/json/json.h>
 #include <kotatsu/codec/json/schema.h>
 #include <kotatsu/codec/macro.h>
-#include <kotatsu/deco/deco.h>
-#include <kotatsu/deco/option.h>
 #include <kotatsu/fs/directory.h>
 #include <kotatsu/fs/file.h>
 #include <kotatsu/fs/path.h>

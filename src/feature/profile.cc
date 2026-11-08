@@ -357,7 +357,7 @@ public:
     explicit Profile(ProfileOptions options) : options(std::move(options)) {}
 
     async::task<std::optional<Build>> on_start(Build build) override {
-        fs::path::resolve(output, *options.output, build.cwd);
+        fs::path::resolve(output, options.output, build.cwd);
         process = command_line({.args = build.command});
         co_return build;
     }
@@ -398,7 +398,7 @@ public:
             commands[found->second].uncaptured = true;
         }
         uncaptured += 1;
-        if(!*options.quiet) {
+        if(!options.quiet) {
             std::println("{}", kotatsu::replace_invalid_utf8(message));
         }
         co_return;
@@ -415,7 +415,7 @@ public:
     async::task<> on_finish([[maybe_unused]] data::process_result result) override {
         const auto timeline = timeline_of(commands);
         save_file(output, trace_of(timeline, process), "trace");
-        if(!*options.quiet) {
+        if(!options.quiet) {
             print(timeline);
         }
         co_return;
@@ -470,7 +470,7 @@ private:
         ranges::sort(slowest, {}, [&](std::size_t i) {
             return std::pair(-timeline.activity.worked[i], timeline.spans[i].start);
         });
-        slowest.resize(std::min(slowest.size(), static_cast<std::size_t>(*options.top)));
+        slowest.resize(std::min(slowest.size(), static_cast<std::size_t>(options.top)));
         if(!slowest.empty()) {
             std::println("Slowest:");
             const auto times = slowest | views::transform([&](std::size_t i) {

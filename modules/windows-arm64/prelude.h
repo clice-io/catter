@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include <arm_neon.h>

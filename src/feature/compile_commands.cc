@@ -110,15 +110,14 @@ public:
     explicit CDB(CompileCommandsOptions options) : options(std::move(options)) {}
 
     async::task<std::optional<Build>> on_start(Build build) override {
-        output_path = options.output.value_or("build/compile_commands.json");
         // Where it fails, no file is in it.
         [[maybe_unused]] auto error = sys::temp_dir(temporary);
         // A database catter cannot merge into ends the session before the build, not after.
-        database.emplace(output_path, build.cwd, !*options.replace);
+        database.emplace(options.output, build.cwd, !options.replace);
         verbose_log(std::format(
             "CDB verbose logging enabled.\n  Output file: {}\n  Existing entries: {}\n  Resolver diagnostics: enabled",
-            output_path,
-            *options.replace ? "replace" : "merge"));
+            options.output,
+            options.replace ? "replace" : "merge"));
         co_return build;
     }
 
@@ -245,10 +244,10 @@ public:
            !preprocess.empty() && fs::is_file(preprocess.mapped())) {
             kept_files.insert(std::move(preprocess.mapped()));
         }
-        if(descendants.left_out(id) || !*options.abort_on_command_failure || result.code == 0) {
+        if(descendants.left_out(id) || !options.abort_on_command_failure || result.code == 0) {
             co_return;
         }
-        if(*options.save_on_failure) {
+        if(options.save_on_failure) {
             save();
         }
         throw cpptrace::runtime_error(
@@ -259,7 +258,7 @@ public:
     }
 
     async::task<> on_finish(data::process_result result) override {
-        if(result.code != 0 && !*options.save_on_failure) {
+        if(result.code != 0 && !options.save_on_failure) {
             log(std::format("Build failed with exit code {}. CDB will not be saved.", result.code));
             co_return;
         }
@@ -373,20 +372,20 @@ private:
     /// Reports what catter could not capture of a command, which ends the session with
     /// --abort-on-capture-error.
     void uncaptured(std::string message) const {
-        if(*options.abort_on_capture_error) {
+        if(options.abort_on_capture_error) {
             throw cpptrace::runtime_error(std::move(message));
         }
         log(message);
     }
 
     void log(std::string_view message) const {
-        if(!*options.quiet) {
+        if(!options.quiet) {
             std::println("{}", kotatsu::replace_invalid_utf8(message));
         }
     }
 
     void verbose_log(std::string_view message) const {
-        if(*options.verbose) {
+        if(options.verbose) {
             log(message);
         }
     }
@@ -443,8 +442,6 @@ private:
 
 private:
     CompileCommandsOptions options;
-
-    std::string output_path;
 
     /// The database the entries go to: those it holds when the build starts, and the build's.
     std::optional<CompilationDatabase> database;

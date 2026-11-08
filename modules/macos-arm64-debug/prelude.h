@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <strings.h>
-#include <errno.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <arm_neon.h>
 import std.compat;

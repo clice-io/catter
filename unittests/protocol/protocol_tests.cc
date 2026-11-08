@@ -12,12 +12,12 @@ namespace {
 
 template <typename T>
 std::string encode(const T& value) {
-    return *json::to_string<kotatsu::ipc::lsp_config>(value);
+    return *json::to_string<kotatsu::ipc::lsp_format>(value);
 }
 
 template <typename T>
 T parse(std::string_view text) {
-    return *json::from_string<T, kotatsu::ipc::lsp_config>(text);
+    return *json::from_string<T, kotatsu::ipc::lsp_format>(text);
 }
 
 }  // namespace

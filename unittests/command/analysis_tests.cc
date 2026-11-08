@@ -580,6 +580,14 @@ ZEST_CASE(last_target_argument_wins) {
     ZEXPECT(analysis->target.source == TargetSource::Argument);
 };
 
+ZEST_CASE(empty_arguments_name_no_file) {
+    const std::vector<std::string> argv = {"clang", "-x", "c", "", "-c", "main.c", "-o", "main.o"};
+    auto analysis = analyze_compiler(argv[0], argv, "", fs::read_file);
+    ZASSERT(analysis.has_value());
+    ZEXPECT(paths(analysis->reads) == std::vector<std::string>{"main.c"});
+    ZEXPECT(paths(analysis->writes) == std::vector<std::string>{"main.o"});
+};
+
 ZEST_CASE(absolute_executable_names_default_output) {
     const std::vector<std::string> argv = {"gcc", "-c", "absolute.c"};
     auto analysis = analyze_compiler("/opt/toolchains/bin/gcc", argv, "", fs::read_file);

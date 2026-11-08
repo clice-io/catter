@@ -13,13 +13,6 @@ namespace {
 
 struct Options {
     SessionOptions session;
-
-    DECO_CFG_START(required = false)
-
-    DecoFlag(names = {"-h", "--help"}, help = "Print this help message.")
-    help = false;
-
-    DECO_CFG_END()
 };
 
 const Help help{

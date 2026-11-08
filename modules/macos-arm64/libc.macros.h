@@ -19,10 +19,9 @@
 #define _PTHREAD_ONCE_SIG_init		0x30B1BCBA
 #define INT32_MAX        2147483647
 #define INT64_MAX        9223372036854775807LL
+#define UINTPTR_MAX       18446744073709551615UL
+#define SIZE_MAX          UINTPTR_MAX
 #    define WCHAR_MAX     __WCHAR_MAX__
-#define SEEK_END        2       /* set file offset to EOF plus offset */
-#define errno (*__error())
-#define ERANGE          34              /* Result too large */
 #define SIGHUP  1       /* hangup */
 #define SIGINT  2       /* interrupt */
 #define SIGKILL 9       /* kill (cannot be caught or ignored) */
@@ -50,5 +49,4 @@
 #define vst1q_u8(__p0, __p1) __extension__ ({   uint8x16_t __s1 = __p1;   __builtin_neon_vst1q_v(__p0, __builtin_bit_cast(int8x16_t, __s1), 48); })
 #define vst1q_s8(__p0, __p1) __extension__ ({   int8x16_t __s1 = __p1;   __builtin_neon_vst1q_v(__p0, __builtin_bit_cast(int8x16_t, __s1), 32); })
 #define vst1_u8(__p0, __p1) __extension__ ({   uint8x8_t __s1 = __p1;   __builtin_neon_vst1_v(__p0, __builtin_bit_cast(int8x8_t, __s1), 16); })
-#define LONG_MAX  __LONG_MAX__
 #define CHAR_BIT  __CHAR_BIT__
