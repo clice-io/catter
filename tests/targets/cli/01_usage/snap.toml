@@ -9,7 +9,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or ptrace. [default: hook]
@@ -33,7 +33,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or eslogger. [default: hook]
@@ -82,7 +82,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or ptrace. [default: hook]
@@ -108,7 +108,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -d, --depth <n>              Limit render depth.
   -C, --directory <path>       The directory the command runs in. [default: the current directory]
   --capture <backend>          How the build's commands are captured: hook, wrapper or eslogger. [default: hook]

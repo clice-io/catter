@@ -9,7 +9,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the compilation database to this path.
   --replace                    Ignore existing database entries and replace the output file.
   --save-on-failure            Save collected entries even when the build exits with a non-zero code.
@@ -44,7 +44,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the compilation database to this path.
   --replace                    Ignore existing database entries and replace the output file.
   --save-on-failure            Save collected entries even when the build exits with a non-zero code.
@@ -115,7 +115,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the compilation database to this path.
   --replace                    Ignore existing database entries and replace the output file.
   --save-on-failure            Save collected entries even when the build exits with a non-zero code.
@@ -152,7 +152,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the compilation database to this path.
   --replace                    Ignore existing database entries and replace the output file.
   --save-on-failure            Save collected entries even when the build exits with a non-zero code.

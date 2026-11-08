@@ -13,7 +13,7 @@ Arguments:
   -- <command>...  The command to analyze.
 
 Options:
-  -h, --help              display this help and exit
+  -h, --help              Print this help and exit.
   -C, --directory <path>  The directory the command runs in. [default: the current directory]
 
 Examples:
@@ -35,7 +35,7 @@ Arguments:
   -- <command>...  The command to analyze.
 
 Options:
-  -h, --help              display this help and exit
+  -h, --help              Print this help and exit.
   -C, --directory <path>  The directory the command runs in. [default: the current directory]
 
 Examples:

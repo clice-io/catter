@@ -9,7 +9,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
   -q, --quiet                  Print no summary, nor why catter could not capture a command.
@@ -40,7 +40,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
   -q, --quiet                  Print no summary, nor why catter could not capture a command.
@@ -103,7 +103,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
   -q, --quiet                  Print no summary, nor why catter could not capture a command.
@@ -136,7 +136,7 @@ Arguments:
   -- <build command>...  The build to run.
 
 Options:
-  -h, --help                   display this help and exit
+  -h, --help                   Print this help and exit.
   -o, --output <path>          Write the trace to this path. [default: trace.json]
   --top <n>                    List the n commands that took the longest. [default: 5]
   -q, --quiet                  Print no summary, nor why catter could not capture a command.
