@@ -43,3 +43,60 @@ Examples:
   # The compiler, its mode, target, sources and outputs.
 '''
 exit = 1
+
+[test."$ catter explain -- clang --target=x86_64-linux-gnu -c a.c --help"]
+stdout = '''
+{
+    "analyzer": "compiler",
+    "compiler": "builtin:clang",
+    "dialect": "clang",
+    "phase": "compile",
+    "artifact": "object",
+    "target": {
+        "triple": "x86_64-linux-gnu",
+        "os": "linux",
+        "objectFormat": "elf",
+        "env": "gnu",
+        "artifactModel": "elf",
+        "from": "argument"
+    },
+    "sources": [
+        "a.c"
+    ],
+    "reads": [
+        "a.c"
+    ],
+    "writes": [
+        "a.o"
+    ],
+    "edges": [
+        {
+            "output": "a.o",
+            "inputs": [
+                "a.c"
+            ]
+        }
+    ],
+    "inferred": [
+        {
+            "path": "a.o",
+            "reason": "default-output"
+        }
+    ],
+    "entries": [
+        {
+            "directory": "${WS}",
+            "file": "a.c",
+            "arguments": [
+                "clang",
+                "--target=x86_64-linux-gnu",
+                "-c",
+                "a.c",
+                "--help"
+            ],
+            "output": "${WS}/a.o"
+        }
+    ]
+}
+'''
+exit = 0
